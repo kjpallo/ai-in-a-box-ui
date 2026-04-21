@@ -21,6 +21,7 @@ app.get('/api/health', (_req, res) => {
 
 app.post('/api/chat', async (req, res) => {
   const message = (req.body?.message || '').trim();
+  console.log('Incoming message:', message);
 
   if (!message) {
     return res.status(400).json({ error: 'Message is required.' });
@@ -35,10 +36,17 @@ app.post('/api/chat', async (req, res) => {
   let sentenceIndex = 0;
   let ttsChain = Promise.resolve();
 
-  req.on('close', () => {
+  req.on('aborted', () => {
+  clientClosed = true;
+  abortController.abort();
+});
+
+res.on('close', () => {
+  if (!res.writableEnded) {
     clientClosed = true;
     abortController.abort();
-  });
+  }
+});
 
   const sendEvent = (payload) => {
     if (clientClosed) return;
@@ -115,6 +123,7 @@ app.post('/api/chat', async (req, res) => {
     sendEvent({ type: 'done', fullText });
     res.end();
   } catch (error) {
+      console.error('Chat route error:', error);
     if (!clientClosed) {
       sendEvent({ type: 'error', message: error.message || 'Chat failed.' });
       res.end();
@@ -123,6 +132,7 @@ app.post('/api/chat', async (req, res) => {
 });
 
 async function streamFromOllama({ prompt, onText, signal }) {
+  console.log('Calling Ollama:', OLLAMA_URL, 'model:', OLLAMA_MODEL);
   const response = await fetch(OLLAMA_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -162,8 +172,9 @@ async function streamFromOllama({ prompt, onText, signal }) {
       }
 
       if (parsed.response) {
-        onText(parsed.response);
-      }
+  console.log('Ollama chunk:', parsed.response);
+  onText(parsed.response);
+}
 
       if (parsed.done) {
         return;
