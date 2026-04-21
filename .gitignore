@@ -1,0 +1,6 @@
+node_modules/
+audio/*
+!.gitkeep
+voices/*.onnx
+voices/*.json
+.DS_Store
