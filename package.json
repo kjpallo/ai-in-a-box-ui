@@ -1,0 +1,13 @@
+{
+  "name": "ai-in-a-box-ui",
+  "version": "1.0.0",
+  "description": "Local UI scaffold for Ollama + Piper with a fox voice visualizer",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
