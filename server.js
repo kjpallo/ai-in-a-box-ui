@@ -11,12 +11,37 @@ const publicDir = path.join(__dirname, 'public');
 const voicesDir = path.join(__dirname, 'voices');
 const audioDir = path.join(__dirname, 'audio');
 
+const DEFAULT_SYSTEM_PROMPT = [
+  'You are a classroom assistant helping in a 9th-grade science class.',
+  'Answer at about a 9th-grade reading level.',
+  'Be concise. Default to 2-3 sentences unless the teacher asks for more.',
+  'If the answer is a process, a list of steps, or math work, use short bullet points.',
+  'When a word has multiple meanings, give the school-science meaning first.',
+  'For definition questions, start with the words: In 9th-grade science,',
+  'For simple definition questions, give one clear definition first, then one short example only if it helps.',
+  'For math or physics questions, show the formula, plug in the values, and give the final answer with units.',
+  'Do not guess. If the question is unclear or missing information, ask one short clarifying question instead of assuming.',
+  'Avoid extra background information unless asked.'
+].join(' ');
+
+const SYSTEM_PROMPT = process.env.SYSTEM_PROMPT || DEFAULT_SYSTEM_PROMPT;
+const OLLAMA_TEMPERATURE = Number(process.env.OLLAMA_TEMPERATURE || 0.2);
+const OLLAMA_NUM_PREDICT = Number(process.env.OLLAMA_NUM_PREDICT || 110);
+const OLLAMA_TOP_K = Number(process.env.OLLAMA_TOP_K || 20);
+const OLLAMA_TOP_P = Number(process.env.OLLAMA_TOP_P || 0.85);
+const OLLAMA_REPEAT_PENALTY = Number(process.env.OLLAMA_REPEAT_PENALTY || 1.1);
+
 app.use(express.json());
 app.use(express.static(publicDir));
 app.use('/audio', express.static(audioDir));
 
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, model: OLLAMA_MODEL, hasVoice: Boolean(findPiperVoice()) });
+  res.json({
+    ok: true,
+    model: OLLAMA_MODEL,
+    hasVoice: Boolean(findPiperVoice()),
+    conciseMode: true
+  });
 });
 
 app.post('/api/chat', async (req, res) => {
@@ -37,16 +62,16 @@ app.post('/api/chat', async (req, res) => {
   let ttsChain = Promise.resolve();
 
   req.on('aborted', () => {
-  clientClosed = true;
-  abortController.abort();
-});
-
-res.on('close', () => {
-  if (!res.writableEnded) {
     clientClosed = true;
     abortController.abort();
-  }
-});
+  });
+
+  res.on('close', () => {
+    if (!res.writableEnded) {
+      clientClosed = true;
+      abortController.abort();
+    }
+  });
 
   const sendEvent = (payload) => {
     if (clientClosed) return;
@@ -60,7 +85,7 @@ res.on('close', () => {
     let pending = '';
 
     await streamFromOllama({
-      prompt: message,
+      prompt: buildTeacherPrompt(message),
       signal: abortController.signal,
       onText(textChunk) {
         if (!textChunk || clientClosed) return;
@@ -123,7 +148,7 @@ res.on('close', () => {
     sendEvent({ type: 'done', fullText });
     res.end();
   } catch (error) {
-      console.error('Chat route error:', error);
+    console.error('Chat route error:', error);
     if (!clientClosed) {
       sendEvent({ type: 'error', message: error.message || 'Chat failed.' });
       res.end();
@@ -138,8 +163,16 @@ async function streamFromOllama({ prompt, onText, signal }) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: OLLAMA_MODEL,
+      system: SYSTEM_PROMPT,
       prompt,
-      stream: true
+      stream: true,
+      options: {
+        temperature: OLLAMA_TEMPERATURE,
+        num_predict: OLLAMA_NUM_PREDICT,
+        top_k: OLLAMA_TOP_K,
+        top_p: OLLAMA_TOP_P,
+        repeat_penalty: OLLAMA_REPEAT_PENALTY
+      }
     }),
     signal
   });
@@ -172,15 +205,24 @@ async function streamFromOllama({ prompt, onText, signal }) {
       }
 
       if (parsed.response) {
-  console.log('Ollama chunk:', parsed.response);
-  onText(parsed.response);
-}
+        console.log('Ollama chunk:', parsed.response);
+        onText(parsed.response);
+      }
 
       if (parsed.done) {
         return;
       }
     }
   }
+}
+
+function buildTeacherPrompt(message) {
+  return [
+    'Teacher request:',
+    message,
+    '',
+    'Follow the classroom instructions above. Answer for a 9th-grade science student.'
+  ].join('\n');
 }
 
 function extractCompletedSentences(text) {
