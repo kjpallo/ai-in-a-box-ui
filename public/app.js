@@ -251,9 +251,19 @@ function finishStreamingSentence() {
   }
 }
 
-async function ensureAudioUnlocked() {
-  if (!audioContext) {
-    audioContext = new AudioContext();
+async function ensureAudioUnlocked(sampleRate) {
+  const needNewContext =
+    !audioContext ||
+    (sampleRate && Math.round(audioContext.sampleRate) !== Math.round(sampleRate));
+
+  if (needNewContext) {
+    if (audioContext) {
+      await audioContext.close();
+    }
+
+    audioContext = new AudioContext(
+      sampleRate ? { sampleRate } : undefined
+    );
   }
 
   if (audioContext.state === 'suspended') {
@@ -262,7 +272,7 @@ async function ensureAudioUnlocked() {
 }
 
 async function ensureStreamingNode(sampleRate) {
-  await ensureAudioUnlocked();
+await ensureAudioUnlocked(sampleRate);
 
   if (!sampleRate) {
     throw new Error('Missing Piper sample rate for streaming audio.');
