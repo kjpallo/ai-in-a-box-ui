@@ -7,12 +7,20 @@ const connectionStatus = document.getElementById('connectionStatus');
 const streamStatus = document.getElementById('streamStatus');
 const voiceOrb = document.getElementById('voiceOrb');
 const voiceStatus = document.getElementById('voiceStatus');
+const voiceSelect = document.getElementById('voiceSelect');
+const voiceHint = document.getElementById('voiceHint');
 const foxVideo = document.getElementById('foxVideo');
 
 let activeRequestController = null;
 let currentAudio = null;
 let currentPlaceholderTimer = null;
 let isPlayingQueue = false;
+let selectedVoice = '';
+let audioContext = null;
+let audioWorkletNode = null;
+let activeSampleRate = null;
+let isStreamingAudio = false;
+let streamChunksReceived = 0;
 const audioQueue = [];
 
 async function boot() {
@@ -40,14 +48,17 @@ chatForm.addEventListener('submit', async (event) => {
 
   sendButton.disabled = true;
   messageInput.disabled = true;
+  voiceSelect.disabled = true;
 
   activeRequestController = new AbortController();
 
   try {
+    await ensureAudioUnlocked();
+
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({ message, voice: selectedVoice }),
       signal: activeRequestController.signal
     });
 
@@ -70,7 +81,7 @@ chatForm.addEventListener('submit', async (event) => {
       for (const line of lines) {
         if (!line.trim()) continue;
         const eventData = JSON.parse(line);
-        handleServerEvent(eventData);
+        await handleServerEvent(eventData);
       }
     }
   } catch (error) {
@@ -87,6 +98,7 @@ chatForm.addEventListener('submit', async (event) => {
     responseText.classList.remove('streaming');
     sendButton.disabled = false;
     messageInput.disabled = false;
+    await refreshVoiceOptions();
     activeRequestController = null;
   }
 });
@@ -100,7 +112,11 @@ stopAudioButton.addEventListener('click', () => {
   setOrbSpeaking(false);
 });
 
-function handleServerEvent(eventData) {
+voiceSelect.addEventListener('change', () => {
+  selectedVoice = voiceSelect.value;
+});
+
+async function handleServerEvent(eventData) {
   switch (eventData.type) {
     case 'start':
       responseText.textContent = '';
@@ -116,14 +132,29 @@ function handleServerEvent(eventData) {
       enqueueAudio(eventData);
       break;
 
+    case 'audio_stream_start':
+      await startStreamingSentence(eventData);
+      break;
+
+    case 'audio_chunk':
+      pushStreamingChunk(eventData);
+      break;
+
+    case 'audio_stream_end':
+      finishStreamingSentence(eventData);
+      break;
+
     case 'audio_error':
       console.warn('Audio error:', eventData.message);
+      setVoiceStatus('Audio issue on one sentence.');
+      setOrbSpeaking(false);
+      isStreamingAudio = false;
       break;
 
     case 'done':
       setStreamStatus('Complete');
       setConnectionStatus('Ready');
-      if (!audioQueue.length && !isPlayingQueue) {
+      if (!audioQueue.length && !isPlayingQueue && !isStreamingAudio) {
         setVoiceStatus('Response finished.');
       }
       break;
@@ -147,7 +178,7 @@ function enqueueAudio(item) {
 }
 
 function playNextAudio() {
-  if (isPlayingQueue) return;
+  if (isPlayingQueue || isStreamingAudio) return;
   const nextItem = audioQueue.shift();
   if (!nextItem) {
     setOrbSpeaking(false);
@@ -194,6 +225,88 @@ function handleAudioFinished() {
   playNextAudio();
 }
 
+async function startStreamingSentence(eventData) {
+  await ensureStreamingNode(eventData.sampleRate);
+  isStreamingAudio = true;
+  streamChunksReceived = 0;
+  setOrbSpeaking(true);
+  setVoiceStatus(`Piper is streaming${eventData.voiceName ? ` (${eventData.voiceName})` : ''}...`);
+}
+
+function pushStreamingChunk(eventData) {
+  if (!audioWorkletNode || !eventData.data) return;
+
+  const samples = decodePcmChunkToFloat32(eventData.data);
+  if (!samples.length) return;
+
+  audioWorkletNode.port.postMessage({ type: 'push', samples }, [samples.buffer]);
+  streamChunksReceived += 1;
+}
+
+function finishStreamingSentence() {
+  isStreamingAudio = false;
+  setOrbSpeaking(false);
+  if (!audioQueue.length && !isPlayingQueue) {
+    setVoiceStatus('Waiting for the next sentence...');
+  }
+}
+
+async function ensureAudioUnlocked() {
+  if (!audioContext) {
+    audioContext = new AudioContext();
+  }
+
+  if (audioContext.state === 'suspended') {
+    await audioContext.resume();
+  }
+}
+
+async function ensureStreamingNode(sampleRate) {
+  await ensureAudioUnlocked();
+
+  if (!sampleRate) {
+    throw new Error('Missing Piper sample rate for streaming audio.');
+  }
+
+  if (audioWorkletNode && activeSampleRate === sampleRate) {
+    return;
+  }
+
+  if (audioWorkletNode) {
+    audioWorkletNode.port.postMessage({ type: 'clear' });
+    audioWorkletNode.disconnect();
+    audioWorkletNode = null;
+  }
+
+  const workletUrl = '/audio-stream-processor.js';
+  await audioContext.audioWorklet.addModule(workletUrl);
+  audioWorkletNode = new AudioWorkletNode(audioContext, 'pcm-stream-processor', {
+    numberOfInputs: 0,
+    numberOfOutputs: 1,
+    outputChannelCount: [2]
+  });
+  audioWorkletNode.connect(audioContext.destination);
+  activeSampleRate = sampleRate;
+}
+
+function decodePcmChunkToFloat32(base64Data) {
+  const binary = atob(base64Data);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+
+  const view = new DataView(bytes.buffer);
+  const samples = new Float32Array(bytes.byteLength / 2);
+
+  for (let index = 0; index < samples.length; index += 1) {
+    const int16 = view.getInt16(index * 2, true);
+    samples[index] = int16 / 32768;
+  }
+
+  return samples;
+}
+
 function stopAudioPlayback({ keepStatus = false } = {}) {
   audioQueue.length = 0;
 
@@ -208,7 +321,12 @@ function stopAudioPlayback({ keepStatus = false } = {}) {
     currentPlaceholderTimer = null;
   }
 
+  if (audioWorkletNode) {
+    audioWorkletNode.port.postMessage({ type: 'clear' });
+  }
+
   isPlayingQueue = false;
+  isStreamingAudio = false;
 
   if (!keepStatus) {
     setStreamStatus('Stopped');
@@ -240,6 +358,7 @@ async function checkHealth() {
 
     if (data.ok) {
       setConnectionStatus(data.hasVoice ? 'Ready + Voice' : 'Ready');
+      populateVoiceSelect(data.voices || [], data.canSelectVoice, data.canStreamAudio);
       return;
     }
   } catch {
@@ -247,6 +366,58 @@ async function checkHealth() {
   }
 
   setConnectionStatus('Server check failed');
+  populateVoiceSelect([], false, false);
+}
+
+async function refreshVoiceOptions() {
+  try {
+    const response = await fetch('/api/voices');
+    const data = await response.json();
+    populateVoiceSelect(data.voices || [], data.canSelectVoice, data.canStreamAudio);
+  } catch {
+    populateVoiceSelect([], false, false);
+  }
+}
+
+function populateVoiceSelect(voices, canSelectVoice, canStreamAudio) {
+  voiceSelect.innerHTML = '';
+
+  if (!voices.length) {
+    const option = document.createElement('option');
+    option.value = '';
+    option.textContent = canSelectVoice ? 'Drop a Piper voice into /voices' : 'Voice is controlled by the Piper server';
+    voiceSelect.appendChild(option);
+    voiceSelect.disabled = true;
+    voiceHint.textContent = canSelectVoice
+      ? 'No local voice model found yet. Add both the .onnx voice and its .onnx.json metadata file to the voices folder.'
+      : 'The local Piper HTTP server decides the voice.';
+    selectedVoice = '';
+    return;
+  }
+
+  for (const voice of voices) {
+    const option = document.createElement('option');
+    option.value = voice.id;
+    const sampleInfo = voice.sampleRate ? ` (${voice.sampleRate} Hz)` : '';
+    option.textContent = `${voice.name}${sampleInfo}`;
+    voiceSelect.appendChild(option);
+  }
+
+  if (selectedVoice && voices.some((voice) => voice.id === selectedVoice)) {
+    voiceSelect.value = selectedVoice;
+  } else {
+    selectedVoice = voices[0].id;
+    voiceSelect.value = selectedVoice;
+  }
+
+  voiceSelect.disabled = !canSelectVoice;
+  if (canSelectVoice) {
+    voiceHint.textContent = canStreamAudio
+      ? 'Pick a local Piper voice. Streaming mode needs the matching .onnx.json metadata file so the browser knows the sample rate.'
+      : 'Pick a local Piper voice. File mode is enabled right now.';
+  } else {
+    voiceHint.textContent = 'Voice changes happen on the Piper server side.';
+  }
 }
 
 boot();
