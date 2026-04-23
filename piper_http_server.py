@@ -4,6 +4,7 @@ import io
 import json
 import os
 import threading
+import traceback
 import wave
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
@@ -55,20 +56,10 @@ def synthesize_wav_bytes(text: str) -> bytes:
     out = io.BytesIO()
     kwargs = {}
 
-    if "speaker_id" in synth_sig.parameters:
-        kwargs["speaker_id"] = SPEAKER_ID
-    elif "speaker" in synth_sig.parameters:
-        kwargs["speaker"] = SPEAKER_ID
-
-    if "length_scale" in synth_sig.parameters:
-        kwargs["length_scale"] = LENGTH_SCALE
-
-    if "sentence_silence" in synth_sig.parameters:
-        kwargs["sentence_silence"] = SENTENCE_SILENCE
 
     with synth_lock:
         with wave.open(out, "wb") as wav_file:
-            voice.synthesize(text, wav_file, **kwargs)
+            voice.synthesize(text, wav_file)
 
     return out.getvalue()
 
@@ -119,7 +110,9 @@ class Handler(BaseHTTPRequestHandler):
                 payload = json.loads(raw.decode("utf-8"))
                 text = (payload.get("text") or "").strip()
             except Exception as exc:
-                self._send_json(400, {"ok": False, "error": f"Bad JSON: {exc}"})
+                import traceback
+                traceback.print_exc()
+                self._send_json(500, {"ok": False, "error": str(exc)})
                 return
         else:
             text = raw.decode("utf-8").strip()
