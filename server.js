@@ -302,23 +302,33 @@ async function streamSentenceAudio({ sentence, index, selectedVoiceId, sendEvent
   }
 
   if (mode !== 'stream') {
-    const filename = `tts-${Date.now()}-${index}.wav`;
-    const outputFile = path.join(audioDir, filename);
-    await runPiperCliFile(sentence, voiceModel.filePath, outputFile, signal);
-    sendEvent({
-      type: 'audio',
-      sentence,
-      mode: 'file',
-      url: `/audio/${filename}`,
-      index,
-      backend,
-      ttsAudioMode: 'file',
-      voiceId: voiceModel.id,
-      voiceName: voiceModel.name,
-      sampleRate: voiceModel.sampleRate || null
-    });
-    return;
-  }
+  const filename = `tts-${Date.now()}-${index}.wav`;
+  const outputFile = path.join(audioDir, filename);
+
+  await runPiperCliFile(sentence, voiceModel.filePath, outputFile, signal);
+  const wavInfo = await readWavInfo(outputFile);
+
+  console.log('Generated WAV:', {
+    file: filename,
+    voice: voiceModel.name,
+    wavInfo
+  });
+
+  sendEvent({
+    type: 'audio',
+    sentence,
+    mode: 'file',
+    url: `/audio/${filename}`,
+    index,
+    backend,
+    ttsAudioMode: 'file',
+    voiceId: voiceModel.id,
+    voiceName: voiceModel.name,
+    sampleRate: voiceModel.sampleRate || null,
+    wavInfo
+  });
+  return;
+}
 
   const sampleRate = resolveSampleRate(voiceModel);
   if (!sampleRate) {
@@ -496,6 +506,38 @@ function runPiperCliStream(sentence, voiceModelPath, { onChunk, signal }) {
     piper.stdin.write(sentence);
     piper.stdin.end();
   });
+}
+
+async function readWavInfo(filePath) {
+  const handle = await fs.promises.open(filePath, 'r');
+
+  try {
+    const header = Buffer.alloc(44);
+    await handle.read(header, 0, 44, 0);
+
+    const riff = header.toString('ascii', 0, 4);
+    const wave = header.toString('ascii', 8, 12);
+
+    if (riff !== 'RIFF' || wave !== 'WAVE') {
+      return {
+        ok: false,
+        reason: 'Not a valid WAV header'
+      };
+    }
+
+    return {
+      ok: true,
+      audioFormat: header.readUInt16LE(20),
+      channels: header.readUInt16LE(22),
+      sampleRate: header.readUInt32LE(24),
+      byteRate: header.readUInt32LE(28),
+      blockAlign: header.readUInt16LE(32),
+      bitsPerSample: header.readUInt16LE(34),
+      dataSize: header.readUInt32LE(40)
+    };
+  } finally {
+    await handle.close();
+  }
 }
 
 function listPiperVoices() {

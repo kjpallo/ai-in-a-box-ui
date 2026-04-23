@@ -191,16 +191,23 @@ function playNextAudio() {
   setVoiceStatus('Piper is talking...');
 
   if (nextItem.mode === 'file' && nextItem.url) {
-    currentAudio = new Audio(nextItem.url);
+  const audioUrl = `${nextItem.url}?v=${Date.now()}`;
+  console.log('Playing audio file:', audioUrl, nextItem.wavInfo || null);
 
-    currentAudio.addEventListener('ended', handleAudioFinished, { once: true });
-    currentAudio.addEventListener('error', handleAudioFinished, { once: true });
+  currentAudio = new Audio(audioUrl);
+  currentAudio.preload = 'auto';
+  currentAudio.defaultPlaybackRate = 1.0;
+  currentAudio.playbackRate = 1.0;
 
-    currentAudio.play().catch(() => {
-      handleAudioFinished();
-    });
-    return;
-  }
+  currentAudio.addEventListener('ended', handleAudioFinished, { once: true });
+  currentAudio.addEventListener('error', handleAudioFinished, { once: true });
+
+  currentAudio.play().catch((error) => {
+    console.error('Audio play error:', error);
+    handleAudioFinished();
+  });
+  return;
+}
 
   const duration = nextItem.durationMs || 1200;
   currentPlaceholderTimer = window.setTimeout(() => {
