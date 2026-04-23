@@ -117,7 +117,9 @@ app.post('/api/chat', async (req, res) => {
 
   try {
     let fullText = '';
-    let pending = '';
+let pending = '';
+let speechBuffer = [];
+let firstChunkSent = false;
 
     await streamFromOllama({
       prompt: buildTeacherPrompt(message),
@@ -125,7 +127,7 @@ app.post('/api/chat', async (req, res) => {
       onText(textChunk) {
         if (!textChunk || clientClosed) return;
 
-        fullText += textChunk;
+         fullText += textChunk;
         pending += textChunk;
         sendEvent({ type: 'text_delta', chunk: textChunk });
 
@@ -133,14 +135,37 @@ app.post('/api/chat', async (req, res) => {
         pending = remaining;
 
         for (const sentence of complete) {
-          queueSentenceForSpeech(sentence.trim());
+          const cleaned = sentence.trim();
+          if (!cleaned) continue;
+
+          speechBuffer.push(cleaned);
+
+          if (!firstChunkSent) {
+            if (speechBuffer.length >= 2) {
+              queueSentenceForSpeech(speechBuffer.join(' '));
+              speechBuffer = [];
+              firstChunkSent = true;
+            }
+          } else {
+            queueSentenceForSpeech(speechBuffer.shift());
+          }
         }
       }
     });
 
-    const trailing = pending.trim();
+        const trailing = pending.trim();
     if (trailing) {
-      queueSentenceForSpeech(trailing);
+      speechBuffer.push(trailing);
+    }
+
+    if (speechBuffer.length) {
+      if (!firstChunkSent) {
+        queueSentenceForSpeech(speechBuffer.join(' '));
+      } else {
+        for (const chunk of speechBuffer) {
+          queueSentenceForSpeech(chunk);
+        }
+      }
     }
 
     await ttsChain;
