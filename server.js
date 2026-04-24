@@ -11,8 +11,8 @@ const publicDir = path.join(__dirname, 'public');
 const voicesDir = path.join(__dirname, 'voices');
 const audioDir = path.join(__dirname, 'audio');
 
-const PIPER_BACKEND = (process.env.PIPER_BACKEND || 'http').toLowerCase();
-const PIPER_HTTP_URL = process.env.PIPER_HTTP_URL || 'http://127.0.0.1:5001/tts';
+const PIPER_BACKEND = (process.env.PIPER_BACKEND || 'auto').toLowerCase();
+const PIPER_HTTP_URL = process.env.PIPER_HTTP_URL || '';
 const PIPER_AUDIO_MODE = (process.env.PIPER_AUDIO_MODE || 'file').toLowerCase();
 const PIPER_SAMPLE_RATE = Number(process.env.PIPER_SAMPLE_RATE || 0);
 const AUDIO_TTL_MS = Number(process.env.AUDIO_TTL_MS || 1000 * 60 * 30);
