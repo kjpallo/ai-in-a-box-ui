@@ -9,7 +9,7 @@ const voiceOrb = document.getElementById('voiceOrb');
 const voiceStatus = document.getElementById('voiceStatus');
 const voiceSelect = document.getElementById('voiceSelect');
 const voiceHint = document.getElementById('voiceHint');
-const foxVideo = document.getElementById('foxVideo');
+const voiceVisualizer = document.getElementById('voiceVisualizer');
 
 let activeRequestController = null;
 let currentAudio = null;
@@ -23,14 +23,12 @@ let isStreamingAudio = false;
 let streamChunksReceived = 0;
 const audioQueue = [];
 
+let visualizerCtx = null;
+let visualizerAnimationId = null;
+
 async function boot() {
   await checkHealth();
-
-  try {
-    await foxVideo.play();
-  } catch {
-    // Browser autoplay policies can block this until user interaction.
-  }
+  setupVoiceVisualizer();
 }
 
 chatForm.addEventListener('submit', async (event) => {
@@ -115,6 +113,102 @@ stopAudioButton.addEventListener('click', () => {
 voiceSelect.addEventListener('change', () => {
   selectedVoice = voiceSelect.value;
 });
+
+function setupVoiceVisualizer() {
+  if (!voiceVisualizer) return;
+
+  visualizerCtx = voiceVisualizer.getContext('2d');
+  resizeVoiceVisualizer();
+  window.addEventListener('resize', resizeVoiceVisualizer);
+
+  if (!visualizerAnimationId) {
+    drawVoiceVisualizer(0);
+  }
+}
+
+function resizeVoiceVisualizer() {
+  if (!voiceVisualizer || !visualizerCtx) return;
+
+  const rect = voiceVisualizer.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+
+  voiceVisualizer.width = Math.max(1, Math.floor(rect.width * dpr));
+  voiceVisualizer.height = Math.max(1, Math.floor(rect.height * dpr));
+
+  visualizerCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function drawVoiceVisualizer(time) {
+  if (!voiceVisualizer || !visualizerCtx) return;
+
+  const ctx = visualizerCtx;
+  const rect = voiceVisualizer.getBoundingClientRect();
+  const width = rect.width;
+  const height = rect.height;
+  const centerX = width / 2;
+  const centerY = height / 2;
+  const speaking = voiceOrb.classList.contains('speaking');
+
+  ctx.clearRect(0, 0, width, height);
+
+  const pulse = speaking
+    ? 0.75 + Math.sin(time * 0.01) * 0.15
+    : 0.22 + Math.sin(time * 0.002) * 0.03;
+
+  const coreRadius = Math.min(width, height) * (0.16 + pulse * 0.02);
+  const ringRadius = Math.min(width, height) * 0.28;
+  const barCount = 56;
+
+  const glow = ctx.createRadialGradient(centerX, centerY, coreRadius * 0.2, centerX, centerY, ringRadius * 1.35);
+  glow.addColorStop(0, speaking ? 'rgba(84,255,179,0.35)' : 'rgba(84,255,179,0.12)');
+  glow.addColorStop(0.45, speaking ? 'rgba(255,138,61,0.16)' : 'rgba(255,138,61,0.08)');
+  glow.addColorStop(1, 'rgba(0,0,0,0)');
+
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, ringRadius * 1.45, 0, Math.PI * 2);
+  ctx.fill();
+
+  for (let i = 0; i < barCount; i += 1) {
+    const angle = (i / barCount) * Math.PI * 2;
+    const waveA = Math.sin(time * 0.01 + i * 0.45);
+    const waveB = Math.sin(time * 0.006 - i * 0.32);
+    const motion = speaking
+      ? ((waveA + waveB + 2) / 4)
+      : ((waveB + 1) / 2) * 0.18;
+
+    const inner = ringRadius;
+    const outer = ringRadius + 8 + motion * 28;
+
+    const x1 = centerX + Math.cos(angle) * inner;
+    const y1 = centerY + Math.sin(angle) * inner;
+    const x2 = centerX + Math.cos(angle) * outer;
+    const y2 = centerY + Math.sin(angle) * outer;
+
+    ctx.strokeStyle = speaking
+      ? `rgba(84,255,179,${0.28 + motion * 0.65})`
+      : `rgba(84,255,179,${0.10 + motion * 0.22})`;
+
+    ctx.lineWidth = speaking ? 2.4 : 1.4;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+  }
+
+  const innerGlow = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, coreRadius);
+  innerGlow.addColorStop(0, speaking ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.65)');
+  innerGlow.addColorStop(0.15, speaking ? 'rgba(84,255,179,0.95)' : 'rgba(84,255,179,0.45)');
+  innerGlow.addColorStop(0.65, speaking ? 'rgba(255,138,61,0.26)' : 'rgba(255,138,61,0.14)');
+  innerGlow.addColorStop(1, 'rgba(0,0,0,0)');
+
+  ctx.fillStyle = innerGlow;
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, coreRadius, 0, Math.PI * 2);
+  ctx.fill();
+
+  visualizerAnimationId = requestAnimationFrame(drawVoiceVisualizer);
+}
 
 async function handleServerEvent(eventData) {
   switch (eventData.type) {
