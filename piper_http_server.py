@@ -55,11 +55,22 @@ def synthesize_wav_bytes(text: str) -> bytes:
 
     out = io.BytesIO()
     kwargs = {}
+    params = synth_sig.parameters
 
+    if "speaker_id" in params:
+        kwargs["speaker_id"] = SPEAKER_ID
+
+    if "length_scale" in params:
+        kwargs["length_scale"] = LENGTH_SCALE
+
+    if "sentence_silence" in params:
+        kwargs["sentence_silence"] = SENTENCE_SILENCE
+    elif "sentence_silence_seconds" in params:
+        kwargs["sentence_silence_seconds"] = SENTENCE_SILENCE
 
     with synth_lock:
         with wave.open(out, "wb") as wav_file:
-            voice.synthesize(text, wav_file)
+            voice.synthesize(text, wav_file, **kwargs)
 
     return out.getvalue()
 
@@ -124,6 +135,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             wav_bytes = synthesize_wav_bytes(text)
         except Exception as exc:
+            traceback.print_exc()
             self._send_json(500, {"ok": False, "error": str(exc)})
             return
 
