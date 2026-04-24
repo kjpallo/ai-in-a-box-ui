@@ -609,7 +609,11 @@ function resolveSampleRate(voiceModel) {
 
 function usingPiperHttp() {
   if (!PIPER_HTTP_URL) return false;
-  return PIPER_BACKEND === 'http';
+
+  if (PIPER_BACKEND === 'http') return true;
+  if (PIPER_BACKEND === 'auto') return true;
+
+  return false;
 }
 
 function getEffectiveTtsBackend() {
