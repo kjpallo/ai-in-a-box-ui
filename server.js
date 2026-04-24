@@ -17,6 +17,7 @@ const PIPER_AUDIO_MODE = (process.env.PIPER_AUDIO_MODE || 'file').toLowerCase();
 const PIPER_SAMPLE_RATE = Number(process.env.PIPER_SAMPLE_RATE || 0);
 const AUDIO_TTL_MS = Number(process.env.AUDIO_TTL_MS || 1000 * 60 * 30);
 const PIPER_LENGTH_SCALE = process.env.PIPER_LENGTH_SCALE || '1.25';
+const PIPER_BIN = process.env.PIPER_BIN || path.join(__dirname, '.venv', 'bin', 'piper');
 
 const DEFAULT_SYSTEM_PROMPT = [
   'You are a classroom assistant helping in a 9th-grade science class.',
@@ -417,7 +418,7 @@ async function runPiperHttp(sentence, outputFile, signal) {
 
 function runPiperCliFile(sentence, voiceModelPath, outputFile, signal) {
   return new Promise((resolve, reject) => {
-    const piper = spawn('piper', [
+    const piper = spawn(PIPER_BIN, [
       '--model',
       voiceModelPath,
       '--output_file',
@@ -465,7 +466,7 @@ function runPiperCliFile(sentence, voiceModelPath, outputFile, signal) {
 
 function runPiperCliStream(sentence, voiceModelPath, { onChunk, signal }) {
   return new Promise((resolve, reject) => {
-    const piper = spawn('piper', [
+    const piper = spawn(PIPER_BIN, [
       '--model',
       voiceModelPath,
       '--output-raw',
@@ -608,7 +609,7 @@ function resolveSampleRate(voiceModel) {
 
 function usingPiperHttp() {
   if (!PIPER_HTTP_URL) return false;
-  return PIPER_BACKEND === 'http' || PIPER_BACKEND === 'auto';
+  return PIPER_BACKEND === 'http';
 }
 
 function getEffectiveTtsBackend() {
