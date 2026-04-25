@@ -1,20 +1,33 @@
-{
-  "items": [
+{"items": [
     {
       "id": "gravity-earth-acceleration",
       "category": "constant",
       "title": "Gravity near Earth",
-      "terms": ["gravity", "force of gravity on earth", "gravity on earth", "earth gravity", "acceleration due to gravity", "g", "9.8"],
+      "terms": [
+        "gravity",
+        "force of gravity on earth",
+        "gravity on earth",
+        "earth gravity",
+        "acceleration due to gravity",
+        "g",
+        "9.8"
+      ],
       "fact": "Near Earth's surface, the acceleration due to gravity is about 9.8 m/s^2 downward. If a student asks for the force of gravity, clarify that force depends on mass.",
       "formula": "g = 9.8 m/s^2; weight force Fg = m × g",
-      "examples": ["A 10 kg object has weight Fg = 10 kg × 9.8 m/s^2 = 98 N."],
+      "examples": [
+        "A 10 kg object has weight Fg = 10 kg × 9.8 m/s^2 = 98 N."
+      ],
       "source": "Teacher-approved 9th-grade physical science reference"
     },
     {
       "id": "mass-definition",
       "category": "vocabulary",
       "title": "Mass",
-      "terms": ["mass", "what is mass", "define mass"],
+      "terms": [
+        "mass",
+        "what is mass",
+        "define mass"
+      ],
       "fact": "Mass is the amount of matter in an object. Mass is measured in grams or kilograms and does not change just because gravity changes.",
       "formula": "mass can be found from m = F/a or m = density × volume when those values are known",
       "source": "Teacher-approved 9th-grade physical science reference"
@@ -23,7 +36,12 @@
       "id": "weight-definition",
       "category": "vocabulary",
       "title": "Weight",
-      "terms": ["weight", "force of gravity", "weigh", "weighed"],
+      "terms": [
+        "weight",
+        "force of gravity",
+        "weigh",
+        "weighed"
+      ],
       "fact": "Weight is the force of gravity pulling on an object. Weight changes when gravity changes and is measured in newtons.",
       "formula": "Fg = m × g",
       "source": "Teacher-approved 9th-grade physical science reference"
@@ -32,7 +50,11 @@
       "id": "matter-definition",
       "category": "vocabulary",
       "title": "Matter",
-      "terms": ["matter", "define matter", "what is matter"],
+      "terms": [
+        "matter",
+        "define matter",
+        "what is matter"
+      ],
       "fact": "Matter is anything that has mass and takes up space.",
       "source": "Teacher-approved 9th-grade physical science reference"
     },
@@ -40,27 +62,42 @@
       "id": "density",
       "category": "formula",
       "title": "Density",
-      "terms": ["density", "calculate density", "mass divided by volume"],
+      "terms": [
+        "density",
+        "calculate density",
+        "mass divided by volume"
+      ],
       "fact": "Density tells how much mass is packed into a certain volume. Common units are g/mL, g/cm^3, or kg/m^3.",
       "formula": "density = mass / volume; D = m / V",
-      "examples": ["If mass = 20 g and volume = 5 cm^3, density = 20 / 5 = 4 g/cm^3."],
+      "examples": [
+        "If mass = 20 g and volume = 5 cm^3, density = 20 / 5 = 4 g/cm^3."
+      ],
       "source": "Teacher-approved 9th-grade physical science reference"
     },
     {
       "id": "speed",
       "category": "formula",
       "title": "Speed",
-      "terms": ["speed", "calculate speed", "distance divided by time"],
+      "terms": [
+        "speed",
+        "calculate speed",
+        "distance divided by time"
+      ],
       "fact": "Speed tells how fast an object moves. It does not include direction.",
       "formula": "speed = distance / time; s = d / t",
-      "examples": ["If distance = 100 m and time = 20 s, speed = 5 m/s."],
+      "examples": [
+        "If distance = 100 m and time = 20 s, speed = 5 m/s."
+      ],
       "source": "Teacher-approved 9th-grade physical science reference"
     },
     {
       "id": "velocity",
       "category": "vocabulary",
       "title": "Velocity",
-      "terms": ["velocity", "speed with direction"],
+      "terms": [
+        "velocity",
+        "speed with direction"
+      ],
       "fact": "Velocity is speed in a specific direction. A car moving 20 m/s north has a velocity because direction is included.",
       "source": "Teacher-approved 9th-grade physical science reference"
     },
@@ -68,27 +105,46 @@
       "id": "acceleration",
       "category": "formula",
       "title": "Acceleration",
-      "terms": ["acceleration", "calculate acceleration", "change in velocity"],
+      "terms": [
+        "acceleration",
+        "calculate acceleration",
+        "change in velocity"
+      ],
       "fact": "Acceleration is the rate that velocity changes over time. It can mean speeding up, slowing down, or changing direction.",
       "formula": "acceleration = change in velocity / time; a = Δv / t",
-      "examples": ["If velocity changes from 0 m/s to 20 m/s in 5 s, acceleration = 4 m/s^2."],
+      "examples": [
+        "If velocity changes from 0 m/s to 20 m/s in 5 s, acceleration = 4 m/s^2."
+      ],
       "source": "Teacher-approved 9th-grade physical science reference"
     },
     {
       "id": "newtons-second-law",
       "category": "formula",
       "title": "Newton's Second Law",
-      "terms": ["newton's second law", "newtons second law", "force equals mass times acceleration", "f equals m a", "net force"],
+      "terms": [
+        "newton's second law",
+        "newtons second law",
+        "force equals mass times acceleration",
+        "f equals m a",
+        "net force"
+      ],
       "fact": "Newton's Second Law says an object's acceleration depends on the net force on the object and the object's mass.",
       "formula": "Fnet = m × a",
-      "examples": ["If mass = 3 kg and acceleration = 2 m/s^2, net force = 6 N."],
+      "examples": [
+        "If mass = 3 kg and acceleration = 2 m/s^2, net force = 6 N."
+      ],
       "source": "Teacher-approved 9th-grade physical science reference"
     },
     {
       "id": "newtons-first-law",
       "category": "vocabulary",
       "title": "Newton's First Law",
-      "terms": ["newton's first law", "newtons first law", "law of inertia", "inertia"],
+      "terms": [
+        "newton's first law",
+        "newtons first law",
+        "law of inertia",
+        "inertia"
+      ],
       "fact": "Newton's First Law says an object at rest stays at rest, and an object in motion stays in motion at the same speed and direction, unless acted on by an unbalanced force.",
       "source": "Teacher-approved 9th-grade physical science reference"
     },
@@ -96,7 +152,12 @@
       "id": "newtons-third-law",
       "category": "vocabulary",
       "title": "Newton's Third Law",
-      "terms": ["newton's third law", "newtons third law", "action reaction", "equal and opposite"],
+      "terms": [
+        "newton's third law",
+        "newtons third law",
+        "action reaction",
+        "equal and opposite"
+      ],
       "fact": "Newton's Third Law says that for every action force, there is an equal and opposite reaction force.",
       "source": "Teacher-approved 9th-grade physical science reference"
     },
@@ -104,37 +165,60 @@
       "id": "momentum",
       "category": "formula",
       "title": "Momentum",
-      "terms": ["momentum", "calculate momentum", "mass times velocity"],
+      "terms": [
+        "momentum",
+        "calculate momentum",
+        "mass times velocity"
+      ],
       "fact": "Momentum describes how hard it is to stop a moving object. More mass or more velocity means more momentum.",
       "formula": "p = m × v",
-      "examples": ["If mass = 4 kg and velocity = 3 m/s, momentum = 12 kg·m/s."],
+      "examples": [
+        "If mass = 4 kg and velocity = 3 m/s, momentum = 12 kg·m/s."
+      ],
       "source": "Teacher-approved 9th-grade physical science reference"
     },
     {
       "id": "kinetic-energy",
       "category": "formula",
       "title": "Kinetic Energy",
-      "terms": ["kinetic energy", "energy of motion", "calculate kinetic energy"],
+      "terms": [
+        "kinetic energy",
+        "energy of motion",
+        "calculate kinetic energy"
+      ],
       "fact": "Kinetic energy is the energy an object has because it is moving.",
       "formula": "KE = 1/2 × m × v^2",
-      "examples": ["If mass = 2 kg and velocity = 3 m/s, KE = 0.5 × 2 × 9 = 9 J."],
+      "examples": [
+        "If mass = 2 kg and velocity = 3 m/s, KE = 0.5 × 2 × 9 = 9 J."
+      ],
       "source": "Teacher-approved 9th-grade physical science reference"
     },
     {
       "id": "potential-energy-gravity",
       "category": "formula",
       "title": "Gravitational Potential Energy",
-      "terms": ["potential energy", "gravitational potential energy", "stored energy", "height energy"],
+      "terms": [
+        "potential energy",
+        "gravitational potential energy",
+        "stored energy",
+        "height energy"
+      ],
       "fact": "Gravitational potential energy is stored energy based on an object's mass, gravity, and height.",
       "formula": "GPE = m × g × h",
-      "examples": ["If mass = 2 kg, g = 9.8 m/s^2, and height = 5 m, GPE = 98 J."],
+      "examples": [
+        "If mass = 2 kg, g = 9.8 m/s^2, and height = 5 m, GPE = 98 J."
+      ],
       "source": "Teacher-approved 9th-grade physical science reference"
     },
     {
       "id": "power",
       "category": "formula",
       "title": "Power",
-      "terms": ["power", "calculate power", "work divided by time"],
+      "terms": [
+        "power",
+        "calculate power",
+        "work divided by time"
+      ],
       "fact": "Power is how quickly work is done or energy is transferred.",
       "formula": "power = work / time; P = W / t",
       "source": "Teacher-approved 9th-grade physical science reference"
@@ -143,7 +227,11 @@
       "id": "work",
       "category": "formula",
       "title": "Work",
-      "terms": ["work", "calculate work", "force times distance"],
+      "terms": [
+        "work",
+        "calculate work",
+        "force times distance"
+      ],
       "fact": "In physics, work happens when a force moves an object over a distance in the direction of the force.",
       "formula": "work = force × distance; W = F × d",
       "source": "Teacher-approved 9th-grade physical science reference"
@@ -152,17 +240,28 @@
       "id": "ohms-law",
       "category": "formula",
       "title": "Ohm's Law",
-      "terms": ["ohm's law", "ohms law", "voltage current resistance", "electricity formula"],
+      "terms": [
+        "ohm's law",
+        "ohms law",
+        "voltage current resistance",
+        "electricity formula"
+      ],
       "fact": "Ohm's Law shows the relationship between voltage, current, and resistance in a circuit.",
       "formula": "V = I × R",
-      "examples": ["If current = 2 A and resistance = 6 Ω, voltage = 12 V."],
+      "examples": [
+        "If current = 2 A and resistance = 6 Ω, voltage = 12 V."
+      ],
       "source": "Teacher-approved physical science reference"
     },
     {
       "id": "atom",
       "category": "vocabulary",
       "title": "Atom",
-      "terms": ["atom", "define atom", "parts of an atom"],
+      "terms": [
+        "atom",
+        "define atom",
+        "parts of an atom"
+      ],
       "fact": "An atom is the smallest unit of an element that still has that element's properties. Atoms contain protons, neutrons, and electrons.",
       "source": "Teacher-approved 9th-grade physical science reference"
     },
@@ -170,7 +269,11 @@
       "id": "proton",
       "category": "vocabulary",
       "title": "Proton",
-      "terms": ["proton", "atomic number", "positive particle"],
+      "terms": [
+        "proton",
+        "atomic number",
+        "positive particle"
+      ],
       "fact": "A proton is a positively charged particle in the nucleus of an atom. The number of protons tells the element's atomic number and identity.",
       "source": "Teacher-approved 9th-grade physical science reference"
     },
@@ -178,7 +281,11 @@
       "id": "neutron",
       "category": "vocabulary",
       "title": "Neutron",
-      "terms": ["neutron", "neutral particle", "mass number"],
+      "terms": [
+        "neutron",
+        "neutral particle",
+        "mass number"
+      ],
       "fact": "A neutron is a particle in the nucleus with no electric charge. Protons plus neutrons make the mass number.",
       "source": "Teacher-approved 9th-grade physical science reference"
     },
@@ -186,7 +293,11 @@
       "id": "electron",
       "category": "vocabulary",
       "title": "Electron",
-      "terms": ["electron", "negative particle", "valence electron"],
+      "terms": [
+        "electron",
+        "negative particle",
+        "valence electron"
+      ],
       "fact": "An electron is a negatively charged particle found outside the nucleus. Valence electrons are the outer electrons involved in bonding.",
       "source": "Teacher-approved 9th-grade physical science reference"
     },
@@ -194,7 +305,12 @@
       "id": "ion",
       "category": "vocabulary",
       "title": "Ion",
-      "terms": ["ion", "charged atom", "cation", "anion"],
+      "terms": [
+        "ion",
+        "charged atom",
+        "cation",
+        "anion"
+      ],
       "fact": "An ion is an atom or group of atoms with a charge because it gained or lost electrons. Losing electrons makes a positive ion; gaining electrons makes a negative ion.",
       "source": "Teacher-approved 9th-grade physical science reference"
     },
@@ -202,7 +318,10 @@
       "id": "isotope",
       "category": "vocabulary",
       "title": "Isotope",
-      "terms": ["isotope", "same element different neutrons"],
+      "terms": [
+        "isotope",
+        "same element different neutrons"
+      ],
       "fact": "Isotopes are atoms of the same element with the same number of protons but different numbers of neutrons.",
       "source": "Teacher-approved 9th-grade physical science reference"
     },
@@ -210,7 +329,14 @@
       "id": "periodic-table-groups-periods",
       "category": "periodic table",
       "title": "Periodic Table Groups and Periods",
-      "terms": ["periodic table", "groups", "periods", "families", "columns", "rows"],
+      "terms": [
+        "periodic table",
+        "groups",
+        "periods",
+        "families",
+        "columns",
+        "rows"
+      ],
       "fact": "Groups are vertical columns on the periodic table. Periods are horizontal rows. Elements in the same group often have similar properties because they have the same number of valence electrons.",
       "source": "Teacher-approved periodic table reference"
     },
@@ -218,9 +344,1498 @@
       "id": "common-elements",
       "category": "periodic table",
       "title": "Common Element Quick Reference",
-      "terms": ["hydrogen", "helium", "carbon", "oxygen", "sodium", "chlorine", "iron", "gold", "element symbols", "atomic numbers"],
+      "terms": [
+        "hydrogen",
+        "helium",
+        "carbon",
+        "oxygen",
+        "sodium",
+        "chlorine",
+        "iron",
+        "gold",
+        "element symbols",
+        "atomic numbers"
+      ],
       "fact": "Common element symbols and atomic numbers: Hydrogen H=1, Helium He=2, Carbon C=6, Nitrogen N=7, Oxygen O=8, Sodium Na=11, Chlorine Cl=17, Iron Fe=26, Copper Cu=29, Silver Ag=47, Gold Au=79, Lead Pb=82.",
       "source": "Teacher-approved periodic table reference"
+    },
+    {
+      "id": "atomic-number",
+      "category": "periodic table",
+      "title": "Atomic Number",
+      "terms": [
+        "atomic number",
+        "number of protons",
+        "identify an element",
+        "protons identify element"
+      ],
+      "fact": "The atomic number tells the number of protons in an atom. The atomic number is used to identify the element. In a neutral atom, the number of protons equals the number of electrons.",
+      "examples": [
+        "Carbon has atomic number 6, so every carbon atom has 6 protons."
+      ],
+      "source": "Concept 2 Notes - Isotopes.pptx, slide 3"
+    },
+    {
+      "id": "chemical-symbol",
+      "category": "periodic table",
+      "title": "Chemical Symbol",
+      "terms": [
+        "chemical symbol",
+        "element symbol",
+        "symbol on periodic table",
+        "atomic symbol"
+      ],
+      "fact": "A chemical symbol is the abbreviation used to represent an element on the periodic table.",
+      "examples": [
+        "H is hydrogen, O is oxygen, Na is sodium, and Cl is chlorine."
+      ],
+      "source": "Concept 2 Notes - Isotopes.pptx, slide 3"
+    },
+    {
+      "id": "mass-number",
+      "category": "atomic structure",
+      "title": "Mass Number",
+      "terms": [
+        "mass number",
+        "calculate mass number",
+        "protons plus neutrons",
+        "p plus n",
+        "p+ plus n0"
+      ],
+      "fact": "Mass number tells the total number of protons and neutrons in the nucleus of an atom. Most of an atom's mass is found in the nucleus.",
+      "formula": "mass number = protons + neutrons",
+      "examples": [
+        "If an atom has 11 protons and 12 neutrons, its mass number is 23."
+      ],
+      "source": "Concept 2 Notes - Isotopes.pptx, slide 4"
+    },
+    {
+      "id": "neutrons-from-mass-number",
+      "category": "atomic structure",
+      "title": "Finding Neutrons",
+      "terms": [
+        "find neutrons",
+        "calculate neutrons",
+        "mass number minus atomic number",
+        "how many neutrons"
+      ],
+      "fact": "To find the number of neutrons, subtract the atomic number from the mass number. The atomic number is the number of protons.",
+      "formula": "neutrons = mass number - atomic number",
+      "examples": [
+        "Potassium-40 has 19 protons, so it has 40 - 19 = 21 neutrons."
+      ],
+      "source": "Concept 2 Notes - Isotopes.pptx, slide 8"
+    },
+    {
+      "id": "neutral-atom-electrons",
+      "category": "atomic structure",
+      "title": "Electrons in a Neutral Atom",
+      "terms": [
+        "neutral atom electrons",
+        "electrons equal protons",
+        "neutral atom",
+        "number of electrons"
+      ],
+      "fact": "In an electrically neutral atom, the number of electrons equals the number of protons.",
+      "examples": [
+        "A neutral oxygen atom has 8 protons and 8 electrons."
+      ],
+      "source": "Concept 2 Notes - Isotopes.pptx, slide 3"
+    },
+    {
+      "id": "nucleus",
+      "category": "atomic structure",
+      "title": "Nucleus",
+      "terms": [
+        "nucleus",
+        "atomic nucleus",
+        "center of atom",
+        "dense center"
+      ],
+      "fact": "The nucleus is the dense center of the atom. It contains protons and neutrons, has a positive charge, and contains most of the atom's mass.",
+      "source": "Concept 1 Notes - Structure of the Atom.pptx, slide 7"
+    },
+    {
+      "id": "electron-cloud",
+      "category": "atomic structure",
+      "title": "Electron Cloud",
+      "terms": [
+        "electron cloud",
+        "energy levels",
+        "shells",
+        "outside nucleus",
+        "where electrons are"
+      ],
+      "fact": "The electron cloud is the space around the nucleus where electrons are found. It is divided into energy levels or shells. Electrons farther from the nucleus have more energy.",
+      "source": "Concept 1 Notes - Structure of the Atom.pptx, slide 7"
+    },
+    {
+      "id": "valence-electrons",
+      "category": "atomic structure",
+      "title": "Valence Electrons",
+      "terms": [
+        "valence electron",
+        "valence electrons",
+        "outer electrons",
+        "outermost energy level"
+      ],
+      "fact": "Valence electrons are the electrons in the outermost energy level of an atom. They are important because they help determine how an atom bonds with other atoms.",
+      "source": "Concept 1 Notes - Structure of the Atom.pptx, slide 7"
+    },
+    {
+      "id": "atomic-models-history",
+      "category": "atomic structure",
+      "title": "Atomic Model History",
+      "terms": [
+        "atomic models",
+        "history of atomic model",
+        "democritus dalton thomson rutherford bohr electron cloud",
+        "plum pudding model",
+        "bohr model",
+        "electron cloud model"
+      ],
+      "fact": "Atomic models changed over time as scientists gathered more evidence. Democritus named the atom, Dalton described atoms as solid spheres, Thomson proposed the plum pudding model, Rutherford discovered the nucleus, Bohr described electrons in fixed energy levels, and the electron cloud model describes electrons in regions of space instead of fixed orbits.",
+      "source": "Concept 1 Notes - Structure of the Atom.pptx, slides 4-6"
+    },
+    {
+      "id": "isotope-notation",
+      "category": "isotopes",
+      "title": "Isotope Notation",
+      "terms": [
+        "isotope notation",
+        "hyphen notation",
+        "nuclear notation",
+        "potassium-40",
+        "write isotope",
+        "mass symbol"
+      ],
+      "fact": "Isotopes can be written in hyphen form or nuclear form. Hyphen form uses the element name and mass number. Nuclear form places the mass number before the chemical symbol.",
+      "examples": [
+        "Potassium-40 and 40K both mean potassium with a mass number of 40.",
+        "Boron-11 can be written as 11B."
+      ],
+      "source": "Concept 2 Notes - Isotopes.pptx, slides 8-9"
+    },
+    {
+      "id": "average-atomic-mass",
+      "category": "isotopes",
+      "title": "Average Atomic Mass",
+      "terms": [
+        "average atomic mass",
+        "weighted average",
+        "most common isotope",
+        "atomic mass decimal"
+      ],
+      "fact": "Average atomic mass is the weighted average of all the naturally occurring isotopes of an element. It is closest to the most common isotope.",
+      "examples": [
+        "Hydrogen's average atomic mass is about 1.01, so the most common isotope is hydrogen-1."
+      ],
+      "source": "Concept 2 Notes - Isotopes.pptx, slide 10"
+    },
+    {
+      "id": "periodic-table-definition",
+      "category": "periodic table",
+      "title": "Periodic Table",
+      "terms": [
+        "periodic table",
+        "what is periodic table",
+        "define periodic table"
+      ],
+      "fact": "The periodic table organizes all known elements by atomic number and chemical properties.",
+      "source": "Concept 3 Notes -Periodic Table.pptx, slide 2"
+    },
+    {
+      "id": "periodic-table-groups-valence",
+      "category": "periodic table",
+      "title": "Groups and Valence Electrons",
+      "terms": [
+        "groups valence electrons",
+        "group number valence electrons",
+        "columns valence electrons",
+        "same group same properties"
+      ],
+      "fact": "Groups are vertical columns on the periodic table. Elements in the same group have the same number of valence electrons, which is why they often have similar chemical properties.",
+      "examples": [
+        "Group 1 elements have 1 valence electron. Group 2 elements have 2 valence electrons. Group 17 elements have 7 valence electrons. Group 18 elements usually have 8 valence electrons, except helium."
+      ],
+      "source": "Concept 3 Notes -Periodic Table.pptx, slide 3"
+    },
+    {
+      "id": "periodic-table-periods-energy-levels",
+      "category": "periodic table",
+      "title": "Periods and Energy Levels",
+      "terms": [
+        "periods energy levels",
+        "period number",
+        "rows on periodic table",
+        "energy levels from period"
+      ],
+      "fact": "Periods are horizontal rows on the periodic table. Elements in the same period have the same number of energy levels in their electron cloud.",
+      "examples": [
+        "Magnesium is in period 3, so it has 3 energy levels."
+      ],
+      "source": "Concept 3 Notes -Periodic Table.pptx, slide 7"
+    },
+    {
+      "id": "group-names",
+      "category": "periodic table",
+      "title": "Periodic Table Group Names",
+      "terms": [
+        "group names",
+        "alkali metals",
+        "alkaline earth metals",
+        "transition metals",
+        "halogens",
+        "noble gases",
+        "rare earth metals"
+      ],
+      "fact": "Important periodic table group names include Group 1 alkali metals, Group 2 alkaline earth metals, Groups 3-12 transition metals, Group 17 halogens, and Group 18 noble gases. Noble gases are mostly nonreactive because they are already stable.",
+      "source": "Concept 3 Notes -Periodic Table.pptx, slide 5"
+    },
+    {
+      "id": "metal-reactivity-trend",
+      "category": "periodic table",
+      "title": "Metal Reactivity Trend",
+      "terms": [
+        "metal reactivity",
+        "reactivity of metals",
+        "alkali metals reactive",
+        "reactivity increases down group"
+      ],
+      "fact": "For metals, reactivity generally increases as you move down a group. Group 1 alkali metals are the most reactive metals, not including hydrogen.",
+      "source": "Concept 3 Notes -Periodic Table.pptx, slide 5"
+    },
+    {
+      "id": "nonmetal-reactivity-trend",
+      "category": "periodic table",
+      "title": "Nonmetal Reactivity Trend",
+      "terms": [
+        "nonmetal reactivity",
+        "reactivity of nonmetals",
+        "halogens reactive",
+        "reactivity decreases down group"
+      ],
+      "fact": "For nonmetals, reactivity generally decreases as you move down a group. Group 17 halogens are the most reactive nonmetals.",
+      "source": "Concept 3 Notes -Periodic Table.pptx, slide 5"
+    },
+    {
+      "id": "metals-properties",
+      "category": "periodic table",
+      "title": "Metals",
+      "terms": [
+        "metals",
+        "properties of metals",
+        "metal properties",
+        "where are metals"
+      ],
+      "fact": "Metals are usually shiny, silvery solids that conduct heat and electricity well. They are malleable and ductile and are located to the left of the metalloids on the periodic table.",
+      "source": "Concept 3 Notes -Periodic Table.pptx, slide 10"
+    },
+    {
+      "id": "nonmetals-properties",
+      "category": "periodic table",
+      "title": "Nonmetals",
+      "terms": [
+        "nonmetals",
+        "properties of nonmetals",
+        "nonmetal properties",
+        "where are nonmetals"
+      ],
+      "fact": "Nonmetals may be gases or dull, brittle solids. They are poor conductors and are found to the right of the metalloids, with hydrogen as an exception.",
+      "source": "Concept 3 Notes -Periodic Table.pptx, slide 11"
+    },
+    {
+      "id": "metalloids-properties",
+      "category": "periodic table",
+      "title": "Metalloids",
+      "terms": [
+        "metalloids",
+        "properties of metalloids",
+        "semiconductors",
+        "metalloid properties"
+      ],
+      "fact": "Metalloids are solids and semiconductors. They have physical properties like metals but chemical properties like nonmetals.",
+      "source": "Concept 3 Notes -Periodic Table.pptx, slide 12"
+    },
+    {
+      "id": "bohr-model",
+      "category": "atomic structure",
+      "title": "Bohr Model",
+      "terms": [
+        "bohr model",
+        "draw bohr model",
+        "bohr diagram",
+        "energy level drawing"
+      ],
+      "fact": "A Bohr model is a simple diagram that shows the atomic structure of an atom. It shows protons and neutrons in the nucleus and electrons placed in energy levels around the nucleus.",
+      "source": "Concept 3 Notes -Periodic Table.pptx, slide 13"
+    },
+    {
+      "id": "bohr-model-steps",
+      "category": "atomic structure",
+      "title": "How to Draw a Bohr Model",
+      "terms": [
+        "how to draw bohr model",
+        "bohr model steps",
+        "draw atom",
+        "bohr diagram steps"
+      ],
+      "fact": "To draw a Bohr model, use the atomic number to find protons, subtract atomic number from mass number to find neutrons, place protons and neutrons in the nucleus, use the period number to find energy levels, then place electrons from the inside energy level outward. For a neutral atom, electrons equal protons.",
+      "examples": [
+        "If mass number is not given, round the average atomic mass to estimate the most common isotope."
+      ],
+      "source": "Concept 3 Notes -Periodic Table.pptx, slide 14"
+    },
+    {
+      "id": "energy-level-capacity-basic",
+      "category": "atomic structure",
+      "title": "Basic Energy Level Capacity",
+      "terms": [
+        "energy level capacity",
+        "how many electrons in each shell",
+        "electron shells",
+        "first energy level",
+        "second energy level"
+      ],
+      "fact": "For this physical science class, the first energy level holds up to 2 electrons, the second holds up to 8, the third holds up to 8, and the fourth holds up to 18.",
+      "source": "Concept 3 Notes -Periodic Table.pptx, slide 7"
+    },
+    {
+      "id": "compound-definition-chemistry",
+      "category": "bonding",
+      "title": "Compound",
+      "terms": [
+        "compound",
+        "define compound",
+        "two or more elements chemically combined",
+        "what is a compound"
+      ],
+      "fact": "A compound is a substance made of two or more different elements chemically combined. The properties of a compound can be very different from the properties of the elements that make it.",
+      "examples": [
+        "Sodium and chlorine have very different properties from sodium chloride, NaCl."
+      ],
+      "source": "Concept 1 Notes - Stability and Bonding.pptx, slide 2"
+    },
+    {
+      "id": "chemical-formula",
+      "category": "bonding",
+      "title": "Chemical Formula",
+      "terms": [
+        "chemical formula",
+        "formula tells atoms",
+        "subscript chemical formula",
+        "what does h2o mean"
+      ],
+      "fact": "A chemical formula tells which elements are in a compound and how many atoms of each element are in one unit of the compound.",
+      "examples": [
+        "H2O contains 2 hydrogen atoms and 1 oxygen atom.",
+        "NH3 contains 1 nitrogen atom and 3 hydrogen atoms."
+      ],
+      "source": "Concept 1 Notes - Stability and Bonding.pptx, slide 3"
+    },
+    {
+      "id": "octet-rule",
+      "category": "bonding",
+      "title": "Octet Rule",
+      "terms": [
+        "octet rule",
+        "stable atoms",
+        "full outer shell",
+        "8 valence electrons",
+        "why atoms bond"
+      ],
+      "fact": "The octet rule says atoms gain, lose, or share electrons to have 8 electrons in their outer energy level. Hydrogen and helium are exceptions because they are stable with 2 electrons.",
+      "source": "Concept 1 Notes - Stability and Bonding.pptx, slide 4"
+    },
+    {
+      "id": "chemical-bond",
+      "category": "bonding",
+      "title": "Chemical Bond",
+      "terms": [
+        "chemical bond",
+        "bond",
+        "why do atoms bond",
+        "force that holds atoms together"
+      ],
+      "fact": "A chemical bond is a force that holds atoms together in a substance. Atoms form bonds by gaining, losing, or sharing electrons to become more stable.",
+      "source": "Concept 1 Notes - Stability and Bonding.pptx, slide 8"
+    },
+    {
+      "id": "noble-gases-stable",
+      "category": "bonding",
+      "title": "Noble Gases and Stability",
+      "terms": [
+        "noble gases stable",
+        "why noble gases are nonreactive",
+        "noble gases nonreactive",
+        "group 18 stable"
+      ],
+      "fact": "Noble gases are mostly nonreactive because their outermost energy levels are already full, making them chemically stable.",
+      "source": "Concept 1 Notes - Stability and Bonding.pptx, slide 6"
+    },
+    {
+      "id": "ionic-bond-expanded",
+      "category": "bonding",
+      "title": "Ionic Bond",
+      "terms": [
+        "ionic bond",
+        "ionic bonding",
+        "metal nonmetal bond",
+        "transfer electrons",
+        "electrons transferred"
+      ],
+      "fact": "An ionic bond forms when electrons are transferred from one atom to another so the atoms become stable. Ionic bonds usually form between a metal and a nonmetal and result in the formation of ions.",
+      "examples": [
+        "Sodium loses 1 electron and chlorine gains 1 electron to form NaCl."
+      ],
+      "source": "Concept 1 Notes - Stability and Bonding.pptx, slide 8"
+    },
+    {
+      "id": "cation",
+      "category": "bonding",
+      "title": "Cation",
+      "terms": [
+        "cation",
+        "positive ion",
+        "metal ion",
+        "lost electrons"
+      ],
+      "fact": "A cation is a positively charged ion. Cations form when atoms lose electrons. Metals usually form cations.",
+      "examples": [
+        "Magnesium loses 2 electrons to form Mg+2."
+      ],
+      "source": "Concept 1 Notes - Stability and Bonding.pptx, slides 9-10"
+    },
+    {
+      "id": "anion",
+      "category": "bonding",
+      "title": "Anion",
+      "terms": [
+        "anion",
+        "negative ion",
+        "nonmetal ion",
+        "gained electrons"
+      ],
+      "fact": "An anion is a negatively charged ion. Anions form when atoms gain electrons. Nonmetals usually form anions.",
+      "examples": [
+        "Oxygen gains 2 electrons to form O-2."
+      ],
+      "source": "Concept 1 Notes - Stability and Bonding.pptx, slides 11-12"
+    },
+    {
+      "id": "oxidation-number",
+      "category": "bonding",
+      "title": "Oxidation Number",
+      "terms": [
+        "oxidation number",
+        "ion charge",
+        "charge of ion",
+        "superscript charge"
+      ],
+      "fact": "An oxidation number is the charge of an ion in a compound. It is written as a superscript to the right of the chemical symbol.",
+      "examples": [
+        "Group 1 forms +1 ions, Group 2 forms +2 ions, Group 13 forms +3 ions, Group 15 forms -3 ions, Group 16 forms -2 ions, and Group 17 forms -1 ions."
+      ],
+      "source": "Concept 1 Notes - Stability and Bonding.pptx, slide 16"
+    },
+    {
+      "id": "common-ion-charges",
+      "category": "bonding",
+      "title": "Common Ion Charges by Group",
+      "terms": [
+        "common ion charges",
+        "group ion charges",
+        "predict ion charge",
+        "oxidation numbers by group"
+      ],
+      "fact": "For main-group elements, common ion charges can be predicted from the group number. Group 1 forms +1, Group 2 forms +2, Group 13 forms +3, Group 14 can be plus or minus 4, Group 15 forms -3, Group 16 forms -2, and Group 17 forms -1. Skip transition metals because their charges can vary.",
+      "source": "Concept 1 Notes - Stability and Bonding.pptx, slide 16"
+    },
+    {
+      "id": "lewis-dot-diagram",
+      "category": "bonding",
+      "title": "Lewis Dot Diagram",
+      "terms": [
+        "lewis dot",
+        "electron dot",
+        "electron dot diagram",
+        "draw dots",
+        "valence dot diagram"
+      ],
+      "fact": "A Lewis dot diagram, also called an electron dot diagram, shows the valence electrons of an atom as dots around the chemical symbol.",
+      "examples": [
+        "Use the group number to find the number of valence electrons, then draw that many dots around the symbol."
+      ],
+      "source": "Concept 1 Notes - Stability and Bonding.pptx, slides 17-19"
+    },
+    {
+      "id": "electron-dot-bonding-formulas",
+      "category": "bonding",
+      "title": "Using Electron Dot Diagrams for Bonding",
+      "terms": [
+        "electron dot bonding",
+        "use lewis dot to form compound",
+        "transfer electrons in dot diagram",
+        "write formula from dots"
+      ],
+      "fact": "To use electron dot diagrams for ionic bonding, draw the electron dot structures, transfer electrons from the metal to the nonmetal, add atoms as needed until all atoms are stable, then write the chemical formula using subscripts.",
+      "examples": [
+        "Potassium and chlorine form KCl.",
+        "Magnesium and fluorine form MgF2.",
+        "Aluminum and nitrogen form AlN.",
+        "Magnesium and phosphorus form Mg3P2."
+      ],
+      "source": "Concept 1 Notes - Stability and Bonding.pptx, slides 21-26"
+    },
+    {
+      "id": "ionic-compound",
+      "category": "ionic compounds",
+      "title": "Ionic Compound",
+      "terms": [
+        "ionic compound",
+        "charged ions compound",
+        "metal and nonmetal compound",
+        "overall charge zero"
+      ],
+      "fact": "An ionic compound is made of charged ions. The metal forms a positive cation and the nonmetal forms a negative anion. The overall charge of the compound must be zero.",
+      "source": "Concept 2 Notes - Naming Ionic Compounds.pptx, slide 3"
+    },
+    {
+      "id": "ionic-formula-crisscross",
+      "category": "ionic compounds",
+      "title": "Writing Ionic Formulas",
+      "terms": [
+        "write ionic formula",
+        "crisscross",
+        "criss cross applesauce",
+        "ionic formula",
+        "formula for ionic compound"
+      ],
+      "fact": "To write an ionic formula, write the ions with their charges, crisscross the charges to become subscripts, rewrite the formula with subscripts, and reduce or simplify if needed. The final compound must have an overall charge of zero.",
+      "examples": [
+        "Magnesium and phosphorus form Mg3P2 because 3(+2) + 2(-3) = 0.",
+        "Calcium and oxygen form CaO, not Ca2O2, because the formula is reduced."
+      ],
+      "source": "Concept 2 Notes - Naming Ionic Compounds.pptx, slides 4-5"
+    },
+    {
+      "id": "naming-ionic-compounds-basic",
+      "category": "ionic compounds",
+      "title": "Naming Ionic Compounds",
+      "terms": [
+        "name ionic compound",
+        "ionic compound name",
+        "formula to name ionic",
+        "ide ending"
+      ],
+      "fact": "To name a basic ionic compound, write the name of the metal first. Then write the name of the nonmetal with an -ide ending.",
+      "examples": [
+        "CaS is calcium sulfide.",
+        "MgCl2 is magnesium chloride.",
+        "Na2O is sodium oxide."
+      ],
+      "source": "Concept 2 Notes - Naming Ionic Compounds.pptx, slide 7"
+    },
+    {
+      "id": "polyatomic-ion",
+      "category": "ionic compounds",
+      "title": "Polyatomic Ion",
+      "terms": [
+        "polyatomic ion",
+        "polyatomic ions",
+        "group of atoms with charge",
+        "covalently bonded ion"
+      ],
+      "fact": "A polyatomic ion is a positively or negatively charged group of covalently bonded atoms. When naming or writing formulas, keep the polyatomic ion together and use its special name.",
+      "source": "Concept 2 Notes - Naming Ionic Compounds.pptx, slide 10"
+    },
+    {
+      "id": "common-polyatomic-ions",
+      "category": "ionic compounds",
+      "title": "Common Polyatomic Ions",
+      "terms": [
+        "common polyatomic ions",
+        "ammonium sulfate nitrate carbonate hydroxide acetate phosphate chlorate",
+        "polyatomic ion list"
+      ],
+      "fact": "Common polyatomic ions to know: ammonium NH4+1, nitrate NO3-1, hydroxide OH-1, acetate C2H3O2-1, sulfate SO4-2, carbonate CO3-2, phosphate PO4-3, and chlorate ClO3-1.",
+      "source": "Concept 2 Notes - Naming Ionic Compounds.pptx, slide 10"
+    },
+    {
+      "id": "naming-ionic-polyatomic",
+      "category": "ionic compounds",
+      "title": "Naming Ionic Compounds with Polyatomic Ions",
+      "terms": [
+        "name compound with polyatomic ion",
+        "polyatomic naming",
+        "sodium phosphate",
+        "magnesium sulfate",
+        "ammonium chloride"
+      ],
+      "fact": "When naming ionic compounds with polyatomic ions, use the special name of the polyatomic ion. Do not change a polyatomic ion to an -ide ending.",
+      "examples": [
+        "Na3PO4 is sodium phosphate.",
+        "MgSO4 is magnesium sulfate.",
+        "NH4Cl is ammonium chloride."
+      ],
+      "source": "Concept 2 Notes - Naming Ionic Compounds.pptx, slide 11"
+    },
+    {
+      "id": "writing-polyatomic-formulas",
+      "category": "ionic compounds",
+      "title": "Writing Formulas with Polyatomic Ions",
+      "terms": [
+        "write formula with polyatomic ion",
+        "polyatomic formula",
+        "parentheses polyatomic ion",
+        "calcium phosphate"
+      ],
+      "fact": "When writing formulas with polyatomic ions, keep the polyatomic ion together. Use parentheses if more than one of the polyatomic ion is needed. Do not change anything inside the polyatomic ion.",
+      "examples": [
+        "Calcium phosphate is Ca3(PO4)2.",
+        "Calcium nitrate is Ca(NO3)2.",
+        "Aluminum hydroxide is Al(OH)3."
+      ],
+      "source": "Concept 2 Notes - Naming Ionic Compounds.pptx, slide 13"
+    },
+    {
+      "id": "transition-metal-roman-numeral",
+      "category": "ionic compounds",
+      "title": "Transition Metals and Roman Numerals",
+      "terms": [
+        "transition metal",
+        "roman numeral",
+        "transition metal charge",
+        "iron ii",
+        "iron iii",
+        "copper i",
+        "copper ii"
+      ],
+      "fact": "Transition metals can form more than one ion charge, so a Roman numeral is used in the compound name to show the charge of the metal.",
+      "examples": [
+        "CuCl is copper (I) chloride.",
+        "CuCl2 is copper (II) chloride.",
+        "FeSO4 is iron (II) sulfate."
+      ],
+      "source": "Concept 2 Notes - Naming Ionic Compounds.pptx, slides 16-17"
+    },
+    {
+      "id": "finding-transition-metal-charge",
+      "category": "ionic compounds",
+      "title": "Finding a Transition Metal Charge",
+      "terms": [
+        "find roman numeral",
+        "determine roman numeral",
+        "transition metal charge from formula",
+        "reverse crisscross"
+      ],
+      "fact": "To find the Roman numeral for a transition metal, use the known charge of the nonmetal or polyatomic ion and determine what metal charge makes the total compound charge zero. Reverse crisscross can help, but always double check because formulas may have been simplified.",
+      "examples": [
+        "In Sn3(PO4)4, phosphate is -3. Four phosphates give -12 total, so three tin ions must give +12 total. Each tin is +4, so the name is tin (IV) phosphate.",
+        "In FeSO4, sulfate is -2, so iron must be +2. The name is iron (II) sulfate."
+      ],
+      "source": "Concept 2 Notes - Naming Ionic Compounds.pptx, slides 18-19"
+    },
+    {
+      "id": "covalent-bond-expanded",
+      "category": "covalent compounds",
+      "title": "Covalent Bond",
+      "terms": [
+        "covalent bond",
+        "covalent bonding",
+        "share electrons",
+        "nonmetal nonmetal bond"
+      ],
+      "fact": "A covalent bond forms when nonmetal atoms share electrons. Covalent compounds are usually made of nonmetals.",
+      "source": "Concept 3 Notes - Naming Covalent Compounds.pptx, slide 2"
+    },
+    {
+      "id": "molecule",
+      "category": "covalent compounds",
+      "title": "Molecule",
+      "terms": [
+        "molecule",
+        "define molecule",
+        "covalently bonded compound"
+      ],
+      "fact": "A molecule is a compound formed when two or more elements are covalently bonded.",
+      "source": "Concept 3 Notes - Naming Covalent Compounds.pptx, slide 2"
+    },
+    {
+      "id": "single-double-triple-bonds",
+      "category": "covalent compounds",
+      "title": "Single, Double, and Triple Bonds",
+      "terms": [
+        "single bond",
+        "double bond",
+        "triple bond",
+        "shared electrons",
+        "bond pairs"
+      ],
+      "fact": "Covalent bonds can be single, double, or triple. A single bond shares 2 electrons, a double bond shares 4 electrons, and a triple bond shares 6 electrons.",
+      "examples": [
+        "H2 has a single bond.",
+        "O2 has a double bond.",
+        "N2 has a triple bond."
+      ],
+      "source": "Concept 3 Notes - Naming Covalent Compounds.pptx, slides 2-5"
+    },
+    {
+      "id": "properties-covalent-compounds",
+      "category": "covalent compounds",
+      "title": "Properties of Covalent Compounds",
+      "terms": [
+        "properties of covalent compounds",
+        "covalent compound properties",
+        "can covalent compounds conduct electricity",
+        "covalent melting point"
+      ],
+      "fact": "Covalent compounds are made of nonmetals sharing electrons. They form molecules that can be solids, liquids, or gases. They usually have low melting and boiling points and do not conduct electricity when dissolved in water.",
+      "source": "Concept 3 Notes - Naming Covalent Compounds.pptx, slide 6"
+    },
+    {
+      "id": "properties-ionic-compounds",
+      "category": "ionic compounds",
+      "title": "Properties of Ionic Compounds",
+      "terms": [
+        "properties of ionic compounds",
+        "ionic compound properties",
+        "ionic crystals",
+        "can ionic compounds conduct electricity",
+        "ionic melting point"
+      ],
+      "fact": "Ionic compounds are made of positive metal ions and negative nonmetal ions. They are arranged in regular repeating patterns called crystals, usually form solids, have high melting and boiling points, and can conduct electricity when dissolved in water.",
+      "source": "Concept 3 Notes - Naming Covalent Compounds.pptx, slide 7"
+    },
+    {
+      "id": "covalent-prefixes",
+      "category": "covalent compounds",
+      "title": "Covalent Prefixes",
+      "terms": [
+        "covalent prefixes",
+        "molecular prefixes",
+        "mono di tri tetra penta",
+        "prefixes for covalent compounds"
+      ],
+      "fact": "Covalent compound names use prefixes to show the number of atoms. The prefixes are mono = 1, di = 2, tri = 3, tetra = 4, penta = 5, hexa = 6, hepta = 7, octa = 8, nona = 9, and deca = 10.",
+      "source": "Concept 3 Notes - Naming Covalent Compounds.pptx, slide 9"
+    },
+    {
+      "id": "naming-covalent-compounds",
+      "category": "covalent compounds",
+      "title": "Naming Covalent Compounds",
+      "terms": [
+        "name covalent compound",
+        "covalent compound name",
+        "molecular compound name",
+        "prefix ide ending"
+      ],
+      "fact": "To name a covalent compound, name the first element with a prefix to show how many atoms there are, but do not use mono- for one atom on the first element. Name the second element with a prefix and change the ending to -ide.",
+      "examples": [
+        "CO2 is carbon dioxide.",
+        "PCl3 is phosphorus trichloride.",
+        "P4O10 is tetraphosphorus decaoxide."
+      ],
+      "source": "Concept 3 Notes - Naming Covalent Compounds.pptx, slides 8-10"
+    },
+    {
+      "id": "writing-covalent-formulas",
+      "category": "covalent compounds",
+      "title": "Writing Covalent Formulas",
+      "terms": [
+        "write covalent formula",
+        "formula for covalent compound",
+        "prefixes to subscripts",
+        "no crisscross covalent"
+      ],
+      "fact": "To write a covalent formula, use the prefixes in the name to determine the subscripts. Do not crisscross charges or simplify covalent formulas.",
+      "examples": [
+        "Dichlorine monoxide is Cl2O.",
+        "Sulfur pentoxide is SO5.",
+        "Silicon tetrafluoride is SiF4."
+      ],
+      "source": "Concept 3 Notes - Naming Covalent Compounds.pptx, slides 11-12"
+    },
+    {
+      "id": "ionic-vs-covalent",
+      "category": "bonding",
+      "title": "Ionic vs Covalent Compounds",
+      "terms": [
+        "ionic vs covalent",
+        "difference between ionic and covalent",
+        "ionic or covalent",
+        "metal nonmetal nonmetal"
+      ],
+      "fact": "Ionic compounds usually form between a metal and a nonmetal when electrons are transferred. Covalent compounds usually form between nonmetals when electrons are shared.",
+      "source": "Concept 2 Notes - Naming Ionic Compounds.pptx, slide 2; Concept 3 Notes - Naming Covalent Compounds.pptx, slide 2"
     }
+    ,
+{
+  "id": "wave-definition",
+  "category": "waves",
+  "title": "Wave",
+  "terms": ["wave", "define wave", "what is a wave", "rhythmic disturbance", "wave transfers energy"],
+  "fact": "A wave is a rhythmic disturbance that transfers energy through matter or space. A wave carries energy without carrying matter from place to place.",
+  "source": "Concept 1 Notes - Nature and Properties.pptx, slide 2"
+},
+{
+  "id": "medium-definition",
+  "category": "waves",
+  "title": "Medium",
+  "terms": ["medium", "wave medium", "what is a medium", "matter waves travel through"],
+  "fact": "A medium is matter that a wave travels through. A medium can be a solid, liquid, or gas.",
+  "examples": ["Sound waves and water waves travel through a medium."],
+  "source": "Concept 1 Notes - Nature and Properties.pptx, slide 3"
+},
+{
+  "id": "electromagnetic-vs-mechanical-waves",
+  "category": "waves",
+  "title": "Electromagnetic vs Mechanical Waves",
+  "terms": ["electromagnetic vs mechanical", "mechanical waves", "electromagnetic waves", "waves need a medium", "waves through vacuum"],
+  "fact": "Electromagnetic waves can transfer energy through a vacuum and do not need a medium. Mechanical waves can only travel through a medium.",
+  "examples": ["Light is an electromagnetic wave. Sound is a mechanical wave."],
+  "source": "Concept 1 Notes - Nature and Properties.pptx, slide 3"
+},
+{
+  "id": "transverse-waves",
+  "category": "waves",
+  "title": "Transverse Waves",
+  "terms": ["transverse wave", "transverse waves", "perpendicular", "right angles", "crest and trough"],
+  "fact": "In a transverse wave, matter in the medium moves back and forth at right angles to the direction the wave travels. Particle motion is perpendicular to wave motion.",
+  "examples": ["Electromagnetic waves, vibrations in string instruments, and ripples on the surface of water are examples."],
+  "source": "Concept 1 Notes - Nature and Properties.pptx, slide 4"
+},
+{
+  "id": "longitudinal-waves",
+  "category": "waves",
+  "title": "Longitudinal Waves",
+  "terms": ["longitudinal wave", "longitudinal waves", "compressional wave", "parallel", "compression", "rarefaction"],
+  "fact": "In a longitudinal wave, matter in the medium moves back and forth in the same direction the wave travels. Particle motion is parallel to wave motion.",
+  "examples": ["Sound waves, ultrasounds, and waves made with a slinky are examples."],
+  "source": "Concept 1 Notes - Nature and Properties.pptx, slide 4"
+},
+{
+  "id": "crest-and-trough",
+  "category": "waves",
+  "title": "Crest and Trough",
+  "terms": ["crest", "trough", "peak", "parts of transverse wave", "highest point", "lowest point"],
+  "fact": "In a transverse wave, the crest is the highest point of the wave and the trough is the lowest point of the wave.",
+  "source": "Concept 1 Notes - Nature and Properties.pptx, slide 5"
+},
+{
+  "id": "compression-and-rarefaction",
+  "category": "waves",
+  "title": "Compression and Rarefaction",
+  "terms": ["compression", "rarefaction", "parts of longitudinal wave", "particles pushed together", "particles spread apart"],
+  "fact": "In a longitudinal wave, a compression is where particles are pushed together and a rarefaction is where particles are spread apart.",
+  "source": "Concept 1 Notes - Nature and Properties.pptx, slide 6"
+},
+{
+  "id": "wave-amplitude",
+  "category": "waves",
+  "title": "Amplitude",
+  "terms": ["amplitude", "wave amplitude", "height of wave", "energy of wave", "amount of energy carried by a wave"],
+  "fact": "Amplitude is the amount of energy carried by a wave. In transverse waves, amplitude is shown by the height of the wave. In longitudinal waves, amplitude is shown by the amount of compression.",
+  "source": "Concept 1 Notes - Nature and Properties.pptx, slide 7"
+},
+{
+  "id": "wavelength",
+  "category": "waves",
+  "title": "Wavelength",
+  "terms": ["wavelength", "lambda", "distance between waves", "crest to crest", "trough to trough", "compression to compression"],
+  "fact": "Wavelength is the distance between one point on a wave and the nearest point just like it. It is measured in meters.",
+  "examples": ["In transverse waves, wavelength can be measured crest to crest or trough to trough. In longitudinal waves, it can be measured compression to compression or rarefaction to rarefaction."],
+  "source": "Concept 1 Notes - Nature and Properties.pptx, slide 8"
+},
+{
+  "id": "wave-period",
+  "category": "waves",
+  "title": "Period",
+  "terms": ["period", "wave period", "time for one wavelength", "T equals one over f"],
+  "fact": "Period is the amount of time it takes one wavelength to pass a point. Period is measured in seconds.",
+  "formula": "T = 1 / f",
+  "source": "Concept 1 Notes - Nature and Properties.pptx, slide 9"
+},
+{
+  "id": "wave-frequency",
+  "category": "waves",
+  "title": "Frequency",
+  "terms": ["frequency", "wave frequency", "hertz", "Hz", "waves per second", "f equals one over T"],
+  "fact": "Frequency is the number of waves that pass a given point in one second. Frequency is measured in Hertz, or Hz.",
+  "formula": "f = 1 / T",
+  "source": "Concept 1 Notes - Nature and Properties.pptx, slide 9"
+},
+{
+  "id": "frequency-period-relationship",
+  "category": "waves",
+  "title": "Frequency and Period Relationship",
+  "terms": ["frequency and period", "period and frequency", "inverse relationship", "T equals one over f", "f equals one over T"],
+  "fact": "Frequency and period have an inverse relationship. If frequency increases, period decreases. If period increases, frequency decreases.",
+  "formula": "T = 1 / f; f = 1 / T",
+  "examples": ["If frequency is 4 Hz, period is 1 / 4 = 0.25 s."],
+  "source": "Concept 1 Notes - Nature and Properties.pptx, slide 9"
+},
+{
+  "id": "frequency-wavelength-relationship",
+  "category": "waves",
+  "title": "Frequency and Wavelength Relationship",
+  "terms": ["frequency and wavelength", "wavelength and frequency", "shorter wavelength higher frequency", "longer wavelength lower frequency"],
+  "fact": "Frequency and wavelength have an inverse relationship. Higher frequency means shorter wavelength. Lower frequency means longer wavelength.",
+  "source": "Concept 1 Notes - Nature and Properties.pptx, slide 10"
+},
+{
+  "id": "wave-speed",
+  "category": "waves",
+  "title": "Wave Speed",
+  "terms": ["wave speed", "calculate wave speed", "velocity of wave", "v equals wavelength times frequency", "v equals lambda f"],
+  "fact": "Wave speed tells how fast a wave travels. It is measured in meters per second. Wave speed depends on the type of wave and the properties of the medium it travels through.",
+  "formula": "v = wavelength x frequency; v = lambda x f",
+  "examples": ["If wavelength = 2 m and frequency = 3 Hz, wave speed = 2 x 3 = 6 m/s."],
+  "source": "Concept 1 Notes - Nature and Properties.pptx, slides 11-12"
+},
+{
+  "id": "finding-frequency-from-wave-speed",
+  "category": "waves",
+  "title": "Finding Frequency from Wave Speed",
+  "terms": ["find frequency", "calculate frequency", "frequency from wave speed", "f equals v over wavelength"],
+  "fact": "To find frequency when wave speed and wavelength are known, divide wave speed by wavelength.",
+  "formula": "f = v / wavelength",
+  "examples": ["If a wave travels at 12 m/s and has a wavelength of 3 m, frequency = 12 / 3 = 4 Hz."],
+  "source": "Concept 1 Notes - Nature and Properties.pptx, slide 13"
+},
+{
+  "id": "wave-speed-medium-properties",
+  "category": "waves",
+  "title": "Wave Speed and Medium",
+  "terms": ["wave speed medium", "mechanical waves fastest in solids", "sound fastest in solids", "electromagnetic waves fastest in vacuum"],
+  "fact": "Mechanical waves, like sound, travel fastest through solids, then liquids, then gases because particles are closer together. Mechanical waves also travel faster through warmer mediums. Electromagnetic waves, like light, travel fastest through a vacuum and slow down when traveling through matter.",
+  "source": "Concept 1 Notes - Nature and Properties.pptx, slide 11"
+},
+{
+  "id": "reflection",
+  "category": "wave behaviors",
+  "title": "Reflection",
+  "terms": ["reflection", "reflect", "wave bounces", "bounces off", "echo"],
+  "fact": "Reflection happens when a wave strikes an object and bounces off of it. All types of waves can be reflected.",
+  "examples": ["An echo is a reflected sound wave."],
+  "source": "Concept 2 Notes - Behaviors.pptx, slide 2"
+},
+{
+  "id": "law-of-reflection",
+  "category": "wave behaviors",
+  "title": "Law of Reflection",
+  "terms": ["law of reflection", "angle of incidence", "angle of reflection", "incident ray", "reflected ray"],
+  "fact": "The law of reflection says the angle of incidence is equal to the angle of reflection. The incident ray is the wave that strikes the surface. The reflected ray is the wave that bounces off the surface.",
+  "source": "Concept 2 Notes - Behaviors.pptx, slide 3"
+},
+{
+  "id": "refraction",
+  "category": "wave behaviors",
+  "title": "Refraction",
+  "terms": ["refraction", "refract", "wave bends", "bending waves", "change in speed", "change medium"],
+  "fact": "Refraction is the bending of waves caused by a change in speed as the waves move from one medium into another. The greater the change in speed, the more the wave bends.",
+  "source": "Concept 2 Notes - Behaviors.pptx, slide 4"
+},
+{
+  "id": "prisms-and-rainbows",
+  "category": "wave behaviors",
+  "title": "Prisms and Rainbows",
+  "terms": ["prism", "prisms", "rainbow", "why prisms separate colors", "light bends in prism", "ROYGBIV"],
+  "fact": "A prism separates white light because light slows down and refracts when it enters a new medium. Different colors of light have different wavelengths, so they bend different amounts and separate into colors.",
+  "examples": ["Rainbows happen because light is separated into colors."],
+  "source": "Concept 2 Notes - Behaviors.pptx, slides 5-6"
+},
+{
+  "id": "diffraction",
+  "category": "wave behaviors",
+  "title": "Diffraction",
+  "terms": ["diffraction", "wave bends around object", "waves around object", "waves through opening"],
+  "fact": "Diffraction happens when an object causes a wave to change direction and bend around it. The amount of diffraction depends on the size of the object or opening and the wavelength of the wave.",
+  "examples": ["Sound waves tend to diffract better than light waves because sound waves are larger."],
+  "source": "Concept 2 Notes - Behaviors.pptx, slide 7"
+},
+{
+  "id": "absorption",
+  "category": "wave behaviors",
+  "title": "Absorption",
+  "terms": ["absorption", "wave absorbed", "absorbed light", "dark colors absorb", "thermal energy"],
+  "fact": "Absorption happens when a wave strikes an object and goes into it. The energy from the wave is converted to thermal energy.",
+  "examples": ["Dark colors absorb light better than light colors, which is why dark clothing can feel warmer in the winter."],
+  "source": "Concept 2 Notes - Behaviors.pptx, slide 8"
+},
+{
+  "id": "interference",
+  "category": "wave behaviors",
+  "title": "Interference",
+  "terms": ["interference", "wave interference", "waves combine", "two waves overlap"],
+  "fact": "Interference happens when two or more waves combine to form a new wave.",
+  "source": "Concept 2 Notes - Behaviors.pptx, slide 9"
+},
+{
+  "id": "constructive-interference",
+  "category": "wave behaviors",
+  "title": "Constructive Interference",
+  "terms": ["constructive interference", "waves add together", "increase amplitude", "like parts line up"],
+  "fact": "Constructive interference happens when two or more waves add together. Like parts of waves line up, causing an increase in amplitude.",
+  "source": "Concept 2 Notes - Behaviors.pptx, slide 10"
+},
+{
+  "id": "destructive-interference",
+  "category": "wave behaviors",
+  "title": "Destructive Interference",
+  "terms": ["destructive interference", "waves subtract", "decrease amplitude", "opposite parts line up"],
+  "fact": "Destructive interference happens when two or more waves subtract from one another when they overlap. Opposite parts of waves line up.",
+  "source": "Concept 2 Notes - Behaviors.pptx, slide 10"
+},
+{
+  "id": "electromagnetic-waves-expanded",
+  "category": "electromagnetic spectrum",
+  "title": "Electromagnetic Waves",
+  "terms": ["electromagnetic wave", "electromagnetic waves", "EM waves", "electric and magnetic waves", "speed of light", "300000000 m/s"],
+  "fact": "Electromagnetic waves are electric and magnetic waves released by a vibrating electric charge. They can transfer energy through a vacuum and do not need a medium. All electromagnetic waves travel at 300,000,000 m/s in a vacuum and slow down when traveling through matter.",
+  "formula": "speed in vacuum = 300,000,000 m/s",
+  "source": "Concept 3 Notes - EMS.pptx, slide 2"
+},
+{
+  "id": "photons",
+  "category": "electromagnetic spectrum",
+  "title": "Photons",
+  "terms": ["photon", "photons", "waves and particles", "massless bundle of energy", "light particles"],
+  "fact": "Electromagnetic waves can behave as waves and as particles called photons. A photon is a massless bundle of energy.",
+  "source": "Concept 3 Notes - EMS.pptx, slide 3"
+},
+{
+  "id": "electromagnetic-radiation",
+  "category": "electromagnetic spectrum",
+  "title": "Electromagnetic Radiation",
+  "terms": ["electromagnetic radiation", "EM radiation", "radiation", "energy from EM waves"],
+  "fact": "Electromagnetic waves give off energy in the form of electromagnetic radiation.",
+  "source": "Concept 3 Notes - EMS.pptx, slide 4"
+},
+{
+  "id": "electromagnetic-spectrum",
+  "category": "electromagnetic spectrum",
+  "title": "Electromagnetic Spectrum",
+  "terms": ["electromagnetic spectrum", "EM spectrum", "range of frequencies", "types of EM radiation"],
+  "fact": "The electromagnetic spectrum is the entire range of frequencies of electromagnetic radiation.",
+  "source": "Concept 3 Notes - EMS.pptx, slide 4"
+},
+{
+  "id": "ems-energy-wavelength-frequency",
+  "category": "electromagnetic spectrum",
+  "title": "EM Spectrum Energy, Wavelength, and Frequency",
+  "terms": ["longer wavelength lower frequency", "shorter wavelength higher frequency", "higher energy", "lower energy", "wavelength frequency energy"],
+  "fact": "On the electromagnetic spectrum, longer wavelength means lower frequency and lower energy. Shorter wavelength means higher frequency and higher energy.",
+  "source": "Concept 3 Notes - EMS.pptx, slide 5"
+},
+{
+  "id": "visible-light-colors",
+  "category": "electromagnetic spectrum",
+  "title": "Visible Light and ROYGBIV",
+  "terms": ["visible light", "ROYGBIV", "colors of light", "red longest wavelength", "violet shortest wavelength"],
+  "fact": "Visible light is the only part of the electromagnetic spectrum humans can see. Different colors of light have different wavelengths. In ROYGBIV, red has the longest wavelength and violet has the shortest wavelength.",
+  "source": "Concept 3 Notes - EMS.pptx, slide 9"
+},
+{
+  "id": "radio-waves",
+  "category": "electromagnetic spectrum",
+  "title": "Radio Waves",
+  "terms": ["radio waves", "radio", "MRI", "RADAR", "wifi", "cell phones", "longest wavelength"],
+  "fact": "Radio waves have the longest wavelength and lowest frequency on the electromagnetic spectrum. They are used by radio stations, MRI, RADAR, Wi-Fi, TV, and cell phones.",
+  "source": "Concept 3 Notes - EMS.pptx, slide 6"
+},
+{
+  "id": "microwaves",
+  "category": "electromagnetic spectrum",
+  "title": "Microwaves",
+  "terms": ["microwaves", "microwave", "Doppler radar", "GPS", "cooking"],
+  "fact": "Microwaves are electromagnetic waves used for cooking, Doppler radar, and GPS.",
+  "examples": ["Doppler radar is used for weather forecasting."],
+  "source": "Concept 3 Notes - EMS.pptx, slide 7"
+},
+{
+  "id": "infrared-waves",
+  "category": "electromagnetic spectrum",
+  "title": "Infrared Waves",
+  "terms": ["infrared", "infrared waves", "night vision", "remote controls", "infrared photography"],
+  "fact": "Infrared waves are electromagnetic waves used in night vision goggles, remote controls, and infrared photography.",
+  "source": "Concept 3 Notes - EMS.pptx, slide 8"
+},
+{
+  "id": "ultraviolet-waves",
+  "category": "electromagnetic spectrum",
+  "title": "Ultraviolet Waves",
+  "terms": ["ultraviolet", "UV", "ultraviolet waves", "vitamin D", "kill bacteria", "sun"],
+  "fact": "Ultraviolet waves are given off by the sun. They are used in some light bulbs, to kill bacteria, and by the human body to make vitamin D.",
+  "source": "Concept 3 Notes - EMS.pptx, slide 10"
+},
+{
+  "id": "x-rays",
+  "category": "electromagnetic spectrum",
+  "title": "X-Rays",
+  "terms": ["x-rays", "x rays", "bones", "fractures", "CAT scan", "penetrate skin", "overexposure cancer"],
+  "fact": "X-rays are electromagnetic waves used to take pictures of bones to check for breaks and fractures. They are also used in CAT scans. X-rays can penetrate skin cells, but overexposure can cause cancer.",
+  "source": "Concept 3 Notes - EMS.pptx, slide 11"
+},
+{
+  "id": "gamma-rays",
+  "category": "electromagnetic spectrum",
+  "title": "Gamma Rays",
+  "terms": ["gamma rays", "gamma", "highest frequency", "smallest wavelength", "kill cancer cells", "sterilize medical equipment", "radioactive tracers"],
+  "fact": "Gamma rays have the smallest wavelength and highest frequency on the electromagnetic spectrum. They are used to kill cancer cells, sterilize medical equipment, and in radioactive tracers.",
+  "source": "Concept 3 Notes - EMS.pptx, slide 12"
+}
+,
+{
+  "id": "static-electricity",
+  "category": "electricity",
+  "title": "Static Electricity",
+  "terms": ["static electricity", "static charge", "charge imbalance", "electric charge build up", "shock"],
+  "fact": "Static electricity is a charge imbalance that results in the buildup of excess electric charge on an object. Shock happens when the charge is neutralized.",
+  "examples": ["A shock after walking on carpet can happen because charge built up and then moved suddenly."],
+  "source": "Concept 1 Notes - Charge.pptx, slide 2"
+},
+{
+  "id": "charge-rules",
+  "category": "electricity",
+  "title": "Charge Rules",
+  "terms": ["charge rules", "opposites attract", "like charges repel", "positive negative charges", "electric charge attraction"],
+  "fact": "Opposite electric charges attract. Like electric charges repel.",
+  "source": "Concept 1 Notes - Charge.pptx, slide 3"
+},
+{
+  "id": "law-conservation-charge",
+  "category": "electricity",
+  "title": "Law of Conservation of Charge",
+  "terms": ["law of conservation of charge", "conservation of charge", "charge cannot be created or destroyed", "net electric charge"],
+  "fact": "The Law of Conservation of Charge says charge cannot be created or destroyed, only transferred. Net electric charge is always constant.",
+  "source": "Concept 1 Notes - Charge.pptx, slide 3"
+},
+{
+  "id": "electric-field",
+  "category": "electricity",
+  "title": "Electric Field",
+  "terms": ["electric field", "force at a distance", "charged particles field", "area around charge"],
+  "fact": "An electric field is the area surrounding charged particles or objects where a force can be exerted on other charged particles or objects. Electric fields allow charges to act at a distance.",
+  "source": "Concept 1 Notes - Charge.pptx, slide 4"
+},
+{
+  "id": "electroscope",
+  "category": "electricity",
+  "title": "Electroscope",
+  "terms": ["electroscope", "detect charge", "detect electric charge", "charge detector"],
+  "fact": "An electroscope is a tool used to detect the presence and magnitude of an electric charge.",
+  "source": "Concept 1 Notes - Charge.pptx, slide 5"
+},
+{
+  "id": "conductors",
+  "category": "electricity",
+  "title": "Conductors",
+  "terms": ["conductor", "conductors", "materials that allow electrons to flow", "allow charge to flow", "copper wire"],
+  "fact": "Conductors are materials that allow electrons to flow easily and readily conduct electric charge.",
+  "examples": ["Metals, especially copper in wires, and skin are examples of conductors."],
+  "source": "Concept 1 Notes - Charge.pptx, slide 6"
+},
+{
+  "id": "insulators",
+  "category": "electricity",
+  "title": "Insulators",
+  "terms": ["insulator", "insulators", "block electron flow", "block charge", "rubber plastic glass"],
+  "fact": "Insulators are materials that block the flow of electrons through them.",
+  "examples": ["Plastic, wood, air, rubber, and glass are examples of insulators."],
+  "source": "Concept 1 Notes - Charge.pptx, slide 6"
+},
+{
+  "id": "charging-by-conduction",
+  "category": "electricity",
+  "title": "Charging by Conduction",
+  "terms": ["conduction", "charging by conduction", "charge by contact", "direct contact electrons"],
+  "fact": "Conduction is the transfer of electrons through direct contact between objects. Electrons move from one object to another object, and the object must be a conductor to transfer charge well.",
+  "source": "Concept 1 Notes - Charge.pptx, slide 7"
+},
+{
+  "id": "charging-by-friction",
+  "category": "electricity",
+  "title": "Charging by Friction",
+  "terms": ["friction", "charging by friction", "rubbing objects", "socks on carpet", "balloon hair charge"],
+  "fact": "Friction is the transfer of electrons through rubbing objects together.",
+  "examples": ["Socks rubbing on carpet can build up charge, which can lead to a shock when touching another object."],
+  "source": "Concept 1 Notes - Charge.pptx, slide 8"
+},
+{
+  "id": "charging-by-induction",
+  "category": "electricity",
+  "title": "Charging by Induction",
+  "terms": ["induction", "charging by induction", "charge without touching", "polarization", "balloon sticks to wall"],
+  "fact": "Induction is the transfer or movement of electrons caused by electric fields working over a distance. A charged object brought near a neutral object can cause polarization and induce a charge on the neutral object.",
+  "examples": ["A charged balloon can stick to a wall because it induces an opposite charge on the wall's surface."],
+  "source": "Concept 1 Notes - Charge.pptx, slide 9"
+},
+{
+  "id": "static-discharge",
+  "category": "electricity",
+  "title": "Static Discharge",
+  "terms": ["static discharge", "sudden flow of charge", "lightning", "charge neutralized"],
+  "fact": "Static discharge is the sudden flow of electric charge between two charged objects because of a buildup of static electricity.",
+  "examples": ["Lightning is an example of static discharge."],
+  "source": "Concept 1 Notes - Charge.pptx, slide 10"
+},
+{
+  "id": "lightning-static-electricity",
+  "category": "electricity",
+  "title": "Lightning and Static Electricity",
+  "terms": ["lightning", "how lightning forms", "cloud charge", "static electricity in clouds"],
+  "fact": "Movement of clouds and air currents can cause a buildup of static electricity in clouds. When enough electrons build up, a positive charge is induced on Earth, and electrons can travel from the clouds to Earth to neutralize the charge imbalance.",
+  "source": "Concept 1 Notes - Charge.pptx, slide 11"
+},
+{
+  "id": "grounding",
+  "category": "electricity",
+  "title": "Grounding",
+  "terms": ["grounding", "remove charge", "neutralize electrical imbalance", "redirect charge to ground"],
+  "fact": "Grounding is the process of removing excess charge on an object by transferring electrons to another object to neutralize the electrical imbalance. It redirects charge to the ground rather than a building.",
+  "source": "Concept 1 Notes - Charge.pptx, slide 12"
+},
+{
+  "id": "electric-current",
+  "category": "electricity",
+  "title": "Electric Current",
+  "terms": ["electric current", "current", "amps", "amperes", "net movement of charge", "I current"],
+  "fact": "Electric current is the net movement of electric charge in a single direction. Current is represented by I and is measured in amperes, or amps.",
+  "source": "Concept 2 Notes - Current.pptx, slide 2"
+},
+{
+  "id": "voltage-difference",
+  "category": "electricity",
+  "title": "Voltage Difference",
+  "terms": ["voltage", "voltage difference", "volts", "push that causes charge to move", "high voltage low voltage"],
+  "fact": "Voltage difference is the push or force that causes charge to move. It is measured in volts. Charge flows from high voltage areas to low voltage areas, and a larger voltage difference creates a greater current.",
+  "source": "Concept 2 Notes - Current.pptx, slide 3"
+},
+{
+  "id": "circuit-definition-electricity",
+  "category": "circuits",
+  "title": "Circuit",
+  "terms": ["circuit", "closed path", "electric current path", "open switch", "closed switch"],
+  "fact": "A circuit is a closed path that electric current flows through. A circuit is necessary for electric charge to move. If the switch is open, current will not flow. If the switch is closed, current will flow.",
+  "source": "Concept 2 Notes - Current.pptx, slide 4"
+},
+{
+  "id": "battery-definition",
+  "category": "electricity",
+  "title": "Battery",
+  "terms": ["battery", "batteries", "chemical energy to electrical energy", "battery terminals", "negative to positive"],
+  "fact": "A battery is a device that converts chemical energy to electrical energy. Chemical reactions create a voltage difference between the positive and negative terminals. When the terminals are connected, current flows through the conductor because of the voltage difference. Electrons flow from the negative end to the positive end.",
+  "source": "Concept 2 Notes - Current.pptx, slide 5"
+},
+{
+  "id": "resistance-electricity",
+  "category": "electricity",
+  "title": "Resistance",
+  "terms": ["resistance", "ohms", "oppose electron flow", "R resistance", "factors affecting resistance"],
+  "fact": "Resistance is the tendency of a material to oppose the flow of electrons through it. Resistance is represented by R and is measured in ohms. Resistance is affected by material, wire diameter, wire length, and temperature.",
+  "examples": ["Insulators have more resistance than conductors. Smaller diameter wire, longer wire, and higher temperature all increase resistance."],
+  "source": "Concept 2 Notes - Current.pptx, slide 6"
+},
+{
+  "id": "ohms-law-expanded-electricity",
+  "category": "electricity",
+  "title": "Ohm's Law Expanded",
+  "terms": ["ohm's law", "ohms law", "V equals IR", "current voltage resistance", "calculate voltage current resistance"],
+  "fact": "Ohm's Law shows the relationship between voltage difference, current, and resistance. Current is directly proportional to voltage difference. Higher voltage means higher current, and lower resistance means higher current.",
+  "formula": "V = I x R",
+  "examples": ["If current = 0.75 A and resistance = 10 ohms, voltage = 0.75 x 10 = 7.5 V."],
+  "source": "Concept 2 Notes - Current.pptx, slides 7-8"
+},
+{
+  "id": "series-circuit",
+  "category": "circuits",
+  "title": "Series Circuit",
+  "terms": ["series circuit", "series", "one path", "one branch", "current same throughout"],
+  "fact": "A series circuit has only one path for current to travel through. It is simpler, all components must work at the same time, adding more items increases overall resistance, voltage decreases as it travels through the circuit, and current stays the same throughout.",
+  "examples": ["Flashlights and some holiday lights are examples of series circuits."],
+  "source": "Concept 3 Notes - Circuits.pptx, slides 2-3"
+},
+{
+  "id": "parallel-circuit",
+  "category": "circuits",
+  "title": "Parallel Circuit",
+  "terms": ["parallel circuit", "parallel", "multiple paths", "multiple branches", "voltage same throughout", "current split"],
+  "fact": "A parallel circuit has more than one path for current to travel through. It is more complex, can use one component at a time, adding more items decreases total resistance, voltage stays the same throughout, and current is split among each pathway.",
+  "examples": ["Houses and schools use parallel circuits."],
+  "source": "Concept 3 Notes - Circuits.pptx, slides 2-3"
+},
+{
+  "id": "combination-circuit",
+  "category": "circuits",
+  "title": "Combination Circuit",
+  "terms": ["combination circuit", "series and parallel", "both series and parallel", "combo circuit"],
+  "fact": "Some circuits are combination circuits, meaning they include both series and parallel parts.",
+  "source": "Concept 3 Notes - Circuits.pptx, slide 4"
+},
+{
+  "id": "circuit-symbols",
+  "category": "circuits",
+  "title": "Circuit Symbols",
+  "terms": ["circuit symbols", "circuit notation", "draw circuit", "battery symbol", "resistor symbol", "switch symbol", "light bulb symbol"],
+  "fact": "Circuit diagrams use symbols for parts such as switches, batteries, light bulbs, resistors, ammeters, and voltmeters. A closed switch allows current to flow, while an open switch stops current.",
+  "source": "Concept 3 Notes - Circuits.pptx, slide 6"
+},
+{
+  "id": "ammeter",
+  "category": "circuits",
+  "title": "Ammeter",
+  "terms": ["ammeter", "measure current", "current meter", "amps meter"],
+  "fact": "An ammeter measures the amount of current in a circuit. In this class, ammeters are placed in series circuits.",
+  "source": "Concept 3 Notes - Circuits.pptx, slide 6"
+},
+{
+  "id": "voltmeter",
+  "category": "circuits",
+  "title": "Voltmeter",
+  "terms": ["voltmeter", "measure voltage", "voltage drop", "voltage meter"],
+  "fact": "A voltmeter measures voltage drop. In this class, voltmeters are placed in parallel circuits.",
+  "source": "Concept 3 Notes - Circuits.pptx, slide 6"
+},
+{
+  "id": "fuse",
+  "category": "circuits",
+  "title": "Fuse",
+  "terms": ["fuse", "overheating fuse", "melts to open circuit", "prevent current"],
+  "fact": "A fuse is a small piece of metal that melts when overheated. This opens the circuit and prevents current from flowing.",
+  "source": "Concept 3 Notes - Circuits.pptx, slide 10"
+},
+{
+  "id": "circuit-breaker",
+  "category": "circuits",
+  "title": "Circuit Breaker",
+  "terms": ["circuit breaker", "breaker", "overheating breaker", "bends when overheated", "open the circuit"],
+  "fact": "A circuit breaker uses a piece of metal that bends when overheated. This opens the circuit and prevents current from flowing.",
+  "source": "Concept 3 Notes - Circuits.pptx, slide 10"
+},
+{
+  "id": "total-resistance-series",
+  "category": "circuits",
+  "title": "Total Resistance in Series",
+  "terms": ["total resistance series", "series resistance", "Rt equals R1 plus R2", "add resistors series"],
+  "fact": "In a series circuit, total resistance is found by adding all resistances together.",
+  "formula": "Rt = R1 + R2 + R3",
+  "examples": ["If a series circuit has 2 ohms and 5 ohms of resistance, Rt = 2 + 5 = 7 ohms."],
+  "source": "Honors Concept 3 Notes - Circuits.pptx, slides 11-12"
+},
+{
+  "id": "total-resistance-parallel",
+  "category": "circuits",
+  "title": "Total Resistance in Parallel",
+  "terms": ["total resistance parallel", "parallel resistance", "one over Rt", "add resistors parallel", "parallel resistance formula"],
+  "fact": "In a parallel circuit, total resistance is found by adding the reciprocals of each resistance, then solving for total resistance. Total resistance in parallel is less than the resistance of any single branch.",
+  "formula": "1/Rt = 1/R1 + 1/R2 + 1/R3",
+  "examples": ["For parallel resistors of 2 ohms and 5 ohms, 1/Rt = 1/2 + 1/5 = 7/10, so Rt = 10/7 = 1.43 ohms."],
+  "source": "Honors Concept 3 Notes - Circuits.pptx, slides 11 and 13"
+},
+{
+  "id": "magnetism",
+  "category": "magnetism",
+  "title": "Magnetism",
+  "terms": ["magnetism", "magnet", "magnetic force", "external magnetic field", "force over a distance"],
+  "fact": "Magnetism is a property of some materials that allows them to give off an attractive or repulsive force. A magnet is a material that gives off an external magnetic field, making it possible to apply a force over a distance.",
+  "source": "Concept 4 Notes - Magnets.pptx, slide 2"
+},
+{
+  "id": "magnetic-force",
+  "category": "magnetism",
+  "title": "Magnetic Force",
+  "terms": ["magnetic force", "attractive magnetic force", "repulsive magnetic force", "magnetic poles", "north and south"],
+  "fact": "Magnetic force can be attractive or repulsive. The attractive force decreases as magnets get farther apart. Magnetic force is strongest at the magnetic poles, called north and south.",
+  "source": "Concept 4 Notes - Magnets.pptx, slide 3"
+},
+{
+  "id": "magnetic-poles",
+  "category": "magnetism",
+  "title": "Magnetic Poles",
+  "terms": ["magnetic poles", "north pole", "south pole", "poles cannot be isolated", "single magnetic pole"],
+  "fact": "Magnetic poles cannot be isolated. If a magnet is cut, each piece still has both a north pole and a south pole.",
+  "source": "Concept 4 Notes - Magnets.pptx, slide 4"
+},
+{
+  "id": "magnetic-field",
+  "category": "magnetism",
+  "title": "Magnetic Field",
+  "terms": ["magnetic field", "field direction", "north to south", "magnet force at distance"],
+  "fact": "A magnetic field is the external force given off by a magnet. It is strongest at the poles and allows magnets to apply force over a distance. Field direction is always north to south.",
+  "source": "Concept 4 Notes - Magnets.pptx, slide 5"
+},
+{
+  "id": "magnetic-attraction-repulsion",
+  "category": "magnetism",
+  "title": "Magnetic Attraction and Repulsion",
+  "terms": ["opposites attract magnets", "like repel magnets", "magnetic attraction", "magnetic repulsion"],
+  "fact": "In magnetism, opposite poles attract and like poles repel. Magnetic fields can create either attractive or repulsive force.",
+  "source": "Concept 4 Notes - Magnets.pptx, slide 6"
+},
+{
+  "id": "earth-magnetic-field",
+  "category": "magnetism",
+  "title": "Earth's Magnetic Field",
+  "terms": ["earth magnetic field", "earth as magnet", "compass", "geographic north", "earth poles"],
+  "fact": "Earth acts like a giant bar magnet because its core is made of metals. This is why Earth has north and south poles. A compass points north because its needle is attracted to Earth's magnetic south pole, which is near geographic north.",
+  "source": "Concept 4 Notes - Magnets.pptx, slide 7"
+},
+{
+  "id": "magnetic-domains",
+  "category": "magnetism",
+  "title": "Magnetic Domains",
+  "terms": ["magnetic domains", "domains", "atoms behave like magnets", "aligned domains", "nonmagnetic elements"],
+  "fact": "All atoms have the potential to be magnetic because of electrons. In magnetic elements, atoms behave like tiny magnets with north and south poles aligned to make a magnetic field. In nonmagnetic elements, domains are not aligned, so there is no apparent magnetism.",
+  "source": "Concept 4 Notes - Magnets.pptx, slide 8"
+},
+{
+  "id": "ferromagnetism",
+  "category": "magnetism",
+  "title": "Ferromagnetism",
+  "terms": ["ferromagnetism", "ferromagnetic", "iron cobalt nickel", "become magnetized", "domains align"],
+  "fact": "Ferromagnetism is when objects placed in a strong magnetic field become magnetized because the poles within their atoms align. This is how materials like iron, cobalt, and nickel can become attracted to magnets.",
+  "source": "Concept 4 Notes - Magnets.pptx, slide 9"
+},
+{
+  "id": "electricity-and-magnetism",
+  "category": "magnetism",
+  "title": "Electricity and Magnetism",
+  "terms": ["electricity and magnetism", "current creates magnetic field", "moving charge magnetic field", "electrons magnetic field"],
+  "fact": "Moving electric charge, or current, can produce a magnetic field. The stronger the current, the stronger the magnetic field that can be produced.",
+  "source": "Concept 4 Notes - Magnets.pptx, slide 10"
+},
+{
+  "id": "electromagnet",
+  "category": "magnetism",
+  "title": "Electromagnet",
+  "terms": ["electromagnet", "temporary magnet", "coil of wire", "iron nail magnet", "current carrying coil"],
+  "fact": "An electromagnet is a temporary magnet made by placing a piece of iron inside a current-carrying coil of wire. When the switch is open, no current flows and the nail is not magnetic. When the switch is closed, current flows and the nail becomes magnetic.",
+  "source": "Concept 4 Notes - Magnets.pptx, slide 11"
+},
+{
+  "id": "electromagnet-strength",
+  "category": "magnetism",
+  "title": "Electromagnet Strength",
+  "terms": ["stronger electromagnet", "increase electromagnet strength", "more loops of wire", "stronger current"],
+  "fact": "An electromagnet becomes stronger when the current is stronger or when there are more loops of wire.",
+  "source": "Concept 4 Notes - Magnets.pptx, slide 12"
+},
+{
+  "id": "electric-motor",
+  "category": "magnetism",
+  "title": "Electric Motor",
+  "terms": ["electric motor", "motor", "electrical energy to mechanical energy", "electromagnet motor"],
+  "fact": "An electric motor is a device that uses an electromagnet to convert electrical energy into mechanical energy.",
+  "source": "Concept 4 Notes - Magnets.pptx, slide 13"
+},
+{
+  "id": "generator",
+  "category": "magnetism",
+  "title": "Generator",
+  "terms": ["generator", "mechanical energy to electrical energy", "electromagnet generator"],
+  "fact": "A generator is a device that uses an electromagnet to convert mechanical energy into electrical energy.",
+  "source": "Concept 4 Notes - Magnets.pptx, slide 13"
+}
   ]
 }
