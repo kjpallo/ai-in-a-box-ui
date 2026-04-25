@@ -1,0 +1,226 @@
+{
+  "items": [
+    {
+      "id": "gravity-earth-acceleration",
+      "category": "constant",
+      "title": "Gravity near Earth",
+      "terms": ["gravity", "force of gravity on earth", "gravity on earth", "earth gravity", "acceleration due to gravity", "g", "9.8"],
+      "fact": "Near Earth's surface, the acceleration due to gravity is about 9.8 m/s^2 downward. If a student asks for the force of gravity, clarify that force depends on mass.",
+      "formula": "g = 9.8 m/s^2; weight force Fg = m × g",
+      "examples": ["A 10 kg object has weight Fg = 10 kg × 9.8 m/s^2 = 98 N."],
+      "source": "Teacher-approved 9th-grade physical science reference"
+    },
+    {
+      "id": "mass-definition",
+      "category": "vocabulary",
+      "title": "Mass",
+      "terms": ["mass", "what is mass", "define mass"],
+      "fact": "Mass is the amount of matter in an object. Mass is measured in grams or kilograms and does not change just because gravity changes.",
+      "formula": "mass can be found from m = F/a or m = density × volume when those values are known",
+      "source": "Teacher-approved 9th-grade physical science reference"
+    },
+    {
+      "id": "weight-definition",
+      "category": "vocabulary",
+      "title": "Weight",
+      "terms": ["weight", "force of gravity", "weigh", "weighed"],
+      "fact": "Weight is the force of gravity pulling on an object. Weight changes when gravity changes and is measured in newtons.",
+      "formula": "Fg = m × g",
+      "source": "Teacher-approved 9th-grade physical science reference"
+    },
+    {
+      "id": "matter-definition",
+      "category": "vocabulary",
+      "title": "Matter",
+      "terms": ["matter", "define matter", "what is matter"],
+      "fact": "Matter is anything that has mass and takes up space.",
+      "source": "Teacher-approved 9th-grade physical science reference"
+    },
+    {
+      "id": "density",
+      "category": "formula",
+      "title": "Density",
+      "terms": ["density", "calculate density", "mass divided by volume"],
+      "fact": "Density tells how much mass is packed into a certain volume. Common units are g/mL, g/cm^3, or kg/m^3.",
+      "formula": "density = mass / volume; D = m / V",
+      "examples": ["If mass = 20 g and volume = 5 cm^3, density = 20 / 5 = 4 g/cm^3."],
+      "source": "Teacher-approved 9th-grade physical science reference"
+    },
+    {
+      "id": "speed",
+      "category": "formula",
+      "title": "Speed",
+      "terms": ["speed", "calculate speed", "distance divided by time"],
+      "fact": "Speed tells how fast an object moves. It does not include direction.",
+      "formula": "speed = distance / time; s = d / t",
+      "examples": ["If distance = 100 m and time = 20 s, speed = 5 m/s."],
+      "source": "Teacher-approved 9th-grade physical science reference"
+    },
+    {
+      "id": "velocity",
+      "category": "vocabulary",
+      "title": "Velocity",
+      "terms": ["velocity", "speed with direction"],
+      "fact": "Velocity is speed in a specific direction. A car moving 20 m/s north has a velocity because direction is included.",
+      "source": "Teacher-approved 9th-grade physical science reference"
+    },
+    {
+      "id": "acceleration",
+      "category": "formula",
+      "title": "Acceleration",
+      "terms": ["acceleration", "calculate acceleration", "change in velocity"],
+      "fact": "Acceleration is the rate that velocity changes over time. It can mean speeding up, slowing down, or changing direction.",
+      "formula": "acceleration = change in velocity / time; a = Δv / t",
+      "examples": ["If velocity changes from 0 m/s to 20 m/s in 5 s, acceleration = 4 m/s^2."],
+      "source": "Teacher-approved 9th-grade physical science reference"
+    },
+    {
+      "id": "newtons-second-law",
+      "category": "formula",
+      "title": "Newton's Second Law",
+      "terms": ["newton's second law", "newtons second law", "force equals mass times acceleration", "f equals m a", "net force"],
+      "fact": "Newton's Second Law says an object's acceleration depends on the net force on the object and the object's mass.",
+      "formula": "Fnet = m × a",
+      "examples": ["If mass = 3 kg and acceleration = 2 m/s^2, net force = 6 N."],
+      "source": "Teacher-approved 9th-grade physical science reference"
+    },
+    {
+      "id": "newtons-first-law",
+      "category": "vocabulary",
+      "title": "Newton's First Law",
+      "terms": ["newton's first law", "newtons first law", "law of inertia", "inertia"],
+      "fact": "Newton's First Law says an object at rest stays at rest, and an object in motion stays in motion at the same speed and direction, unless acted on by an unbalanced force.",
+      "source": "Teacher-approved 9th-grade physical science reference"
+    },
+    {
+      "id": "newtons-third-law",
+      "category": "vocabulary",
+      "title": "Newton's Third Law",
+      "terms": ["newton's third law", "newtons third law", "action reaction", "equal and opposite"],
+      "fact": "Newton's Third Law says that for every action force, there is an equal and opposite reaction force.",
+      "source": "Teacher-approved 9th-grade physical science reference"
+    },
+    {
+      "id": "momentum",
+      "category": "formula",
+      "title": "Momentum",
+      "terms": ["momentum", "calculate momentum", "mass times velocity"],
+      "fact": "Momentum describes how hard it is to stop a moving object. More mass or more velocity means more momentum.",
+      "formula": "p = m × v",
+      "examples": ["If mass = 4 kg and velocity = 3 m/s, momentum = 12 kg·m/s."],
+      "source": "Teacher-approved 9th-grade physical science reference"
+    },
+    {
+      "id": "kinetic-energy",
+      "category": "formula",
+      "title": "Kinetic Energy",
+      "terms": ["kinetic energy", "energy of motion", "calculate kinetic energy"],
+      "fact": "Kinetic energy is the energy an object has because it is moving.",
+      "formula": "KE = 1/2 × m × v^2",
+      "examples": ["If mass = 2 kg and velocity = 3 m/s, KE = 0.5 × 2 × 9 = 9 J."],
+      "source": "Teacher-approved 9th-grade physical science reference"
+    },
+    {
+      "id": "potential-energy-gravity",
+      "category": "formula",
+      "title": "Gravitational Potential Energy",
+      "terms": ["potential energy", "gravitational potential energy", "stored energy", "height energy"],
+      "fact": "Gravitational potential energy is stored energy based on an object's mass, gravity, and height.",
+      "formula": "GPE = m × g × h",
+      "examples": ["If mass = 2 kg, g = 9.8 m/s^2, and height = 5 m, GPE = 98 J."],
+      "source": "Teacher-approved 9th-grade physical science reference"
+    },
+    {
+      "id": "power",
+      "category": "formula",
+      "title": "Power",
+      "terms": ["power", "calculate power", "work divided by time"],
+      "fact": "Power is how quickly work is done or energy is transferred.",
+      "formula": "power = work / time; P = W / t",
+      "source": "Teacher-approved 9th-grade physical science reference"
+    },
+    {
+      "id": "work",
+      "category": "formula",
+      "title": "Work",
+      "terms": ["work", "calculate work", "force times distance"],
+      "fact": "In physics, work happens when a force moves an object over a distance in the direction of the force.",
+      "formula": "work = force × distance; W = F × d",
+      "source": "Teacher-approved 9th-grade physical science reference"
+    },
+    {
+      "id": "ohms-law",
+      "category": "formula",
+      "title": "Ohm's Law",
+      "terms": ["ohm's law", "ohms law", "voltage current resistance", "electricity formula"],
+      "fact": "Ohm's Law shows the relationship between voltage, current, and resistance in a circuit.",
+      "formula": "V = I × R",
+      "examples": ["If current = 2 A and resistance = 6 Ω, voltage = 12 V."],
+      "source": "Teacher-approved physical science reference"
+    },
+    {
+      "id": "atom",
+      "category": "vocabulary",
+      "title": "Atom",
+      "terms": ["atom", "define atom", "parts of an atom"],
+      "fact": "An atom is the smallest unit of an element that still has that element's properties. Atoms contain protons, neutrons, and electrons.",
+      "source": "Teacher-approved 9th-grade physical science reference"
+    },
+    {
+      "id": "proton",
+      "category": "vocabulary",
+      "title": "Proton",
+      "terms": ["proton", "atomic number", "positive particle"],
+      "fact": "A proton is a positively charged particle in the nucleus of an atom. The number of protons tells the element's atomic number and identity.",
+      "source": "Teacher-approved 9th-grade physical science reference"
+    },
+    {
+      "id": "neutron",
+      "category": "vocabulary",
+      "title": "Neutron",
+      "terms": ["neutron", "neutral particle", "mass number"],
+      "fact": "A neutron is a particle in the nucleus with no electric charge. Protons plus neutrons make the mass number.",
+      "source": "Teacher-approved 9th-grade physical science reference"
+    },
+    {
+      "id": "electron",
+      "category": "vocabulary",
+      "title": "Electron",
+      "terms": ["electron", "negative particle", "valence electron"],
+      "fact": "An electron is a negatively charged particle found outside the nucleus. Valence electrons are the outer electrons involved in bonding.",
+      "source": "Teacher-approved 9th-grade physical science reference"
+    },
+    {
+      "id": "ion",
+      "category": "vocabulary",
+      "title": "Ion",
+      "terms": ["ion", "charged atom", "cation", "anion"],
+      "fact": "An ion is an atom or group of atoms with a charge because it gained or lost electrons. Losing electrons makes a positive ion; gaining electrons makes a negative ion.",
+      "source": "Teacher-approved 9th-grade physical science reference"
+    },
+    {
+      "id": "isotope",
+      "category": "vocabulary",
+      "title": "Isotope",
+      "terms": ["isotope", "same element different neutrons"],
+      "fact": "Isotopes are atoms of the same element with the same number of protons but different numbers of neutrons.",
+      "source": "Teacher-approved 9th-grade physical science reference"
+    },
+    {
+      "id": "periodic-table-groups-periods",
+      "category": "periodic table",
+      "title": "Periodic Table Groups and Periods",
+      "terms": ["periodic table", "groups", "periods", "families", "columns", "rows"],
+      "fact": "Groups are vertical columns on the periodic table. Periods are horizontal rows. Elements in the same group often have similar properties because they have the same number of valence electrons.",
+      "source": "Teacher-approved periodic table reference"
+    },
+    {
+      "id": "common-elements",
+      "category": "periodic table",
+      "title": "Common Element Quick Reference",
+      "terms": ["hydrogen", "helium", "carbon", "oxygen", "sodium", "chlorine", "iron", "gold", "element symbols", "atomic numbers"],
+      "fact": "Common element symbols and atomic numbers: Hydrogen H=1, Helium He=2, Carbon C=6, Nitrogen N=7, Oxygen O=8, Sodium Na=11, Chlorine Cl=17, Iron Fe=26, Copper Cu=29, Silver Ag=47, Gold Au=79, Lead Pb=82.",
+      "source": "Teacher-approved periodic table reference"
+    }
+  ]
+}

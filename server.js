@@ -10,6 +10,9 @@ const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'qwen2.5:0.5b';
 const publicDir = path.join(__dirname, 'public');
 const voicesDir = path.join(__dirname, 'voices');
 const audioDir = path.join(__dirname, 'audio');
+const knowledgeDir = path.join(__dirname, 'knowledge');
+const teacherFactsFile = path.join(knowledgeDir, 'teacher_facts.json');
+const MAX_KNOWLEDGE_ITEMS = Number(process.env.MAX_KNOWLEDGE_ITEMS || 6);
 
 const PIPER_BACKEND = (process.env.PIPER_BACKEND || 'auto').toLowerCase();
 const PIPER_HTTP_URL = process.env.PIPER_HTTP_URL || '';
@@ -40,6 +43,8 @@ const OLLAMA_TOP_P = Number(process.env.OLLAMA_TOP_P || 0.85);
 const OLLAMA_REPEAT_PENALTY = Number(process.env.OLLAMA_REPEAT_PENALTY || 1.1);
 
 ensureDir(audioDir);
+ensureDir(knowledgeDir);
+const TEACHER_KNOWLEDGE = loadTeacherKnowledge();
 pruneAudioDir();
 setInterval(pruneAudioDir, Math.max(60_000, Math.floor(AUDIO_TTL_MS / 2))).unref();
 
@@ -59,6 +64,7 @@ app.get('/api/health', (_req, res) => {
     canStreamAudio: canStreamAudio(),
     canSelectVoice: !usingPiperHttp(),
     hasVoice: usingPiperHttp() || voices.length > 0,
+    knowledgeItems: TEACHER_KNOWLEDGE.length,
     voices
   });
 });
@@ -122,8 +128,11 @@ let pending = '';
 let speechBuffer = [];
 let firstChunkSent = false;
 
+    const matchedKnowledge = findRelevantKnowledge(message);
+    console.log('Knowledge matches:', matchedKnowledge.map((item) => item.title || item.id));
+
     await streamFromOllama({
-      prompt: buildTeacherPrompt(message),
+      prompt: buildTeacherPrompt(message, matchedKnowledge),
       signal: abortController.signal,
       onText(textChunk) {
         if (!textChunk || clientClosed) return;
@@ -266,13 +275,151 @@ async function streamFromOllama({ prompt, onText, signal }) {
   }
 }
 
-function buildTeacherPrompt(message) {
-  return [
+function buildTeacherPrompt(message, matchedKnowledge = []) {
+  const parts = [];
+
+  if (matchedKnowledge.length) {
+    parts.push(
+      'LOCAL VERIFIED CLASS REFERENCE (hidden from students):',
+      'Use this reference as the most trusted information when it is relevant.',
+      'If this reference conflicts with your general memory, use this reference.',
+      'Do not tell students you looked up a hidden database unless the teacher asks.',
+      formatKnowledgeForPrompt(matchedKnowledge),
+      ''
+    );
+  }
+
+  parts.push(
     'Teacher request:',
     message,
     '',
-    'Follow the classroom instructions above. Answer for a 9th-grade science student.'
-  ].join('\n');
+    'Follow the classroom instructions above. Answer for a 9th-grade science student.',
+    'If a calculation is needed and a trusted formula or constant is provided above, use it and show the formula, substitution, and units.'
+  );
+
+  return parts.join('\n');
+}
+
+function loadTeacherKnowledge() {
+  try {
+    if (!fs.existsSync(teacherFactsFile)) {
+      console.warn(`No teacher knowledge file found at ${teacherFactsFile}. Running without local facts.`);
+      return [];
+    }
+
+    const parsed = JSON.parse(fs.readFileSync(teacherFactsFile, 'utf8'));
+    const items = Array.isArray(parsed) ? parsed : parsed.items;
+
+    if (!Array.isArray(items)) {
+      console.warn('Teacher knowledge file should be an array or an object with an items array.');
+      return [];
+    }
+
+    return items
+      .map((item, index) => ({
+        id: item.id || `knowledge-${index + 1}`,
+        category: item.category || 'reference',
+        title: item.title || item.term || `Knowledge item ${index + 1}`,
+        terms: Array.isArray(item.terms) ? item.terms : [],
+        fact: item.fact || item.definition || item.text || '',
+        formula: item.formula || '',
+        examples: Array.isArray(item.examples) ? item.examples : [],
+        source: item.source || 'Teacher-created local knowledge base'
+      }))
+      .filter((item) => item.fact || item.formula);
+  } catch (error) {
+    console.error('Could not load teacher knowledge:', error);
+    return [];
+  }
+}
+
+function findRelevantKnowledge(message) {
+  const normalizedMessage = normalizeForSearch(message);
+  const messageTokens = new Set(tokenizeForSearch(message));
+
+  if (!normalizedMessage || !TEACHER_KNOWLEDGE.length) return [];
+
+  return TEACHER_KNOWLEDGE
+    .map((item) => {
+      const searchableParts = [
+        item.title,
+        item.category,
+        item.fact,
+        item.formula,
+        ...(item.terms || []),
+        ...(item.examples || [])
+      ];
+      const searchable = normalizeForSearch(searchableParts.join(' '));
+      const itemTokens = new Set(tokenizeForSearch(searchable));
+
+      let score = 0;
+
+      for (const term of item.terms || []) {
+        const normalizedTerm = normalizeForSearch(term);
+        if (!normalizedTerm) continue;
+
+        if (containsPhrase(normalizedMessage, normalizedTerm)) {
+          score += normalizedTerm.includes(' ') ? 18 : 10;
+        }
+      }
+
+      const normalizedTitle = normalizeForSearch(item.title);
+      if (normalizedTitle && containsPhrase(normalizedMessage, normalizedTitle)) {
+        score += 14;
+      }
+
+      for (const token of messageTokens) {
+        if (itemTokens.has(token)) score += 1;
+      }
+
+      return { ...item, score };
+    })
+    .filter((item) => item.score >= 2)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, MAX_KNOWLEDGE_ITEMS);
+}
+
+function formatKnowledgeForPrompt(items) {
+  return items
+    .map((item, index) => {
+      const lines = [
+        `${index + 1}. ${item.title} [${item.category}]`,
+        `Fact: ${item.fact}`
+      ];
+
+      if (item.formula) lines.push(`Formula: ${item.formula}`);
+      if (item.examples.length) lines.push(`Examples: ${item.examples.join(' | ')}`);
+      if (item.source) lines.push(`Source note: ${item.source}`);
+
+      return lines.join('\n');
+    })
+    .join('\n\n');
+}
+
+function normalizeForSearch(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9µμ.\s-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function tokenizeForSearch(value) {
+  const stopWords = new Set([
+    'a', 'an', 'and', 'are', 'as', 'at', 'be', 'but', 'by', 'for', 'from', 'how', 'i', 'in',
+    'is', 'it', 'of', 'on', 'or', 'the', 'to', 'what', 'when', 'where', 'which', 'who', 'why', 'with'
+  ]);
+
+  return normalizeForSearch(value)
+    .split(' ')
+    .filter((token) => token.length > 1 && !stopWords.has(token));
+}
+
+function containsPhrase(haystack, phrase) {
+  if (!phrase) return false;
+  const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const pattern = new RegExp(`(^|\\s)${escaped}($|\\s)`);
+  return pattern.test(haystack);
 }
 
 function extractCompletedSentences(text) {
