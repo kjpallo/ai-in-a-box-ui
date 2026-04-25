@@ -44,7 +44,7 @@ const OLLAMA_REPEAT_PENALTY = Number(process.env.OLLAMA_REPEAT_PENALTY || 1.1);
 
 ensureDir(audioDir);
 ensureDir(knowledgeDir);
-const TEACHER_KNOWLEDGE = loadTeacherKnowledge();
+let TEACHER_KNOWLEDGE = loadTeacherKnowledge();
 pruneAudioDir();
 setInterval(pruneAudioDir, Math.max(60_000, Math.floor(AUDIO_TTL_MS / 2))).unref();
 
@@ -128,7 +128,10 @@ let pending = '';
 let speechBuffer = [];
 let firstChunkSent = false;
 
-    const matchedKnowledge = findRelevantKnowledge(message);
+    // Reload teacher facts on every question so edits to knowledge/teacher_facts.json work without restarting Node.
+TEACHER_KNOWLEDGE = loadTeacherKnowledge();
+
+const matchedKnowledge = findRelevantKnowledge(message);
     console.log('Knowledge matches:', matchedKnowledge.map((item) => item.title || item.id));
 
     await streamFromOllama({
