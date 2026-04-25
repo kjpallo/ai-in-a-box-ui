@@ -3,6 +3,8 @@ import inspect
 import io
 import json
 import os
+import subprocess
+import tempfile
 import threading
 import traceback
 import wave
@@ -23,7 +25,7 @@ MODEL = os.getenv(
 CONFIG = os.getenv("PIPER_CONFIG", MODEL + ".json")
 HOST = os.getenv("PIPER_SERVER_HOST", "127.0.0.1")
 PORT = int(os.getenv("PIPER_SERVER_PORT", "5001"))
-
+PIPER_BIN = os.getenv("PIPER_BIN", os.path.join(BASE_DIR, ".venv", "bin", "piper"))
 LENGTH_SCALE = float(os.getenv("PIPER_LENGTH_SCALE", "1.20"))
 SENTENCE_SILENCE = float(os.getenv("PIPER_SENTENCE_SILENCE", "0.05"))
 SPEAKER_ID = int(os.getenv("PIPER_SPEAKER_ID", "0"))
@@ -53,26 +55,42 @@ def synthesize_wav_bytes(text: str) -> bytes:
     if not text:
         raise ValueError("Text is required.")
 
-    out = io.BytesIO()
-    kwargs = {}
-    params = synth_sig.parameters
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_file:
+            temp_path = temp_file.name
 
-    if "speaker_id" in params:
-        kwargs["speaker_id"] = SPEAKER_ID
+        cmd = [
+            PIPER_BIN,
+            "--model",
+            MODEL,
+            "--output_file",
+            temp_path,
+            "--length-scale",
+            str(LENGTH_SCALE),
+        ]
 
-    if "length_scale" in params:
-        kwargs["length_scale"] = LENGTH_SCALE
+        completed = subprocess.run(
+            cmd,
+            input=text.encode("utf-8"),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
 
-    if "sentence_silence" in params:
-        kwargs["sentence_silence"] = SENTENCE_SILENCE
-    elif "sentence_silence_seconds" in params:
-        kwargs["sentence_silence_seconds"] = SENTENCE_SILENCE
+        if completed.returncode != 0:
+            stderr_text = completed.stderr.decode("utf-8", errors="replace").strip()
+            raise RuntimeError(stderr_text or f"Piper exited with code {completed.returncode}")
 
-    with synth_lock:
-        with wave.open(out, "wb") as wav_file:
-            voice.synthesize(text, wav_file, **kwargs)
+        with open(temp_path, "rb") as wav_file:
+            return wav_file.read()
 
-    return out.getvalue()
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            try:
+                os.remove(temp_path)
+            except OSError:
+                pass
 
 
 class Handler(BaseHTTPRequestHandler):
