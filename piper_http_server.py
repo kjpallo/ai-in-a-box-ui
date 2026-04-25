@@ -121,7 +121,6 @@ class Handler(BaseHTTPRequestHandler):
                 payload = json.loads(raw.decode("utf-8"))
                 text = (payload.get("text") or "").strip()
             except Exception as exc:
-                import traceback
                 traceback.print_exc()
                 self._send_json(500, {"ok": False, "error": str(exc)})
                 return
