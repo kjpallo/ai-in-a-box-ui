@@ -335,50 +335,82 @@ function loadTeacherKnowledge() {
 
 function findRelevantKnowledge(message) {
   const normalizedMessage = normalizeForSearch(message);
-  const messageTokens = new Set(tokenizeForSearch(message));
 
   if (!normalizedMessage || !TEACHER_KNOWLEDGE.length) return [];
+
+  const STOP_WORDS = new Set([
+    'a', 'an', 'and', 'are', 'as', 'at', 'be', 'but', 'by', 'for', 'from',
+    'how', 'i', 'in', 'is', 'it', 'of', 'on', 'or', 'the', 'to', 'what',
+    'when', 'where', 'which', 'who', 'why', 'with', 'does', 'do', 'did',
+    'can', 'could', 'would', 'should', 'this', 'that', 'these', 'those',
+    'about', 'because', 'there', 'their', 'they', 'them', 'than', 'then',
+    'have', 'has', 'had', 'was', 'were', 'you', 'your', 'its', 'our',
+    'get', 'find', 'calculate', 'solve', 'define', 'explain', 'tell',
+    'mean', 'means'
+  ]);
+
+  const importantMessageTokens = tokenizeForSearch(message)
+    .filter((token) => token.length >= 4 && !STOP_WORDS.has(token));
 
   return TEACHER_KNOWLEDGE
     .map((item) => {
       const searchableParts = [
         item.title,
         item.category,
-        item.fact,
-        item.formula,
-        ...(item.terms || []),
-        ...(item.examples || [])
+        ...(item.terms || [])
       ];
-      const searchable = normalizeForSearch(searchableParts.join(' '));
-      const itemTokens = new Set(tokenizeForSearch(searchable));
+
+      const itemImportantTokens = new Set(
+        tokenizeForSearch(searchableParts.join(' '))
+          .filter((token) => token.length >= 4 && !STOP_WORDS.has(token))
+      );
 
       let score = 0;
+      let exactTermMatch = false;
+      let exactTitleMatch = false;
+      let importantKeywordMatches = 0;
 
       for (const term of item.terms || []) {
         const normalizedTerm = normalizeForSearch(term);
         if (!normalizedTerm) continue;
 
         if (containsPhrase(normalizedMessage, normalizedTerm)) {
-          score += normalizedTerm.includes(' ') ? 18 : 10;
+          exactTermMatch = true;
+          score += normalizedTerm.includes(' ') ? 30 : 18;
         }
       }
 
       const normalizedTitle = normalizeForSearch(item.title);
       if (normalizedTitle && containsPhrase(normalizedMessage, normalizedTitle)) {
-        score += 14;
+        exactTitleMatch = true;
+        score += 25;
       }
 
-      for (const token of messageTokens) {
-        if (itemTokens.has(token)) score += 1;
+      for (const token of new Set(importantMessageTokens)) {
+        if (itemImportantTokens.has(token)) {
+          importantKeywordMatches += 1;
+          score += 4;
+        }
       }
 
-      return { ...item, score };
+      const strongEnoughMatch =
+        exactTermMatch ||
+        exactTitleMatch ||
+        importantKeywordMatches >= 2;
+
+      return {
+        ...item,
+        score,
+        exactTermMatch,
+        exactTitleMatch,
+        importantKeywordMatches,
+        strongEnoughMatch
+      };
     })
-    .filter((item) => item.score >= 2)
+    .filter((item) => item.strongEnoughMatch)
     .sort((a, b) => b.score - a.score)
     .slice(0, MAX_KNOWLEDGE_ITEMS);
 }
-
 function formatKnowledgeForPrompt(items) {
   return items
     .map((item, index) => {
