@@ -324,6 +324,17 @@ function buildTeacherPrompt(message, matchedKnowledge = [], questionRoute = null
     );
   }
 
+  if (questionRoute && questionRoute.calculatorResult) {
+    parts.push(
+      'LOCAL CALCULATOR RESULT (hidden from students):',
+      'Expression: ' + questionRoute.calculatorResult.expression,
+      'Answer: ' + questionRoute.calculatorResult.displayValue,
+      'Use this local calculator result as correct. Do not recalculate it differently.',
+      'Explain it simply for a 9th-grade student if an explanation is needed.',
+      ''
+    );
+  }
+
   if (matchedKnowledge.length) {
     parts.push(
       'LOCAL VERIFIED CLASS REFERENCE (hidden from students):',
