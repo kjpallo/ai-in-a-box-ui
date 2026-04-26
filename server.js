@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
+const { routeStudentQuestion } = require('./lib/questionRouter');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -69,6 +70,30 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
+
+app.get('/api/router-test', (req, res) => {
+  TEACHER_KNOWLEDGE = loadTeacherKnowledge();
+  const message = String(req.query.q || '').trim();
+  const matchedKnowledge = findRelevantKnowledge(message);
+  const questionRoute = routeStudentQuestion(message, matchedKnowledge);
+
+  res.json({
+    question: message,
+    router: questionRoute.public,
+    answerPreview: questionRoute.directAnswer,
+    matchedKnowledge: matchedKnowledge.map((item) => ({
+      id: item.id,
+      title: item.title,
+      category: item.category,
+      score: item.score,
+      exactTermMatch: item.exactTermMatch,
+      exactTitleMatch: item.exactTitleMatch,
+      importantKeywordMatches: item.importantKeywordMatches,
+      strongEnoughMatch: item.strongEnoughMatch
+    }))
+  });
+});
+
 app.get('/api/voices', (_req, res) => {
   res.json({
     backend: getEffectiveTtsBackend(),
@@ -132,39 +157,48 @@ let firstChunkSent = false;
 TEACHER_KNOWLEDGE = loadTeacherKnowledge();
 
 const matchedKnowledge = findRelevantKnowledge(message);
+const questionRoute = routeStudentQuestion(message, matchedKnowledge);
     console.log('Knowledge matches:', matchedKnowledge.map((item) => item.title || item.id));
+    console.log('Question route:', questionRoute.public);
+    sendEvent({ type: 'router', router: questionRoute.public });
 
-    await streamFromOllama({
-      prompt: buildTeacherPrompt(message, matchedKnowledge),
-      signal: abortController.signal,
-      onText(textChunk) {
-        if (!textChunk || clientClosed) return;
+    if (questionRoute.directAnswer && !questionRoute.aiAllowed) {
+      fullText += questionRoute.directAnswer;
+      sendEvent({ type: 'text_delta', chunk: questionRoute.directAnswer });
+      queueSentenceForSpeech(questionRoute.directAnswer);
+    } else {
+      await streamFromOllama({
+        prompt: buildTeacherPrompt(message, matchedKnowledge, questionRoute),
+        signal: abortController.signal,
+        onText(textChunk) {
+          if (!textChunk || clientClosed) return;
 
-         fullText += textChunk;
-        pending += textChunk;
-        sendEvent({ type: 'text_delta', chunk: textChunk });
+          fullText += textChunk;
+          pending += textChunk;
+          sendEvent({ type: 'text_delta', chunk: textChunk });
 
-        const { complete, remaining } = extractCompletedSentences(pending);
-        pending = remaining;
+          const { complete, remaining } = extractCompletedSentences(pending);
+          pending = remaining;
 
-        for (const sentence of complete) {
-          const cleaned = sentence.trim();
-          if (!cleaned) continue;
+          for (const sentence of complete) {
+            const cleaned = sentence.trim();
+            if (!cleaned) continue;
 
-          speechBuffer.push(cleaned);
+            speechBuffer.push(cleaned);
 
-          if (!firstChunkSent) {
-            if (speechBuffer.length >= 2) {
-              queueSentenceForSpeech(speechBuffer.join(' '));
-              speechBuffer = [];
-              firstChunkSent = true;
+            if (!firstChunkSent) {
+              if (speechBuffer.length >= 2) {
+                queueSentenceForSpeech(speechBuffer.join(' '));
+                speechBuffer = [];
+                firstChunkSent = true;
+              }
+            } else {
+              queueSentenceForSpeech(speechBuffer.shift());
             }
-          } else {
-            queueSentenceForSpeech(speechBuffer.shift());
           }
         }
-      }
-    });
+      });
+    }
 
         const trailing = pending.trim();
     if (trailing) {
@@ -278,8 +312,17 @@ async function streamFromOllama({ prompt, onText, signal }) {
   }
 }
 
-function buildTeacherPrompt(message, matchedKnowledge = []) {
+function buildTeacherPrompt(message, matchedKnowledge = [], questionRoute = null) {
   const parts = [];
+
+  if (questionRoute) {
+    parts.push(
+      'LOCAL QUESTION ROUTER (hidden from students):',
+      JSON.stringify(questionRoute.public),
+      'Router rule: strong = use trusted local info first; weak = say something is related and be careful; none = do not make up a science answer.',
+      ''
+    );
+  }
 
   if (matchedKnowledge.length) {
     parts.push(
@@ -410,7 +453,7 @@ function findRelevantKnowledge(message) {
         strongEnoughMatch
       };
     })
-    .filter((item) => item.strongEnoughMatch)
+    .filter((item) => item.score > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, MAX_KNOWLEDGE_ITEMS);
 }
