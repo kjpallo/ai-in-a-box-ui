@@ -1,0 +1,192 @@
+{
+  "items": [
+    {
+      "formula": "NaCl",
+      "name": "sodium chloride",
+      "aliases": ["nacl", "Na Cl", "salt", "table salt"],
+      "type": "ionic compound",
+      "ions": ["Na+", "Cl-"],
+      "ratio": "1:1",
+      "student_answer": "NaCl is sodium chloride, also known as table salt. It is an ionic compound made from sodium ions and chloride ions. It is ionic, not covalent.",
+      "misconceptions": [
+        "NaCl is not a covalent compound.",
+        "NaCl is better described as a formula unit, not a molecule.",
+        "The subscript 1 is understood and not written."
+      ],
+      "source": "Teacher-approved chemistry cheat sheet"
+    },
+    {
+      "formula": "H2O",
+      "name": "water",
+      "aliases": ["water"],
+      "type": "covalent compound",
+      "student_answer": "H2O is water. It is a covalent compound made from hydrogen and oxygen.",
+      "misconceptions": [
+        "H2O is not ionic.",
+        "The 2 means there are two hydrogen atoms for every one oxygen atom."
+      ],
+      "source": "Teacher-approved chemistry cheat sheet"
+    },
+    {
+      "formula": "CO2",
+      "name": "carbon dioxide",
+      "aliases": ["carbon dioxide"],
+      "type": "covalent compound",
+      "student_answer": "CO2 is carbon dioxide. It is a covalent compound made from carbon and oxygen.",
+      "misconceptions": [
+        "The 2 only applies to oxygen, not carbon.",
+        "CO2 is different from CO, which is carbon monoxide."
+      ],
+      "source": "Teacher-approved chemistry cheat sheet"
+    },
+    {
+      "formula": "O2",
+      "name": "oxygen gas",
+      "aliases": ["oxygen", "oxygen gas", "diatomic oxygen"],
+      "type": "diatomic element",
+      "student_answer": "O2 is oxygen gas. It is a diatomic element, which means two oxygen atoms are bonded together.",
+      "misconceptions": [
+        "O2 is not the same as a single oxygen atom.",
+        "O2 is an element form, not a compound."
+      ],
+      "source": "Teacher-approved chemistry cheat sheet"
+    },
+    {
+      "formula": "H2",
+      "name": "hydrogen gas",
+      "aliases": ["hydrogen", "hydrogen gas", "diatomic hydrogen"],
+      "type": "diatomic element",
+      "student_answer": "H2 is hydrogen gas. It is a diatomic element, which means two hydrogen atoms are bonded together.",
+      "source": "Teacher-approved chemistry cheat sheet"
+    },
+    {
+      "formula": "N2",
+      "name": "nitrogen gas",
+      "aliases": ["nitrogen", "nitrogen gas", "diatomic nitrogen"],
+      "type": "diatomic element",
+      "student_answer": "N2 is nitrogen gas. It is a diatomic element, which means two nitrogen atoms are bonded together.",
+      "source": "Teacher-approved chemistry cheat sheet"
+    },
+    {
+      "formula": "Cl2",
+      "name": "chlorine gas",
+      "aliases": ["chlorine", "chlorine gas", "diatomic chlorine"],
+      "type": "diatomic element",
+      "student_answer": "Cl2 is chlorine gas. It is a diatomic element, which means two chlorine atoms are bonded together.",
+      "source": "Teacher-approved chemistry cheat sheet"
+    },
+    {
+      "formula": "NH3",
+      "name": "ammonia",
+      "aliases": ["ammonia"],
+      "type": "covalent compound",
+      "student_answer": "NH3 is ammonia. It is a covalent compound made from nitrogen and hydrogen.",
+      "source": "Teacher-approved chemistry cheat sheet"
+    },
+    {
+      "formula": "CH4",
+      "name": "methane",
+      "aliases": ["methane", "natural gas"],
+      "type": "covalent compound",
+      "student_answer": "CH4 is methane. It is a covalent compound made from carbon and hydrogen.",
+      "source": "Teacher-approved chemistry cheat sheet"
+    },
+    {
+      "formula": "C6H12O6",
+      "name": "glucose",
+      "aliases": ["glucose", "sugar", "simple sugar"],
+      "type": "covalent compound",
+      "student_answer": "C6H12O6 is glucose. It is a sugar made from carbon, hydrogen, and oxygen.",
+      "source": "Teacher-approved chemistry cheat sheet"
+    },
+    {
+      "formula": "CaCl2",
+      "name": "calcium chloride",
+      "aliases": ["calcium chloride"],
+      "type": "ionic compound",
+      "ions": ["Ca2+", "Cl-"],
+      "ratio": "1:2",
+      "student_answer": "CaCl2 is calcium chloride. It is an ionic compound made from calcium ions and chloride ions.",
+      "source": "Teacher-approved chemistry cheat sheet"
+    },
+    {
+      "formula": "MgO",
+      "name": "magnesium oxide",
+      "aliases": ["magnesium oxide"],
+      "type": "ionic compound",
+      "ions": ["Mg2+", "O2-"],
+      "ratio": "1:1",
+      "student_answer": "MgO is magnesium oxide. It is an ionic compound made from magnesium ions and oxide ions.",
+      "source": "Teacher-approved chemistry cheat sheet"
+    },
+    {
+      "formula": "HCl",
+      "name": "hydrochloric acid",
+      "aliases": ["hydrochloric acid", "hydrogen chloride"],
+      "type": "acid",
+      "student_answer": "HCl is commonly taught as hydrochloric acid when it is dissolved in water. It contains hydrogen and chlorine.",
+      "source": "Teacher-approved chemistry cheat sheet"
+    },
+    {
+      "formula": "NaOH",
+      "name": "sodium hydroxide",
+      "aliases": ["sodium hydroxide", "lye"],
+      "type": "ionic compound",
+      "ions": ["Na+", "OH-"],
+      "ratio": "1:1",
+      "student_answer": "NaOH is sodium hydroxide. It is an ionic compound made from sodium ions and hydroxide ions.",
+      "source": "Teacher-approved chemistry cheat sheet"
+    },
+    {
+      "formula": "H2O2",
+      "name": "hydrogen peroxide",
+      "aliases": ["hydrogen peroxide", "peroxide"],
+      "type": "covalent compound",
+      "student_answer": "H2O2 is hydrogen peroxide. It is a covalent compound made from hydrogen and oxygen.",
+      "source": "Teacher-approved chemistry cheat sheet"
+    },
+    {
+      "formula": "CaCO3",
+      "name": "calcium carbonate",
+      "aliases": ["calcium carbonate", "limestone", "chalk"],
+      "type": "ionic compound",
+      "ions": ["Ca2+", "CO3 2-"],
+      "student_answer": "CaCO3 is calcium carbonate. It is an ionic compound that contains calcium ions and carbonate ions.",
+      "source": "Teacher-approved chemistry cheat sheet"
+    },
+    {
+      "formula": "SO2",
+      "name": "sulfur dioxide",
+      "aliases": ["sulfur dioxide"],
+      "type": "covalent compound",
+      "student_answer": "SO2 is sulfur dioxide. It is a covalent compound made from sulfur and oxygen.",
+      "source": "Teacher-approved chemistry cheat sheet"
+    },
+    {
+      "formula": "CO",
+      "name": "carbon monoxide",
+      "aliases": ["carbon monoxide"],
+      "type": "covalent compound",
+      "student_answer": "CO is carbon monoxide. It is a covalent compound made from carbon and oxygen. CO is different from CO2.",
+      "source": "Teacher-approved chemistry cheat sheet"
+    },
+    {
+      "formula": "KCl",
+      "name": "potassium chloride",
+      "aliases": ["potassium chloride"],
+      "type": "ionic compound",
+      "ions": ["K+", "Cl-"],
+      "ratio": "1:1",
+      "student_answer": "KCl is potassium chloride. It is an ionic compound made from potassium ions and chloride ions.",
+      "source": "Teacher-approved chemistry cheat sheet"
+    },
+    {
+      "formula": "Fe2O3",
+      "name": "iron(III) oxide",
+      "aliases": ["iron oxide", "iron iii oxide", "rust"],
+      "type": "ionic compound",
+      "student_answer": "Fe2O3 is iron(III) oxide. It is commonly associated with rust and contains iron and oxygen.",
+      "source": "Teacher-approved chemistry cheat sheet"
+    }
+  ]
+}
