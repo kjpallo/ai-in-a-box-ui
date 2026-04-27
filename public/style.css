@@ -473,3 +473,245 @@ button:active {
   font-size: 0.88rem;
   line-height: 1.4;
 }
+
+
+/* CHARLEMAGNE_UI_PATCH_START */
+:root {
+  --panel: rgba(10, 18, 24, 0.9);
+  --panel-border: rgba(99, 210, 255, 0.3);
+  --panel-shadow: 0 0 34px rgba(77, 199, 255, 0.09);
+  --neon: #78f2ff;
+  --neon-soft: rgba(120, 242, 255, 0.18);
+  --answer: #f2fbff;
+  --text: #edf8ff;
+  --muted: #a7bfcc;
+  --accent: #ffb14a;
+}
+
+body {
+  background:
+    radial-gradient(circle at top, rgba(33, 126, 170, 0.22), transparent 36%),
+    radial-gradient(circle at 82% 20%, rgba(255, 177, 74, 0.12), transparent 22%),
+    linear-gradient(180deg, #07121b 0%, #030507 100%);
+}
+
+.app-shell {
+  width: min(1220px, calc(100vw - 32px));
+}
+
+.app-header h1 {
+  letter-spacing: 0.045em;
+  line-height: 1.05;
+  text-transform: none;
+}
+
+.subtitle {
+  margin: 10px auto 0;
+  max-width: 760px;
+  color: var(--muted);
+  font-size: clamp(0.98rem, 1.4vw, 1.12rem);
+  line-height: 1.45;
+}
+
+.layout-grid {
+  grid-template-areas:
+    'question voice'
+    'response response'
+    'history history';
+}
+
+.response-panel {
+  min-height: 260px;
+  background: rgba(9, 21, 29, 0.94);
+}
+
+.history-panel {
+  grid-area: history;
+  padding: 24px;
+}
+
+.response-title-row,
+.response-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.response-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.status-ready {
+  color: #9dffcf;
+  border-color: rgba(157, 255, 207, 0.24);
+  background: rgba(157, 255, 207, 0.08);
+}
+
+.status-thinking,
+.status-speaking {
+  color: var(--neon);
+  border-color: rgba(120, 242, 255, 0.3);
+  background: rgba(120, 242, 255, 0.1);
+}
+
+.status-error {
+  color: #ffd3d8;
+  border-color: rgba(255, 111, 127, 0.32);
+  background: rgba(255, 111, 127, 0.1);
+}
+
+#messageInput {
+  min-height: 190px;
+  font-size: 1.06rem;
+  border-color: rgba(120, 242, 255, 0.28);
+}
+
+.quick-help-row,
+.teacher-toggle-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.chip-button {
+  padding: 9px 12px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  background: rgba(120, 242, 255, 0.1);
+  color: var(--answer);
+  border: 1px solid rgba(120, 242, 255, 0.18);
+  box-shadow: none;
+}
+
+.teacher-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--answer);
+  font-weight: 700;
+}
+
+.teacher-toggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--neon);
+}
+
+.teacher-toggle-hint {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.voice-controls {
+  display: none;
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+body.teacher-mode .voice-controls {
+  display: grid;
+}
+
+.small-button {
+  padding: 8px 12px;
+  font-size: 0.86rem;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.secondary-small {
+  color: var(--muted);
+}
+
+.response-text {
+  min-height: 170px;
+  padding: 22px 24px;
+  border-color: rgba(120, 242, 255, 0.25);
+  background: rgba(241, 249, 255, 0.96);
+  color: #081018;
+  font-family: Inter, Arial, Helvetica, sans-serif;
+  font-size: clamp(1.08rem, 1.55vw, 1.28rem);
+  line-height: 1.65;
+  text-shadow: none;
+  box-shadow: 0 0 22px rgba(120, 242, 255, 0.1);
+}
+
+.history-list {
+  display: grid;
+  gap: 12px;
+  position: relative;
+  z-index: 1;
+}
+
+.history-empty {
+  margin: 0;
+  color: var(--muted);
+}
+
+.history-card {
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.history-question,
+.history-answer {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.history-question {
+  color: var(--answer);
+  font-weight: 800;
+}
+
+.history-answer {
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+@media (max-width: 900px) {
+  .layout-grid {
+    grid-template-areas:
+      'question'
+      'voice'
+      'response'
+      'history';
+  }
+
+  .response-title-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .response-actions {
+    justify-content: flex-start;
+  }
+}
+/* CHARLEMAGNE_UI_PATCH_END */
+
+
+/* CLEAN_CLASSROOM_UI_PATCH */
+.quick-help-row,
+.teacher-toggle-row,
+.teacher-toggle,
+.teacher-toggle-hint {
+  display: none !important;
+}
+
+/* Keep the student screen cleaner. Voice/debug controls stay hidden. */
+.voice-controls {
+  display: none !important;
+}
+
+/* Make the main question area tighter now that the extra help box is gone. */
+.question-panel {
+  gap: 16px;
+}

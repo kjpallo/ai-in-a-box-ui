@@ -3,20 +3,21 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI in a Box</title>
+    <title>Charlemagne AI Tutor & Teaching Assistant</title>
     <link rel="stylesheet" href="/style.css" />
   </head>
   <body>
     <div class="app-shell">
       <header class="app-header">
-        <p class="eyebrow">Local assistant UI</p>
-        <h1>AI in a Box</h1>
+        <p class="eyebrow">9th Grade Physical Science Helper</p>
+        <h1>Charlemagne AI Tutor & Teaching Assistant</h1>
+        <p class="subtitle">Ask a science question, get a clear answer, then try the next one.</p>
       </header>
 
       <main class="layout-grid">
         <section class="question-panel panel">
           <div class="panel-title-row">
-            <h2>Question</h2>
+            <h2>Ask Charlemagne</h2>
             <span id="connectionStatus" class="status-pill">Ready</span>
           </div>
 
@@ -25,10 +26,10 @@
             <textarea
               id="messageInput"
               name="message"
-              placeholder="Ask a short science question..."              rows="10"
+              placeholder="Ask a short science question... Example: What is density?"
+              rows="8"
             ></textarea>
-
-            <div class="voice-controls">
+<div class="voice-controls">
               <label for="voiceSelect">Voice</label>
               <select id="voiceSelect" name="voice"></select>
               <p id="voiceHint" class="voice-hint">Choose which Piper voice should speak.</p>
@@ -36,16 +37,12 @@
 
             <div class="button-row">
               <button type="submit" id="sendButton">Send</button>
-              <button type="button" id="stopAudioButton" class="secondary-button">Stop Audio</button>
+              <button type="button" id="stopAudioButton" class="secondary-button">Stop Talking</button>
             </div>
           </form>
 
-          <div class="notes-block">
-  <p>Ask one clear science question at a time.</p>
-  <p>For math questions, include the numbers and units.</p>
-  <p>For vocabulary, ask something like: What does mass mean?</p>
-  <p>If the answer seems unclear, ask a follow-up question.</p>
-</div>
+          
+
         </section>
 
         <section class="voice-panel panel">
@@ -62,16 +59,30 @@
                 <span>Voice</span>
               </div>
             </div>
-            <p id="voiceStatus" class="voice-status">Listening for the next response...</p>
+            <p id="voiceStatus" class="voice-status">Ready for the next question.</p>
           </div>
         </section>
 
         <section class="response-panel panel">
           <div class="panel-title-row">
-            <h2>Response</h2>
-            <span id="streamStatus" class="stream-status">Waiting</span>
+            <h2>Answer</h2>
+            <div class="response-actions">
+              <span id="streamStatus" class="stream-status">Ready</span>
+              <button type="button" id="copyAnswerButton" class="small-button">Copy Answer</button>
+              <button type="button" id="clearButton" class="small-button secondary-small">Clear</button>
+            </div>
           </div>
-          <div id="responseText" class="response-text">Response here in neon green text.</div>
+          <div id="responseText" class="response-text">Ask a question to see the answer here.</div>
+        </section>
+
+        <section class="history-panel panel">
+          <div class="panel-title-row">
+            <h2>Recent Questions</h2>
+            <span class="stream-status">Classroom View</span>
+          </div>
+          <div id="historyList" class="history-list">
+            <p class="history-empty">No questions yet.</p>
+          </div>
         </section>
       </main>
     </div>
