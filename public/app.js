@@ -40,7 +40,7 @@ chatForm.addEventListener('submit', async (event) => {
   stopAudioPlayback({ keepStatus: true });
   responseText.textContent = '';
   responseText.classList.add('streaming');
-  setStreamStatus('Streaming');
+  setStreamStatus('Thinking…');
   setConnectionStatus('Thinking');
   setVoiceStatus('Preparing response...');
 
@@ -61,7 +61,7 @@ chatForm.addEventListener('submit', async (event) => {
     });
 
     if (!response.ok || !response.body) {
-      throw new Error('Could not reach the local server.');
+      throw new Error('The classroom assistant is not connected right now. Tell your teacher.');
     }
 
     const reader = response.body.getReader();
@@ -87,10 +87,10 @@ chatForm.addEventListener('submit', async (event) => {
       setStreamStatus('Stopped');
       setVoiceStatus('Audio stopped.');
     } else {
-      responseText.textContent = `Error: ${error.message}`;
-      setStreamStatus('Error');
-      setConnectionStatus('Offline');
-      setVoiceStatus('There was a problem talking to the backend.');
+      responseText.textContent = 'The classroom assistant is not connected right now. Tell your teacher.';
+      setStreamStatus('Voice problem');
+      setConnectionStatus('Voice problem');
+      setVoiceStatus('Voice problem');
     }
   } finally {
     responseText.classList.remove('streaming');
@@ -214,8 +214,8 @@ async function handleServerEvent(eventData) {
   switch (eventData.type) {
     case 'start':
       responseText.textContent = '';
-      setStreamStatus('Streaming');
-      setConnectionStatus('Connected');
+      setStreamStatus('Thinking…');
+      setConnectionStatus('Ready');
       break;
 
     case 'text_delta':
@@ -246,7 +246,7 @@ async function handleServerEvent(eventData) {
       break;
 
     case 'done':
-      setStreamStatus('Complete');
+      setStreamStatus('Ready');
       setConnectionStatus('Ready');
       if (!audioQueue.length && !isPlayingQueue && !isStreamingAudio) {
         setVoiceStatus('Response finished.');
@@ -255,8 +255,8 @@ async function handleServerEvent(eventData) {
 
     case 'error':
       responseText.textContent += `\n\n[Server error] ${eventData.message}`;
-      setStreamStatus('Error');
-      setConnectionStatus('Offline');
+      setStreamStatus('Voice problem');
+      setConnectionStatus('Voice problem');
       setVoiceStatus('Server returned an error.');
       break;
 
@@ -267,7 +267,7 @@ async function handleServerEvent(eventData) {
 
 function enqueueAudio(item) {
   audioQueue.push(item);
-  setVoiceStatus('Voice queued...');
+  setVoiceStatus('Speaking…');
   playNextAudio();
 }
 
@@ -282,7 +282,7 @@ function playNextAudio() {
 
   isPlayingQueue = true;
   setOrbSpeaking(true);
-  setVoiceStatus('Piper is talking...');
+  setVoiceStatus('Speaking…');
 
   if (nextItem.mode === 'file' && nextItem.url) {
   const audioUrl = `${nextItem.url}?v=${Date.now()}`;
@@ -331,7 +331,7 @@ async function startStreamingSentence(eventData) {
   isStreamingAudio = true;
   streamChunksReceived = 0;
   setOrbSpeaking(true);
-  setVoiceStatus(`Piper is streaming${eventData.voiceName ? ` (${eventData.voiceName})` : ''}...`);
+  setVoiceStatus('Speaking…');
 }
 
 function pushStreamingChunk(eventData) {
@@ -476,7 +476,7 @@ async function checkHealth() {
     // Ignore and fall through.
   }
 
-  setConnectionStatus('Server check failed');
+  setConnectionStatus('Voice problem');
   populateVoiceSelect([], false, false);
 }
 
@@ -532,3 +532,257 @@ function populateVoiceSelect(voices, canSelectVoice, canStreamAudio) {
 }
 
 boot();
+
+
+// CHARLEMAGNE_UI_PATCH_START
+const charlemagneCopyButton = document.getElementById('copyAnswerButton');
+const charlemagneClearButton = document.getElementById('clearButton');
+const charlemagneTeacherToggle = document.getElementById('teacherModeToggle');
+const charlemagneHistoryList = document.getElementById('historyList');
+const charlemagneChipButtons = document.querySelectorAll('.chip-button');
+
+let charlemagneLastQuestion = '';
+let charlemagneHistoryAnswer = '';
+
+chatForm.addEventListener('submit', () => {
+  charlemagneLastQuestion = messageInput.value.trim();
+
+  window.setTimeout(() => {
+    messageInput.value = '';
+  }, 0);
+});
+
+if (charlemagneTeacherToggle) {
+  charlemagneTeacherToggle.addEventListener('change', () => {
+    document.body.classList.toggle('teacher-mode', charlemagneTeacherToggle.checked);
+  });
+}
+
+charlemagneChipButtons.forEach((button) => {
+  button.addEventListener('click', () => {
+    messageInput.value = button.dataset.prompt || button.textContent.trim();
+    messageInput.focus();
+  });
+});
+
+if (charlemagneCopyButton) {
+  charlemagneCopyButton.addEventListener('click', async () => {
+    const text = responseText.textContent.trim();
+
+    if (!text || text === 'Ask a question to see the answer here.') return;
+
+    try {
+      await navigator.clipboard.writeText(text);
+      charlemagneCopyButton.textContent = 'Copied';
+    } catch {
+      charlemagneCopyButton.textContent = 'Copy failed';
+    }
+
+    window.setTimeout(() => {
+      charlemagneCopyButton.textContent = 'Copy Answer';
+    }, 1200);
+  });
+}
+
+if (charlemagneClearButton) {
+  charlemagneClearButton.addEventListener('click', () => {
+    stopAudioPlayback({ keepStatus: true });
+
+    responseText.textContent = 'Ask a question to see the answer here.';
+    responseText.classList.remove('streaming');
+
+    messageInput.value = '';
+    messageInput.focus();
+
+    setStreamStatus('Ready');
+    setConnectionStatus('Ready');
+    setVoiceStatus('Ready');
+    setOrbSpeaking(false);
+  });
+}
+
+function setConnectionStatus(text) {
+  setCharlemagneStatus(connectionStatus, text);
+}
+
+function setStreamStatus(text) {
+  setCharlemagneStatus(streamStatus, text);
+}
+
+function setCharlemagneStatus(element, text) {
+  if (!element) return;
+
+  const friendly = normalizeCharlemagneStatus(text);
+
+  element.textContent = friendly;
+  element.classList.remove('status-ready', 'status-thinking', 'status-speaking', 'status-error');
+
+  if (friendly === 'Ready') element.classList.add('status-ready');
+  if (friendly === 'Thinking…') element.classList.add('status-thinking');
+  if (friendly === 'Speaking…') element.classList.add('status-speaking');
+  if (friendly === 'Voice problem') element.classList.add('status-error');
+}
+
+function normalizeCharlemagneStatus(text) {
+  const value = String(text || '').toLowerCase();
+
+  if (
+    value.includes('speak') ||
+    value.includes('talk') ||
+    value.includes('stream') ||
+    value.includes('queued')
+  ) {
+    return 'Speaking…';
+  }
+
+  if (value.includes('think') || value.includes('prepar')) {
+    return 'Thinking…';
+  }
+
+  if (
+    value.includes('error') ||
+    value.includes('offline') ||
+    value.includes('failed') ||
+    value.includes('problem')
+  ) {
+    return 'Voice problem';
+  }
+
+  return 'Ready';
+}
+
+function setVoiceStatus(text) {
+  if (!voiceStatus) return;
+
+  voiceStatus.textContent = normalizeVoiceText(text);
+}
+
+function normalizeVoiceText(text) {
+  const value = String(text || '').toLowerCase();
+
+  if (value.includes('problem') || value.includes('error') || value.includes('issue')) {
+    return 'Voice problem';
+  }
+
+  if (
+    value.includes('speak') ||
+    value.includes('talk') ||
+    value.includes('stream') ||
+    value.includes('queued')
+  ) {
+    return 'Speaking…';
+  }
+
+  if (value.includes('think') || value.includes('prepar')) {
+    return 'Thinking…';
+  }
+
+  if (value.includes('stopped')) {
+    return 'Voice stopped.';
+  }
+
+  return 'Ready for the next question.';
+}
+
+async function handleServerEvent(eventData) {
+  switch (eventData.type) {
+    case 'start':
+      responseText.textContent = '';
+      charlemagneHistoryAnswer = '';
+      setStreamStatus('Thinking…');
+      setConnectionStatus('Thinking…');
+      setVoiceStatus('Thinking…');
+      break;
+
+    case 'text_delta':
+      responseText.textContent += eventData.chunk;
+      charlemagneHistoryAnswer = responseText.textContent.trim();
+      break;
+
+    case 'audio':
+      enqueueAudio(eventData);
+      break;
+
+    case 'audio_stream_start':
+      await startStreamingSentence(eventData);
+      break;
+
+    case 'audio_chunk':
+      pushStreamingChunk(eventData);
+      break;
+
+    case 'audio_stream_end':
+      finishStreamingSentence(eventData);
+      break;
+
+    case 'audio_error':
+      console.warn('Audio error:', eventData.message);
+      setVoiceStatus('Voice problem');
+      setStreamStatus('Voice problem');
+      setOrbSpeaking(false);
+      isStreamingAudio = false;
+      break;
+
+    case 'done':
+      setStreamStatus('Ready');
+      setConnectionStatus('Ready');
+
+      charlemagneHistoryAnswer = responseText.textContent.trim();
+
+      if (charlemagneLastQuestion && charlemagneHistoryAnswer) {
+        addCharlemagneHistoryItem(charlemagneLastQuestion, charlemagneHistoryAnswer);
+      }
+
+      if (!audioQueue.length && !isPlayingQueue && !isStreamingAudio) {
+        setVoiceStatus('Ready');
+      }
+
+      break;
+
+    case 'error':
+      responseText.textContent = 'The classroom assistant is not connected right now. Tell your teacher.';
+      setStreamStatus('Voice problem');
+      setConnectionStatus('Voice problem');
+      setVoiceStatus('Voice problem');
+
+      if (charlemagneLastQuestion) {
+        addCharlemagneHistoryItem(charlemagneLastQuestion, responseText.textContent);
+      }
+
+      break;
+
+    default:
+      break;
+  }
+}
+
+function addCharlemagneHistoryItem(question, answer) {
+  if (!charlemagneHistoryList || !question || !answer) return;
+
+  const empty = charlemagneHistoryList.querySelector('.history-empty');
+  if (empty) empty.remove();
+
+  const card = document.createElement('article');
+  card.className = 'history-card';
+
+  const q = document.createElement('p');
+  q.className = 'history-question';
+  q.textContent = `Student: ${question}`;
+
+  const a = document.createElement('p');
+  a.className = 'history-answer';
+
+  const shortAnswer = answer.replace(/\s+/g, ' ').trim();
+  a.textContent = `Charlemagne: ${
+    shortAnswer.length > 180 ? shortAnswer.slice(0, 177) + '...' : shortAnswer
+  }`;
+
+  card.appendChild(q);
+  card.appendChild(a);
+  charlemagneHistoryList.prepend(card);
+
+  charlemagneHistoryList.querySelectorAll('.history-card').forEach((item, index) => {
+    if (index >= 6) item.remove();
+  });
+}
+// CHARLEMAGNE_UI_PATCH_END
