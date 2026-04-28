@@ -338,11 +338,8 @@ function buildTeacherPrompt(message, matchedKnowledge = [], questionRoute = null
   if (matchedKnowledge.length) {
     parts.push(
       'LOCAL VERIFIED CLASS REFERENCE (hidden from students):',
-      'Use ONLY this local verified class reference when answering the student.',
+      'Use this reference as the most trusted information when it is relevant.',
       'If this reference conflicts with your general memory, use this reference.',
-      'If multiple local references match, combine the useful parts into one clear answer.',
-      'If the student asks about force of gravity, distinguish between weight force Fg = m × g and Earth gravity g = 9.8 m/s^2 when those references are provided.',
-      'Do not add facts that are not in the local reference.',
       'Do not tell students you looked up a hidden database unless the teacher asks.',
       formatKnowledgeForPrompt(matchedKnowledge),
       ''

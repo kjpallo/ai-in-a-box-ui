@@ -126,10 +126,10 @@ function routeStudentQuestion(message, matchedKnowledge = []) {
       confidence: isStrong ? 'strong' : 'weak',
       toolsUsed: ['teacher_facts'],
       notes: isStrong
-        ? `Found strong local match: ${bestKnowledge.title}. Sending matched teacher facts to AI for wording.`
-        : `Found related local match: ${bestKnowledge.title}. Sending matched teacher facts to AI carefully.`,
+        ? `Found strong local match: ${bestKnowledge.title}.`
+        : `Found related local match: ${bestKnowledge.title}.`,
       directAnswer: buildKnowledgeAnswer(bestKnowledge, isStrong),
-      aiAllowed: true
+      aiAllowed: false
     });
   }
 
