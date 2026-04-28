@@ -72,7 +72,7 @@ If you later decide to run Piper as a local HTTP service instead, this app can s
 
 ```bash
 export PIPER_BACKEND=http
-export PIPER_HTTP_URL=http://127.0.0.1:5001/tts
+export PIPER_HTTP_URL=http://127.0.0.1:5000
 npm start
 ```
 
