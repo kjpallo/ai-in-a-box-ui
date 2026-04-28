@@ -786,3 +786,289 @@ function addCharlemagneHistoryItem(question, answer) {
   });
 }
 // CHARLEMAGNE_UI_PATCH_END
+
+
+// CHARLEMAGNE_BLADE_UI_START
+(() => {
+  const BLADE_KEY = "charlemagneBladeActive";
+  const bladeDefs = [
+    {
+      id: "voice",
+      label: "Voice Setup",
+      short: "VOICE SETUP",
+      icon: "🎙",
+      body: `
+        <div class="blade-placeholder-card">
+          <h3>Voice Setup</h3>
+          <p>Teacher voice training will live here.</p>
+          <p>For now this is a placeholder blade so the blade UI and sliding mechanic are in place.</p>
+        </div>
+      `
+    },
+    {
+      id: "profiles",
+      label: "Profiles",
+      short: "PROFILES",
+      icon: "👤",
+      body: `
+        <div class="blade-placeholder-card">
+          <h3>Profiles</h3>
+          <p>Teacher profiles will live here.</p>
+          <p>No student voice tracking. Teacher profiles only.</p>
+        </div>
+      `
+    },
+    {
+      id: "main",
+      label: "Main",
+      short: "MAIN",
+      icon: "⌂",
+      body: ""
+    },
+    {
+      id: "commands",
+      label: "Commands",
+      short: "COMMANDS",
+      icon: ">_",
+      body: `
+        <div class="blade-placeholder-card">
+          <h3>Commands</h3>
+          <p>Built-in assistant commands will live here.</p>
+          <ul>
+            <li>stop talking</li>
+            <li>clear screen</li>
+            <li>reload teacher facts</li>
+            <li>lock classroom voice</li>
+            <li>unlock classroom voice</li>
+            <li>shutdown assistant</li>
+          </ul>
+        </div>
+      `
+    },
+    {
+      id: "modes",
+      label: "Modes",
+      short: "MODES",
+      icon: "◧",
+      body: `
+        <div class="blade-placeholder-card">
+          <h3>Modes</h3>
+          <p>Voice mode switching will live here.</p>
+          <ul>
+            <li>Open Classroom Mode</li>
+            <li>Teacher Voice Mode</li>
+            <li>Locked Teacher Mode</li>
+          </ul>
+        </div>
+      `
+    },
+    {
+      id: "system",
+      label: "System",
+      short: "SYSTEM",
+      icon: "⚙",
+      body: `
+        <div class="blade-placeholder-card">
+          <h3>System</h3>
+          <p>System settings and diagnostics will live here.</p>
+        </div>
+      `
+    }
+  ];
+
+  function getActiveIndex() {
+    const saved = localStorage.getItem(BLADE_KEY);
+    const idx = bladeDefs.findIndex(b => b.id === saved);
+    return idx >= 0 ? idx : 2; // default = Main
+  }
+
+  function setActiveIndex(idx) {
+    localStorage.setItem(BLADE_KEY, bladeDefs[idx].id);
+  }
+
+  function buildShell(appRoot) {
+    const shell = document.createElement("div");
+    shell.id = "bladeUiShell";
+    shell.className = "blade-ui-shell";
+
+    shell.innerHTML = `
+      <div class="blade-stage-shell">
+        <div class="blade-side-frame blade-side-frame-left"></div>
+        <div class="blade-side-frame blade-side-frame-right"></div>
+
+        <button class="blade-arrow blade-arrow-left" type="button" aria-label="Previous blade">‹</button>
+
+        <div class="blade-preview-rail blade-preview-rail-left" id="bladeLeftRail"></div>
+
+        <div class="blade-center-stage">
+          <div class="blade-center-halo"></div>
+          <div class="blade-center-panel" id="bladeCenterPanel"></div>
+        </div>
+
+        <div class="blade-preview-rail blade-preview-rail-right" id="bladeRightRail"></div>
+
+        <button class="blade-arrow blade-arrow-right" type="button" aria-label="Next blade">›</button>
+      </div>
+
+      <nav class="blade-bottom-nav" id="bladeBottomNav"></nav>
+    `;
+
+    const center = shell.querySelector("#bladeCenterPanel");
+
+    bladeDefs.forEach(def => {
+      const page = document.createElement("section");
+      page.className = "blade-page";
+      page.dataset.bladePage = def.id;
+
+      if (def.id === "main") {
+        const header = document.createElement("div");
+        header.className = "blade-page-title";
+        header.textContent = "Main";
+        page.appendChild(header);
+
+        const contentWrap = document.createElement("div");
+        contentWrap.className = "blade-main-content-wrap";
+        contentWrap.appendChild(appRoot);
+        page.appendChild(contentWrap);
+      } else {
+        page.innerHTML = `
+          <div class="blade-page-title">${def.label}</div>
+          <div class="blade-page-body">${def.body}</div>
+        `;
+      }
+
+      center.appendChild(page);
+    });
+
+    document.body.innerHTML = "";
+    document.body.appendChild(shell);
+  }
+
+  function buildBottomNav(activeIndex) {
+    const nav = document.getElementById("bladeBottomNav");
+    if (!nav) return;
+
+    nav.innerHTML = `
+      <button class="blade-nav-arrow" data-blade-shift="-1" type="button">‹</button>
+      ${bladeDefs.map((def, index) => `
+        <button
+          class="blade-nav-item ${index === activeIndex ? "active" : ""}"
+          data-blade-index="${index}"
+          type="button"
+        >
+          <span class="blade-nav-icon">${def.icon}</span>
+          <span class="blade-nav-label">${def.label}</span>
+        </button>
+      `).join("")}
+      <button class="blade-nav-arrow" data-blade-shift="1" type="button">›</button>
+    `;
+  }
+
+  function makePreviewBlade(def, index, activeIndex, side) {
+    const btn = document.createElement("button");
+    btn.className = `blade-preview ${side}`;
+    btn.dataset.bladeIndex = index;
+
+    const distance = Math.abs(index - activeIndex);
+    btn.style.setProperty("--preview-depth", String(distance));
+
+    btn.innerHTML = `
+      <div class="blade-preview-inner">
+        <div class="blade-preview-title">${def.short}</div>
+        <div class="blade-preview-icon">${def.icon}</div>
+        <div class="blade-preview-accent ${def.id}"></div>
+      </div>
+    `;
+    return btn;
+  }
+
+  function render(activeIndex) {
+    setActiveIndex(activeIndex);
+
+    document.querySelectorAll(".blade-page").forEach((page, idx) => {
+      page.classList.toggle("active", idx === activeIndex);
+    });
+
+    const leftRail = document.getElementById("bladeLeftRail");
+    const rightRail = document.getElementById("bladeRightRail");
+    if (leftRail) leftRail.innerHTML = "";
+    if (rightRail) rightRail.innerHTML = "";
+
+    const leftItems = bladeDefs
+      .map((def, idx) => ({ def, idx }))
+      .filter(item => item.idx < activeIndex);
+
+    const rightItems = bladeDefs
+      .map((def, idx) => ({ def, idx }))
+      .filter(item => item.idx > activeIndex);
+
+    leftItems.forEach(item => {
+      leftRail.appendChild(makePreviewBlade(item.def, item.idx, activeIndex, "left"));
+    });
+
+    rightItems.forEach(item => {
+      rightRail.appendChild(makePreviewBlade(item.def, item.idx, activeIndex, "right"));
+    });
+
+    buildBottomNav(activeIndex);
+
+    document.querySelectorAll("[data-blade-index]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const idx = Number(btn.dataset.bladeIndex);
+        if (!Number.isNaN(idx)) render(idx);
+      });
+    });
+
+    document.querySelectorAll("[data-blade-shift]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const shift = Number(btn.dataset.bladeShift);
+        const next = Math.max(0, Math.min(bladeDefs.length - 1, activeIndex + shift));
+        render(next);
+      });
+    });
+
+    document.querySelector(".blade-arrow-left")?.addEventListener("click", () => {
+      const next = Math.max(0, activeIndex - 1);
+      render(next);
+    });
+
+    document.querySelector(".blade-arrow-right")?.addEventListener("click", () => {
+      const next = Math.min(bladeDefs.length - 1, activeIndex + 1);
+      render(next);
+    });
+  }
+
+  function initBladeUi() {
+    if (document.getElementById("bladeUiShell")) return;
+
+    const appRoot =
+      document.querySelector("main") ||
+      document.querySelector(".app-shell") ||
+      document.querySelector(".container") ||
+      document.querySelector(".page-shell") ||
+      document.body.firstElementChild;
+
+    if (!appRoot) return;
+
+    buildShell(appRoot);
+    render(getActiveIndex());
+
+    document.addEventListener("keydown", (event) => {
+      const current = getActiveIndex();
+      if (event.key === "ArrowLeft") {
+        render(Math.max(0, current - 1));
+      }
+      if (event.key === "ArrowRight") {
+        render(Math.min(bladeDefs.length - 1, current + 1));
+      }
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initBladeUi);
+  } else {
+    initBladeUi();
+  }
+})();
+// CHARLEMAGNE_BLADE_UI_END
+
