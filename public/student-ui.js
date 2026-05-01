@@ -53,8 +53,12 @@
         activeRequestController.abort();
       }
 
-      audio.stop();
-      audio.setOrbSpeaking(false);
+      if (typeof window.CharlemagneStopSpeaking === 'function') {
+        window.CharlemagneStopSpeaking();
+      } else {
+        audio.stop();
+        audio.setOrbSpeaking(false);
+      }
     });
 
     elements.voiceSelect.addEventListener('change', () => {

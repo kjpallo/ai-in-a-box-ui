@@ -329,4 +329,9 @@
     setOrbSpeaking,
     isIdle
   };
+
+  window.CharlemagneStopSpeaking = () => {
+    stop();
+    setOrbSpeaking(false);
+  };
 })();

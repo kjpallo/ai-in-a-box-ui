@@ -18,14 +18,57 @@
     alwaysListeningTimer: null,
     alwaysListeningBusy: false,
     alwaysListeningCooldownUntil: 0,
+    alwaysListeningAudioContext: null,
+    alwaysListeningAnalyser: null,
+    alwaysListeningVolumeData: null,
+    alwaysListeningMonitorId: null,
+    alwaysListeningMonitorTimer: null,
+    alwaysListeningState: 'off',
+    alwaysListeningStartedAt: 0,
+    alwaysListeningRecordingStartedAt: 0,
+    alwaysListeningLastVoiceAt: 0,
+    alwaysListeningSpeechFrames: 0,
+    alwaysListeningRms: 0,
+    alwaysListeningPeakRms: 0,
+    alwaysListeningTranscriptStartedAt: 0,
+    alwaysListeningRecordingMeta: null,
     pendingConfirmation: null
   };
 
   const MAX_RECORDING_MS = 30_000;
-  const ALWAYS_LISTENING_CHUNK_MS = 4_000;
+  const ALWAYS_LISTENING_SPEECH_THRESHOLD = 0.026;
+  const ALWAYS_LISTENING_SILENCE_THRESHOLD = 0.014;
+  const ALWAYS_LISTENING_SPEECH_FRAMES_TO_START = 2;
+  const ALWAYS_LISTENING_SILENCE_MS = 1_100;
+  const ALWAYS_LISTENING_MAX_RECORDING_MS = 6_000;
+  const ALWAYS_LISTENING_MIN_RECORDING_MS = 400;
   const ALWAYS_LISTENING_MIN_BYTES = 1_500;
   const ALWAYS_LISTENING_COMMAND_COOLDOWN_MS = 1_800;
-  const WAKE_WORD_PATTERN = /\b(?:hey\s+)?(?:charlemagne|charlemain|charlemaine)\b/i;
+  const WAKE_MAX_PREFIX_WORDS = 3;
+  const WAKE_MAX_INDEX = 32;
+  const DANGEROUS_COMMAND_PATTERN = /^(?:shutdown|clear logs|reload teacher facts|unlock student mode)\b/;
+  const WAKE_NAME_VARIANTS = [
+    'hey charlemagne',
+    'okay charlemagne',
+    'ok charlemagne',
+    'charlemagne',
+    'charlimain',
+    'charlemain',
+    'charlemaine'
+  ];
+  const COMMAND_STATE_LABELS = {
+    off: 'Command Listening: Off',
+    mic_ready: 'Command Listening: Listening...',
+    listening_for_speech: 'Command Listening: Listening...',
+    recording: 'Command Listening: Recording...',
+    waiting_for_silence: 'Command Listening: Recording...',
+    transcribing: 'Command Listening: Thinking...',
+    wake_word_detected: 'Command Listening: Heard Charlemagne',
+    command_detected: 'Command Listening: Heard command',
+    sending_question: 'Command Listening: Sending question...',
+    ignored: 'Command Listening: Ignored',
+    error: 'Command Listening: Error - check microphone'
+  };
 
   const elements = {};
 
@@ -35,6 +78,54 @@
 
   function setStatus(message) {
     if (elements.status) elements.status.textContent = message;
+  }
+
+  function setCommandState(nextState, detail = '') {
+    state.alwaysListeningState = nextState;
+    const baseLabel = COMMAND_STATE_LABELS[nextState] || 'Command Listening: Listening...';
+    setStatus(detail ? `${baseLabel} - ${detail}` : baseLabel);
+    document.body.dataset.commandListeningState = nextState;
+  }
+
+  function setIgnoredStatus(reason) {
+    setCommandState('ignored', reason);
+  }
+
+  function recordCommandLog(entry = {}) {
+    if (!elements.commandLog) return;
+
+    const transcript = String(entry.transcript || '').trim();
+    const decision = String(entry.decision || '').trim() || 'listening';
+    const reason = String(entry.reason || '').trim();
+    const recordingMs = Number(entry.recordingMs || 0);
+    const whisperMs = Number(entry.whisperMs || 0);
+    const level = Number(entry.level || 0);
+
+    elements.commandLog.hidden = false;
+    elements.commandLog.innerHTML = `
+      <div class="command-log-row">
+        <span>Last heard</span>
+        <strong>${escapeHtml(transcript || 'Nothing yet')}</strong>
+      </div>
+      <div class="command-log-row">
+        <span>Decision</span>
+        <strong>${escapeHtml(reason ? `${decision} - ${reason}` : decision)}</strong>
+      </div>
+      <div class="command-log-meta">
+        ${recordingMs ? `<span>${Math.round(recordingMs)} ms recording</span>` : ''}
+        ${whisperMs ? `<span>${Math.round(whisperMs)} ms Whisper</span>` : ''}
+        ${level ? `<span>level ${level.toFixed(3)}</span>` : ''}
+      </div>
+    `;
+  }
+
+  function escapeHtml(value) {
+    return String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
   }
 
   function setButtonActive(button, active) {
@@ -102,24 +193,27 @@
 
     try {
       state.alwaysListeningActive = true;
+      state.alwaysListeningStartedAt = Date.now();
+      state.alwaysListeningCooldownUntil = 0;
       setButtonsActive(elements.alwaysListeningButtons, true);
       elements.pushToTalkButtons.forEach((button) => {
         button.disabled = true;
       });
       document.body.classList.add('voice-always-listening-on');
-      setStatus('Always Listening is on. Say Charlemagne before a question.');
+      setCommandState('mic_ready');
+      recordCommandLog({ decision: 'listening', reason: 'waiting for speech' });
       console.info('[Always Listening] started');
 
-      await startAlwaysListeningChunk();
+      await startAlwaysListeningMonitor();
       loadDevices();
     } catch (error) {
       console.warn('[Always Listening] could not start:', error);
       await stopAlwaysListening({ quiet: true });
 
       if (error && (error.name === 'NotAllowedError' || error.name === 'SecurityError')) {
-        setStatus('Microphone is blocked. Allow microphone permission in the browser.');
+        setCommandState('error', 'microphone blocked');
       } else {
-        setStatus('Could not access the microphone. Check browser permission and try again.');
+        setCommandState('error', 'check microphone');
       }
     }
   }
@@ -127,6 +221,7 @@
   async function stopAlwaysListening(options = {}) {
     state.alwaysListeningActive = false;
     state.pendingConfirmation = null;
+    state.alwaysListeningSpeechFrames = 0;
     setButtonsActive(elements.alwaysListeningButtons, false);
     elements.alwaysListeningButtons.forEach((button) => button.classList.remove('is-paused'));
     elements.pushToTalkButtons.forEach((button) => {
@@ -140,9 +235,11 @@
     }
 
     await cleanupAlwaysListeningRecorder();
+    await cleanupAlwaysListeningMonitor();
 
     console.info('[Always Listening] stopped');
-    if (!options.quiet) setStatus(options.message || 'Always Listening is off.');
+    if (!options.quiet) setCommandState('off', options.message || '');
+    else setCommandState('off');
   }
 
   function setTranscribing(active) {
@@ -202,7 +299,13 @@
       const micText = mics.length ? `${mics.length} mic option${mics.length === 1 ? '' : 's'} found` : 'Using default mic';
       const speakerText = speakers.length ? `${speakers.length} speaker option${speakers.length === 1 ? '' : 's'} found` : 'Using default speaker';
 
-      setStatus(`${micText}. ${speakerText}. Push to Talk will use local Whisper when configured.`);
+      if (state.pushToTalkActive) {
+        setStatus(`${micText}. ${speakerText}. Recording...`);
+      } else if (state.alwaysListeningActive) {
+        setStatus(`${COMMAND_STATE_LABELS[state.alwaysListeningState] || 'Command Listening: Listening...'}. ${micText}. ${speakerText}.`);
+      } else {
+        setStatus(`Command Listening: Off. ${micText}. ${speakerText}.`);
+      }
     } catch (error) {
       console.warn('Device discovery failed:', error);
       setStatus('Could not list devices yet. This may need HTTPS or browser permission later.');
@@ -392,19 +495,148 @@
     state.recordingMimeType = '';
   }
 
-  async function startAlwaysListeningChunk() {
-    if (!state.alwaysListeningActive || state.alwaysListeningBusy || state.alwaysListeningRecorder) return;
+  async function startAlwaysListeningMonitor() {
+    if (!state.alwaysListeningActive || state.alwaysListeningStream) return;
 
     const stream = await requestMicStream();
-    const mimeType = chooseRecordingMimeType();
-    const recorder = mimeType
-      ? new MediaRecorder(stream, { mimeType })
-      : new MediaRecorder(stream);
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
 
     state.alwaysListeningStream = stream;
+
+    if (AudioContextClass) {
+      const audioContext = new AudioContextClass();
+      if (audioContext.state === 'suspended') {
+        await audioContext.resume().catch(() => {});
+      }
+      const source = audioContext.createMediaStreamSource(stream);
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 1024;
+      analyser.smoothingTimeConstant = 0.18;
+      source.connect(analyser);
+
+      state.alwaysListeningAudioContext = audioContext;
+      state.alwaysListeningAnalyser = analyser;
+      state.alwaysListeningVolumeData = new Uint8Array(analyser.fftSize);
+    }
+
+    setCommandState('listening_for_speech');
+    scheduleAlwaysListeningMonitor();
+  }
+
+  function scheduleAlwaysListeningMonitor() {
+    if (!state.alwaysListeningActive) return;
+
+    if (window.requestAnimationFrame && state.alwaysListeningAnalyser) {
+      state.alwaysListeningMonitorId = window.requestAnimationFrame(monitorAlwaysListeningVolume);
+      return;
+    }
+
+    state.alwaysListeningMonitorTimer = window.setTimeout(monitorAlwaysListeningVolume, 80);
+  }
+
+  function monitorAlwaysListeningVolume() {
+    state.alwaysListeningMonitorId = null;
+    state.alwaysListeningMonitorTimer = null;
+
+    if (!state.alwaysListeningActive) return;
+
+    const now = Date.now();
+    const rms = readAlwaysListeningRms();
+    state.alwaysListeningRms = rms;
+
+    if (isTtsSpeaking()) {
+      state.alwaysListeningSpeechFrames = 0;
+      if (!state.alwaysListeningRecorder && !state.alwaysListeningBusy) {
+        setCommandState('mic_ready', 'waiting while Charlemagne speaks');
+      }
+      scheduleAlwaysListeningMonitor();
+      return;
+    }
+
+    if (state.alwaysListeningBusy || now < state.alwaysListeningCooldownUntil) {
+      scheduleAlwaysListeningMonitor();
+      return;
+    }
+
+    if (!state.alwaysListeningRecorder) {
+      if (rms >= ALWAYS_LISTENING_SPEECH_THRESHOLD) {
+        state.alwaysListeningSpeechFrames += 1;
+      } else {
+        state.alwaysListeningSpeechFrames = 0;
+      }
+
+      if (state.alwaysListeningSpeechFrames >= ALWAYS_LISTENING_SPEECH_FRAMES_TO_START) {
+        startAlwaysListeningRecording().catch((error) => {
+          console.warn('[Always Listening] recording start failed:', error);
+          setCommandState('error', 'check microphone');
+          recordCommandLog({ decision: 'error', reason: 'recording could not start' });
+        });
+      } else if (state.alwaysListeningState !== 'listening_for_speech') {
+        setCommandState('listening_for_speech');
+      }
+
+      scheduleAlwaysListeningMonitor();
+      return;
+    }
+
+    if (rms > state.alwaysListeningPeakRms) state.alwaysListeningPeakRms = rms;
+
+    if (rms >= ALWAYS_LISTENING_SILENCE_THRESHOLD) {
+      state.alwaysListeningLastVoiceAt = now;
+      if (state.alwaysListeningState !== 'recording') setCommandState('recording');
+    } else if (now - state.alwaysListeningLastVoiceAt >= ALWAYS_LISTENING_SILENCE_MS) {
+      setCommandState('waiting_for_silence');
+      finishAlwaysListeningRecording('silence').catch((error) => {
+        console.warn('[Always Listening] recording finish failed:', error);
+        setCommandState('error', 'check microphone');
+      });
+      return;
+    }
+
+    if (now - state.alwaysListeningRecordingStartedAt >= ALWAYS_LISTENING_MAX_RECORDING_MS) {
+      finishAlwaysListeningRecording('max_length').catch((error) => {
+        console.warn('[Always Listening] max-length finish failed:', error);
+        setCommandState('error', 'check microphone');
+      });
+      return;
+    }
+
+    scheduleAlwaysListeningMonitor();
+  }
+
+  function readAlwaysListeningRms() {
+    const analyser = state.alwaysListeningAnalyser;
+    const data = state.alwaysListeningVolumeData;
+    if (!analyser || !data) return 0;
+
+    analyser.getByteTimeDomainData(data);
+
+    let sum = 0;
+    for (let index = 0; index < data.length; index += 1) {
+      const centered = (data[index] - 128) / 128;
+      sum += centered * centered;
+    }
+
+    return Math.sqrt(sum / data.length);
+  }
+
+  async function startAlwaysListeningRecording() {
+    if (!state.alwaysListeningActive || state.alwaysListeningRecorder || state.alwaysListeningBusy) return;
+    if (!state.alwaysListeningStream) await startAlwaysListeningMonitor();
+    if (!state.alwaysListeningStream) return;
+
+    const mimeType = chooseRecordingMimeType();
+    const recorder = mimeType
+      ? new MediaRecorder(state.alwaysListeningStream, { mimeType })
+      : new MediaRecorder(state.alwaysListeningStream);
+
     state.alwaysListeningRecorder = recorder;
     state.alwaysListeningMimeType = recorder.mimeType || mimeType || 'application/octet-stream';
     state.alwaysListeningChunks = [];
+    state.alwaysListeningRecordingStartedAt = Date.now();
+    state.alwaysListeningLastVoiceAt = state.alwaysListeningRecordingStartedAt;
+    state.alwaysListeningPeakRms = state.alwaysListeningRms;
+    state.alwaysListeningRecordingMeta = null;
 
     console.info('[Always Listening] selected mime type:', state.alwaysListeningMimeType);
 
@@ -414,54 +646,87 @@
 
     recorder.addEventListener('error', (event) => {
       console.warn('[Always Listening] MediaRecorder error:', event.error || event);
+      setCommandState('error', 'microphone issue');
       stopAlwaysListening({ message: 'Recording stopped because the microphone had an issue.' });
     });
 
-    recorder.start(1000);
-    state.alwaysListeningTimer = window.setTimeout(() => {
-      finishAlwaysListeningChunk();
-    }, ALWAYS_LISTENING_CHUNK_MS);
+    recorder.start(250);
+    setCommandState('recording');
   }
 
-  async function finishAlwaysListeningChunk() {
-    if (!state.alwaysListeningActive || state.alwaysListeningBusy) return;
+  async function finishAlwaysListeningRecording(reason) {
+    if (!state.alwaysListeningRecorder || state.alwaysListeningBusy) return;
 
     state.alwaysListeningBusy = true;
 
+    const recordingMs = Date.now() - state.alwaysListeningRecordingStartedAt;
+    const peakRms = state.alwaysListeningPeakRms;
+
     try {
       const blob = await stopAlwaysListeningRecorder();
+      state.alwaysListeningRecordingMeta = { recordingMs, peakRms, stopReason: reason };
+      state.alwaysListeningCooldownUntil = Date.now() + ALWAYS_LISTENING_COMMAND_COOLDOWN_MS;
       console.info('[Always Listening] blob size/type:', blob ? blob.size : 0, blob ? blob.type : '');
 
       if (!state.alwaysListeningActive) return;
 
+      if (recordingMs < ALWAYS_LISTENING_MIN_RECORDING_MS) {
+        console.info('[Always Listening] ignored transcript reason: transcript too short');
+        setIgnoredStatus('transcript too short');
+        recordCommandLog({
+          decision: 'ignored',
+          reason: 'transcript too short',
+          recordingMs,
+          level: peakRms
+        });
+        return;
+      }
+
+      if (peakRms < ALWAYS_LISTENING_SPEECH_THRESHOLD) {
+        console.info('[Always Listening] ignored transcript reason: recording too quiet');
+        setIgnoredStatus('recording too quiet');
+        recordCommandLog({
+          decision: 'ignored',
+          reason: 'recording too quiet',
+          recordingMs,
+          level: peakRms
+        });
+        return;
+      }
+
       if (!blob || blob.size < ALWAYS_LISTENING_MIN_BYTES) {
-        console.info('[Always Listening] ignored transcript reason: empty or too small audio chunk');
-        setStatus('No voice was recorded. Check microphone input.');
+        console.info('[Always Listening] ignored transcript reason: transcript too short');
+        setIgnoredStatus('transcript too short');
+        recordCommandLog({
+          decision: 'ignored',
+          reason: 'transcript too short',
+          recordingMs,
+          level: peakRms
+        });
         return;
       }
 
-      if (Date.now() < state.alwaysListeningCooldownUntil) {
-        console.info('[Always Listening] ignored transcript reason: command cooldown active');
-        return;
-      }
-
-      await transcribeAlwaysListeningBlob(blob);
+      await transcribeAlwaysListeningBlob(blob, state.alwaysListeningRecordingMeta);
     } catch (error) {
-      console.warn('[Always Listening] chunk failed:', error);
+      console.warn('[Always Listening] recording failed:', error);
       if (error && (error.name === 'NotAllowedError' || error.name === 'SecurityError')) {
-        setStatus('Microphone is blocked. Allow microphone permission in the browser.');
+        setCommandState('error', 'microphone blocked');
+      } else {
+        setCommandState('error', 'check microphone');
       }
+      recordCommandLog({ decision: 'error', reason: 'microphone or Whisper issue', recordingMs, level: peakRms });
     } finally {
       state.alwaysListeningBusy = false;
       await cleanupAlwaysListeningRecorder();
 
       if (state.alwaysListeningActive) {
+        state.alwaysListeningSpeechFrames = 0;
         window.setTimeout(() => {
-          startAlwaysListeningChunk().catch((error) => {
-            console.warn('[Always Listening] restart failed:', error);
-            stopAlwaysListening({ message: 'Microphone is blocked. Allow microphone permission in the browser.' });
-          });
-        }, 150);
+          if (state.alwaysListeningActive && !state.alwaysListeningBusy) {
+            setCommandState('listening_for_speech');
+            scheduleAlwaysListeningMonitor();
+          }
+        }, Math.max(150, state.alwaysListeningCooldownUntil - Date.now()));
       }
     }
   }
@@ -499,18 +764,43 @@
       }
     }
 
+    state.alwaysListeningRecorder = null;
+    state.alwaysListeningChunks = [];
+    state.alwaysListeningMimeType = '';
+    state.alwaysListeningRecordingStartedAt = 0;
+    state.alwaysListeningLastVoiceAt = 0;
+    state.alwaysListeningPeakRms = 0;
+  }
+
+  async function cleanupAlwaysListeningMonitor() {
+    if (state.alwaysListeningMonitorId && window.cancelAnimationFrame) {
+      window.cancelAnimationFrame(state.alwaysListeningMonitorId);
+    }
+
+    if (state.alwaysListeningMonitorTimer) {
+      window.clearTimeout(state.alwaysListeningMonitorTimer);
+    }
+
     if (state.alwaysListeningStream) {
       state.alwaysListeningStream.getTracks().forEach((track) => track.stop());
     }
 
-    state.alwaysListeningRecorder = null;
+    if (state.alwaysListeningAudioContext) {
+      await state.alwaysListeningAudioContext.close().catch(() => {});
+    }
+
+    state.alwaysListeningMonitorId = null;
+    state.alwaysListeningMonitorTimer = null;
     state.alwaysListeningStream = null;
-    state.alwaysListeningChunks = [];
-    state.alwaysListeningMimeType = '';
+    state.alwaysListeningAudioContext = null;
+    state.alwaysListeningAnalyser = null;
+    state.alwaysListeningVolumeData = null;
   }
 
-  async function transcribeAlwaysListeningBlob(blob) {
+  async function transcribeAlwaysListeningBlob(blob, meta = {}) {
     console.info('[Always Listening] sending chunk to Whisper');
+    setCommandState('transcribing');
+    state.alwaysListeningTranscriptStartedAt = performance.now();
 
     const response = await fetch('/api/whisper/transcribe', {
       method: 'POST',
@@ -525,6 +815,7 @@
       throw new Error(data.error || 'Whisper transcription failed.');
     }
 
+    const whisperMs = performance.now() - state.alwaysListeningTranscriptStartedAt;
     const rawTranscript = String(data.text || '').trim();
     const normalizedTranscript = normalizeTranscript(rawTranscript);
     console.info('[Always Listening] raw transcript:', rawTranscript);
@@ -532,6 +823,15 @@
 
     if (!normalizedTranscript) {
       console.info('[Always Listening] ignored transcript reason: empty transcript');
+      setIgnoredStatus('transcript too short');
+      recordCommandLog({
+        transcript: rawTranscript,
+        decision: 'ignored',
+        reason: 'transcript too short',
+        recordingMs: meta.recordingMs,
+        whisperMs,
+        level: meta.peakRms
+      });
       return;
     }
 
@@ -539,11 +839,33 @@
     console.info('[Always Listening] detected wake word:', wakeResult.detected ? wakeResult.wakeWord : 'none');
 
     if (!wakeResult.detected) {
-      console.info('[Always Listening] ignored transcript reason: wake word missing near beginning');
+      console.info('[Always Listening] ignored transcript reason:', wakeResult.reason || 'wake name missing');
+      setIgnoredStatus(wakeResult.reason || 'wake name missing');
+      recordCommandLog({
+        transcript: rawTranscript,
+        decision: 'ignored',
+        reason: wakeResult.reason || 'wake name missing',
+        recordingMs: meta.recordingMs,
+        whisperMs,
+        level: meta.peakRms
+      });
       return;
     }
 
-    await handleAlwaysListeningCommand(wakeResult.payload);
+    setCommandState('wake_word_detected');
+    recordCommandLog({
+      transcript: rawTranscript,
+      decision: 'wake name heard',
+      recordingMs: meta.recordingMs,
+      whisperMs,
+      level: meta.peakRms
+    });
+    await handleAlwaysListeningCommand(wakeResult.payload, {
+      transcript: rawTranscript,
+      recordingMs: meta.recordingMs,
+      whisperMs,
+      level: meta.peakRms
+    });
   }
 
   function normalizeTranscript(text) {
@@ -557,29 +879,64 @@
   function extractWakeCommand(text) {
     const raw = String(text || '').trim();
     const normalized = normalizeTranscript(raw);
-    const match = normalized.match(WAKE_WORD_PATTERN);
+    if (!normalized) return { detected: false, wakeWord: '', payload: '', reason: 'transcript too short' };
 
-    if (!match || match.index > 24) {
-      return { detected: false, wakeWord: '', payload: '' };
+    const words = normalized.split(' ').filter(Boolean);
+    let bestMatch = null;
+
+    for (const variant of WAKE_NAME_VARIANTS) {
+      const variantWords = variant.split(' ');
+
+      for (let index = 0; index <= Math.min(WAKE_MAX_PREFIX_WORDS, words.length - variantWords.length); index += 1) {
+        const slice = words.slice(index, index + variantWords.length).join(' ');
+        if (slice === variant) {
+          bestMatch = {
+            wordIndex: index,
+            wordLength: variantWords.length,
+            charIndex: words.slice(0, index).join(' ').length + (index > 0 ? 1 : 0),
+            wakeWord: variant
+          };
+          break;
+        }
+      }
+
+      if (bestMatch) break;
     }
 
-    const payload = normalized.slice(match.index + match[0].length).trim();
-    return { detected: true, wakeWord: match[0], payload };
+    if (!bestMatch) {
+      const lateWake = WAKE_NAME_VARIANTS.some((variant) => normalized.includes(variant));
+      return {
+        detected: false,
+        wakeWord: '',
+        payload: '',
+        reason: lateWake ? 'wake name too late' : 'wake name missing'
+      };
+    }
+
+    if (bestMatch.wordIndex > WAKE_MAX_PREFIX_WORDS || bestMatch.charIndex > WAKE_MAX_INDEX) {
+      return { detected: false, wakeWord: bestMatch.wakeWord, payload: '', reason: 'wake name too late' };
+    }
+
+    const payload = words.slice(bestMatch.wordIndex + bestMatch.wordLength).join(' ').trim();
+    return { detected: true, wakeWord: bestMatch.wakeWord, payload, reason: '' };
   }
 
-  async function handleAlwaysListeningCommand(payload) {
+  async function handleAlwaysListeningCommand(payload, meta = {}) {
     const commandText = normalizeTranscript(payload);
 
     if (!commandText) {
       console.info('[Always Listening] ignored transcript reason: wake word heard without command');
-      setStatus('Heard Charlemagne. Say a question after the wake word.');
+      setCommandState('wake_word_detected', 'say a question after the wake name');
+      recordCommandLog({ ...meta, decision: 'ignored', reason: 'transcript too short' });
       return;
     }
 
     const command = parseAlwaysListeningCommand(commandText);
     console.info('[Always Listening] command/payload:', command.type, command.payload || '');
+    setCommandState('command_detected');
 
     if (command.type === 'stop_listening') {
+      recordCommandLog({ ...meta, decision: 'command executed', reason: 'stop listening' });
       await stopAlwaysListening({ message: 'Listening stopped.' });
       return;
     }
@@ -588,13 +945,15 @@
 
     if (command.type === 'cancel') {
       state.pendingConfirmation = null;
-      setStatus('Confirmation canceled.');
+      recordCommandLog({ ...meta, decision: 'command executed', reason: 'cancel' });
+      setCommandState('command_detected', 'canceled');
       return;
     }
 
     if (command.type === 'confirm') {
       if (!state.pendingConfirmation) {
-        setStatus('Nothing is waiting for confirmation.');
+        recordCommandLog({ ...meta, decision: 'ignored', reason: 'nothing to confirm' });
+        setIgnoredStatus('nothing to confirm');
         return;
       }
 
@@ -606,31 +965,58 @@
 
     if (command.requiresConfirmation) {
       state.pendingConfirmation = command;
-      setStatus('Please say Charlemagne confirm or Charlemagne cancel.');
+      setCommandState('command_detected', 'say confirm or cancel');
+      return;
+    }
+
+    if (command.type === 'not_enabled') {
+      recordCommandLog({ ...meta, decision: 'ignored', reason: 'command not enabled' });
+      setIgnoredStatus('That command is not enabled yet.');
       return;
     }
 
     if (command.type === 'stop_talking') {
       stopCurrentSpeech();
-      setStatus('Stopped talking.');
+      recordCommandLog({ ...meta, decision: 'command executed', reason: 'stop talking' });
+      setCommandState('command_detected', 'stopped talking');
       return;
     }
 
     if (command.type === 'clear_screen') {
       clearScreenFromVoice();
+      recordCommandLog({ ...meta, decision: 'command executed', reason: 'clear screen' });
+      return;
+    }
+
+    if (command.type === 'read_answer') {
+      recordCommandLog({ ...meta, decision: 'command executed', reason: 'read answer' });
+      readAnswerFromVoice();
+      return;
+    }
+
+    if (command.type === 'lock_student_mode') {
+      recordCommandLog({ ...meta, decision: 'command executed', reason: 'lock student mode' });
+      lockStudentModeFromVoice();
       return;
     }
 
     if (command.payload) {
-      setStatus('Heard Charlemagne. Sending question...');
+      setCommandState('sending_question');
+      recordCommandLog({ ...meta, decision: 'sent', reason: command.type });
       submitTeacherQuestion(command.payload);
+      window.setTimeout(() => {
+        if (state.alwaysListeningActive) setCommandState('sending_question', 'sent question');
+      }, 250);
     }
   }
 
   function parseAlwaysListeningCommand(text) {
+    if (DANGEROUS_COMMAND_PATTERN.test(text)) return { type: 'not_enabled' };
     if (/^stop listening\b/.test(text)) return { type: 'stop_listening' };
     if (/^stop talking\b/.test(text)) return { type: 'stop_talking' };
     if (/^clear screen\b/.test(text)) return { type: 'clear_screen' };
+    if (/^read answer\b/.test(text)) return { type: 'read_answer' };
+    if (/^lock student mode\b/.test(text)) return { type: 'lock_student_mode' };
     if (/^cancel\b/.test(text)) return { type: 'cancel' };
     if (/^confirm\b/.test(text)) return { type: 'confirm' };
 
@@ -638,18 +1024,23 @@
     if (askMatch) return { type: 'ask', payload: askMatch[1].trim() };
 
     const calculateMatch = text.match(/^calculate\s+(.+)/);
-    if (calculateMatch) return { type: 'calculate', payload: `Calculate: ${calculateMatch[1].trim()}` };
+    if (calculateMatch) return { type: 'calculate', payload: `calculate ${calculateMatch[1].trim()}` };
 
     const defineMatch = text.match(/^define\s+(.+)/);
-    if (defineMatch) return { type: 'define', payload: `Define: ${defineMatch[1].trim()}` };
+    if (defineMatch) return { type: 'define', payload: `define ${defineMatch[1].trim()}` };
 
     const formulaMatch = text.match(/^show formula for\s+(.+)/);
-    if (formulaMatch) return { type: 'show_formula', payload: `Show formula for ${formulaMatch[1].trim()}` };
+    if (formulaMatch) return { type: 'show_formula', payload: `show formula for ${formulaMatch[1].trim()}` };
 
     return { type: 'question', payload: text };
   }
 
   function stopCurrentSpeech() {
+    if (typeof window.CharlemagneStopSpeaking === 'function') {
+      window.CharlemagneStopSpeaking();
+      return;
+    }
+
     const audio = window.CharlemagneAudio;
     if (audio && typeof audio.stop === 'function') audio.stop();
     if (audio && typeof audio.setOrbSpeaking === 'function') audio.setOrbSpeaking(false);
@@ -659,11 +1050,33 @@
     const clearButton = byId('clearButton');
     if (clearButton) {
       clearButton.click();
-      setStatus('Screen cleared.');
+      setCommandState('command_detected', 'screen cleared');
       return;
     }
 
-    setStatus('I heard clear screen, but this view does not have a clear button.');
+    setCommandState('error', 'clear button missing');
+  }
+
+  function readAnswerFromVoice() {
+    const response = byId('responseText');
+    const text = String(response ? response.textContent || '' : '').trim();
+    if (!text || response.classList.contains('response-empty')) {
+      setIgnoredStatus('no answer to read');
+      return;
+    }
+
+    submitTeacherQuestion(`Read this answer aloud: ${text}`);
+  }
+
+  function lockStudentModeFromVoice() {
+    const toggle = byId('teacherModeToggle');
+    if (toggle && toggle.checked) {
+      toggle.click();
+      setCommandState('command_detected', 'student mode locked');
+      return;
+    }
+
+    setCommandState('command_detected', 'student mode locked');
   }
 
   function submitTeacherQuestion(question) {
@@ -769,7 +1182,7 @@
 
       if (speaking && state.alwaysListeningActive) {
         elements.alwaysListeningButtons.forEach((button) => button.classList.remove('is-paused'));
-        setStatus('Always Listening is on. Say Charlemagne before a question.');
+        setCommandState('mic_ready', 'waiting while Charlemagne speaks');
       } else {
         elements.alwaysListeningButtons.forEach((button) => button.classList.remove('is-paused'));
       }
@@ -792,7 +1205,7 @@
 
       if (speaking && state.alwaysListeningActive) {
         elements.alwaysListeningButtons.forEach((button) => button.classList.remove('is-paused'));
-        setStatus('Always Listening is on. Say Charlemagne before a question.');
+        setCommandState('mic_ready', 'waiting while Charlemagne speaks');
       } else {
         elements.alwaysListeningButtons.forEach((button) => button.classList.remove('is-paused'));
       }
@@ -812,6 +1225,7 @@
     elements.micSelect = byId('micDeviceSelect');
     elements.speakerSelect = byId('speakerDeviceSelect');
     elements.status = byId('voiceInputStatus');
+    elements.commandLog = byId('commandListeningLog');
 
     if (!elements.panel) return;
 

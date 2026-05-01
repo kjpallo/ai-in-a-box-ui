@@ -64,7 +64,7 @@
                   id="pushToTalkButton"
                   class="voice-mode-button"
                   aria-pressed="false"
-                  title="Future Whisper push-to-talk input"
+                  title="Whisper push-to-talk input"
                 >🎙 Push to Talk</button>
 
                 <button
@@ -72,7 +72,7 @@
                   id="alwaysListeningButton"
                   class="voice-mode-button"
                   aria-pressed="false"
-                  title="Future Whisper always-listening mode"
+                  title="Whisper command listening mode"
                 >◎ Always Listening</button>
               </div>
 
@@ -95,29 +95,8 @@
               <p id="voiceInputStatus" class="voice-input-status">
                 Voice controls are ready. Whisper is not connected yet.
               </p>
+              <div id="commandListeningLog" class="command-listening-log" hidden aria-live="polite"></div>
             </div>
-
-
-            <div class="voice-placeholder-row" aria-label="Future voice controls">
-              <button
-                type="button"
-                id="pushToTalkButton"
-                class="voice-action-button"
-                aria-describedby="voicePlaceholderStatus"
-              >
-                Push to Talk
-              </button>
-              <button
-                type="button"
-                id="alwaysListeningButton"
-                class="voice-action-button"
-                aria-pressed="false"
-                aria-describedby="voicePlaceholderStatus"
-              >
-                Always Listening
-              </button>
-            </div>
-            <p id="voicePlaceholderStatus" class="voice-placeholder-status" aria-live="polite"></p>
           </form>
 
           

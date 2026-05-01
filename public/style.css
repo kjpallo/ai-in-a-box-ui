@@ -2228,6 +2228,55 @@ button:disabled {
   line-height: 1.3;
 }
 
+.command-listening-log {
+  display: grid;
+  gap: 0.38rem;
+  padding: 0.56rem 0.62rem;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  background: rgba(0,0,0,0.18);
+  color: #cce4df;
+  font-size: 0.72rem;
+  line-height: 1.28;
+}
+
+.command-listening-log[hidden] {
+  display: none;
+}
+
+.command-log-row {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 0.45rem;
+  align-items: start;
+}
+
+.command-log-row span {
+  color: #8da8a7;
+  font-weight: 800;
+}
+
+.command-log-row strong {
+  min-width: 0;
+  color: #effff8;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.command-log-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.38rem;
+  color: #91aaa8;
+}
+
+.command-log-meta span {
+  padding: 0.14rem 0.36rem;
+  border: 1px solid rgba(103,255,208,0.12);
+  border-radius: 999px;
+  background: rgba(103,255,208,0.055);
+}
+
 body.tts-speaking .header-sparkline,
 body.tts-speaking .subtitle::after {
   animation: charlemagneHeaderVoiceWave 760ms ease-in-out infinite;
