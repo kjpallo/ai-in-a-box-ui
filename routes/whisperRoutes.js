@@ -1,11 +1,24 @@
 const fsp = require('fs/promises');
 const os = require('os');
 const path = require('path');
-const { GENERIC_WHISPER_ERROR, transcribeAudioFile } = require('../lib/whisper/transcribe');
+const { GENERIC_WHISPER_ERROR, getWhisperHealth, transcribeAudioFile } = require('../lib/whisper/transcribe');
 
 const MAX_UPLOAD_BYTES = Number(process.env.WHISPER_MAX_UPLOAD_BYTES || 25 * 1024 * 1024);
 
 function registerWhisperRoutes(app) {
+  app.get('/api/whisper/health', async (_req, res) => {
+    try {
+      res.json(await getWhisperHealth());
+    } catch (error) {
+      console.warn('Whisper health check failed:', error && (error.stack || error.message || error));
+      res.status(500).json({
+        ok: false,
+        ready: false,
+        missing: ['Whisper health check failed. Check the server logs.']
+      });
+    }
+  });
+
   app.post('/api/whisper/transcribe', async (req, res) => {
     let tempDir = '';
 
@@ -26,12 +39,13 @@ function registerWhisperRoutes(app) {
       res.json({ ok: true, text: result.text });
     } catch (error) {
       const status = error && error.statusCode === 413 ? 413 : 200;
-      console.warn('Whisper transcription failed:', error && (error.detail || error.message || error));
+      console.warn('Whisper transcription failed:', error && (error.stack || error.detail || error.message || error));
       res.status(status).json({
         ok: false,
+        code: error && error.code ? error.code : 'WHISPER_TRANSCRIPTION_FAILED',
         error: error && error.statusCode === 413
           ? 'Recording is too large. Please keep Push to Talk recordings short.'
-          : GENERIC_WHISPER_ERROR
+          : (error && error.publicMessage) || GENERIC_WHISPER_ERROR
       });
     } finally {
       if (tempDir) {

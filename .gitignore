@@ -1,4 +1,5 @@
 node_modules/
+.venv/
 .env
 .env.*
 logs/teacher_gmail_auth.json
@@ -7,4 +8,6 @@ audio/*
 !.gitkeep
 voices/*.onnx
 voices/*.json
+models/*.bin
+vendor/whisper.cpp/
 .DS_Store

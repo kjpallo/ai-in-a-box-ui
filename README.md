@@ -86,6 +86,36 @@ export PIPER_AUDIO_MODE=stream
 npm start
 ```
 
+## Local Whisper Push to Talk setup
+
+Push to Talk uses local `whisper.cpp`; it does not use any cloud API.
+
+On the Raspberry Pi, install or build `whisper.cpp` separately, then put the model file at:
+
+```bash
+models/ggml-tiny.en.bin
+```
+
+Set these paths in `.env` or in the shell that starts the app:
+
+```bash
+WHISPER_CPP_BIN=vendor/whisper.cpp/build/bin/whisper-cli
+WHISPER_MODEL=models/ggml-tiny.en.bin
+FFMPEG_BIN=/usr/bin/ffmpeg
+WHISPER_LANGUAGE=en
+WHISPER_TIMEOUT_MS=60000
+```
+
+Older `whisper.cpp` builds may produce `main` instead of `whisper-cli`; if so, set `WHISPER_CPP_BIN` to that executable.
+
+Check readiness from the teacher computer:
+
+```bash
+curl http://localhost:3000/api/whisper/health
+```
+
+The app is ready for Push to Talk when that response has `"ready":true`. If it is false, the `missing` array shows which local file or command still needs attention.
+
 ## File mode fallback
 
 If you want to fall back to WAV files instead of chunked streaming:

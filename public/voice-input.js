@@ -330,7 +330,9 @@
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok || !data.ok) {
-        throw new Error(data.error || 'Whisper transcription failed.');
+        const error = new Error(data.error || 'Whisper transcription failed.');
+        error.code = data.code || '';
+        throw error;
       }
 
       const text = String(data.text || '').trim();
@@ -343,7 +345,9 @@
       setStatus('Transcription added to the text box. Press Send when ready.');
     } catch (error) {
       console.warn('Whisper transcription request failed:', error);
-      setStatus('Whisper could not transcribe that recording yet. Check local setup and try again.');
+      setStatus(error && error.code === 'WHISPER_SETUP_INCOMPLETE'
+        ? 'Voice setup is incomplete. Check Whisper setup on the teacher computer.'
+        : 'Whisper could not transcribe that recording yet. Check local setup and try again.');
     } finally {
       setTranscribing(false);
     }
