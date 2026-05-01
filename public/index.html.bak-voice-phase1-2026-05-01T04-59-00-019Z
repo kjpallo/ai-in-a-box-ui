@@ -57,46 +57,6 @@
               <button type="submit" id="sendButton">Send</button>
               <button type="button" id="stopAudioButton" class="secondary-button">Stop Talking</button>
             </div>
-            <div id="voiceInputPanel" class="voice-input-panel" aria-label="Future Whisper voice controls">
-              <div class="voice-input-actions">
-                <button
-                  type="button"
-                  id="pushToTalkButton"
-                  class="voice-mode-button"
-                  aria-pressed="false"
-                  title="Future Whisper push-to-talk input"
-                >🎙 Push to Talk</button>
-
-                <button
-                  type="button"
-                  id="alwaysListeningButton"
-                  class="voice-mode-button"
-                  aria-pressed="false"
-                  title="Future Whisper always-listening mode"
-                >◎ Always Listening</button>
-              </div>
-
-              <div class="voice-device-grid">
-                <label class="voice-device-field" for="micDeviceSelect">
-                  <span>Mic</span>
-                  <select id="micDeviceSelect">
-                    <option value="">Default microphone</option>
-                  </select>
-                </label>
-
-                <label class="voice-device-field" for="speakerDeviceSelect">
-                  <span>Speaker</span>
-                  <select id="speakerDeviceSelect">
-                    <option value="">Default speaker</option>
-                  </select>
-                </label>
-              </div>
-
-              <p id="voiceInputStatus" class="voice-input-status">
-                Voice controls are ready. Whisper is not connected yet.
-              </p>
-            </div>
-
 
             <div class="voice-placeholder-row" aria-label="Future voice controls">
               <button
@@ -235,7 +195,6 @@
     </div>
 
     <script src="/audio.js"></script>
-    <script src="/voice-input.js"></script>
     <script src="/teacher-ui.js"></script>
     <script src="/student-ui.js"></script>
     <script src="/blade-ui.js"></script>

@@ -225,5 +225,215 @@
       },
       "className": ""
     }
+  },
+  {
+    "id": "interaction_20260501023146858_l8esbn",
+    "timestamp": "2026-05-01T02:31:46.858Z",
+    "studentQuestion": "what is mass",
+    "question": "what is mass",
+    "message": "what is mass",
+    "answerGiven": "In 9th-grade science, Mass is the amount of matter in an object. Mass is measured in grams or kilograms and does not change just because gravity changes.\nFormula: mass can be found from m = F/a or m = density × volume when those values are known",
+    "answer": "In 9th-grade science, Mass is the amount of matter in an object. Mass is measured in grams or kilograms and does not change just because gravity changes.\nFormula: mass can be found from m = F/a or m = density × volume when those values are known",
+    "response": "In 9th-grade science, Mass is the amount of matter in an object. Mass is measured in grams or kilograms and does not change just because gravity changes.\nFormula: mass can be found from m = F/a or m = density × volume when those values are known",
+    "responsePreview": "In 9th-grade science, Mass is the amount of matter in an object. Mass is measured in grams or kilograms and does not change just because ...",
+    "routerType": "definition",
+    "routeType": "definition",
+    "type": "definition",
+    "formulaChosen": "",
+    "category": "definition",
+    "confidence": "strong",
+    "source": "chat_router",
+    "sessionId": "",
+    "debug": {
+      "route": {
+        "type": "definition",
+        "confidence": "strong",
+        "toolsUsed": [
+          "teacher_facts"
+        ],
+        "notes": "Found strong local match: Mass. Answering directly from teacher facts.",
+        "aiAllowed": false
+      }
+    }
+  },
+  {
+    "id": "interaction_20260501025054117_lg05xy",
+    "timestamp": "2026-05-01T02:50:54.117Z",
+    "studentQuestion": "what is helium",
+    "question": "what is helium",
+    "message": "what is helium",
+    "answerGiven": "In 9th-grade science, Common element symbols and atomic numbers: Hydrogen H=1, Helium He=2, Carbon C=6, Nitrogen N=7, Oxygen O=8, Sodium Na=11, Chlorine Cl=17, Iron Fe=26, Copper Cu=29, Silver Ag=47, Gold Au=79, Lead Pb=82.",
+    "answer": "In 9th-grade science, Common element symbols and atomic numbers: Hydrogen H=1, Helium He=2, Carbon C=6, Nitrogen N=7, Oxygen O=8, Sodium Na=11, Chlorine Cl=17, Iron Fe=26, Copper Cu=29, Silver Ag=47, Gold Au=79, Lead Pb=82.",
+    "response": "In 9th-grade science, Common element symbols and atomic numbers: Hydrogen H=1, Helium He=2, Carbon C=6, Nitrogen N=7, Oxygen O=8, Sodium Na=11, Chlorine Cl=17, Iron Fe=26, Copper Cu=29, Silver Ag=47, Gold Au=79, Lead Pb=82.",
+    "responsePreview": "In 9th-grade science, Common element symbols and atomic numbers: Hydrogen H=1, Helium He=2, Carbon C=6, Nitrogen N=7, Oxygen O=8, Sodium ...",
+    "routerType": "definition",
+    "routeType": "definition",
+    "type": "definition",
+    "formulaChosen": "",
+    "category": "definition",
+    "confidence": "strong",
+    "source": "chat_router",
+    "sessionId": "",
+    "debug": {
+      "route": {
+        "type": "definition",
+        "confidence": "strong",
+        "toolsUsed": [
+          "teacher_facts"
+        ],
+        "notes": "Found strong local match: Common Element Quick Reference. Answering directly from teacher facts.",
+        "aiAllowed": false
+      }
+    }
+  },
+  {
+    "id": "interaction_20260501041406399_9zriw1",
+    "timestamp": "2026-05-01T04:14:06.399Z",
+    "studentQuestion": "what is mass",
+    "question": "what is mass",
+    "message": "what is mass",
+    "answerGiven": "In 9th-grade science, Mass is the amount of matter in an object. Mass is measured in grams or kilograms and does not change just because gravity changes.\nFormula: mass can be found from m = F/a or m = density × volume when those values are known",
+    "answer": "In 9th-grade science, Mass is the amount of matter in an object. Mass is measured in grams or kilograms and does not change just because gravity changes.\nFormula: mass can be found from m = F/a or m = density × volume when those values are known",
+    "response": "In 9th-grade science, Mass is the amount of matter in an object. Mass is measured in grams or kilograms and does not change just because gravity changes.\nFormula: mass can be found from m = F/a or m = density × volume when those values are known",
+    "responsePreview": "In 9th-grade science, Mass is the amount of matter in an object. Mass is measured in grams or kilograms and does not change just because ...",
+    "routerType": "definition",
+    "routeType": "definition",
+    "type": "definition",
+    "formulaChosen": "",
+    "category": "definition",
+    "confidence": "strong",
+    "source": "chat_router",
+    "sessionId": "",
+    "debug": {
+      "route": {
+        "type": "definition",
+        "confidence": "strong",
+        "toolsUsed": [
+          "teacher_facts"
+        ],
+        "notes": "Found strong local match: Mass. Answering directly from teacher facts.",
+        "aiAllowed": false
+      }
+    }
+  },
+  {
+    "id": "interaction_20260501041420865_8twpwq",
+    "timestamp": "2026-05-01T04:14:20.865Z",
+    "studentQuestion": "what is the force of gravity",
+    "question": "what is the force of gravity",
+    "message": "what is the force of gravity",
+    "answerGiven": "Near Earth, gravity is about 9.8 m/s² downward.\nUse g = 9.8 m/s² in the weight formula Fg = m × g.",
+    "answer": "Near Earth, gravity is about 9.8 m/s² downward.\nUse g = 9.8 m/s² in the weight formula Fg = m × g.",
+    "response": "Near Earth, gravity is about 9.8 m/s² downward.\nUse g = 9.8 m/s² in the weight formula Fg = m × g.",
+    "responsePreview": "Near Earth, gravity is about 9.8 m/s² downward. Use g = 9.8 m/s² in the weight formula Fg = m × g.",
+    "routerType": "science_formula",
+    "routeType": "science_formula",
+    "type": "science_formula",
+    "formulaChosen": "",
+    "category": "science_formula",
+    "confidence": "strong",
+    "source": "chat_router",
+    "sessionId": "",
+    "debug": {
+      "route": {
+        "type": "science_formula",
+        "confidence": "strong",
+        "toolsUsed": [
+          "science_formula_rules"
+        ],
+        "notes": "Recognized gravity constant question.",
+        "aiAllowed": false
+      }
+    }
+  },
+  {
+    "id": "interaction_20260501041447420_f3lwme",
+    "timestamp": "2026-05-01T04:14:47.420Z",
+    "studentQuestion": "what is time speed if he runs for 10 min for 8 meters",
+    "question": "what is time speed if he runs for 10 min for 8 meters",
+    "message": "what is time speed if he runs for 10 min for 8 meters",
+    "answerGiven": "In 9th-grade science, Speed tells how fast an object moves. It does not include direction.\nFormula: speed = distance / time; s = d / t\nExample: If distance = 100 m and time = 20 s, speed = 5 m/s.",
+    "answer": "In 9th-grade science, Speed tells how fast an object moves. It does not include direction.\nFormula: speed = distance / time; s = d / t\nExample: If distance = 100 m and time = 20 s, speed = 5 m/s.",
+    "response": "In 9th-grade science, Speed tells how fast an object moves. It does not include direction.\nFormula: speed = distance / time; s = d / t\nExample: If distance = 100 m and time = 20 s, speed = 5 m/s.",
+    "responsePreview": "In 9th-grade science, Speed tells how fast an object moves. It does not include direction. Formula: speed = distance / time; s = d / t Ex...",
+    "routerType": "definition",
+    "routeType": "definition",
+    "type": "definition",
+    "formulaChosen": "",
+    "category": "definition",
+    "confidence": "strong",
+    "source": "chat_router",
+    "sessionId": "",
+    "debug": {
+      "route": {
+        "type": "definition",
+        "confidence": "strong",
+        "toolsUsed": [
+          "teacher_facts"
+        ],
+        "notes": "Found strong local match: Speed. Answering directly from teacher facts.",
+        "aiAllowed": false
+      }
+    }
+  },
+  {
+    "id": "interaction_20260501042817939_n8f3t0",
+    "timestamp": "2026-05-01T04:28:17.939Z",
+    "studentQuestion": "what is mass",
+    "question": "what is mass",
+    "message": "what is mass",
+    "answerGiven": "In 9th-grade science, Mass is the amount of matter in an object. Mass is measured in grams or kilograms and does not change just because gravity changes.\nFormula: mass can be found from m = F/a or m = density × volume when those values are known",
+    "answer": "In 9th-grade science, Mass is the amount of matter in an object. Mass is measured in grams or kilograms and does not change just because gravity changes.\nFormula: mass can be found from m = F/a or m = density × volume when those values are known",
+    "response": "In 9th-grade science, Mass is the amount of matter in an object. Mass is measured in grams or kilograms and does not change just because gravity changes.\nFormula: mass can be found from m = F/a or m = density × volume when those values are known",
+    "responsePreview": "In 9th-grade science, Mass is the amount of matter in an object. Mass is measured in grams or kilograms and does not change just because ...",
+    "routerType": "definition",
+    "routeType": "definition",
+    "type": "definition",
+    "formulaChosen": "",
+    "category": "definition",
+    "confidence": "strong",
+    "source": "chat_router",
+    "sessionId": "",
+    "debug": {
+      "route": {
+        "type": "definition",
+        "confidence": "strong",
+        "toolsUsed": [
+          "teacher_facts"
+        ],
+        "notes": "Found strong local match: Mass. Answering directly from teacher facts.",
+        "aiAllowed": false
+      }
+    }
+  },
+  {
+    "id": "interaction_20260501044334459_6s1fbg",
+    "timestamp": "2026-05-01T04:43:34.459Z",
+    "studentQuestion": "what is mass",
+    "question": "what is mass",
+    "message": "what is mass",
+    "answerGiven": "In 9th-grade science, Mass is the amount of matter in an object. Mass is measured in grams or kilograms and does not change just because gravity changes.\nFormula: mass can be found from m = F/a or m = density × volume when those values are known",
+    "answer": "In 9th-grade science, Mass is the amount of matter in an object. Mass is measured in grams or kilograms and does not change just because gravity changes.\nFormula: mass can be found from m = F/a or m = density × volume when those values are known",
+    "response": "In 9th-grade science, Mass is the amount of matter in an object. Mass is measured in grams or kilograms and does not change just because gravity changes.\nFormula: mass can be found from m = F/a or m = density × volume when those values are known",
+    "responsePreview": "In 9th-grade science, Mass is the amount of matter in an object. Mass is measured in grams or kilograms and does not change just because ...",
+    "routerType": "definition",
+    "routeType": "definition",
+    "type": "definition",
+    "formulaChosen": "",
+    "category": "definition",
+    "confidence": "strong",
+    "source": "chat_router",
+    "sessionId": "",
+    "debug": {
+      "route": {
+        "type": "definition",
+        "confidence": "strong",
+        "toolsUsed": [
+          "teacher_facts"
+        ],
+        "notes": "Found strong local match: Mass. Answering directly from teacher facts.",
+        "aiAllowed": false
+      }
+    }
   }
 ]

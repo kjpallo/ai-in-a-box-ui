@@ -28,6 +28,7 @@ const {
   sendDailySummaryEmail
 } = require('./lib/system/gmailConnector');
 const { logStudentInteraction } = require('./lib/system/studentInteractionLogger');
+const { registerWhisperRoutes } = require('./routes/whisperRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -84,6 +85,7 @@ setInterval(tts.pruneAudioDir, Math.max(60_000, Math.floor(Number(process.env.AU
 app.use(express.json());
 app.use(express.static(publicDir));
 app.use('/audio', express.static(audioDir));
+registerWhisperRoutes(app);
 
 app.get('/api/health', (_req, res) => {
   const voices = tts.listVoices();

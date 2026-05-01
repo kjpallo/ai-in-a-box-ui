@@ -135,6 +135,16 @@
               </dl>
             </section>
 
+            <section class="teacher-profile-card daily-date-card">
+              <label for="profileDateSelect">Daily Summary Date</label>
+              <select id="profileDateSelect" disabled>
+                <option>Today</option>
+                <option>No activity dates loaded yet</option>
+              </select>
+              <button type="button" id="profileRefreshSummary" class="small-button secondary-small">Refresh Summary</button>
+              <span id="profileDateStatus">No activity dates loaded yet.</span>
+            </section>
+
             <section class="teacher-profile-card student-link-card">
               <h4>Student Link</h4>
               <p>Create a local student help page for this classroom session.</p>
@@ -155,34 +165,8 @@
               </div>
             </section>
           </div>
-        </section>
-      `
-    },
 
-    {
-      id: 'class-activity',
-      label: 'Class Activity',
-      short: 'ACTIVITY',
-      icon: '📊',
-      body: `
-        <section class="class-activity-panel" aria-label="Class Activity">
-          <div class="class-activity-top">
-            <div>
-              <h3>Class Activity</h3>
-              <p>Review student questions, common topics, and daily report tools.</p>
-            </div>
-            <section class="teacher-profile-card daily-date-card class-activity-date-card">
-              <label for="profileDateSelect">Daily Summary Date</label>
-              <select id="profileDateSelect" disabled>
-                <option>Today</option>
-                <option>No activity dates loaded yet</option>
-              </select>
-              <button type="button" id="profileRefreshSummary" class="small-button secondary-small">Refresh Summary</button>
-              <span id="profileDateStatus">No activity dates loaded yet.</span>
-            </section>
-          </div>
-
-          <section class="teacher-profile-card question-rundown-card class-activity-rundown-card">
+          <section class="teacher-profile-card question-rundown-card">
             <div class="profile-section-head">
               <h4>Daily Question Rundown</h4>
               <span id="profileSummaryStatus">No question activity loaded yet.</span>
@@ -203,7 +187,7 @@
             </div>
           </section>
 
-          <div class="class-activity-bottom-grid">
+          <div class="teacher-profile-grid">
             <section class="teacher-profile-card topic-summary-card">
               <h4>Topic Summary</h4>
               <div id="profileTopicSummary" class="topic-summary-placeholder">
@@ -222,7 +206,6 @@
         </section>
       `
     },
-
     {
       id: 'system',
       label: 'System',
@@ -294,138 +277,21 @@
 
   // CH_BLADE_CLEANUP_20260430
   // Hide placeholder blades until they are real tools.
-  // Kept blades: Main, AI Improvement, Teacher Profile, Class Activity, System.
-  const visibleBladeIds = ['main', 'ai-improvement', 'modes', 'class-activity', 'system'];
+  // Kept blades: Main, AI Improvement, Teacher Profile, System.
+  const visibleBladeIds = ['main', 'ai-improvement', 'modes', 'system'];
   bladeDefs.splice(0, bladeDefs.length, ...bladeDefs.filter((blade) => visibleBladeIds.includes(blade.id)));
-
 
   function getActiveIndex() {
     const saved = localStorage.getItem(BLADE_KEY);
     const idx = bladeDefs.findIndex((blade) => blade.id === saved);
     if (idx >= 0) return idx;
-
     const mainIdx = bladeDefs.findIndex((blade) => blade.id === 'main');
     return mainIdx >= 0 ? mainIdx : 0;
   }
 
   function setActiveIndex(idx) {
-    if (!bladeDefs[idx]) return;
     localStorage.setItem(BLADE_KEY, bladeDefs[idx].id);
   }
-
-  let activeBladeIndex = getActiveIndex();
-  let lastSwishTime = 0;
-
-  // CH_PHASE5_SAFE_SWISH_20260501
-  function getBladeAudioContext() {
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContextClass) return null;
-
-    if (!playBladeSwish.ctx || playBladeSwish.ctx.state === 'closed') {
-      playBladeSwish.ctx = new AudioContextClass();
-    }
-
-    return playBladeSwish.ctx;
-  }
-
-  function playBladeSwish(direction = 1) {
-    try {
-      if (localStorage.getItem('charlemagneBladeSound') === 'off') return;
-
-      const nowMs = Date.now();
-      if (nowMs - lastSwishTime < 180) return;
-      lastSwishTime = nowMs;
-
-      const ctx = getBladeAudioContext();
-      if (!ctx) return;
-
-      const startSound = () => startBladeSwish(ctx, direction);
-
-      if (ctx.state === 'suspended') {
-        const resumeResult = ctx.resume();
-        if (resumeResult && typeof resumeResult.then === 'function') {
-          resumeResult.then(startSound).catch(() => {});
-        } else {
-          startSound();
-        }
-        return;
-      }
-
-      startSound();
-    } catch (_) {}
-  }
-
-  function startBladeSwish(ctx, direction = 1) {
-    try {
-      if (!ctx || ctx.state === 'closed') return;
-
-      const now = ctx.currentTime;
-      const duration = 0.18;
-      const sampleRate = ctx.sampleRate || 44100;
-      const buffer = ctx.createBuffer(1, Math.floor(sampleRate * duration), sampleRate);
-      const data = buffer.getChannelData(0);
-
-      for (let i = 0; i < data.length; i += 1) {
-        const fadeIn = Math.min(1, i / (sampleRate * 0.018));
-        const fadeOut = Math.min(1, (data.length - i) / (sampleRate * 0.075));
-        data[i] = (Math.random() * 2 - 1) * 0.24 * fadeIn * fadeOut;
-      }
-
-      const noise = ctx.createBufferSource();
-      noise.buffer = buffer;
-
-      const filter = ctx.createBiquadFilter();
-      filter.type = 'bandpass';
-      filter.frequency.setValueAtTime(direction >= 0 ? 760 : 1080, now);
-      filter.frequency.exponentialRampToValueAtTime(direction >= 0 ? 1320 : 640, now + duration);
-      filter.Q.setValueAtTime(0.8, now);
-
-      const gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.exponentialRampToValueAtTime(0.028, now + 0.026);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-
-      const tone = ctx.createOscillator();
-      const toneGain = ctx.createGain();
-      tone.type = 'sine';
-      tone.frequency.setValueAtTime(direction >= 0 ? 360 : 420, now);
-      tone.frequency.exponentialRampToValueAtTime(direction >= 0 ? 245 : 285, now + duration);
-      toneGain.gain.setValueAtTime(0.0001, now);
-      toneGain.gain.exponentialRampToValueAtTime(0.006, now + 0.02);
-      toneGain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-
-      noise.connect(filter);
-      filter.connect(gain);
-      gain.connect(ctx.destination);
-      tone.connect(toneGain);
-      toneGain.connect(ctx.destination);
-
-      noise.start(now);
-      noise.stop(now + duration);
-      tone.start(now);
-      tone.stop(now + duration);
-
-      window.setTimeout(() => {
-        try {
-          noise.disconnect();
-          filter.disconnect();
-          gain.disconnect();
-          tone.disconnect();
-          toneGain.disconnect();
-        } catch (_) {}
-      }, 320);
-    } catch (_) {}
-  }
-
-  document.addEventListener('pointerdown', () => {
-    try {
-      const ctx = getBladeAudioContext();
-      if (ctx && ctx.state === 'suspended') {
-        const resumeResult = ctx.resume();
-        if (resumeResult && typeof resumeResult.catch === 'function') resumeResult.catch(() => {});
-      }
-    } catch (_) {}
-  }, { capture: true, passive: true });
 
   function buildShell(appRoot) {
     const shell = document.createElement('div');
@@ -509,7 +375,6 @@
     const btn = document.createElement('button');
     btn.className = `blade-preview ${side}`;
     btn.dataset.bladeIndex = index;
-    btn.type = 'button';
 
     const distance = Math.abs(index - activeIndex);
     btn.style.setProperty('--preview-depth', String(distance));
@@ -524,36 +389,75 @@
     return btn;
   }
 
-  function goToBlade(nextIndex, options = {}) {
-    const safeNext = Math.max(0, Math.min(bladeDefs.length - 1, Number(nextIndex)));
-    if (Number.isNaN(safeNext) || safeNext === activeBladeIndex) return;
+  let lastBladeIndex = getActiveIndex();
+  let bladeRenderCount = 0;
 
-    const direction = safeNext > activeBladeIndex ? 1 : -1;
-    activeBladeIndex = safeNext;
+  // CH_BLADE_WHOOSH_20260430
+  // Small local swish sound. No audio file needed.
+  function playBladeWhoosh() {
+    try {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return;
 
-    if (options.sound !== false) {
-      playBladeSwish(direction);
+      const ctx = playBladeWhoosh.ctx || (playBladeWhoosh.ctx = new AudioContextClass());
+      if (ctx.state === 'suspended') ctx.resume();
+
+      const now = ctx.currentTime;
+      const duration = 0.16;
+
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const filter = ctx.createBiquadFilter();
+
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(720, now);
+      osc.frequency.exponentialRampToValueAtTime(170, now + duration);
+
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(1600, now);
+      filter.frequency.exponentialRampToValueAtTime(520, now + duration);
+
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.035, now + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + duration);
+    } catch (_) {
+      // Decorative only. Do not break blade switching if browser audio fails.
     }
-
-    render(activeBladeIndex, direction);
   }
 
-  function render(activeIndex, direction = 0) {
-    activeBladeIndex = Math.max(0, Math.min(bladeDefs.length - 1, activeIndex));
-    setActiveIndex(activeBladeIndex);
-
+  function render(activeIndex) {
+    const previousIndex = lastBladeIndex;
     const shell = document.getElementById('bladeUiShell');
-    if (shell && direction !== 0) {
+
+    if (shell) {
       shell.classList.remove('blade-move-left', 'blade-move-right');
-      void shell.offsetWidth;
-      shell.classList.add(direction > 0 ? 'blade-move-right' : 'blade-move-left');
-      window.setTimeout(() => {
-        shell.classList.remove('blade-move-left', 'blade-move-right');
-      }, 360);
+
+      if (bladeRenderCount > 0 && activeIndex !== previousIndex) {
+        shell.classList.add(activeIndex > previousIndex ? 'blade-move-right' : 'blade-move-left');
+        window.setTimeout(() => {
+          shell.classList.remove('blade-move-left', 'blade-move-right');
+        }, 360);
+      }
     }
 
+    if (bladeRenderCount > 0 && activeIndex !== previousIndex) {
+      playBladeWhoosh();
+    }
+
+    lastBladeIndex = activeIndex;
+    bladeRenderCount += 1;
+
+    setActiveIndex(activeIndex);
+
     document.querySelectorAll('.blade-page').forEach((page, idx) => {
-      page.classList.toggle('active', idx === activeBladeIndex);
+      page.classList.toggle('active', idx === activeIndex);
     });
 
     const leftRail = document.getElementById('bladeLeftRail');
@@ -563,53 +467,49 @@
 
     const leftItems = bladeDefs
       .map((blade, idx) => ({ blade, idx }))
-      .filter((item) => item.idx < activeBladeIndex);
+      .filter((item) => item.idx < activeIndex);
 
     const rightItems = bladeDefs
       .map((blade, idx) => ({ blade, idx }))
-      .filter((item) => item.idx > activeBladeIndex);
+      .filter((item) => item.idx > activeIndex);
 
     leftItems.forEach((item) => {
-      leftRail?.appendChild(makePreviewBlade(item.blade, item.idx, activeBladeIndex, 'left'));
+      leftRail.appendChild(makePreviewBlade(item.blade, item.idx, activeIndex, 'left'));
     });
 
     rightItems.forEach((item) => {
-      rightRail?.appendChild(makePreviewBlade(item.blade, item.idx, activeBladeIndex, 'right'));
+      rightRail.appendChild(makePreviewBlade(item.blade, item.idx, activeIndex, 'right'));
     });
 
-    buildBottomNav(activeBladeIndex);
+    buildBottomNav(activeIndex);
 
-    // Use onclick assignment instead of stacking addEventListener calls on every render.
     document.querySelectorAll('[data-blade-index]').forEach((btn) => {
-      btn.onclick = () => {
+      btn.addEventListener('click', () => {
         const idx = Number(btn.dataset.bladeIndex);
-        if (!Number.isNaN(idx)) goToBlade(idx);
-      };
+        if (!Number.isNaN(idx)) render(idx);
+      });
     });
 
     document.querySelectorAll('[data-blade-shift]').forEach((btn) => {
-      btn.onclick = () => {
+      btn.addEventListener('click', () => {
         const shift = Number(btn.dataset.bladeShift);
-        if (Number.isNaN(shift)) return;
-        goToBlade(activeBladeIndex + shift);
-      };
+        const next = Math.max(0, Math.min(bladeDefs.length - 1, activeIndex + shift));
+        render(next);
+      });
     });
 
-    const leftArrow = document.querySelector('.blade-arrow-left');
-    const rightArrow = document.querySelector('.blade-arrow-right');
+    document.querySelector('.blade-arrow-left')?.addEventListener('click', () => {
+      render(Math.max(0, activeIndex - 1));
+    });
 
-    if (leftArrow) {
-      leftArrow.onclick = () => goToBlade(activeBladeIndex - 1);
-    }
-
-    if (rightArrow) {
-      rightArrow.onclick = () => goToBlade(activeBladeIndex + 1);
-    }
+    document.querySelector('.blade-arrow-right')?.addEventListener('click', () => {
+      render(Math.min(bladeDefs.length - 1, activeIndex + 1));
+    });
 
     document.dispatchEvent(new CustomEvent('charlemagne:blade-active', {
       detail: {
-        id: bladeDefs[activeBladeIndex]?.id || '',
-        label: bladeDefs[activeBladeIndex]?.label || ''
+        id: bladeDefs[activeIndex]?.id || '',
+        label: bladeDefs[activeIndex]?.label || ''
       }
     }));
   }
@@ -618,8 +518,8 @@
     if (document.getElementById('bladeUiShell')) return;
 
     const appRoot =
-      document.querySelector('.app-shell') ||
       document.querySelector('main') ||
+      document.querySelector('.app-shell') ||
       document.querySelector('.container') ||
       document.querySelector('.page-shell') ||
       document.body.firstElementChild;
@@ -627,17 +527,15 @@
     if (!appRoot) return;
 
     buildShell(appRoot);
-    render(activeBladeIndex, 0);
+    render(getActiveIndex());
 
     document.addEventListener('keydown', (event) => {
+      const current = getActiveIndex();
       if (event.key === 'ArrowLeft') {
-        event.preventDefault();
-        goToBlade(activeBladeIndex - 1);
+        render(Math.max(0, current - 1));
       }
-
       if (event.key === 'ArrowRight') {
-        event.preventDefault();
-        goToBlade(activeBladeIndex + 1);
+        render(Math.min(bladeDefs.length - 1, current + 1));
       }
     });
   }

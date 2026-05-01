@@ -40,12 +40,7 @@
 
     copyButton.addEventListener('click', async () => {
       const text = responseText.textContent.trim();
-      if (
-        !text ||
-        responseText.classList.contains('response-empty') ||
-        text === 'Ask a question to see the answer here.' ||
-        text === 'Answer will appear here'
-      ) return;
+      if (!text || text === 'Ask a question to see the answer here.') return;
 
       try {
         await navigator.clipboard.writeText(text);
@@ -70,7 +65,8 @@
         audio.setOrbSpeaking(false);
       }
 
-      renderEmptyAnswer();
+      responseText.textContent = 'Ask a question to see the answer here.';
+      responseText.classList.remove('streaming');
 
       messageInput.value = '';
       messageInput.focus();
@@ -87,44 +83,6 @@
 
   function clearPendingAnswer() {
     // The current answer is read from the answer box when the server finishes.
-  }
-
-  function renderEmptyAnswer() {
-    const { responseText } = elements;
-    if (!responseText) return;
-
-    responseText.classList.remove('streaming', 'has-answer');
-    responseText.classList.add('response-empty');
-    responseText.innerHTML = `
-      <div class="answer-empty-state">
-        <div class="answer-empty-spark" aria-hidden="true"></div>
-        <h3>Answer will appear here</h3>
-        <p>Charlemagne is ready to help you teach with clarity and confidence.</p>
-        <div class="answer-feature-row" aria-label="Answer benefits">
-          <div class="answer-feature">
-            <span aria-hidden="true">✣</span>
-            <div>
-              <strong>Curriculum Aligned</strong>
-              <small>Standards-based explanations</small>
-            </div>
-          </div>
-          <div class="answer-feature">
-            <span aria-hidden="true">◎</span>
-            <div>
-              <strong>Student Focused</strong>
-              <small>Clear, accurate, and age-appropriate</small>
-            </div>
-          </div>
-          <div class="answer-feature">
-            <span aria-hidden="true">♢</span>
-            <div>
-              <strong>Teacher Ready</strong>
-              <small>Save time and teach with confidence</small>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
   }
 
   function finishAnswer(answer) {
@@ -235,12 +193,6 @@
     const card = document.createElement('article');
     card.className = 'history-card';
 
-    const icon = document.createElement('span');
-    icon.className = 'history-icon';
-    icon.setAttribute('aria-hidden', 'true');
-
-    const copy = document.createElement('div');
-
     const q = document.createElement('p');
     q.className = 'history-question';
     q.textContent = `Student: ${question}`;
@@ -253,10 +205,8 @@
       shortAnswer.length > 180 ? shortAnswer.slice(0, 177) + '...' : shortAnswer
     }`;
 
-    copy.appendChild(q);
-    copy.appendChild(a);
-    card.appendChild(icon);
-    card.appendChild(copy);
+    card.appendChild(q);
+    card.appendChild(a);
     historyList.prepend(card);
 
     historyList.querySelectorAll('.history-card').forEach((item, index) => {

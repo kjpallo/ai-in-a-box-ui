@@ -294,7 +294,7 @@
 
   // CH_BLADE_CLEANUP_20260430
   // Hide placeholder blades until they are real tools.
-  // Kept blades: Main, AI Improvement, Teacher Profile, Class Activity, System.
+  // Kept blades: Main, AI Improvement, Teacher Profile, System.
   const visibleBladeIds = ['main', 'ai-improvement', 'modes', 'class-activity', 'system'];
   bladeDefs.splice(0, bladeDefs.length, ...bladeDefs.filter((blade) => visibleBladeIds.includes(blade.id)));
 
@@ -316,59 +316,35 @@
   let activeBladeIndex = getActiveIndex();
   let lastSwishTime = 0;
 
-  // CH_PHASE5_SAFE_SWISH_20260501
-  function getBladeAudioContext() {
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContextClass) return null;
-
-    if (!playBladeSwish.ctx || playBladeSwish.ctx.state === 'closed') {
-      playBladeSwish.ctx = new AudioContextClass();
-    }
-
-    return playBladeSwish.ctx;
-  }
-
+  // CH_SAFE_SWISH_20260430
+  // Safe one-shot swish. It does not loop, does not use the microphone,
+  // and is only triggered by actual blade navigation.
   function playBladeSwish(direction = 1) {
     try {
       if (localStorage.getItem('charlemagneBladeSound') === 'off') return;
 
       const nowMs = Date.now();
-      if (nowMs - lastSwishTime < 180) return;
+      if (nowMs - lastSwishTime < 240) return;
       lastSwishTime = nowMs;
 
-      const ctx = getBladeAudioContext();
-      if (!ctx) return;
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return;
 
-      const startSound = () => startBladeSwish(ctx, direction);
-
-      if (ctx.state === 'suspended') {
-        const resumeResult = ctx.resume();
-        if (resumeResult && typeof resumeResult.then === 'function') {
-          resumeResult.then(startSound).catch(() => {});
-        } else {
-          startSound();
-        }
-        return;
-      }
-
-      startSound();
-    } catch (_) {}
-  }
-
-  function startBladeSwish(ctx, direction = 1) {
-    try {
-      if (!ctx || ctx.state === 'closed') return;
+      const ctx = playBladeSwish.ctx || (playBladeSwish.ctx = new AudioContextClass());
+      if (ctx.state === 'suspended') ctx.resume();
 
       const now = ctx.currentTime;
-      const duration = 0.18;
-      const sampleRate = ctx.sampleRate || 44100;
+      const duration = 0.22;
+
+      // Soft filtered noise = "air/swish"
+      const sampleRate = ctx.sampleRate;
       const buffer = ctx.createBuffer(1, Math.floor(sampleRate * duration), sampleRate);
       const data = buffer.getChannelData(0);
 
       for (let i = 0; i < data.length; i += 1) {
-        const fadeIn = Math.min(1, i / (sampleRate * 0.018));
-        const fadeOut = Math.min(1, (data.length - i) / (sampleRate * 0.075));
-        data[i] = (Math.random() * 2 - 1) * 0.24 * fadeIn * fadeOut;
+        const fadeIn = Math.min(1, i / (sampleRate * 0.025));
+        const fadeOut = Math.min(1, (data.length - i) / (sampleRate * 0.09));
+        data[i] = (Math.random() * 2 - 1) * 0.38 * fadeIn * fadeOut;
       }
 
       const noise = ctx.createBufferSource();
@@ -376,56 +352,53 @@
 
       const filter = ctx.createBiquadFilter();
       filter.type = 'bandpass';
-      filter.frequency.setValueAtTime(direction >= 0 ? 760 : 1080, now);
-      filter.frequency.exponentialRampToValueAtTime(direction >= 0 ? 1320 : 640, now + duration);
-      filter.Q.setValueAtTime(0.8, now);
+      filter.frequency.setValueAtTime(direction >= 0 ? 850 : 1250, now);
+      filter.frequency.exponentialRampToValueAtTime(direction >= 0 ? 1450 : 720, now + duration);
+      filter.Q.setValueAtTime(0.9, now);
 
       const gain = ctx.createGain();
       gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.exponentialRampToValueAtTime(0.028, now + 0.026);
+      gain.gain.exponentialRampToValueAtTime(0.045, now + 0.035);
       gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
 
-      const tone = ctx.createOscillator();
-      const toneGain = ctx.createGain();
-      tone.type = 'sine';
-      tone.frequency.setValueAtTime(direction >= 0 ? 360 : 420, now);
-      tone.frequency.exponentialRampToValueAtTime(direction >= 0 ? 245 : 285, now + duration);
-      toneGain.gain.setValueAtTime(0.0001, now);
-      toneGain.gain.exponentialRampToValueAtTime(0.006, now + 0.02);
-      toneGain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+      // Tiny low-volume shimmer so it feels like a blade move, not static.
+      const shimmer = ctx.createOscillator();
+      const shimmerGain = ctx.createGain();
+
+      shimmer.type = 'triangle';
+      shimmer.frequency.setValueAtTime(direction >= 0 ? 420 : 520, now);
+      shimmer.frequency.exponentialRampToValueAtTime(direction >= 0 ? 260 : 310, now + duration);
+
+      shimmerGain.gain.setValueAtTime(0.0001, now);
+      shimmerGain.gain.exponentialRampToValueAtTime(0.012, now + 0.03);
+      shimmerGain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
 
       noise.connect(filter);
       filter.connect(gain);
       gain.connect(ctx.destination);
-      tone.connect(toneGain);
-      toneGain.connect(ctx.destination);
+
+      shimmer.connect(shimmerGain);
+      shimmerGain.connect(ctx.destination);
 
       noise.start(now);
       noise.stop(now + duration);
-      tone.start(now);
-      tone.stop(now + duration);
+
+      shimmer.start(now);
+      shimmer.stop(now + duration);
 
       window.setTimeout(() => {
         try {
           noise.disconnect();
           filter.disconnect();
           gain.disconnect();
-          tone.disconnect();
-          toneGain.disconnect();
+          shimmer.disconnect();
+          shimmerGain.disconnect();
         } catch (_) {}
-      }, 320);
-    } catch (_) {}
+      }, 420);
+    } catch (_) {
+      // Sound is decorative. Never let audio break the UI.
+    }
   }
-
-  document.addEventListener('pointerdown', () => {
-    try {
-      const ctx = getBladeAudioContext();
-      if (ctx && ctx.state === 'suspended') {
-        const resumeResult = ctx.resume();
-        if (resumeResult && typeof resumeResult.catch === 'function') resumeResult.catch(() => {});
-      }
-    } catch (_) {}
-  }, { capture: true, passive: true });
 
   function buildShell(appRoot) {
     const shell = document.createElement('div');
@@ -531,11 +504,11 @@
     const direction = safeNext > activeBladeIndex ? 1 : -1;
     activeBladeIndex = safeNext;
 
+    render(activeBladeIndex, direction);
+
     if (options.sound !== false) {
       playBladeSwish(direction);
     }
-
-    render(activeBladeIndex, direction);
   }
 
   function render(activeIndex, direction = 0) {
@@ -618,8 +591,8 @@
     if (document.getElementById('bladeUiShell')) return;
 
     const appRoot =
-      document.querySelector('.app-shell') ||
       document.querySelector('main') ||
+      document.querySelector('.app-shell') ||
       document.querySelector('.container') ||
       document.querySelector('.page-shell') ||
       document.body.firstElementChild;

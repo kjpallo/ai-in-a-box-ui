@@ -294,7 +294,7 @@
 
   // CH_BLADE_CLEANUP_20260430
   // Hide placeholder blades until they are real tools.
-  // Kept blades: Main, AI Improvement, Teacher Profile, Class Activity, System.
+  // Kept blades: Main, AI Improvement, Teacher Profile, System.
   const visibleBladeIds = ['main', 'ai-improvement', 'modes', 'class-activity', 'system'];
   bladeDefs.splice(0, bladeDefs.length, ...bladeDefs.filter((blade) => visibleBladeIds.includes(blade.id)));
 
@@ -618,8 +618,8 @@
     if (document.getElementById('bladeUiShell')) return;
 
     const appRoot =
-      document.querySelector('.app-shell') ||
       document.querySelector('main') ||
+      document.querySelector('.app-shell') ||
       document.querySelector('.container') ||
       document.querySelector('.page-shell') ||
       document.body.firstElementChild;

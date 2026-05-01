@@ -15,9 +15,6 @@
     copyButton: document.getElementById('copyAnswerButton'),
     flagAnswerButton: document.getElementById('flagAnswerButton'),
     clearButton: document.getElementById('clearButton'),
-    pushToTalkButton: document.getElementById('pushToTalkButton'),
-    alwaysListeningButton: document.getElementById('alwaysListeningButton'),
-    voicePlaceholderStatus: document.getElementById('voicePlaceholderStatus'),
     teacherToggle: document.getElementById('teacherModeToggle'),
     historyList: document.getElementById('historyList'),
     chipButtons: document.querySelectorAll('.chip-button')
@@ -60,26 +57,6 @@
     elements.voiceSelect.addEventListener('change', () => {
       selectedVoice = elements.voiceSelect.value;
     });
-
-    elements.pushToTalkButton?.addEventListener('click', () => {
-      setVoicePlaceholderStatus('Push to Talk will connect to Whisper later.');
-    });
-
-    elements.alwaysListeningButton?.addEventListener('click', () => {
-      const nextPressed = elements.alwaysListeningButton.getAttribute('aria-pressed') !== 'true';
-      elements.alwaysListeningButton.setAttribute('aria-pressed', String(nextPressed));
-      elements.alwaysListeningButton.classList.toggle('is-active', nextPressed);
-      setVoicePlaceholderStatus(
-        nextPressed
-          ? 'Always Listening placeholder is on. No microphone is active yet.'
-          : 'Always Listening placeholder is off.'
-      );
-    });
-  }
-
-  function setVoicePlaceholderStatus(text) {
-    if (!elements.voicePlaceholderStatus) return;
-    elements.voicePlaceholderStatus.textContent = text;
   }
 
   async function handleSubmit(event) {
@@ -95,7 +72,7 @@
 
     audio.stop({ keepStatus: true });
     elements.responseText.textContent = '';
-    elements.responseText.classList.remove('has-answer', 'response-empty');
+    elements.responseText.classList.remove('has-answer');
     elements.responseText.classList.add('streaming');
     teacherUi.clearPendingAnswer();
     teacherUi.setStreamStatus('Thinking…');
@@ -164,7 +141,6 @@
     switch (eventData.type) {
       case 'start':
         elements.responseText.textContent = '';
-        elements.responseText.classList.remove('has-answer', 'response-empty');
         teacherUi.clearPendingAnswer();
         lastRouter = null;
         teacherUi.setStreamStatus('Thinking…');
