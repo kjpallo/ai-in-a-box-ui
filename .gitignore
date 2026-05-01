@@ -1,4 +1,8 @@
 node_modules/
+.env
+.env.*
+logs/teacher_gmail_auth.json
+logs/teacher_gmail_auth.json.tmp
 audio/*
 !.gitkeep
 voices/*.onnx

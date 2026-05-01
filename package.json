@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "test": "node scripts/test-router.js"
+    "test": "node scripts/test-router.js",
+    "test:bank": "node scripts/test-router-bank.js",
+    "test:all": "npm test && npm run test:bank"
   },
   "dependencies": {
     "express": "^4.19.2",

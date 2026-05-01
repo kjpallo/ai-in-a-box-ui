@@ -1,0 +1,229 @@
+[
+  {
+    "id": "interaction_20260430191805530_kcbfbo",
+    "timestamp": "2026-04-30T19:18:05.530Z",
+    "studentQuestion": "What is density if mass is 20 g and volume is 5 mL?",
+    "answerGiven": "Use the density formula: D = m / V.\nD = 20 g / 5 mL\nD = 4 g/mL",
+    "routerType": "science_formula",
+    "routeType": "science_formula",
+    "formulaChosen": "",
+    "confidence": "strong",
+    "source": "chat_router",
+    "debug": {
+      "route": {
+        "type": "science_formula",
+        "confidence": "strong",
+        "toolsUsed": [
+          "science_formula_rules"
+        ],
+        "notes": "Recognized density problem: solving for density.",
+        "aiAllowed": false
+      }
+    }
+  },
+  {
+    "id": "interaction_20260430192006216_727xxm",
+    "timestamp": "2026-04-30T19:20:06.216Z",
+    "studentQuestion": "what is the maaa",
+    "answerGiven": "I do not have a trusted local fact for that yet. Please reword the question or ask your teacher.",
+    "routerType": "no_match",
+    "routeType": "no_match",
+    "formulaChosen": "",
+    "confidence": "none",
+    "source": "chat_router",
+    "debug": {
+      "route": {
+        "type": "no_match",
+        "confidence": "none",
+        "toolsUsed": [],
+        "notes": "No trusted local match found.",
+        "aiAllowed": false
+      }
+    }
+  },
+  {
+    "id": "interaction_20260430192122828_w3dmf7",
+    "timestamp": "2026-04-30T19:21:22.828Z",
+    "studentQuestion": "what is mass",
+    "answerGiven": "In 9th-grade science, Mass is the amount of matter in an object. Mass is measured in grams or kilograms and does not change just because gravity changes.\nFormula: mass can be found from m = F/a or m = density × volume when those values are known",
+    "routerType": "definition",
+    "routeType": "definition",
+    "formulaChosen": "",
+    "confidence": "strong",
+    "source": "chat_router",
+    "debug": {
+      "route": {
+        "type": "definition",
+        "confidence": "strong",
+        "toolsUsed": [
+          "teacher_facts"
+        ],
+        "notes": "Found strong local match: Mass. Answering directly from teacher facts.",
+        "aiAllowed": false
+      }
+    }
+  },
+  {
+    "id": "interaction_20260430222203641_52lzwf",
+    "timestamp": "2026-04-30T22:22:03.641Z",
+    "studentQuestion": "what is mass",
+    "answerGiven": "In 9th-grade science, Mass is the amount of matter in an object. Mass is measured in grams or kilograms and does not change just because gravity changes.\nFormula: mass can be found from m = F/a or m = density × volume when those values are known",
+    "routerType": "definition",
+    "routeType": "definition",
+    "formulaChosen": "",
+    "confidence": "strong",
+    "source": "chat_router",
+    "debug": {
+      "route": {
+        "type": "definition",
+        "confidence": "strong",
+        "toolsUsed": [
+          "teacher_facts"
+        ],
+        "notes": "Found strong local match: Mass. Answering directly from teacher facts.",
+        "aiAllowed": false
+      }
+    }
+  },
+  {
+    "id": "interaction_20260430233106194_q1mymm",
+    "timestamp": "2026-04-30T23:31:06.194Z",
+    "studentQuestion": "what is mass",
+    "answerGiven": "In 9th-grade science, Mass is the amount of matter in an object. Mass is measured in grams or kilograms and does not change just because gravity changes.\nFormula: mass can be found from m = F/a or m = density × volume when those values are known",
+    "routerType": "definition",
+    "routeType": "definition",
+    "formulaChosen": "",
+    "confidence": "strong",
+    "source": "student_session",
+    "debug": {
+      "route": {
+        "type": "definition",
+        "confidence": "strong",
+        "toolsUsed": [
+          "teacher_facts"
+        ],
+        "notes": "Found strong local match: Mass. Answering directly from teacher facts.",
+        "aiAllowed": false
+      },
+      "sessionId": "0d456600-5803-49a0-9093-a49b9bc6279d",
+      "className": ""
+    }
+  },
+  {
+    "id": "interaction_20260430235905270_a5pcyy",
+    "timestamp": "2026-04-30T23:59:05.270Z",
+    "studentQuestion": "what is mass",
+    "answerGiven": "In 9th-grade science, Mass is the amount of matter in an object. Mass is measured in grams or kilograms and does not change just because gravity changes.\nFormula: mass can be found from m = F/a or m = density × volume when those values are known",
+    "routerType": "definition",
+    "routeType": "definition",
+    "formulaChosen": "",
+    "confidence": "strong",
+    "source": "student_session",
+    "debug": {
+      "route": {
+        "type": "definition",
+        "confidence": "strong",
+        "toolsUsed": [
+          "teacher_facts"
+        ],
+        "notes": "Found strong local match: Mass. Answering directly from teacher facts.",
+        "aiAllowed": false
+      },
+      "sessionId": "0d456600-5803-49a0-9093-a49b9bc6279d",
+      "className": ""
+    }
+  },
+  {
+    "id": "interaction_20260501000359120_u70zp1",
+    "timestamp": "2026-05-01T00:03:59.120Z",
+    "studentQuestion": "what is mass",
+    "question": "what is mass",
+    "message": "what is mass",
+    "answerGiven": "In 9th-grade science, Mass is the amount of matter in an object. Mass is measured in grams or kilograms and does not change just because gravity changes.\nFormula: mass can be found from m = F/a or m = density × volume when those values are known",
+    "answer": "In 9th-grade science, Mass is the amount of matter in an object. Mass is measured in grams or kilograms and does not change just because gravity changes.\nFormula: mass can be found from m = F/a or m = density × volume when those values are known",
+    "response": "In 9th-grade science, Mass is the amount of matter in an object. Mass is measured in grams or kilograms and does not change just because gravity changes.\nFormula: mass can be found from m = F/a or m = density × volume when those values are known",
+    "responsePreview": "In 9th-grade science, Mass is the amount of matter in an object. Mass is measured in grams or kilograms and does not change just because ...",
+    "routerType": "definition",
+    "routeType": "definition",
+    "type": "definition",
+    "formulaChosen": "",
+    "category": "definition",
+    "confidence": "strong",
+    "source": "student",
+    "sessionId": "e48a0b35-c898-4a9c-8294-4962a6f28d10",
+    "debug": {
+      "route": {
+        "type": "definition",
+        "confidence": "strong",
+        "toolsUsed": [
+          "teacher_facts"
+        ],
+        "notes": "Found strong local match: Mass. Answering directly from teacher facts.",
+        "aiAllowed": false
+      },
+      "className": ""
+    }
+  },
+  {
+    "id": "interaction_20260501012524714_skzhiz",
+    "timestamp": "2026-05-01T01:25:24.714Z",
+    "studentQuestion": "student rundown test what is density",
+    "question": "student rundown test what is density",
+    "message": "student rundown test what is density",
+    "answerGiven": "In 9th-grade science, Density tells how much mass is packed into a certain volume. Common units are g/mL, g/cm^3, or kg/m^3.\nFormula: density = mass / volume; D = m / V\nExample: If mass = 20 g and volume = 5 cm^3, density = 20 / 5 = 4 g/cm^3.",
+    "answer": "In 9th-grade science, Density tells how much mass is packed into a certain volume. Common units are g/mL, g/cm^3, or kg/m^3.\nFormula: density = mass / volume; D = m / V\nExample: If mass = 20 g and volume = 5 cm^3, density = 20 / 5 = 4 g/cm^3.",
+    "response": "In 9th-grade science, Density tells how much mass is packed into a certain volume. Common units are g/mL, g/cm^3, or kg/m^3.\nFormula: density = mass / volume; D = m / V\nExample: If mass = 20 g and volume = 5 cm^3, density = 20 / 5 = 4 g/cm^3.",
+    "responsePreview": "In 9th-grade science, Density tells how much mass is packed into a certain volume. Common units are g/mL, g/cm^3, or kg/m^3. Formula: den...",
+    "routerType": "definition",
+    "routeType": "definition",
+    "type": "definition",
+    "formulaChosen": "",
+    "category": "definition",
+    "confidence": "strong",
+    "source": "student",
+    "sessionId": "d62c6223-6431-4c64-a034-e8f6b50782fa",
+    "debug": {
+      "route": {
+        "type": "definition",
+        "confidence": "strong",
+        "toolsUsed": [
+          "teacher_facts"
+        ],
+        "notes": "Found strong local match: Density. Answering directly from teacher facts.",
+        "aiAllowed": false
+      },
+      "className": ""
+    }
+  },
+  {
+    "id": "interaction_20260501012657864_dbfvjm",
+    "timestamp": "2026-05-01T01:26:57.864Z",
+    "studentQuestion": "student rundown test what is density",
+    "question": "student rundown test what is density",
+    "message": "student rundown test what is density",
+    "answerGiven": "In 9th-grade science, Density tells how much mass is packed into a certain volume. Common units are g/mL, g/cm^3, or kg/m^3.\nFormula: density = mass / volume; D = m / V\nExample: If mass = 20 g and volume = 5 cm^3, density = 20 / 5 = 4 g/cm^3.",
+    "answer": "In 9th-grade science, Density tells how much mass is packed into a certain volume. Common units are g/mL, g/cm^3, or kg/m^3.\nFormula: density = mass / volume; D = m / V\nExample: If mass = 20 g and volume = 5 cm^3, density = 20 / 5 = 4 g/cm^3.",
+    "response": "In 9th-grade science, Density tells how much mass is packed into a certain volume. Common units are g/mL, g/cm^3, or kg/m^3.\nFormula: density = mass / volume; D = m / V\nExample: If mass = 20 g and volume = 5 cm^3, density = 20 / 5 = 4 g/cm^3.",
+    "responsePreview": "In 9th-grade science, Density tells how much mass is packed into a certain volume. Common units are g/mL, g/cm^3, or kg/m^3. Formula: den...",
+    "routerType": "definition",
+    "routeType": "definition",
+    "type": "definition",
+    "formulaChosen": "",
+    "category": "definition",
+    "confidence": "strong",
+    "source": "student",
+    "sessionId": "0b79bdfc-568a-4bf7-9690-eff2d7546046",
+    "debug": {
+      "route": {
+        "type": "definition",
+        "confidence": "strong",
+        "toolsUsed": [
+          "teacher_facts"
+        ],
+        "notes": "Found strong local match: Density. Answering directly from teacher facts.",
+        "aiAllowed": false
+      },
+      "className": ""
+    }
+  }
+]

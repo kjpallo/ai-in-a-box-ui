@@ -92,8 +92,6 @@
     <script src="/teacher-ui.js"></script>
     <script src="/student-ui.js"></script>
     <script src="/blade-ui.js"></script>
-    <script src="/profile.js"></script>
     <script src="/ai-improvement.js"></script>
-    <script src="/system-health.js"></script>
   </body>
 </html>

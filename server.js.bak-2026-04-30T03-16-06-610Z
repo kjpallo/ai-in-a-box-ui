@@ -1,0 +1,462 @@
+const express = require('express');
+const path = require('path');
+const fs = require('fs');
+const { routeStudentQuestion } = require('./lib/router/questionRouter');
+const {
+  loadTeacherKnowledge,
+  findRelevantKnowledge
+} = require('./lib/knowledge/teacherKnowledge');
+const { createOllamaClient } = require('./lib/ollama/client');
+const { createTtsService } = require('./lib/tts/piper');
+const {
+  getProblems,
+  logProblem,
+  updateProblem
+} = require('./lib/system/problemLogger');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+const publicDir = path.join(__dirname, 'public');
+const voicesDir = path.join(__dirname, 'voices');
+const audioDir = path.join(__dirname, 'audio');
+const knowledgeDir = path.join(__dirname, 'knowledge');
+const teacherFactsFile = path.join(knowledgeDir, 'teacher_facts.json');
+const MAX_KNOWLEDGE_ITEMS = Number(process.env.MAX_KNOWLEDGE_ITEMS || 6);
+
+const DEFAULT_SYSTEM_PROMPT = [
+  'You are a classroom assistant helping in a 9th-grade science class.',
+  'Answer at about a 9th-grade reading level.',
+  'Be concise. Default to 2-3 sentences unless the teacher asks for more.',
+  'If the answer is a process, a list of steps, or math work, use short bullet points.',
+  'When a word has multiple meanings, give the school-science meaning first.',
+  'For definition questions, start with the words: In 9th-grade science,',
+  'For simple definition questions, give one clear definition first, then one short example only if it helps.',
+  'For math or physics questions, show the formula, plug in the values, and give the final answer with units.',
+  'Do not guess. If the question is unclear or missing information, ask one short clarifying question instead of assuming.',
+  'Avoid extra background information unless asked.'
+].join(' ');
+
+const ollama = createOllamaClient({
+  url: process.env.OLLAMA_URL || 'http://127.0.0.1:11434/api/generate',
+  model: process.env.OLLAMA_MODEL || 'qwen2.5:0.5b',
+  systemPrompt: process.env.SYSTEM_PROMPT || DEFAULT_SYSTEM_PROMPT,
+  temperature: Number(process.env.OLLAMA_TEMPERATURE || 0.2),
+  numPredict: Number(process.env.OLLAMA_NUM_PREDICT || 110),
+  topK: Number(process.env.OLLAMA_TOP_K || 20),
+  topP: Number(process.env.OLLAMA_TOP_P || 0.85),
+  repeatPenalty: Number(process.env.OLLAMA_REPEAT_PENALTY || 1.1)
+});
+
+const tts = createTtsService({
+  voicesDir,
+  audioDir,
+  piperBackend: (process.env.PIPER_BACKEND || 'auto').toLowerCase(),
+  piperHttpUrl: process.env.PIPER_HTTP_URL || '',
+  piperAudioMode: (process.env.PIPER_AUDIO_MODE || 'file').toLowerCase(),
+  piperSampleRate: Number(process.env.PIPER_SAMPLE_RATE || 0),
+  audioTtlMs: Number(process.env.AUDIO_TTL_MS || 1000 * 60 * 30),
+  piperLengthScale: process.env.PIPER_LENGTH_SCALE || '1.25',
+  piperBin: process.env.PIPER_BIN || path.join(__dirname, '.venv', 'bin', 'piper')
+});
+
+ensureDir(knowledgeDir);
+let TEACHER_KNOWLEDGE = loadTeacherKnowledge(teacherFactsFile);
+tts.pruneAudioDir();
+setInterval(tts.pruneAudioDir, Math.max(60_000, Math.floor(Number(process.env.AUDIO_TTL_MS || 1000 * 60 * 30) / 2))).unref();
+
+app.use(express.json());
+app.use(express.static(publicDir));
+app.use('/audio', express.static(audioDir));
+
+app.get('/api/health', (_req, res) => {
+  const voices = tts.listVoices();
+  res.json({
+    ok: true,
+    model: process.env.OLLAMA_MODEL || 'qwen2.5:0.5b',
+    conciseMode: true,
+    ttsBackend: tts.getEffectiveTtsBackend(),
+    piperHttpConfigured: tts.usingPiperHttp(),
+    ttsAudioMode: tts.getEffectiveAudioMode(),
+    canStreamAudio: tts.canStreamAudio(),
+    canSelectVoice: !tts.usingPiperHttp(),
+    hasVoice: tts.usingPiperHttp() || voices.length > 0,
+    knowledgeItems: TEACHER_KNOWLEDGE.length,
+    voices
+  });
+});
+
+app.get('/api/router-test', (req, res) => {
+  TEACHER_KNOWLEDGE = loadTeacherKnowledge(teacherFactsFile);
+  const message = String(req.query.q || '').trim();
+  const matchedKnowledge = getRelevantKnowledge(message);
+  const questionRoute = routeStudentQuestion(message, matchedKnowledge);
+
+  res.json({
+    question: message,
+    router: questionRoute.public,
+    answerPreview: questionRoute.directAnswer,
+    matchedKnowledge: matchedKnowledge.map((item) => ({
+      id: item.id,
+      title: item.title,
+      category: item.category,
+      score: item.score,
+      exactTermMatch: item.exactTermMatch,
+      exactTitleMatch: item.exactTitleMatch,
+      importantKeywordMatches: item.importantKeywordMatches,
+      strongEnoughMatch: item.strongEnoughMatch
+    }))
+  });
+});
+
+app.get('/api/voices', (_req, res) => {
+  res.json({
+    backend: tts.getEffectiveTtsBackend(),
+    ttsAudioMode: tts.getEffectiveAudioMode(),
+    canStreamAudio: tts.canStreamAudio(),
+    canSelectVoice: !tts.usingPiperHttp(),
+    voices: tts.listVoices()
+  });
+});
+
+app.get('/api/ai-improvement/problems', (_req, res) => {
+  const problems = getProblems()
+    .slice()
+    .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+
+  res.json({ problems });
+});
+
+app.post('/api/ai-improvement/problems', (req, res) => {
+  const problem = logProblem({
+    status: req.body?.status || 'open',
+    category: req.body?.category || 'needs_review',
+    studentQuestion: req.body?.studentQuestion || '',
+    answerGiven: req.body?.answerGiven || '',
+    routerType: req.body?.routerType || '',
+    formulaChosen: req.body?.formulaChosen || '',
+    confidence: req.body?.confidence || '',
+    expectedBehavior: req.body?.expectedBehavior || '',
+    teacherNotes: req.body?.teacherNotes || '',
+    source: req.body?.source || '',
+    reason: req.body?.reason || '',
+    debug: req.body?.debug || {}
+  });
+
+  res.status(201).json({ problem });
+});
+
+app.patch('/api/ai-improvement/problems/:id', (req, res) => {
+  const problem = updateProblem(req.params.id, {
+    status: req.body?.status,
+    category: req.body?.category,
+    teacherNotes: req.body?.teacherNotes,
+    expectedBehavior: req.body?.expectedBehavior,
+    source: req.body?.source,
+    reason: req.body?.reason
+  });
+
+  if (!problem) {
+    return res.status(404).json({ error: 'Problem not found.' });
+  }
+
+  res.json({ problem });
+});
+
+app.post('/api/chat', async (req, res) => {
+  const message = (req.body?.message || '').trim();
+  const selectedVoiceId = (req.body?.voice || '').trim();
+  console.log('Incoming message:', message);
+
+  if (!message) {
+    return res.status(400).json({ error: 'Message is required.' });
+  }
+
+  res.setHeader('Content-Type', 'application/x-ndjson; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+
+  const abortController = new AbortController();
+  let clientClosed = false;
+  let sentenceIndex = 0;
+  let ttsChain = Promise.resolve();
+
+  req.on('aborted', () => {
+    clientClosed = true;
+    abortController.abort();
+  });
+
+  res.on('close', () => {
+    if (!res.writableEnded) {
+      clientClosed = true;
+      abortController.abort();
+    }
+  });
+
+  const sendEvent = (payload) => {
+    if (clientClosed) return;
+    res.write(`${JSON.stringify(payload)}\n`);
+  };
+
+  sendEvent({
+    type: 'start',
+    voice: selectedVoiceId || null,
+    ttsBackend: tts.getEffectiveTtsBackend(),
+    ttsAudioMode: tts.getEffectiveAudioMode(),
+    canStreamAudio: tts.canStreamAudio()
+  });
+
+  let fullText = '';
+  let matchedKnowledge = [];
+  let questionRoute = null;
+  let usedAiFallback = false;
+
+  try {
+    let pending = '';
+    let speechBuffer = [];
+    let firstChunkSent = false;
+
+    TEACHER_KNOWLEDGE = loadTeacherKnowledge(teacherFactsFile);
+    matchedKnowledge = getRelevantKnowledge(message);
+    questionRoute = routeStudentQuestion(message, matchedKnowledge);
+
+    console.log('Knowledge matches:', matchedKnowledge.map((item) => item.title || item.id));
+    console.log('Question route:', questionRoute.public);
+    sendEvent({ type: 'router', router: questionRoute.public });
+
+    maybeLogReviewQuestion({
+      message,
+      questionRoute,
+      matchedKnowledge,
+      answerGiven: questionRoute.directAnswer
+    });
+
+    if (questionRoute.directAnswer && !questionRoute.aiAllowed) {
+      fullText += questionRoute.directAnswer;
+      sendEvent({ type: 'text_delta', chunk: questionRoute.directAnswer });
+      queueSentenceForSpeech(questionRoute.directAnswer);
+    } else {
+      usedAiFallback = true;
+      await ollama.stream({
+        prompt: ollama.buildTeacherPrompt({ message, matchedKnowledge, questionRoute }),
+        signal: abortController.signal,
+        onText(textChunk) {
+          if (!textChunk || clientClosed) return;
+
+          fullText += textChunk;
+          pending += textChunk;
+          sendEvent({ type: 'text_delta', chunk: textChunk });
+
+          const { complete, remaining } = ollama.extractCompletedSentences(pending);
+          pending = remaining;
+
+          for (const sentence of complete) {
+            const cleaned = sentence.trim();
+            if (!cleaned) continue;
+
+            speechBuffer.push(cleaned);
+
+            if (!firstChunkSent) {
+              if (speechBuffer.length >= 2) {
+                queueSentenceForSpeech(speechBuffer.join(' '));
+                speechBuffer = [];
+                firstChunkSent = true;
+              }
+            } else {
+              queueSentenceForSpeech(speechBuffer.shift());
+            }
+          }
+        }
+      });
+    }
+
+    const trailing = pending.trim();
+    if (trailing) {
+      speechBuffer.push(trailing);
+    }
+
+    if (speechBuffer.length) {
+      if (!firstChunkSent) {
+        queueSentenceForSpeech(speechBuffer.join(' '));
+      } else {
+        for (const chunk of speechBuffer) {
+          queueSentenceForSpeech(chunk);
+        }
+      }
+    }
+
+    if (usedAiFallback) {
+      logAiImprovementProblem({
+        message,
+        questionRoute,
+        matchedKnowledge,
+        answerGiven: fullText,
+        category: 'fallback_review',
+        reason: 'fallback',
+        source: 'auto'
+      });
+    }
+
+    await ttsChain;
+
+    sendEvent({ type: 'done', fullText });
+    res.end();
+  } catch (error) {
+    console.error('Chat route error:', error);
+    if (!clientClosed) {
+      const safeMessage = 'I do not have a trusted answer for that yet. Ask your teacher or try rewording the question.';
+      logAiImprovementProblem({
+        message,
+        questionRoute,
+        matchedKnowledge,
+        answerGiven: fullText || safeMessage,
+        category: 'server_error',
+        reason: 'server_error',
+        source: 'auto',
+        debug: {
+          error: {
+            name: error.name,
+            message: error.message,
+            stack: error.stack
+          }
+        }
+      });
+      sendEvent({ type: 'error', message: safeMessage });
+      res.end();
+    }
+  }
+
+  function queueSentenceForSpeech(sentence) {
+    if (!sentence) return;
+
+    const itemNumber = sentenceIndex++;
+    ttsChain = ttsChain
+      .then(async () => {
+        await tts.streamSentenceAudio({
+          sentence,
+          index: itemNumber,
+          selectedVoiceId,
+          sendEvent,
+          signal: abortController.signal,
+          isClientClosed: () => clientClosed
+        });
+      })
+      .catch((error) => {
+        sendEvent({
+          type: 'audio_error',
+          sentence,
+          index: itemNumber,
+          message: error.message
+        });
+      });
+  }
+});
+
+function getRelevantKnowledge(message) {
+  return findRelevantKnowledge(message, TEACHER_KNOWLEDGE, MAX_KNOWLEDGE_ITEMS);
+}
+
+function ensureDir(dirPath) {
+  if (!fs.existsSync(dirPath)) {
+    fs.mkdirSync(dirPath, { recursive: true });
+  }
+}
+
+function maybeLogReviewQuestion({ message, questionRoute, matchedKnowledge, answerGiven }) {
+  const review = getRouteReviewInfo(questionRoute);
+  if (!review) return;
+
+  logAiImprovementProblem({
+    message,
+    questionRoute,
+    matchedKnowledge,
+    answerGiven,
+    source: 'auto',
+    category: review.category,
+    reason: review.reason
+  });
+}
+
+function logAiImprovementProblem({
+  message,
+  questionRoute = null,
+  matchedKnowledge = [],
+  answerGiven = '',
+  category = 'needs_review',
+  reason = '',
+  source = 'auto',
+  debug = {}
+}) {
+  try {
+    logProblem({
+      status: 'open',
+      category,
+      studentQuestion: message,
+      answerGiven,
+      routerType: questionRoute?.type || '',
+      formulaChosen: getFormulaChosen(questionRoute),
+      confidence: questionRoute?.confidence || '',
+      source,
+      reason,
+      debug: {
+        route: questionRoute?.public || null,
+        notes: questionRoute?.notes || '',
+        toolsUsed: questionRoute?.toolsUsed || [],
+        matchedKnowledge: matchedKnowledge.map((item) => ({
+          id: item.id,
+          title: item.title,
+          category: item.category,
+          score: item.score
+        })),
+        ...debug
+      }
+    });
+  } catch (error) {
+    console.warn('Could not write AI Improvement problem log:', error.message);
+  }
+}
+
+function getRouteReviewInfo(questionRoute) {
+  if (!questionRoute) {
+    return { category: 'no_trusted_answer', reason: 'no_route' };
+  }
+
+  if (questionRoute.type === 'no_match') {
+    if (looksLikeSafetyBlock(questionRoute)) {
+      return { category: 'rejected_question', reason: 'rejected' };
+    }
+
+    return { category: 'no_trusted_answer', reason: 'no_trusted_answer' };
+  }
+
+  if (questionRoute.confidence === 'none') {
+    return { category: 'no_trusted_answer', reason: 'no_trusted_answer' };
+  }
+
+  if (questionRoute.confidence === 'weak') {
+    return { category: 'needs_review', reason: 'low_confidence' };
+  }
+
+  return null;
+}
+
+function looksLikeSafetyBlock(questionRoute) {
+  const text = `${questionRoute.notes || ''} ${questionRoute.directAnswer || ''}`.toLowerCase();
+  return /\bsafety\b|\beating\b|\btouching\b|\bsmelling\b|\bchemical\b/.test(text);
+}
+
+function getFormulaChosen(questionRoute) {
+  return questionRoute?.formulaChosen
+    || questionRoute?.public?.formulaChosen
+    || questionRoute?.calculatorResult?.expression
+    || '';
+}
+
+app.listen(PORT, () => {
+  console.log(`AI in a Box running at http://localhost:${PORT}`);
+  console.log(`TTS backend: ${tts.getEffectiveTtsBackend()}`);
+  console.log(`Audio mode: ${tts.getEffectiveAudioMode()}`);
+  if (tts.usingPiperHttp()) {
+    console.log(`Piper HTTP URL: ${process.env.PIPER_HTTP_URL}`);
+  }
+});

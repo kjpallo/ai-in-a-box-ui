@@ -1,0 +1,32 @@
+[
+  {
+    "id": "problem_20260430192006215_1nplmg",
+    "createdAt": "2026-04-30T19:20:06.214Z",
+    "updatedAt": "2026-04-30T19:20:06.214Z",
+    "lastSeenAt": "2026-04-30T19:20:06.214Z",
+    "count": 1,
+    "status": "open",
+    "category": "no_trusted_answer",
+    "studentQuestion": "what is the maaa",
+    "answerGiven": "I do not have a trusted local fact for that yet. Please reword the question or ask your teacher.",
+    "routerType": "no_match",
+    "formulaChosen": "",
+    "confidence": "none",
+    "expectedBehavior": "",
+    "teacherNotes": "",
+    "source": "auto",
+    "reason": "no_trusted_answer",
+    "debug": {
+      "route": {
+        "type": "no_match",
+        "confidence": "none",
+        "toolsUsed": [],
+        "notes": "No trusted local match found.",
+        "aiAllowed": false
+      },
+      "notes": "No trusted local match found.",
+      "toolsUsed": [],
+      "matchedKnowledge": []
+    }
+  }
+]

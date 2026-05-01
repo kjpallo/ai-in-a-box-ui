@@ -9,14 +9,44 @@ Local classroom assistant UI for a Raspberry Pi.
 - Sends each finished sentence to Piper right away.
 - Streams Piper audio chunks to the browser in order so speech can begin before the whole response is finished.
 - Keeps the browser audio path, which fits HDMI audio on the Pi.
+- Uses local router/formula rules and local knowledge files for trusted classroom answers.
+- Includes a 400-question router test bank for accuracy checks before adding more UI or formula families.
 
 ## Files to care about
 
 - `public/index.html` = what is on the page
 - `public/style.css` = what it looks like
-- `public/app.js` = what the page does
+- `public/student-ui.js` = student question flow and streamed answer handling
+- `public/teacher-ui.js` = visible status, answer display, recent questions, and voice list UI
+- `public/audio.js` = browser audio playback
+- `public/blade-ui.js` = side/bottom blade shell UI
 - `public/audio-stream-processor.js` = low-latency browser audio playback for Piper PCM chunks
-- `server.js` = how it talks to Ollama and Piper
+- `server.js` = local HTTP server and streaming chat endpoint
+- `lib/router/questionRouter.js` = local router that decides which trusted tool should answer
+- `lib/formulas/` = local science formula rules, being split one formula family at a time
+- `lib/knowledge/` = local chemistry, periodic table, and teacher knowledge helpers
+- `lib/ollama/client.js` = local Ollama client
+- `lib/tts/piper.js` = local Piper TTS service
+
+## Router tests
+
+Run the small regression suite:
+
+```bash
+npm test
+```
+
+Run the full 400-question teacher test bank:
+
+```bash
+npm run test:bank
+```
+
+Run both:
+
+```bash
+npm run test:all
+```
 
 ## Streaming mode design
 

@@ -1,27 +1,44 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-const { spawn } = require('child_process');
-const { routeStudentQuestion } = require('./lib/questionRouter');
+const crypto = require('crypto');
+
+loadLocalEnv(path.join(__dirname, '.env'));
+
+const { routeStudentQuestion } = require('./lib/router/questionRouter');
+const {
+  loadTeacherKnowledge,
+  findRelevantKnowledge
+} = require('./lib/knowledge/teacherKnowledge');
+const { createOllamaClient } = require('./lib/ollama/client');
+const { createTtsService } = require('./lib/tts/piper');
+const {
+  getProblems,
+  logProblem,
+  updateProblem
+} = require('./lib/system/problemLogger');
+const {
+  getAvailableProfileDates,
+  getDailyQuestionSummary
+} = require('./lib/system/profileSummary');
+const {
+  getProfileStatus,
+  createGoogleConnectUrl,
+  completeGoogleConnect,
+  sendDailySummaryEmail
+} = require('./lib/system/gmailConnector');
+const { logStudentInteraction } = require('./lib/system/studentInteractionLogger');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const OLLAMA_URL = process.env.OLLAMA_URL || 'http://127.0.0.1:11434/api/generate';
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'qwen2.5:0.5b';
+
 const publicDir = path.join(__dirname, 'public');
 const voicesDir = path.join(__dirname, 'voices');
 const audioDir = path.join(__dirname, 'audio');
 const knowledgeDir = path.join(__dirname, 'knowledge');
 const teacherFactsFile = path.join(knowledgeDir, 'teacher_facts.json');
 const MAX_KNOWLEDGE_ITEMS = Number(process.env.MAX_KNOWLEDGE_ITEMS || 6);
-
-const PIPER_BACKEND = (process.env.PIPER_BACKEND || 'auto').toLowerCase();
-const PIPER_HTTP_URL = process.env.PIPER_HTTP_URL || '';
-const PIPER_AUDIO_MODE = (process.env.PIPER_AUDIO_MODE || 'file').toLowerCase();
-const PIPER_SAMPLE_RATE = Number(process.env.PIPER_SAMPLE_RATE || 0);
-const AUDIO_TTL_MS = Number(process.env.AUDIO_TTL_MS || 1000 * 60 * 30);
-const PIPER_LENGTH_SCALE = process.env.PIPER_LENGTH_SCALE || '1.25';
-const PIPER_BIN = process.env.PIPER_BIN || path.join(__dirname, '.venv', 'bin', 'piper');
+const studentSessions = Object.create(null);
 
 const DEFAULT_SYSTEM_PROMPT = [
   'You are a classroom assistant helping in a 9th-grade science class.',
@@ -36,45 +53,72 @@ const DEFAULT_SYSTEM_PROMPT = [
   'Avoid extra background information unless asked.'
 ].join(' ');
 
-const SYSTEM_PROMPT = process.env.SYSTEM_PROMPT || DEFAULT_SYSTEM_PROMPT;
-const OLLAMA_TEMPERATURE = Number(process.env.OLLAMA_TEMPERATURE || 0.2);
-const OLLAMA_NUM_PREDICT = Number(process.env.OLLAMA_NUM_PREDICT || 110);
-const OLLAMA_TOP_K = Number(process.env.OLLAMA_TOP_K || 20);
-const OLLAMA_TOP_P = Number(process.env.OLLAMA_TOP_P || 0.85);
-const OLLAMA_REPEAT_PENALTY = Number(process.env.OLLAMA_REPEAT_PENALTY || 1.1);
+const ollama = createOllamaClient({
+  url: process.env.OLLAMA_URL || 'http://127.0.0.1:11434/api/generate',
+  model: process.env.OLLAMA_MODEL || 'qwen2.5:0.5b',
+  systemPrompt: process.env.SYSTEM_PROMPT || DEFAULT_SYSTEM_PROMPT,
+  temperature: Number(process.env.OLLAMA_TEMPERATURE || 0.2),
+  numPredict: Number(process.env.OLLAMA_NUM_PREDICT || 110),
+  topK: Number(process.env.OLLAMA_TOP_K || 20),
+  topP: Number(process.env.OLLAMA_TOP_P || 0.85),
+  repeatPenalty: Number(process.env.OLLAMA_REPEAT_PENALTY || 1.1)
+});
 
-ensureDir(audioDir);
+const tts = createTtsService({
+  voicesDir,
+  audioDir,
+  piperBackend: (process.env.PIPER_BACKEND || 'auto').toLowerCase(),
+  piperHttpUrl: process.env.PIPER_HTTP_URL || '',
+  piperAudioMode: (process.env.PIPER_AUDIO_MODE || 'file').toLowerCase(),
+  piperSampleRate: Number(process.env.PIPER_SAMPLE_RATE || 0),
+  audioTtlMs: Number(process.env.AUDIO_TTL_MS || 1000 * 60 * 30),
+  piperLengthScale: process.env.PIPER_LENGTH_SCALE || '1.25',
+  piperBin: process.env.PIPER_BIN || path.join(__dirname, '.venv', 'bin', 'piper')
+});
+
 ensureDir(knowledgeDir);
-let TEACHER_KNOWLEDGE = loadTeacherKnowledge();
-pruneAudioDir();
-setInterval(pruneAudioDir, Math.max(60_000, Math.floor(AUDIO_TTL_MS / 2))).unref();
+let TEACHER_KNOWLEDGE = loadTeacherKnowledge(teacherFactsFile);
+tts.pruneAudioDir();
+setInterval(tts.pruneAudioDir, Math.max(60_000, Math.floor(Number(process.env.AUDIO_TTL_MS || 1000 * 60 * 30) / 2))).unref();
 
 app.use(express.json());
 app.use(express.static(publicDir));
 app.use('/audio', express.static(audioDir));
 
 app.get('/api/health', (_req, res) => {
-  const voices = listPiperVoices();
+  const voices = tts.listVoices();
   res.json({
     ok: true,
-    model: OLLAMA_MODEL,
+    model: process.env.OLLAMA_MODEL || 'qwen2.5:0.5b',
     conciseMode: true,
-    ttsBackend: getEffectiveTtsBackend(),
-    piperHttpConfigured: usingPiperHttp(),
-    ttsAudioMode: getEffectiveAudioMode(),
-    canStreamAudio: canStreamAudio(),
-    canSelectVoice: !usingPiperHttp(),
-    hasVoice: usingPiperHttp() || voices.length > 0,
+    ttsBackend: tts.getEffectiveTtsBackend(),
+    piperHttpConfigured: tts.usingPiperHttp(),
+    ttsAudioMode: tts.getEffectiveAudioMode(),
+    canStreamAudio: tts.canStreamAudio(),
+    canSelectVoice: !tts.usingPiperHttp(),
+    hasVoice: tts.usingPiperHttp() || voices.length > 0,
     knowledgeItems: TEACHER_KNOWLEDGE.length,
     voices
   });
 });
 
+app.get('/api/system-health', async (_req, res) => {
+  try {
+    const report = await buildSystemHealthReport();
+    res.json(report);
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      generatedAt: new Date().toISOString(),
+      error: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
 
 app.get('/api/router-test', (req, res) => {
-  TEACHER_KNOWLEDGE = loadTeacherKnowledge();
+  TEACHER_KNOWLEDGE = loadTeacherKnowledge(teacherFactsFile);
   const message = String(req.query.q || '').trim();
-  const matchedKnowledge = findRelevantKnowledge(message);
+  const matchedKnowledge = getRelevantKnowledge(message);
   const questionRoute = routeStudentQuestion(message, matchedKnowledge);
 
   res.json({
@@ -96,12 +140,256 @@ app.get('/api/router-test', (req, res) => {
 
 app.get('/api/voices', (_req, res) => {
   res.json({
-    backend: getEffectiveTtsBackend(),
-    ttsAudioMode: getEffectiveAudioMode(),
-    canStreamAudio: canStreamAudio(),
-    canSelectVoice: !usingPiperHttp(),
-    voices: listPiperVoices()
+    backend: tts.getEffectiveTtsBackend(),
+    ttsAudioMode: tts.getEffectiveAudioMode(),
+    canStreamAudio: tts.canStreamAudio(),
+    canSelectVoice: !tts.usingPiperHttp(),
+    voices: tts.listVoices()
   });
+});
+
+app.get('/api/ai-improvement/problems', (_req, res) => {
+  const problems = getProblems()
+    .slice()
+    .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+
+  res.json({ problems });
+});
+
+app.get('/api/profile/status', (_req, res) => {
+  res.json(getProfileStatus());
+});
+
+app.post('/api/profile/create-student-session', (req, res) => {
+  const sessionId = crypto.randomUUID();
+  const className = String(req.body?.className || '').trim();
+  const studentUrl = buildStudentUrl(req, sessionId);
+
+  studentSessions[sessionId] = {
+    sessionId,
+    className,
+    createdAt: new Date().toISOString(),
+    studentUrl,
+    messages: []
+  };
+
+  res.status(201).json({
+    sessionId,
+    className,
+    createdAt: studentSessions[sessionId].createdAt,
+    studentUrl
+  });
+});
+
+app.get('/api/profile/student-sessions', (_req, res) => {
+  const sessions = Object.values(studentSessions)
+    .map((session) => ({
+      className: session.className || '',
+      sessionId: session.sessionId,
+      createdAt: session.createdAt,
+      studentUrl: session.studentUrl || `/student.html?sessionId=${encodeURIComponent(session.sessionId)}`
+    }))
+    .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+
+  res.json({ sessions });
+});
+
+app.get('/api/profile/google/start', (_req, res) => {
+  try {
+    res.redirect(createGoogleConnectUrl());
+  } catch (error) {
+    sendProfileError(res, error);
+  }
+});
+
+app.get('/api/profile/google/callback', async (req, res) => {
+  try {
+    await completeGoogleConnect(req.query);
+    res.send(`
+      <!doctype html>
+      <html lang="en">
+        <head>
+          <meta charset="utf-8">
+          <title>Gmail connected</title>
+          <meta http-equiv="refresh" content="1; url=/">
+          <style>
+            body {
+              margin: 0;
+              min-height: 100vh;
+              display: grid;
+              place-items: center;
+              background: #03090a;
+              color: #effff8;
+              font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            }
+            main {
+              max-width: 520px;
+              padding: 2rem;
+              border: 1px solid rgba(103, 255, 208, 0.25);
+              border-radius: 18px;
+              background: rgba(0, 18, 17, 0.82);
+            }
+            a { color: #67ffd0; }
+          </style>
+        </head>
+        <body>
+          <main>
+            <h1>Gmail connected</h1>
+            <p>You can return to Charlemagne and send daily summary emails.</p>
+            <p><a href="/">Back to Charlemagne</a></p>
+          </main>
+        </body>
+      </html>
+    `);
+  } catch (error) {
+    const message = escapeHtml(error instanceof Error ? error.message : String(error));
+    res.status(error.statusCode || 500).send(`
+      <!doctype html>
+      <html lang="en">
+        <head>
+          <meta charset="utf-8">
+          <title>Gmail connection failed</title>
+          <style>
+            body {
+              margin: 0;
+              min-height: 100vh;
+              display: grid;
+              place-items: center;
+              background: #03090a;
+              color: #effff8;
+              font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            }
+            main {
+              max-width: 620px;
+              padding: 2rem;
+              border: 1px solid rgba(255, 124, 124, 0.3);
+              border-radius: 18px;
+              background: rgba(40, 0, 8, 0.72);
+            }
+            a { color: #67ffd0; }
+          </style>
+        </head>
+        <body>
+          <main>
+            <h1>Gmail connection failed</h1>
+            <p>${message}</p>
+            <p><a href="/">Back to Charlemagne</a></p>
+          </main>
+        </body>
+      </html>
+    `);
+  }
+});
+
+app.get('/api/profile/dates', (_req, res) => {
+  res.json(getAvailableProfileDates());
+});
+
+app.get('/api/profile/question-summary', (req, res) => {
+  res.json(getDailyQuestionSummary(req.query.date));
+});
+
+app.post('/api/profile/send-daily-summary', async (req, res) => {
+  sendProfileDailySummary(req, res);
+});
+
+app.post('/api/profile/send-email', async (req, res) => {
+  sendProfileDailySummary(req, res);
+});
+
+async function sendProfileDailySummary(req, res) {
+  try {
+    const summary = getDailyQuestionSummary(req.body?.date);
+    const result = await sendDailySummaryEmail(summary);
+    res.json(result);
+  } catch (error) {
+    sendProfileError(res, error);
+  }
+}
+
+app.post('/api/ai-improvement/problems', (req, res) => {
+  const problem = logProblem({
+    status: req.body?.status || 'open',
+    category: req.body?.category || 'needs_review',
+    studentQuestion: req.body?.studentQuestion || '',
+    answerGiven: req.body?.answerGiven || '',
+    routerType: req.body?.routerType || '',
+    formulaChosen: req.body?.formulaChosen || '',
+    confidence: req.body?.confidence || '',
+    expectedBehavior: req.body?.expectedBehavior || '',
+    teacherNotes: req.body?.teacherNotes || '',
+    source: req.body?.source || '',
+    reason: req.body?.reason || '',
+    debug: req.body?.debug || {}
+  });
+
+  res.status(201).json({ problem });
+});
+
+app.post('/api/student/message', async (req, res) => {
+  const sessionId = String(req.body?.sessionId || '').trim();
+  const message = String(req.body?.message || '').trim();
+  const session = studentSessions[sessionId];
+
+  if (!session) {
+    return res.status(404).json({ error: 'Student session not found.' });
+  }
+
+  if (!message) {
+    return res.status(400).json({ error: 'Message is required.' });
+  }
+
+  try {
+    const result = await answerStudentMessage(message);
+    const entry = {
+      message,
+      response: result.response,
+      routeType: result.routeType,
+      confidence: result.confidence,
+      createdAt: new Date().toISOString()
+    };
+
+    session.messages.push(entry);
+
+    logCompletedInteraction({
+      message,
+      questionRoute: result.questionRoute,
+      answerGiven: result.response,
+      source: 'student',
+      sessionId,
+      debug: {
+        className: session.className || ''
+      }
+    });
+
+    res.json({
+      response: result.response,
+      routeType: result.routeType,
+      confidence: result.confidence
+    });
+  } catch (error) {
+    console.error('Student message route error:', error);
+    res.status(500).json({
+      error: 'Could not answer that student message.'
+    });
+  }
+});
+
+app.patch('/api/ai-improvement/problems/:id', (req, res) => {
+  const problem = updateProblem(req.params.id, {
+    status: req.body?.status,
+    category: req.body?.category,
+    teacherNotes: req.body?.teacherNotes,
+    expectedBehavior: req.body?.expectedBehavior,
+    source: req.body?.source,
+    reason: req.body?.reason
+  });
+
+  if (!problem) {
+    return res.status(404).json({ error: 'Problem not found.' });
+  }
+
+  res.json({ problem });
 });
 
 app.post('/api/chat', async (req, res) => {
@@ -142,33 +430,44 @@ app.post('/api/chat', async (req, res) => {
   sendEvent({
     type: 'start',
     voice: selectedVoiceId || null,
-    ttsBackend: getEffectiveTtsBackend(),
-    ttsAudioMode: getEffectiveAudioMode(),
-    canStreamAudio: canStreamAudio()
+    ttsBackend: tts.getEffectiveTtsBackend(),
+    ttsAudioMode: tts.getEffectiveAudioMode(),
+    canStreamAudio: tts.canStreamAudio()
   });
 
+  let fullText = '';
+  let matchedKnowledge = [];
+  let questionRoute = null;
+  let usedAiFallback = false;
+
   try {
-    let fullText = '';
-let pending = '';
-let speechBuffer = [];
-let firstChunkSent = false;
+    let pending = '';
+    let speechBuffer = [];
+    let firstChunkSent = false;
 
-    // Reload teacher facts on every question so edits to knowledge/teacher_facts.json work without restarting Node.
-TEACHER_KNOWLEDGE = loadTeacherKnowledge();
+    TEACHER_KNOWLEDGE = loadTeacherKnowledge(teacherFactsFile);
+    matchedKnowledge = getRelevantKnowledge(message);
+    questionRoute = routeStudentQuestion(message, matchedKnowledge);
 
-const matchedKnowledge = findRelevantKnowledge(message);
-const questionRoute = routeStudentQuestion(message, matchedKnowledge);
     console.log('Knowledge matches:', matchedKnowledge.map((item) => item.title || item.id));
     console.log('Question route:', questionRoute.public);
     sendEvent({ type: 'router', router: questionRoute.public });
+
+    maybeLogReviewQuestion({
+      message,
+      questionRoute,
+      matchedKnowledge,
+      answerGiven: questionRoute.directAnswer
+    });
 
     if (questionRoute.directAnswer && !questionRoute.aiAllowed) {
       fullText += questionRoute.directAnswer;
       sendEvent({ type: 'text_delta', chunk: questionRoute.directAnswer });
       queueSentenceForSpeech(questionRoute.directAnswer);
     } else {
-      await streamFromOllama({
-        prompt: buildTeacherPrompt(message, matchedKnowledge, questionRoute),
+      usedAiFallback = true;
+      await ollama.stream({
+        prompt: ollama.buildTeacherPrompt({ message, matchedKnowledge, questionRoute }),
         signal: abortController.signal,
         onText(textChunk) {
           if (!textChunk || clientClosed) return;
@@ -177,7 +476,7 @@ const questionRoute = routeStudentQuestion(message, matchedKnowledge);
           pending += textChunk;
           sendEvent({ type: 'text_delta', chunk: textChunk });
 
-          const { complete, remaining } = extractCompletedSentences(pending);
+          const { complete, remaining } = ollama.extractCompletedSentences(pending);
           pending = remaining;
 
           for (const sentence of complete) {
@@ -200,7 +499,7 @@ const questionRoute = routeStudentQuestion(message, matchedKnowledge);
       });
     }
 
-        const trailing = pending.trim();
+    const trailing = pending.trim();
     if (trailing) {
       speechBuffer.push(trailing);
     }
@@ -215,6 +514,25 @@ const questionRoute = routeStudentQuestion(message, matchedKnowledge);
       }
     }
 
+    if (usedAiFallback) {
+      logAiImprovementProblem({
+        message,
+        questionRoute,
+        matchedKnowledge,
+        answerGiven: fullText,
+        category: 'fallback_review',
+        reason: 'fallback',
+        source: 'auto'
+      });
+    }
+
+    logCompletedInteraction({
+      message,
+      questionRoute,
+      answerGiven: fullText,
+      source: usedAiFallback ? 'chat_ai_fallback' : 'chat_router'
+    });
+
     await ttsChain;
 
     sendEvent({ type: 'done', fullText });
@@ -222,7 +540,24 @@ const questionRoute = routeStudentQuestion(message, matchedKnowledge);
   } catch (error) {
     console.error('Chat route error:', error);
     if (!clientClosed) {
-      sendEvent({ type: 'error', message: error.message || 'Chat failed.' });
+      const safeMessage = 'I do not have a trusted answer for that yet. Ask your teacher or try rewording the question.';
+      logAiImprovementProblem({
+        message,
+        questionRoute,
+        matchedKnowledge,
+        answerGiven: fullText || safeMessage,
+        category: 'server_error',
+        reason: 'server_error',
+        source: 'auto',
+        debug: {
+          error: {
+            name: error.name,
+            message: error.message,
+            stack: error.stack
+          }
+        }
+      });
+      sendEvent({ type: 'error', message: safeMessage });
       res.end();
     }
   }
@@ -233,7 +568,7 @@ const questionRoute = routeStudentQuestion(message, matchedKnowledge);
     const itemNumber = sentenceIndex++;
     ttsChain = ttsChain
       .then(async () => {
-        await streamSentenceAudio({
+        await tts.streamSentenceAudio({
           sentence,
           index: itemNumber,
           selectedVoiceId,
@@ -253,620 +588,87 @@ const questionRoute = routeStudentQuestion(message, matchedKnowledge);
   }
 });
 
-async function streamFromOllama({ prompt, onText, signal }) {
-  console.log('Calling Ollama:', OLLAMA_URL, 'model:', OLLAMA_MODEL);
-  const response = await fetch(OLLAMA_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: OLLAMA_MODEL,
-      system: SYSTEM_PROMPT,
-      prompt,
-      stream: true,
-      options: {
-        temperature: OLLAMA_TEMPERATURE,
-        num_predict: OLLAMA_NUM_PREDICT,
-        top_k: OLLAMA_TOP_K,
-        top_p: OLLAMA_TOP_P,
-        repeat_penalty: OLLAMA_REPEAT_PENALTY
-      }
-    }),
-    signal
+function getRelevantKnowledge(message) {
+  return findRelevantKnowledge(message, TEACHER_KNOWLEDGE, MAX_KNOWLEDGE_ITEMS);
+}
+
+async function answerStudentMessage(message) {
+  TEACHER_KNOWLEDGE = loadTeacherKnowledge(teacherFactsFile);
+  const matchedKnowledge = getRelevantKnowledge(message);
+  const questionRoute = routeStudentQuestion(message, matchedKnowledge);
+  let response = questionRoute.directAnswer || '';
+  let usedAiFallback = false;
+
+  maybeLogReviewQuestion({
+    message,
+    questionRoute,
+    matchedKnowledge,
+    answerGiven: response
   });
 
-  if (!response.ok || !response.body) {
-    throw new Error(`Ollama request failed with status ${response.status}.`);
+  if (!response || questionRoute.aiAllowed) {
+    usedAiFallback = true;
+    response = '';
+    await ollama.stream({
+      prompt: ollama.buildTeacherPrompt({ message, matchedKnowledge, questionRoute }),
+      onText(textChunk) {
+        response += textChunk || '';
+      }
+    });
   }
 
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
-
-  while (true) {
-    const { value, done } = await reader.read();
-    if (done) break;
-
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop() || '';
-
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed) continue;
-
-      let parsed;
-      try {
-        parsed = JSON.parse(trimmed);
-      } catch {
-        continue;
-      }
-
-      if (parsed.response) {
-        onText(parsed.response);
-      }
-
-      if (parsed.done) {
-        return;
-      }
-    }
-  }
-}
-
-function buildTeacherPrompt(message, matchedKnowledge = [], questionRoute = null) {
-  const parts = [];
-
-  if (questionRoute) {
-    parts.push(
-      'LOCAL QUESTION ROUTER (hidden from students):',
-      JSON.stringify(questionRoute.public),
-      'Router rule: strong = use trusted local info first; weak = say something is related and be careful; none = do not make up a science answer.',
-      ''
-    );
-  }
-
-  if (questionRoute && questionRoute.calculatorResult) {
-    parts.push(
-      'LOCAL CALCULATOR RESULT (hidden from students):',
-      'Expression: ' + questionRoute.calculatorResult.expression,
-      'Answer: ' + questionRoute.calculatorResult.displayValue,
-      'Use this local calculator result as correct. Do not recalculate it differently.',
-      'Explain it simply for a 9th-grade student if an explanation is needed.',
-      ''
-    );
-  }
-
-  if (matchedKnowledge.length) {
-    parts.push(
-      'LOCAL VERIFIED CLASS REFERENCE (hidden from students):',
-      'Use ONLY this local verified class reference when answering the student.',
-      'If this reference conflicts with your general memory, use this reference.',
-      'If multiple local references match, combine the useful parts into one clear answer.',
-      'If the student asks about force of gravity, distinguish between weight force Fg = m × g and Earth gravity g = 9.8 m/s^2 when those references are provided.',
-      'Do not add facts that are not in the local reference.',
-      'Do not tell students you looked up a hidden database unless the teacher asks.',
-      formatKnowledgeForPrompt(matchedKnowledge),
-      ''
-    );
-  }
-
-  parts.push(
-    'Teacher request:',
-    message,
-    '',
-    'Follow the classroom instructions above. Answer for a 9th-grade science student.',
-    'If a calculation is needed and a trusted formula or constant is provided above, use it and show the formula, substitution, and units.'
-  );
-
-  return parts.join('\n');
-}
-
-function loadTeacherKnowledge() {
-  try {
-    if (!fs.existsSync(teacherFactsFile)) {
-      console.warn(`No teacher knowledge file found at ${teacherFactsFile}. Running without local facts.`);
-      return [];
-    }
-
-    const parsed = JSON.parse(fs.readFileSync(teacherFactsFile, 'utf8'));
-    const items = Array.isArray(parsed) ? parsed : parsed.items;
-
-    if (!Array.isArray(items)) {
-      console.warn('Teacher knowledge file should be an array or an object with an items array.');
-      return [];
-    }
-
-    return items
-      .map((item, index) => ({
-        id: item.id || `knowledge-${index + 1}`,
-        category: item.category || 'reference',
-        title: item.title || item.term || `Knowledge item ${index + 1}`,
-        terms: Array.isArray(item.terms) ? item.terms : [],
-        fact: item.fact || item.definition || item.text || '',
-        formula: item.formula || '',
-        examples: Array.isArray(item.examples) ? item.examples : [],
-        source: item.source || 'Teacher-created local knowledge base'
-      }))
-      .filter((item) => item.fact || item.formula);
-  } catch (error) {
-    console.error('Could not load teacher knowledge:', error);
-    return [];
-  }
-}
-
-function findRelevantKnowledge(message) {
-  const normalizedMessage = normalizeForSearch(message);
-
-  if (!normalizedMessage || !TEACHER_KNOWLEDGE.length) return [];
-
-  const STOP_WORDS = new Set([
-    'a', 'an', 'and', 'are', 'as', 'at', 'be', 'but', 'by', 'for', 'from',
-    'how', 'i', 'in', 'is', 'it', 'of', 'on', 'or', 'the', 'to', 'what',
-    'when', 'where', 'which', 'who', 'why', 'with', 'does', 'do', 'did',
-    'can', 'could', 'would', 'should', 'this', 'that', 'these', 'those',
-    'about', 'because', 'there', 'their', 'they', 'them', 'than', 'then',
-    'have', 'has', 'had', 'was', 'were', 'you', 'your', 'its', 'our',
-    'get', 'find', 'calculate', 'solve', 'define', 'explain', 'tell',
-    'mean', 'means'
-  ]);
-
-  const importantMessageTokens = tokenizeForSearch(message)
-    .filter((token) => token.length >= 4 && !STOP_WORDS.has(token));
-
-  return TEACHER_KNOWLEDGE
-    .map((item) => {
-      const searchableParts = [
-        item.title,
-        item.category,
-        ...(item.terms || [])
-      ];
-
-      const itemImportantTokens = new Set(
-        tokenizeForSearch(searchableParts.join(' '))
-          .filter((token) => token.length >= 4 && !STOP_WORDS.has(token))
-      );
-
-      let score = 0;
-      let exactTermMatch = false;
-      let exactTitleMatch = false;
-      let importantKeywordMatches = 0;
-
-      for (const term of item.terms || []) {
-        const normalizedTerm = normalizeForSearch(term);
-        if (!normalizedTerm) continue;
-
-        if (containsPhrase(normalizedMessage, normalizedTerm)) {
-          exactTermMatch = true;
-          score += normalizedTerm.includes(' ') ? 30 : 18;
-        }
-      }
-
-      const normalizedTitle = normalizeForSearch(item.title);
-      if (normalizedTitle && containsPhrase(normalizedMessage, normalizedTitle)) {
-        exactTitleMatch = true;
-        score += 25;
-      }
-
-      for (const token of new Set(importantMessageTokens)) {
-        if (itemImportantTokens.has(token)) {
-          importantKeywordMatches += 1;
-          score += 4;
-        }
-      }
-
-      const strongEnoughMatch =
-        exactTermMatch ||
-        exactTitleMatch ||
-        importantKeywordMatches >= 2;
-
-      return {
-        ...item,
-        score,
-        exactTermMatch,
-        exactTitleMatch,
-        importantKeywordMatches,
-        strongEnoughMatch
-      };
-    })
-    .filter((item) => item.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, MAX_KNOWLEDGE_ITEMS);
-}
-function formatKnowledgeForPrompt(items) {
-  return items
-    .map((item, index) => {
-      const lines = [
-        `${index + 1}. ${item.title} [${item.category}]`,
-        `Fact: ${item.fact}`
-      ];
-
-      if (item.formula) lines.push(`Formula: ${item.formula}`);
-      if (item.examples.length) lines.push(`Examples: ${item.examples.join(' | ')}`);
-      if (item.source) lines.push(`Source note: ${item.source}`);
-
-      return lines.join('\n');
-    })
-    .join('\n\n');
-}
-
-function normalizeForSearch(value) {
-  return String(value || '')
-    .toLowerCase()
-    .replace(/[^a-z0-9µμ.\s-]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function tokenizeForSearch(value) {
-  const stopWords = new Set([
-    'a', 'an', 'and', 'are', 'as', 'at', 'be', 'but', 'by', 'for', 'from', 'how', 'i', 'in',
-    'is', 'it', 'of', 'on', 'or', 'the', 'to', 'what', 'when', 'where', 'which', 'who', 'why', 'with'
-  ]);
-
-  return normalizeForSearch(value)
-    .split(' ')
-    .filter((token) => token.length > 1 && !stopWords.has(token));
-}
-
-function containsPhrase(haystack, phrase) {
-  if (!phrase) return false;
-  const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const pattern = new RegExp(`(^|\\s)${escaped}($|\\s)`);
-  return pattern.test(haystack);
-}
-
-function extractCompletedSentences(text) {
-  const complete = [];
-  let lastCut = 0;
-  const matches = text.matchAll(/[^.!?\n]+[.!?]+(?:\s+|$)|[^\n]+\n+/g);
-
-  for (const match of matches) {
-    const sentence = match[0].trim();
-    if (sentence) complete.push(sentence);
-    lastCut = match.index + match[0].length;
+  if (usedAiFallback) {
+    logAiImprovementProblem({
+      message,
+      questionRoute,
+      matchedKnowledge,
+      answerGiven: response,
+      category: 'fallback_review',
+      reason: 'fallback',
+      source: 'student_session'
+    });
   }
 
   return {
-    complete,
-    remaining: text.slice(lastCut)
+    response: response || 'I do not have a trusted answer for that yet. Please ask your teacher.',
+    routeType: questionRoute?.public?.type || questionRoute?.type || 'unknown',
+    confidence: questionRoute?.confidence || 'unknown',
+    questionRoute
   };
 }
 
-async function streamSentenceAudio({ sentence, index, selectedVoiceId, sendEvent, signal, isClientClosed }) {
-  const backend = getEffectiveTtsBackend();
-  const mode = getEffectiveAudioMode();
-
-  if (backend === 'http') {
-    const filename = `tts-${Date.now()}-${index}.wav`;
-    const outputFile = path.join(audioDir, filename);
-    await runPiperHttp(sentence, outputFile, signal);
-    sendEvent({
-      type: 'audio',
-      sentence,
-      mode: 'file',
-      url: `/audio/${filename}`,
-      index,
-      backend,
-      ttsAudioMode: 'file'
-    });
-    return;
-  }
-
-  const voiceModel = resolveVoiceModel(selectedVoiceId);
-  if (!voiceModel) {
-    sendEvent({
-      type: 'audio',
-      sentence,
-      mode: 'placeholder',
-      durationMs: estimateDuration(sentence),
-      index,
-      backend,
-      ttsAudioMode: 'placeholder',
-      message: 'No Piper voice found yet.'
-    });
-    return;
-  }
-
-  if (mode !== 'stream') {
-  const filename = `tts-${Date.now()}-${index}.wav`;
-  const outputFile = path.join(audioDir, filename);
-
-  await runPiperCliFile(sentence, voiceModel.filePath, outputFile, signal);
-  const wavInfo = await readWavInfo(outputFile);
-
-  console.log('Generated WAV:', {
-    file: filename,
-    voice: voiceModel.name,
-    wavInfo
-  });
-
-  sendEvent({
-    type: 'audio',
-    sentence,
-    mode: 'file',
-    url: `/audio/${filename}`,
-    index,
-    backend,
-    ttsAudioMode: 'file',
-    voiceId: voiceModel.id,
-    voiceName: voiceModel.name,
-    sampleRate: voiceModel.sampleRate || null,
-    wavInfo
-  });
-  return;
-}
-
-  const sampleRate = resolveSampleRate(voiceModel);
-  if (!sampleRate) {
-    throw new Error(`Could not determine sample rate for ${voiceModel.name}. Add the matching .onnx.json file or set PIPER_SAMPLE_RATE.`);
-  }
-
-  sendEvent({
-    type: 'audio_stream_start',
-    sentence,
-    index,
-    backend,
-    ttsAudioMode: 'stream',
-    voiceId: voiceModel.id,
-    voiceName: voiceModel.name,
-    sampleRate,
-    channels: 1,
-    format: 'pcm_s16le'
-  });
-
-  let chunkCount = 0;
-  await runPiperCliStream(sentence, voiceModel.filePath, {
-    signal,
-    onChunk(chunk) {
-      if (isClientClosed()) return;
-      if (!chunk || !chunk.length) return;
-      chunkCount += 1;
-      sendEvent({
-        type: 'audio_chunk',
-        index,
-        sampleRate,
-        encoding: 'base64',
-        data: chunk.toString('base64')
-      });
-    }
-  });
-
-  sendEvent({
-    type: 'audio_stream_end',
-    sentence,
-    index,
-    chunkCount,
-    sampleRate
-  });
-}
-
-async function runPiperHttp(sentence, outputFile, signal) {
-  const response = await fetch(PIPER_HTTP_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-    body: sentence,
-    signal
-  });
-
-  if (!response.ok) {
-    throw new Error(`Piper HTTP request failed with status ${response.status}.`);
-  }
-
-  const arrayBuffer = await response.arrayBuffer();
-  await fs.promises.writeFile(outputFile, Buffer.from(arrayBuffer));
-}
-
-function runPiperCliFile(sentence, voiceModelPath, outputFile, signal) {
-  return new Promise((resolve, reject) => {
-    const piper = spawn(PIPER_BIN, [
-      '--model',
-      voiceModelPath,
-      '--output_file',
-      outputFile,
-      '--length-scale',
-      PIPER_LENGTH_SCALE
-    ]);
-
-    let stderr = '';
-
-    const abortHandler = () => {
-      piper.kill('SIGTERM');
-      reject(new Error('Audio generation aborted.'));
-    };
-
-    if (signal) {
-      if (signal.aborted) {
-        abortHandler();
-        return;
-      }
-      signal.addEventListener('abort', abortHandler, { once: true });
-    }
-
-    piper.stdin.write(sentence);
-    piper.stdin.end();
-
-    piper.stderr.on('data', (chunk) => {
-      stderr += chunk.toString();
-    });
-
-    piper.on('error', (error) => {
-      reject(new Error(`Piper failed to start: ${error.message}`));
-    });
-
-    piper.on('close', (code) => {
-      signal?.removeEventListener?.('abort', abortHandler);
-      if (code === 0) {
-        resolve();
-      } else {
-        reject(new Error(stderr || `Piper exited with code ${code}.`));
-      }
-    });
-  });
-}
-
-function runPiperCliStream(sentence, voiceModelPath, { onChunk, signal }) {
-  return new Promise((resolve, reject) => {
-    const piper = spawn(PIPER_BIN, [
-      '--model',
-      voiceModelPath,
-      '--output-raw',
-      '--length-scale',
-      PIPER_LENGTH_SCALE
-    ]);
-
-    let stderr = '';
-    let settled = false;
-
-    const finishReject = (error) => {
-      if (settled) return;
-      settled = true;
-      reject(error);
-    };
-
-    const finishResolve = () => {
-      if (settled) return;
-      settled = true;
-      resolve();
-    };
-
-    const abortHandler = () => {
-      piper.kill('SIGTERM');
-      finishReject(new Error('Audio generation aborted.'));
-    };
-
-    if (signal) {
-      if (signal.aborted) {
-        abortHandler();
-        return;
-      }
-      signal.addEventListener('abort', abortHandler, { once: true });
-    }
-
-    piper.stdout.on('data', (chunk) => {
-      try {
-        onChunk(chunk);
-      } catch (error) {
-        piper.kill('SIGTERM');
-        finishReject(error instanceof Error ? error : new Error(String(error)));
-      }
-    });
-
-    piper.stderr.on('data', (chunk) => {
-      stderr += chunk.toString();
-    });
-
-    piper.on('error', (error) => {
-      finishReject(new Error(`Piper failed to start: ${error.message}`));
-    });
-
-    piper.on('close', (code) => {
-      signal?.removeEventListener?.('abort', abortHandler);
-      if (settled) return;
-      if (code === 0) {
-        finishResolve();
-      } else {
-        finishReject(new Error(stderr || `Piper exited with code ${code}.`));
-      }
-    });
-
-    piper.stdin.write(sentence);
-    piper.stdin.end();
-  });
-}
-
-async function readWavInfo(filePath) {
-  const handle = await fs.promises.open(filePath, 'r');
+function loadLocalEnv(filePath) {
+  if (!fs.existsSync(filePath)) return;
 
   try {
-    const header = Buffer.alloc(44);
-    await handle.read(header, 0, 44, 0);
+    const lines = fs.readFileSync(filePath, 'utf8').split(/\r?\n/);
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
 
-    const riff = header.toString('ascii', 0, 4);
-    const wave = header.toString('ascii', 8, 12);
+      const equalsIndex = trimmed.indexOf('=');
+      if (equalsIndex <= 0) continue;
 
-    if (riff !== 'RIFF' || wave !== 'WAVE') {
-      return {
-        ok: false,
-        reason: 'Not a valid WAV header'
-      };
+      const key = trimmed.slice(0, equalsIndex).trim();
+      const rawValue = trimmed.slice(equalsIndex + 1).trim();
+      if (!key || process.env[key] !== undefined) continue;
+
+      process.env[key] = unquoteEnvValue(rawValue);
     }
-
-    return {
-      ok: true,
-      audioFormat: header.readUInt16LE(20),
-      channels: header.readUInt16LE(22),
-      sampleRate: header.readUInt32LE(24),
-      byteRate: header.readUInt32LE(28),
-      blockAlign: header.readUInt16LE(32),
-      bitsPerSample: header.readUInt16LE(34),
-      dataSize: header.readUInt32LE(40)
-    };
-  } finally {
-    await handle.close();
+  } catch (error) {
+    console.warn('Could not load local .env file:', error.message);
   }
 }
 
-function listPiperVoices() {
-  if (!fs.existsSync(voicesDir)) return [];
-
-  const files = fs.readdirSync(voicesDir)
-    .filter((file) => file.toLowerCase().endsWith('.onnx'))
-    .sort((a, b) => a.localeCompare(b));
-
-  return files.map((file) => {
-    const filePath = path.join(voicesDir, file);
-    const metaPath = `${filePath}.json`;
-    const metadata = readJsonIfPresent(metaPath);
-    const sampleRate = metadata?.audio?.sample_rate || metadata?.sample_rate || null;
-
-    return {
-      id: file,
-      name: file.replace(/\.onnx$/i, '').replace(/[_-]+/g, ' '),
-      filePath,
-      sampleRate
-    };
-  });
-}
-
-function readJsonIfPresent(filePath) {
-  try {
-    if (!fs.existsSync(filePath)) return null;
-    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
-  } catch {
-    return null;
+function unquoteEnvValue(value) {
+  if (
+    (value.startsWith('"') && value.endsWith('"'))
+    || (value.startsWith("'") && value.endsWith("'"))
+  ) {
+    return value.slice(1, -1);
   }
-}
 
-function resolveVoiceModel(selectedVoiceId) {
-  const voices = listPiperVoices();
-  if (!voices.length) return null;
-  return voices.find((voice) => voice.id === selectedVoiceId) || voices[0];
-}
-
-function resolveSampleRate(voiceModel) {
-  return Number(voiceModel?.sampleRate || PIPER_SAMPLE_RATE || 0) || null;
-}
-
-function usingPiperHttp() {
-  if (!PIPER_HTTP_URL) return false;
-
-  if (PIPER_BACKEND === 'http') return true;
-  if (PIPER_BACKEND === 'auto') return true;
-
-  return false;
-}
-
-function getEffectiveTtsBackend() {
-  if (usingPiperHttp()) return 'http';
-  return 'cli';
-}
-
-function getEffectiveAudioMode() {
-  if (getEffectiveTtsBackend() === 'http') return 'file';
-  return PIPER_AUDIO_MODE === 'file' ? 'file' : 'stream';
-}
-
-function canStreamAudio() {
-  return getEffectiveTtsBackend() === 'cli' && getEffectiveAudioMode() === 'stream';
+  return value;
 }
 
 function ensureDir(dirPath) {
@@ -875,41 +677,431 @@ function ensureDir(dirPath) {
   }
 }
 
-function pruneAudioDir() {
-  if (!fs.existsSync(audioDir)) return;
-  const cutoff = Date.now() - AUDIO_TTL_MS;
+function sendProfileError(res, error) {
+  const statusCode = Number(error?.statusCode || 500);
+  res.status(statusCode >= 400 && statusCode < 600 ? statusCode : 500).json({
+    error: error instanceof Error ? error.message : String(error)
+  });
+}
 
-  for (const file of fs.readdirSync(audioDir)) {
-    const fullPath = path.join(audioDir, file);
+function buildStudentUrl(req, sessionId) {
+  const host = req.get('host') || `localhost:${PORT}`;
+  const protocol = req.protocol || 'http';
+  return `${protocol}://${host}/student.html?sessionId=${encodeURIComponent(sessionId)}`;
+}
 
-    let stats;
-    try {
-      stats = fs.statSync(fullPath);
-    } catch {
-      continue;
-    }
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
 
-    if (!stats.isFile()) continue;
-    if (stats.mtimeMs >= cutoff) continue;
+function maybeLogReviewQuestion({ message, questionRoute, matchedKnowledge, answerGiven }) {
+  const review = getRouteReviewInfo(questionRoute);
+  if (!review) return;
 
-    try {
-      fs.unlinkSync(fullPath);
-    } catch {
-      // Ignore cleanup issues.
-    }
+  logAiImprovementProblem({
+    message,
+    questionRoute,
+    matchedKnowledge,
+    answerGiven,
+    source: 'auto',
+    category: review.category,
+    reason: review.reason
+  });
+}
+
+function logAiImprovementProblem({
+  message,
+  questionRoute = null,
+  matchedKnowledge = [],
+  answerGiven = '',
+  category = 'needs_review',
+  reason = '',
+  source = 'auto',
+  debug = {}
+}) {
+  try {
+    logProblem({
+      status: 'open',
+      category,
+      studentQuestion: message,
+      answerGiven,
+      routerType: questionRoute?.type || '',
+      formulaChosen: getFormulaChosen(questionRoute),
+      confidence: questionRoute?.confidence || '',
+      source,
+      reason,
+      debug: {
+        route: questionRoute?.public || null,
+        notes: questionRoute?.notes || '',
+        toolsUsed: questionRoute?.toolsUsed || [],
+        matchedKnowledge: matchedKnowledge.map((item) => ({
+          id: item.id,
+          title: item.title,
+          category: item.category,
+          score: item.score
+        })),
+        ...debug
+      }
+    });
+  } catch (error) {
+    console.warn('Could not write AI Improvement problem log:', error.message);
   }
 }
 
-function estimateDuration(sentence) {
-  const words = sentence.split(/\s+/).filter(Boolean).length;
-  return Math.max(900, Math.round(words * 330));
+function logCompletedInteraction({
+  message,
+  questionRoute = null,
+  answerGiven = '',
+  source = 'chat',
+  sessionId = '',
+  debug = {}
+}) {
+  try {
+    const routeType = questionRoute?.public?.type || questionRoute?.type || '';
+    const formulaChosen = getFormulaChosen(questionRoute);
+
+    logStudentInteraction({
+      studentQuestion: message,
+      question: message,
+      message,
+      answerGiven,
+      answer: answerGiven,
+      response: answerGiven,
+      routerType: questionRoute?.type || '',
+      routeType,
+      type: routeType,
+      formulaChosen,
+      category: formulaChosen || routeType,
+      confidence: questionRoute?.confidence || '',
+      source,
+      sessionId,
+      debug: {
+        route: questionRoute?.public || null,
+        ...debug
+      }
+    });
+  } catch (error) {
+    console.warn('Could not write student interaction log:', error.message);
+  }
+}
+
+function getRouteReviewInfo(questionRoute) {
+  if (!questionRoute) {
+    return { category: 'no_trusted_answer', reason: 'no_route' };
+  }
+
+  if (questionRoute.type === 'no_match') {
+    if (looksLikeSafetyBlock(questionRoute)) {
+      return { category: 'rejected_question', reason: 'rejected' };
+    }
+
+    return { category: 'no_trusted_answer', reason: 'no_trusted_answer' };
+  }
+
+  if (questionRoute.confidence === 'none') {
+    return { category: 'no_trusted_answer', reason: 'no_trusted_answer' };
+  }
+
+  if (questionRoute.confidence === 'weak') {
+    return { category: 'needs_review', reason: 'low_confidence' };
+  }
+
+  return null;
+}
+
+function looksLikeSafetyBlock(questionRoute) {
+  const text = `${questionRoute.notes || ''} ${questionRoute.directAnswer || ''}`.toLowerCase();
+  return /\bsafety\b|\beating\b|\btouching\b|\bsmelling\b|\bchemical\b/.test(text);
+}
+
+function getFormulaChosen(questionRoute) {
+  return questionRoute?.formulaChosen
+    || questionRoute?.public?.formulaChosen
+    || questionRoute?.calculatorResult?.expression
+    || '';
+}
+
+async function buildSystemHealthReport() {
+  const checks = [];
+  const addCheck = (id, label, status, message, details = {}) => {
+    checks.push({ id, label, status, message, details });
+  };
+
+  const configuredOllamaGenerateUrl = process.env.OLLAMA_URL || 'http://127.0.0.1:11434/api/generate';
+  const configuredOllamaModel = process.env.OLLAMA_MODEL || 'qwen2.5:0.5b';
+  const ollamaTagsUrl = getOllamaTagsUrl(configuredOllamaGenerateUrl);
+
+  const piperBackend = (process.env.PIPER_BACKEND || 'auto').toLowerCase();
+  const piperAudioMode = tts.getEffectiveAudioMode();
+  const piperBin = process.env.PIPER_BIN || path.join(__dirname, '.venv', 'bin', 'piper');
+  const piperHttpUrl = process.env.PIPER_HTTP_URL || '';
+
+  const logsDir = path.join(__dirname, 'logs');
+  const problemLogPath = path.join(logsDir, 'problem_questions.json');
+
+  addCheck('node_server', 'Node server', 'green', 'Node/Express server is running.', {
+    uptimeSeconds: Math.round(process.uptime()),
+    nodeVersion: process.version,
+    port: PORT
+  });
+
+  addCheck(
+    'working_directory',
+    'Project folder',
+    canRead(__dirname) ? 'green' : 'red',
+    canRead(__dirname) ? 'Project folder is readable.' : 'Project folder is not readable.',
+    {
+      cwd: process.cwd(),
+      projectDir: __dirname
+    }
+  );
+
+  try {
+    const ollamaTags = await fetchJsonWithTimeout(ollamaTagsUrl, 1500);
+    const models = Array.isArray(ollamaTags && ollamaTags.models) ? ollamaTags.models : [];
+    const modelNames = models.map((model) => model.name || model.model).filter(Boolean);
+    const foundModel = modelNames.includes(configuredOllamaModel);
+
+    addCheck('ollama_reachable', 'Ollama', 'green', 'Ollama is reachable.', {
+      url: ollamaTagsUrl
+    });
+
+    addCheck(
+      'ollama_model_found',
+      'Ollama model',
+      foundModel ? 'green' : 'red',
+      foundModel
+        ? 'Model ' + configuredOllamaModel + ' is installed.'
+        : 'Model ' + configuredOllamaModel + ' was not found in Ollama.',
+      {
+        configuredModel: configuredOllamaModel,
+        availableModels: modelNames
+      }
+    );
+  } catch (error) {
+    addCheck('ollama_reachable', 'Ollama', 'red', 'Ollama is not reachable at ' + ollamaTagsUrl + '.', {
+      error: error instanceof Error ? error.message : String(error)
+    });
+
+    addCheck('ollama_model_found', 'Ollama model', 'yellow', 'Could not check model because Ollama is not reachable.', {
+      configuredModel: configuredOllamaModel
+    });
+  }
+
+  addCheck(
+    'piper_backend',
+    'Piper backend',
+    piperBackend ? 'green' : 'yellow',
+    'Configured Piper backend: ' + (piperBackend || 'unknown') + '.',
+    {
+      requestedBackend: piperBackend,
+      effectiveBackend: tts.getEffectiveTtsBackend(),
+      audioMode: piperAudioMode
+    }
+  );
+
+  addCheck(
+    'piper_cli_found',
+    'Piper CLI',
+    fs.existsSync(piperBin) ? 'green' : 'red',
+    fs.existsSync(piperBin) ? 'Piper CLI binary was found.' : 'Piper CLI binary was not found.',
+    { piperBin }
+  );
+
+  if (piperHttpUrl) {
+    const piperHealthUrl = getPiperHealthUrl(piperHttpUrl);
+
+    try {
+      const piperHealth = await fetchJsonWithTimeout(piperHealthUrl, 1500);
+      addCheck('piper_http_reachable', 'Piper HTTP', 'green', 'Piper HTTP health endpoint is reachable.', {
+        url: piperHealthUrl,
+        response: piperHealth
+      });
+    } catch (error) {
+      addCheck('piper_http_reachable', 'Piper HTTP', 'red', 'Piper HTTP is configured but not reachable at ' + piperHealthUrl + '.', {
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  } else {
+    addCheck('piper_http_reachable', 'Piper HTTP', 'yellow', 'Piper HTTP URL is not configured. This is okay if you are using Piper CLI.', {});
+  }
+
+  const voiceScan = scanVoicesDirectory(voicesDir);
+
+  addCheck(
+    'voices_dir',
+    'Voices folder',
+    voiceScan.dirExists ? 'green' : 'red',
+    voiceScan.dirExists ? 'Voices folder exists.' : 'Voices folder is missing.',
+    { voicesDir }
+  );
+
+  addCheck(
+    'voice_onnx_found',
+    'Voice .onnx file',
+    voiceScan.onnxFiles.length > 0 ? 'green' : 'red',
+    voiceScan.onnxFiles.length > 0 ? String(voiceScan.onnxFiles.length) + ' .onnx voice file(s) found.' : 'No .onnx voice files found.',
+    { files: voiceScan.onnxFiles }
+  );
+
+  addCheck(
+    'voice_json_found',
+    'Voice .onnx.json file',
+    voiceScan.missingJson.length === 0 && voiceScan.onnxFiles.length > 0 ? 'green' : 'red',
+    voiceScan.missingJson.length === 0 && voiceScan.onnxFiles.length > 0
+      ? 'Every .onnx voice has a matching .onnx.json file.'
+      : 'One or more voice metadata files are missing.',
+    { missingJson: voiceScan.missingJson }
+  );
+
+  addCheck(
+    'knowledge_dir',
+    'Knowledge folder',
+    fs.existsSync(knowledgeDir) ? 'green' : 'yellow',
+    fs.existsSync(knowledgeDir) ? 'Knowledge folder exists.' : 'Knowledge folder was not found.',
+    { knowledgeDir }
+  );
+
+  addCheck(
+    'teacher_facts',
+    'Teacher facts file',
+    fs.existsSync(teacherFactsFile) ? 'green' : 'yellow',
+    fs.existsSync(teacherFactsFile) ? 'Teacher facts loaded: ' + TEACHER_KNOWLEDGE.length + ' item(s).' : 'Teacher facts file was not found.',
+    {
+      teacherFactsFile,
+      knowledgeItems: TEACHER_KNOWLEDGE.length
+    }
+  );
+
+  addCheck(
+    'logs_dir',
+    'Logs folder',
+    fs.existsSync(logsDir) ? (canWrite(logsDir) ? 'green' : 'red') : 'yellow',
+    fs.existsSync(logsDir) ? (canWrite(logsDir) ? 'Logs folder is writable.' : 'Logs folder is not writable.') : 'Logs folder does not exist yet.',
+    { logsDir }
+  );
+
+  addCheck(
+    'problem_log',
+    'AI Improvement log',
+    fs.existsSync(problemLogPath) ? (canRead(problemLogPath) && canWrite(problemLogPath) ? 'green' : 'red') : 'yellow',
+    fs.existsSync(problemLogPath) ? 'Problem log file exists.' : 'Problem log file does not exist yet; it will be created when needed.',
+    { problemLogPath }
+  );
+
+  const summary = checks.reduce((acc, check) => {
+    acc[check.status] = (acc[check.status] || 0) + 1;
+    return acc;
+  }, { green: 0, yellow: 0, red: 0 });
+
+  return {
+    ok: true,
+    healthy: summary.red === 0,
+    generatedAt: new Date().toISOString(),
+    summary,
+    config: {
+      port: PORT,
+      ollamaGenerateUrl: configuredOllamaGenerateUrl,
+      ollamaTagsUrl,
+      ollamaModel: configuredOllamaModel,
+      piperBackend,
+      effectiveTtsBackend: tts.getEffectiveTtsBackend(),
+      piperAudioMode,
+      piperBin,
+      piperHttpUrl,
+      voicesDir,
+      knowledgeDir,
+      teacherFactsFile
+    },
+    checks
+  };
+}
+
+function scanVoicesDirectory(dirPath) {
+  if (!fs.existsSync(dirPath)) {
+    return { dirExists: false, onnxFiles: [], missingJson: [] };
+  }
+
+  let files = [];
+  try {
+    files = fs.readdirSync(dirPath);
+  } catch {
+    return { dirExists: true, onnxFiles: [], missingJson: [] };
+  }
+
+  const onnxFiles = files.filter((file) => file.toLowerCase().endsWith('.onnx')).sort();
+  const missingJson = onnxFiles.filter((file) => !fs.existsSync(path.join(dirPath, file + '.json')));
+
+  return { dirExists: true, onnxFiles, missingJson };
+}
+
+function canRead(targetPath) {
+  try {
+    fs.accessSync(targetPath, fs.constants.R_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function canWrite(targetPath) {
+  try {
+    fs.accessSync(targetPath, fs.constants.W_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function fetchJsonWithTimeout(url, timeoutMs = 1500) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+
+    if (!response.ok) {
+      throw new Error('HTTP ' + response.status);
+    }
+
+    return await response.json();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function getOllamaTagsUrl(generateUrl) {
+  try {
+    const url = new URL(generateUrl);
+    url.pathname = '/api/tags';
+    url.search = '';
+    return url.toString();
+  } catch {
+    return 'http://127.0.0.1:11434/api/tags';
+  }
+}
+
+function getPiperHealthUrl(piperHttpUrl) {
+  try {
+    const url = new URL(piperHttpUrl);
+    url.pathname = '/health';
+    url.search = '';
+    return url.toString();
+  } catch {
+    return piperHttpUrl;
+  }
 }
 
 app.listen(PORT, () => {
   console.log(`AI in a Box running at http://localhost:${PORT}`);
-  console.log(`TTS backend: ${getEffectiveTtsBackend()}`);
-  console.log(`Audio mode: ${getEffectiveAudioMode()}`);
-  if (usingPiperHttp()) {
-    console.log(`Piper HTTP URL: ${PIPER_HTTP_URL}`);
+  console.log(`TTS backend: ${tts.getEffectiveTtsBackend()}`);
+  console.log(`Audio mode: ${tts.getEffectiveAudioMode()}`);
+  if (tts.usingPiperHttp()) {
+    console.log(`Piper HTTP URL: ${process.env.PIPER_HTTP_URL}`);
   }
 });
