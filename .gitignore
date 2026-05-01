@@ -8,3 +8,6 @@ audio/*
 voices/*.onnx
 voices/*.json
 .DS_Store
+.venv/
+models/*.bin
+vendor/whisper.cpp/
