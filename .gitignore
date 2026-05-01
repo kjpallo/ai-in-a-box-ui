@@ -11,3 +11,6 @@ voices/*.json
 models/*.bin
 vendor/whisper.cpp/
 .DS_Store
+.venv/
+models/*.bin
+vendor/whisper.cpp/
