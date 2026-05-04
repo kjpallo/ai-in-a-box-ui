@@ -54,6 +54,8 @@ npm run test:all
 
 Teachers will eventually create and edit approved JSON through forms. A future upload flow can be: upload -> local model draft -> teacher review -> approved JSON. For now, teachers provide content and approval data while hard tools like formula solving, chemistry lookup, history lookup, vocabulary lookup, and standards tracking remain prebuilt app tools.
 
+Phase 3 adds a local standards/concept matcher that reads the sample pack and tags likely concepts, units, and standards. It does not change student answers yet; future phases will attach these tags to student question logs.
+
 ## Before pushing to GitHub
 
 ```bash
