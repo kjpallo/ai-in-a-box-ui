@@ -2,6 +2,7 @@
 (function () {
   let initialized = false;
   let lastBackendChecks = [];
+  let lastRenderedChecks = [];
 
   const browserState = {
     audioUnlocked: false,
@@ -21,6 +22,80 @@
       .replaceAll(">", "&gt;")
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#039;");
+  }
+
+  function likelyFilesFor(check) {
+    const id = check.id || "";
+
+    if (id.includes("ollama")) {
+      return ["server.js", "lib/ollama/client.js", ".env"];
+    }
+
+    if (id.includes("piper") || id.includes("voice")) {
+      return ["server.js", "lib/tts/piper.js", "voices/", ".env"];
+    }
+
+    if (id.includes("browser") || id.includes("audio_context")) {
+      return ["public/system-health.js", "public/audio.js", "public/audio-stream-processor.js"];
+    }
+
+    if (id.includes("mic")) {
+      return ["public/system-health.js", "public/voice-input.js", "routes/whisperRoutes.js"];
+    }
+
+    if (id.includes("knowledge") || id.includes("teacher_facts")) {
+      return ["knowledge/teacher_facts.json", "lib/knowledge/teacherKnowledge.js"];
+    }
+
+    if (id.includes("problem_log") || id.includes("logs")) {
+      return ["logs/", "lib/system/problemLogger.js", "routes/aiImprovementRoutes.js"];
+    }
+
+    if (id.includes("system_health")) {
+      return ["server.js", "lib/system/healthReport.js", "public/system-health.js"];
+    }
+
+    return ["server.js", "lib/system/healthReport.js"];
+  }
+
+  function buildFixPrompt(check) {
+    const details =
+      check.details && Object.keys(check.details).length
+        ? JSON.stringify(check.details, null, 2)
+        : "";
+    const lines = [
+      "Please fix this one AI in a Box system health item.",
+      "",
+      "Check label: " + (check.label || check.id || "Unknown check"),
+      "Status: " + (check.status || "yellow"),
+      "Message: " + (check.message || ""),
+      "Likely files involved: " + likelyFilesFor(check).join(", ")
+    ];
+
+    if (details) {
+      lines.push("Details JSON:", details);
+    }
+
+    lines.push(
+      "",
+      "Fix only this issue. Keep the local classroom assistant behavior stable, and do not change unrelated routes, router/formula behavior, or UI architecture."
+    );
+
+    return lines.join("\n");
+  }
+
+  async function copyFixPrompt(check, button) {
+    const prompt = buildFixPrompt(check);
+
+    try {
+      await navigator.clipboard.writeText(prompt);
+      button.textContent = "Copied";
+      setTimeout(() => {
+        button.textContent = "Copy Fix Prompt";
+      }, 1600);
+    } catch {
+      window.prompt("Copy this fix prompt:", prompt);
+    }
   }
 
   function groupFor(check) {
@@ -93,6 +168,10 @@
       check.details && Object.keys(check.details).length
         ? JSON.stringify(check.details, null, 2)
         : "";
+    const copyButton =
+      status === "red" || status === "yellow"
+        ? `<button class="system-copy-fix-button" type="button" data-copy-fix-id="${escapeHtml(check.id || "")}">Copy Fix Prompt</button>`
+        : "";
 
     return `
       <div class="system-check-row ${escapeHtml(status)}">
@@ -100,6 +179,7 @@
         <div class="system-check-copy">
           <strong>${escapeHtml(check.label || check.id)}</strong>
           <span>${escapeHtml(check.message || "")}</span>
+          ${copyButton}
           ${
             details
               ? `<details><summary>Details</summary><pre>${escapeHtml(details)}</pre></details>`
@@ -112,6 +192,7 @@
 
   function render(checks) {
     const allChecks = [...checks, ...browserChecks()];
+    lastRenderedChecks = allChecks;
 
     const groups = {
       systemServerChecks: [],
@@ -280,6 +361,16 @@
       await checkAudio();
       await checkMicPermission();
       await refreshHealth();
+    });
+
+    document.addEventListener("click", async (event) => {
+      const button = event.target.closest(".system-copy-fix-button");
+      if (!button) return;
+
+      const check = lastRenderedChecks.find((item) => item.id === button.dataset.copyFixId);
+      if (!check) return;
+
+      await copyFixPrompt(check, button);
     });
 
     await quickMicCheck();

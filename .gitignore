@@ -14,3 +14,7 @@ vendor/whisper.cpp/
 .venv/
 models/*.bin
 vendor/whisper.cpp/
+*.bak
+*.bak-*
+public/*.bak-*
+server.js.bak-*
