@@ -48,6 +48,21 @@ Run both:
 npm run test:all
 ```
 
+## Before pushing to GitHub
+
+```bash
+npm run test:all
+npm run check:cleanup
+```
+
+## Before running on the Pi
+
+Start the app, then check local system health:
+
+```bash
+http://localhost:3000/api/system-health
+```
+
 ## Streaming mode design
 
 This build is set up for the simplest real streaming path on the Pi:

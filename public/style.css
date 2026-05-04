@@ -1801,6 +1801,25 @@ button:disabled {
   overflow-wrap: anywhere;
 }
 
+.system-copy-fix-button {
+  justify-self: start;
+  min-height: 28px;
+  padding: 5px 9px;
+  border: 1px solid rgba(102, 247, 209, 0.38);
+  border-radius: 8px;
+  background: rgba(102, 247, 209, 0.1);
+  color: #dfffee;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.system-copy-fix-button:hover {
+  border-color: rgba(102, 247, 209, 0.65);
+  background: rgba(102, 247, 209, 0.16);
+}
+
 .system-check-copy summary {
   cursor: pointer;
   color: var(--neon);

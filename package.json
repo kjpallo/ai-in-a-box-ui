@@ -8,7 +8,8 @@
     "dev": "node server.js",
     "test": "node scripts/test-router.js",
     "test:bank": "node scripts/test-router-bank.js",
-    "test:all": "npm test && npm run test:bank"
+    "test:all": "npm test && npm run test:bank",
+    "check:cleanup": "node scripts/project-cleanup-check.js"
   },
   "dependencies": {
     "express": "^4.19.2",
