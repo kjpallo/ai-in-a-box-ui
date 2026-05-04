@@ -1,0 +1,69 @@
+{
+  "packId": "physical-science",
+  "schema": "../../schema/tool_registry.schema.json",
+  "teacherBoundary": "Teachers enable tools and provide approved content. Teachers are not expected to build formula parsers, routers, chemistry lookup code, or local model upload processing.",
+  "enabledTools": [
+    {
+      "toolId": "formula_solver",
+      "enabled": true,
+      "builtByApp": true,
+      "teacherConfigurable": true,
+      "settings": {
+        "allowedFormulaFamilies": ["density", "force", "motion", "energy", "waves", "work_power"],
+        "unitsPolicy": "show_units_when_known",
+        "answerStyle": "show_steps"
+      }
+    },
+    {
+      "toolId": "chemistry_lookup",
+      "enabled": true,
+      "builtByApp": true,
+      "teacherConfigurable": true,
+      "settings": {
+        "approvedSourcesOnly": true,
+        "includePeriodicTableFacts": true,
+        "includeCompoundFacts": true
+      }
+    },
+    {
+      "toolId": "vocabulary_lookup",
+      "enabled": true,
+      "builtByApp": true,
+      "teacherConfigurable": true,
+      "settings": {
+        "readingLevel": "grade-8",
+        "showExamples": true,
+        "preferTeacherApprovedItems": true
+      }
+    },
+    {
+      "toolId": "science_history",
+      "enabled": true,
+      "builtByApp": true,
+      "teacherConfigurable": true,
+      "settings": {
+        "includePeople": true,
+        "includeTimelineEvents": true,
+        "answerStyle": "brief_classroom_answer"
+      }
+    },
+    {
+      "toolId": "standards_tracker",
+      "enabled": true,
+      "builtByApp": true,
+      "teacherConfigurable": true,
+      "settings": {
+        "standardsSetName": "Physical Science Local Standards",
+        "visibleToStudents": false,
+        "recordQuestionMatches": false
+      }
+    }
+  ],
+  "notIncludedYet": [
+    "teacher form UI",
+    "Gamma or Gemma upload processing",
+    "local model draft generation",
+    "database persistence",
+    "router integration"
+  ]
+}

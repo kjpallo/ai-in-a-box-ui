@@ -1,0 +1,52 @@
+{
+  "schemaName": "standards_tag",
+  "schemaVersion": "0.1.0",
+  "description": "Readable scaffold for teacher-owned standard tags used by knowledge packs.",
+  "fields": {
+    "standardId": {
+      "type": "string",
+      "required": true,
+      "description": "Stable local id such as PS.MATTER.DENSITY."
+    },
+    "subject": {
+      "type": "string",
+      "required": true
+    },
+    "unit": {
+      "type": "string",
+      "required": true
+    },
+    "label": {
+      "type": "string",
+      "required": true
+    },
+    "keywords": {
+      "type": "array",
+      "items": "string"
+    },
+    "linkedConcepts": {
+      "type": "array",
+      "items": "knowledgeItemId"
+    },
+    "officialStandards": {
+      "type": "array",
+      "items": "object",
+      "description": "Optional placeholder for district, state, NGSS, or local standard references."
+    }
+  },
+  "example": {
+    "standardId": "PS.MATTER.DENSITY",
+    "subject": "Physical Science",
+    "unit": "Matter",
+    "label": "Use density to describe and compare matter.",
+    "keywords": ["density", "mass", "volume"],
+    "linkedConcepts": ["density-formula"],
+    "officialStandards": [
+      {
+        "setName": "Teacher local standards",
+        "code": "",
+        "description": ""
+      }
+    ]
+  }
+}

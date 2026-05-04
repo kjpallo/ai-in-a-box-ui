@@ -48,6 +48,12 @@ Run both:
 npm run test:all
 ```
 
+## Teacher Knowledge Packs
+
+`knowledge/schema/` and `knowledge/packs/` contain the first scaffold for teacher-customizable subject knowledge packs. This is data-only groundwork: the current router, formula behavior, and student answer flow are unchanged.
+
+Teachers will eventually create and edit approved JSON through forms. A future upload flow can be: upload -> local model draft -> teacher review -> approved JSON. For now, teachers provide content and approval data while hard tools like formula solving, chemistry lookup, history lookup, vocabulary lookup, and standards tracking remain prebuilt app tools.
+
 ## Before pushing to GitHub
 
 ```bash

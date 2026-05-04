@@ -1,0 +1,85 @@
+{
+  "packId": "physical-science",
+  "schema": "../../schema/standards_tag.schema.json",
+  "standardsSetName": "Physical Science Local Standards",
+  "standards": [
+    {
+      "standardId": "PS.MATTER.DENSITY",
+      "subject": "Physical Science",
+      "unit": "Matter",
+      "label": "Use density to describe and compare matter.",
+      "keywords": ["density", "mass", "volume", "matter", "measurement"],
+      "linkedConcepts": ["density-formula", "lab-safety-measurement-note"],
+      "officialStandards": [
+        {
+          "setName": "Official standards placeholder",
+          "code": "",
+          "description": ""
+        }
+      ]
+    },
+    {
+      "standardId": "PS.FORCES.NEWTONS_LAWS",
+      "subject": "Physical Science",
+      "unit": "Forces and Motion",
+      "label": "Explain motion using Newton's laws.",
+      "keywords": ["force", "motion", "inertia", "acceleration", "Newton"],
+      "linkedConcepts": ["inertia-concept"],
+      "officialStandards": []
+    },
+    {
+      "standardId": "PS.ENERGY.WORK_POWER",
+      "subject": "Physical Science",
+      "unit": "Energy",
+      "label": "Connect work, energy, and power in physical systems.",
+      "keywords": ["work", "power", "energy", "force", "distance", "time"],
+      "linkedConcepts": [],
+      "officialStandards": []
+    },
+    {
+      "standardId": "PS.WAVES.WAVE_SPEED",
+      "subject": "Physical Science",
+      "unit": "Waves",
+      "label": "Use wave speed, frequency, and wavelength relationships.",
+      "keywords": ["waves", "wave speed", "frequency", "wavelength"],
+      "linkedConcepts": [],
+      "officialStandards": []
+    },
+    {
+      "standardId": "CHEM.PERIODIC_TABLE",
+      "subject": "Chemistry",
+      "unit": "Periodic Table",
+      "label": "Use patterns in the periodic table to describe elements.",
+      "keywords": ["periodic table", "elements", "Mendeleev", "groups", "periods"],
+      "linkedConcepts": ["dmitri-mendeleev"],
+      "officialStandards": []
+    },
+    {
+      "standardId": "SCI_HISTORY.SPACE_RACE",
+      "subject": "Science History",
+      "unit": "Space Race",
+      "label": "Describe major scientific and engineering milestones from the Space Race.",
+      "keywords": ["space race", "Sputnik", "satellite", "orbit", "timeline"],
+      "linkedConcepts": ["sputnik-1-launch"],
+      "officialStandards": []
+    },
+    {
+      "standardId": "CS.INTERNET",
+      "subject": "Computer Science",
+      "unit": "Networks and the Internet",
+      "label": "Explain the internet as a system for sending information between computers.",
+      "keywords": ["internet", "network", "packet", "protocol", "router"],
+      "linkedConcepts": [],
+      "officialStandards": []
+    },
+    {
+      "standardId": "CS.TRANSISTORS",
+      "subject": "Computer Science",
+      "unit": "Computing Hardware",
+      "label": "Describe transistors as switching devices used in computers.",
+      "keywords": ["transistor", "switch", "semiconductor", "computer hardware"],
+      "linkedConcepts": [],
+      "officialStandards": []
+    }
+  ]
+}

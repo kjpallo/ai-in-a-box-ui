@@ -1,0 +1,69 @@
+{
+  "schemaName": "tool_registry",
+  "schemaVersion": "0.1.0",
+  "description": "Readable scaffold for prebuilt app tools that teachers can enable and configure in subject packs.",
+  "teacherBoundary": "Teachers provide content, approval status, standards links, answer text, and safe configuration. Formula parsers, chemistry lookup code, routing, and model processing stay in app code.",
+  "fields": {
+    "tools": {
+      "type": "array",
+      "items": {
+        "toolId": "string",
+        "label": "string",
+        "description": "string",
+        "builtByApp": "boolean",
+        "teacherConfigurable": "boolean",
+        "teacherEditableFields": "array",
+        "studentFacing": "boolean"
+      }
+    }
+  },
+  "example": {
+    "tools": [
+      {
+        "toolId": "formula_solver",
+        "label": "Formula Solver",
+        "description": "Prebuilt app logic for supported formula families.",
+        "builtByApp": true,
+        "teacherConfigurable": true,
+        "teacherEditableFields": ["enabled", "allowedFormulaFamilies", "unitsPolicy", "answerStyle"],
+        "studentFacing": true
+      },
+      {
+        "toolId": "chemistry_lookup",
+        "label": "Chemistry Lookup",
+        "description": "Prebuilt app lookup for approved chemistry facts, elements, and compounds.",
+        "builtByApp": true,
+        "teacherConfigurable": true,
+        "teacherEditableFields": ["enabled", "allowedUnits", "approvedSourcesOnly"],
+        "studentFacing": true
+      },
+      {
+        "toolId": "vocabulary_lookup",
+        "label": "Vocabulary Lookup",
+        "description": "Prebuilt app lookup for teacher-approved vocabulary and concept explanations.",
+        "builtByApp": true,
+        "teacherConfigurable": true,
+        "teacherEditableFields": ["enabled", "readingLevel", "showExamples"],
+        "studentFacing": true
+      },
+      {
+        "toolId": "science_history",
+        "label": "Science History",
+        "description": "Prebuilt app lookup for approved people, events, and timeline entries.",
+        "builtByApp": true,
+        "teacherConfigurable": true,
+        "teacherEditableFields": ["enabled", "timePeriod", "answerStyle"],
+        "studentFacing": true
+      },
+      {
+        "toolId": "standards_tracker",
+        "label": "Standards Tracker",
+        "description": "Prebuilt app support for linking questions and content to teacher-approved standard tags.",
+        "builtByApp": true,
+        "teacherConfigurable": true,
+        "teacherEditableFields": ["enabled", "standardsSetName", "visibleToStudents"],
+        "studentFacing": false
+      }
+    ]
+  }
+}

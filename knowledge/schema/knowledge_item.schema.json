@@ -1,0 +1,127 @@
+{
+  "schemaName": "knowledge_item",
+  "schemaVersion": "0.1.0",
+  "description": "Readable scaffold for a teacher-approved knowledge item. This is not wired into the student router yet.",
+  "statusValues": ["draft", "needs_review", "approved", "archived"],
+  "typeValues": ["formula", "history_person", "timeline_event", "classroom_note", "vocabulary", "concept"],
+  "fields": {
+    "id": {
+      "type": "string",
+      "required": true,
+      "description": "Stable unique id inside a subject pack."
+    },
+    "type": {
+      "type": "string",
+      "required": true,
+      "description": "Kind of teacher-approved content, such as formula, history_person, timeline_event, classroom_note, vocabulary, or concept."
+    },
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "subject": {
+      "type": "string",
+      "required": true
+    },
+    "gradeBand": {
+      "type": "string",
+      "required": true,
+      "examples": ["6-8", "9-10", "9-12"]
+    },
+    "unit": {
+      "type": "string",
+      "required": true
+    },
+    "topics": {
+      "type": "array",
+      "items": "string",
+      "description": "Searchable teacher-facing topic labels."
+    },
+    "standards": {
+      "type": "array",
+      "items": "standardId",
+      "description": "Links to standards_map entries such as PS.MATTER.DENSITY."
+    },
+    "tool": {
+      "type": "string",
+      "description": "Optional prebuilt app tool that may use this content later. Teachers enable/configure tools; they do not build parsers or routers."
+    },
+    "toolConfig": {
+      "type": "object",
+      "description": "Teacher-editable configuration for a prebuilt app tool. Keep parser and routing logic in app code."
+    },
+    "studentAnswer": {
+      "type": "object",
+      "description": "Approved answer text and optional scaffolds suitable for the configured reading level."
+    },
+    "teacherNotes": {
+      "type": "string",
+      "description": "Private notes for teacher review and future editing."
+    },
+    "questionTriggers": {
+      "type": "array",
+      "items": "string",
+      "description": "Teacher-provided phrases that can later help match questions after review."
+    },
+    "sources": {
+      "type": "array",
+      "items": "object",
+      "description": "Teacher-approved source labels, URLs, textbook pages, or classroom references."
+    },
+    "image": {
+      "type": "object",
+      "description": "Placeholder metadata for future teacher-approved images. No image processing is included in this scaffold."
+    },
+    "status": {
+      "type": "string",
+      "required": true,
+      "allowed": ["draft", "needs_review", "approved", "archived"]
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "required": true
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "required": true
+    }
+  },
+  "example": {
+    "id": "density-formula",
+    "type": "formula",
+    "title": "Density Formula",
+    "subject": "Physical Science",
+    "gradeBand": "9-10",
+    "unit": "Matter",
+    "topics": ["density", "mass", "volume"],
+    "standards": ["PS.MATTER.DENSITY"],
+    "tool": "formula_solver",
+    "toolConfig": {
+      "formulaFamily": "density",
+      "allowedVariables": ["density", "mass", "volume"]
+    },
+    "studentAnswer": {
+      "readingLevel": "grade-8",
+      "summary": "Density tells how much mass is packed into a certain volume.",
+      "approvedText": "Density is mass divided by volume. Use D = m / V when you know mass and volume."
+    },
+    "teacherNotes": "Use classroom units first: g/mL and g/cm^3.",
+    "questionTriggers": ["density", "mass divided by volume", "calculate density"],
+    "sources": [
+      {
+        "label": "Teacher-approved physical science reference",
+        "type": "classroom_reference"
+      }
+    ],
+    "image": {
+      "status": "none",
+      "altText": "",
+      "assetPath": ""
+    },
+    "status": "approved",
+    "createdAt": "2026-05-04T00:00:00.000Z",
+    "updatedAt": "2026-05-04T00:00:00.000Z"
+  }
+}

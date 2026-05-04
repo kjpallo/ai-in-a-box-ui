@@ -1,0 +1,190 @@
+{
+  "packId": "physical-science",
+  "schema": "../../schema/knowledge_item.schema.json",
+  "items": [
+    {
+      "id": "density-formula",
+      "type": "formula",
+      "title": "Density Formula",
+      "subject": "Physical Science",
+      "gradeBand": "9-10",
+      "unit": "Matter",
+      "topics": ["density", "mass", "volume", "measurement"],
+      "standards": ["PS.MATTER.DENSITY"],
+      "tool": "formula_solver",
+      "toolConfig": {
+        "formulaFamily": "density",
+        "allowedVariables": ["density", "mass", "volume"],
+        "preferredUnits": ["g/mL", "g/cm^3", "kg/m^3"],
+        "teacherCanEditParser": false
+      },
+      "studentAnswer": {
+        "readingLevel": "grade-8",
+        "summary": "Density tells how much mass is packed into a certain volume.",
+        "approvedText": "Density is mass divided by volume. Use D = m / V when you know mass and volume.",
+        "example": "If an object has a mass of 20 g and a volume of 5 cm^3, its density is 4 g/cm^3."
+      },
+      "teacherNotes": "Keep formula behavior in lib/formulas. This item is teacher-approved content and metadata only.",
+      "questionTriggers": ["density", "calculate density", "mass divided by volume", "D = m / V"],
+      "sources": [
+        {
+          "label": "Teacher-approved 9th-grade physical science reference",
+          "type": "classroom_reference"
+        }
+      ],
+      "image": {
+        "status": "placeholder",
+        "assetPath": "",
+        "altText": "Optional teacher-approved density diagram."
+      },
+      "status": "approved",
+      "createdAt": "2026-05-04T00:00:00.000Z",
+      "updatedAt": "2026-05-04T00:00:00.000Z"
+    },
+    {
+      "id": "dmitri-mendeleev",
+      "type": "history_person",
+      "title": "Dmitri Mendeleev",
+      "subject": "Physical Science",
+      "gradeBand": "9-10",
+      "unit": "Periodic Table",
+      "topics": ["periodic table", "chemistry history", "elements"],
+      "standards": ["CHEM.PERIODIC_TABLE"],
+      "tool": "science_history",
+      "toolConfig": {
+        "historyCategory": "person",
+        "relatedTool": "chemistry_lookup"
+      },
+      "studentAnswer": {
+        "readingLevel": "grade-8",
+        "summary": "Dmitri Mendeleev was a scientist who organized elements in a way that helped predict missing elements.",
+        "approvedText": "Dmitri Mendeleev is known for creating an early periodic table. He arranged elements by patterns in their properties and left spaces where he predicted undiscovered elements would belong."
+      },
+      "teacherNotes": "Good bridge between periodic table structure and evidence-based prediction.",
+      "questionTriggers": ["Mendeleev", "who made the periodic table", "periodic table history"],
+      "sources": [
+        {
+          "label": "Teacher-approved chemistry history note",
+          "type": "classroom_reference"
+        }
+      ],
+      "image": {
+        "status": "placeholder",
+        "assetPath": "",
+        "altText": "Optional teacher-approved image of Dmitri Mendeleev."
+      },
+      "status": "draft",
+      "createdAt": "2026-05-04T00:00:00.000Z",
+      "updatedAt": "2026-05-04T00:00:00.000Z"
+    },
+    {
+      "id": "sputnik-1-launch",
+      "type": "timeline_event",
+      "title": "Sputnik 1 Launch",
+      "subject": "Physical Science",
+      "gradeBand": "9-10",
+      "unit": "Science History",
+      "topics": ["space race", "satellites", "timeline"],
+      "standards": ["SCI_HISTORY.SPACE_RACE"],
+      "tool": "science_history",
+      "toolConfig": {
+        "historyCategory": "timeline_event",
+        "eventDate": "1957-10-04"
+      },
+      "studentAnswer": {
+        "readingLevel": "grade-8",
+        "summary": "Sputnik 1 was the first artificial satellite launched into orbit.",
+        "approvedText": "Sputnik 1 was launched by the Soviet Union on October 4, 1957. It was the first artificial satellite to orbit Earth and became a major event in the Space Race."
+      },
+      "teacherNotes": "Useful for connecting physics, engineering, and Cold War science history.",
+      "questionTriggers": ["Sputnik", "first satellite", "space race", "1957 satellite"],
+      "sources": [
+        {
+          "label": "Teacher-approved science history timeline",
+          "type": "classroom_reference"
+        }
+      ],
+      "image": {
+        "status": "placeholder",
+        "assetPath": "",
+        "altText": "Optional teacher-approved image of Sputnik 1."
+      },
+      "status": "needs_review",
+      "createdAt": "2026-05-04T00:00:00.000Z",
+      "updatedAt": "2026-05-04T00:00:00.000Z"
+    },
+    {
+      "id": "lab-safety-measurement-note",
+      "type": "classroom_note",
+      "title": "Measurement Lab Reminder",
+      "subject": "Physical Science",
+      "gradeBand": "9-10",
+      "unit": "Matter",
+      "topics": ["lab safety", "measurement", "classroom routine"],
+      "standards": ["PS.MATTER.DENSITY"],
+      "tool": "vocabulary_lookup",
+      "toolConfig": {
+        "noteCategory": "classroom_routine",
+        "studentFacing": true
+      },
+      "studentAnswer": {
+        "readingLevel": "grade-8",
+        "summary": "Measure carefully and include units.",
+        "approvedText": "When you record mass, volume, or density, write both the number and the unit. A measurement without a unit is incomplete."
+      },
+      "teacherNotes": "Example of a classroom-specific note that a teacher could approve through a future form.",
+      "questionTriggers": ["forgot units", "measurement reminder", "lab measurement", "do I need units"],
+      "sources": [
+        {
+          "label": "Teacher classroom procedure",
+          "type": "classroom_policy"
+        }
+      ],
+      "image": {
+        "status": "none",
+        "assetPath": "",
+        "altText": ""
+      },
+      "status": "approved",
+      "createdAt": "2026-05-04T00:00:00.000Z",
+      "updatedAt": "2026-05-04T00:00:00.000Z"
+    },
+    {
+      "id": "inertia-concept",
+      "type": "concept",
+      "title": "Inertia",
+      "subject": "Physical Science",
+      "gradeBand": "9-10",
+      "unit": "Forces and Motion",
+      "topics": ["inertia", "Newton's laws", "motion"],
+      "standards": ["PS.FORCES.NEWTONS_LAWS"],
+      "tool": "vocabulary_lookup",
+      "toolConfig": {
+        "conceptCategory": "physics",
+        "includeExample": true
+      },
+      "studentAnswer": {
+        "readingLevel": "grade-8",
+        "summary": "Inertia is an object's tendency to keep doing what it is already doing.",
+        "approvedText": "Inertia means an object resists changes in motion. An object at rest tends to stay at rest, and a moving object tends to keep moving unless a force changes its motion.",
+        "example": "A book on a desk stays still until something pushes or pulls it."
+      },
+      "teacherNotes": "Can be linked later to Newton's First Law answers.",
+      "questionTriggers": ["inertia", "law of inertia", "why objects keep moving", "Newton's first law"],
+      "sources": [
+        {
+          "label": "Teacher-approved 9th-grade physical science reference",
+          "type": "classroom_reference"
+        }
+      ],
+      "image": {
+        "status": "placeholder",
+        "assetPath": "",
+        "altText": "Optional teacher-approved inertia example image."
+      },
+      "status": "draft",
+      "createdAt": "2026-05-04T00:00:00.000Z",
+      "updatedAt": "2026-05-04T00:00:00.000Z"
+    }
+  ]
+}

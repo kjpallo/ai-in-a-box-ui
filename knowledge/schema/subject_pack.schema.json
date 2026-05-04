@@ -1,0 +1,68 @@
+{
+  "schemaName": "subject_pack",
+  "schemaVersion": "0.1.0",
+  "description": "Readable scaffold for a teacher-customizable subject pack. This metadata is not used by the current router yet.",
+  "statusValues": ["draft", "needs_review", "approved", "archived"],
+  "fields": {
+    "packId": {
+      "type": "string",
+      "required": true
+    },
+    "subjectName": {
+      "type": "string",
+      "required": true
+    },
+    "gradeBand": {
+      "type": "string",
+      "required": true
+    },
+    "teacherOwner": {
+      "type": "object",
+      "required": true,
+      "description": "Placeholder for future local teacher identity or classroom ownership."
+    },
+    "enabledPrebuiltTools": {
+      "type": "array",
+      "items": "toolId",
+      "description": "Tools are built by the app and only enabled/configured by teachers."
+    },
+    "standardsSetName": {
+      "type": "string",
+      "required": true
+    },
+    "answerReadingLevel": {
+      "type": "string",
+      "required": true
+    },
+    "contentStatus": {
+      "type": "string",
+      "required": true,
+      "allowed": ["draft", "needs_review", "approved", "archived"]
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "required": true
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "required": true
+    }
+  },
+  "example": {
+    "packId": "physical-science",
+    "subjectName": "Physical Science",
+    "gradeBand": "9-10",
+    "teacherOwner": {
+      "teacherId": "local-teacher-placeholder",
+      "displayName": "Teacher Owner Placeholder"
+    },
+    "enabledPrebuiltTools": ["formula_solver", "chemistry_lookup", "vocabulary_lookup", "science_history", "standards_tracker"],
+    "standardsSetName": "Physical Science Local Standards",
+    "answerReadingLevel": "grade-8",
+    "contentStatus": "draft",
+    "createdAt": "2026-05-04T00:00:00.000Z",
+    "updatedAt": "2026-05-04T00:00:00.000Z"
+  }
+}

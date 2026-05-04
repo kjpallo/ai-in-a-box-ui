@@ -1,0 +1,27 @@
+{
+  "packId": "physical-science",
+  "subjectName": "Physical Science",
+  "gradeBand": "9-10",
+  "teacherOwner": {
+    "teacherId": "local-teacher-placeholder",
+    "displayName": "Teacher Owner Placeholder",
+    "notes": "Future local teacher account or classroom owner."
+  },
+  "enabledPrebuiltTools": [
+    "formula_solver",
+    "chemistry_lookup",
+    "vocabulary_lookup",
+    "science_history",
+    "standards_tracker"
+  ],
+  "standardsSetName": "Physical Science Local Standards",
+  "answerReadingLevel": "grade-8",
+  "contentStatus": "draft",
+  "files": {
+    "knowledgeItems": "knowledge_items.sample.json",
+    "standardsMap": "standards_map.sample.json",
+    "toolSettings": "tool_settings.sample.json"
+  },
+  "createdAt": "2026-05-04T00:00:00.000Z",
+  "updatedAt": "2026-05-04T00:00:00.000Z"
+}
