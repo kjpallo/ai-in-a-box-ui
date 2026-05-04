@@ -9,6 +9,7 @@
     "test": "node scripts/test-router.js",
     "test:bank": "node scripts/test-router-bank.js",
     "test:standards": "node scripts/test-standards-matcher.js",
+    "test:standards-log": "node scripts/test-standards-log-shape.js",
     "test:all": "npm test && npm run test:bank",
     "check:cleanup": "node scripts/project-cleanup-check.js"
   },
