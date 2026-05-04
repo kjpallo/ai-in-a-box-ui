@@ -3,8 +3,7 @@ function registerQuestionRoutes(app, {
   questionAnswer,
   tts
 }) {
-  app.get('/api/router-test', (req, res) => {
-    const message = String(req.query.q || '').trim();
+  function sendRouterTestResponse(message, res) {
     const { matchedKnowledge, questionRoute } = questionAnswer.routeMessage(message);
 
     res.json({
@@ -22,6 +21,14 @@ function registerQuestionRoutes(app, {
         strongEnoughMatch: item.strongEnoughMatch
       }))
     });
+  }
+
+  app.get('/api/router-test', (req, res) => {
+    sendRouterTestResponse(String(req.query.q || '').trim(), res);
+  });
+
+  app.post('/api/router-test', (req, res) => {
+    sendRouterTestResponse(String(req.body?.question || req.body?.q || '').trim(), res);
   });
 
   app.post('/api/chat', async (req, res) => {
