@@ -78,6 +78,10 @@ const standardIds = new Set();
 const keywordUsage = new Map();
 const triggerUsage = new Map();
 
+if (standards.length !== 125) {
+  errors.push(`Standards count is ${standards.length}; expected 125`);
+}
+
 for (const standard of standards) {
   const id = standard.standardId || '(missing standardId)';
 
@@ -92,6 +96,14 @@ for (const standard of standards) {
   for (const field of ['gradeBand', 'domainName', 'strandCode', 'strandTitle', 'conceptTitle', 'statement']) {
     if (!standard[field]) errors.push(`${id} missing required field ${field}`);
   }
+
+  if (!standard.officialStandard) errors.push(`${id} missing officialStandard`);
+  if (!standard.studentFriendlyStandard) errors.push(`${id} missing studentFriendlyStandard`);
+  if (standard.studentFriendlyStandard && !/^I can\b/.test(String(standard.studentFriendlyStandard))) {
+    errors.push(`${id} studentFriendlyStandard must start with "I can"`);
+  }
+  if (!standard.teacherShortName) errors.push(`${id} missing teacherShortName`);
+  if (!standard.source || !standard.source.publisher) errors.push(`${id} missing source.publisher`);
 
   if (!Array.isArray(standard.keywords)) errors.push(`${id} missing required keywords array`);
   if (!Array.isArray(standard.questionTriggers)) errors.push(`${id} missing required questionTriggers array`);

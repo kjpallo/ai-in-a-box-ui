@@ -13,7 +13,7 @@ const profilesConfig = JSON.parse(fs.readFileSync(profilesPath, 'utf8'));
 
 assert.equal(bank.bankId, 'missouri_science_6_12');
 assert.ok(Array.isArray(bank.standards), 'standards should be an array');
-assert.ok(bank.standards.length > 0, 'standards should not be empty');
+assert.equal(bank.standards.length, 125, 'standards count should remain 125');
 
 const standardIds = bank.standards.map((standard) => standard.standardId);
 assert.equal(new Set(standardIds).size, standardIds.length, 'all standardIds should be unique');
@@ -85,6 +85,30 @@ for (const standard of bank.standards) {
   assert.ok(standard.strandTitle, `${standard.standardId} should have strandTitle`);
   assert.ok(standard.conceptTitle, `${standard.standardId} should have conceptTitle`);
   assert.ok(standard.statement, `${standard.standardId} should have statement`);
+  assert.ok(standard.officialStandard, `${standard.standardId} should have officialStandard`);
+  assert.equal(
+    standard.officialStandardVerified,
+    true,
+    `${standard.standardId} should have source-verified officialStandard`
+  );
+  assert.ok(
+    standard.officialStandardSource,
+    `${standard.standardId} should have officialStandardSource`
+  );
+  assert.ok(
+    standard.studentFriendlyStandard,
+    `${standard.standardId} should have studentFriendlyStandard`
+  );
+  assert.match(
+    standard.studentFriendlyStandard,
+    /^I can\b/,
+    `${standard.standardId} studentFriendlyStandard should start with "I can"`
+  );
+  assert.ok(standard.teacherShortName, `${standard.standardId} should have teacherShortName`);
+  assert.ok(
+    standard.source?.publisher,
+    `${standard.standardId} should have source.publisher`
+  );
   assert.ok(
     standard.statementType,
     `${standard.standardId} should have statementType`
