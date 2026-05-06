@@ -66,7 +66,10 @@ function scanFiles() {
     const ext = path.extname(fileName).toLowerCase();
     const stat = fs.statSync(filePath);
 
-    if (fileName.toLowerCase().endsWith('.bak') || fileName.toLowerCase().includes('.bak-')) {
+    if (
+      !isInsideBackups(rel) &&
+      (fileName.toLowerCase().endsWith('.bak') || fileName.toLowerCase().includes('.bak-'))
+    ) {
       findings.bakFiles.push(rel);
     }
 
@@ -153,7 +156,7 @@ checkVoiceModelFiles();
 console.log('Project cleanup check');
 console.log('This report is read-only. No files were changed or deleted.');
 
-printSection('Backup/junk .bak files', findings.bakFiles, 'None found.');
+printSection('Active-source backup/junk .bak files', findings.bakFiles, 'None found.');
 printSection('Backup-looking files outside backups/', findings.backupFilesOutsideBackups, 'None found.');
 printSection('Large media files', findings.largeMediaFiles, 'None found over ' + Math.round(largeMediaBytes / 1024 / 1024) + ' MB.');
 printSection('Missing expected folders', findings.missingExpectedFolders, 'All expected folders are present.');

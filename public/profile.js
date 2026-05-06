@@ -22,18 +22,7 @@
   }
 
   async function fetchJson(url, options = {}) {
-    const response = await fetch(url, { cache: 'no-store', ...options });
-    if (!response.ok) {
-      let message = 'HTTP ' + response.status;
-      try {
-        const data = await response.json();
-        message = data.error || data.message || message;
-      } catch {
-        // Use the HTTP status when the response is not JSON.
-      }
-      throw new Error(message);
-    }
-    return response.json();
+    return window.Charlemagne.api.fetchJson(url, options);
   }
 
   async function loadProfileStatus() {
@@ -134,6 +123,28 @@
     }
   }
 
+  async function loadStandardsSummaryReport() {
+    const refreshButton = byId('profileRefreshStandardsReport');
+    if (!byId('standardsSummaryRows')) return;
+
+    setText('standardsSummaryStatus', 'Loading standards report...');
+    if (refreshButton) refreshButton.disabled = true;
+
+    try {
+      const data = await fetchJson('/api/profile/standards-summary');
+      if (data?.ok === false) {
+        renderStandardsSummaryError(data.error || 'Could not load standards summary report.');
+        return;
+      }
+
+      renderStandardsSummaryReport(data?.summary);
+    } catch (error) {
+      renderStandardsSummaryError(error.message || 'Could not load standards summary report.');
+    } finally {
+      if (refreshButton) refreshButton.disabled = false;
+    }
+  }
+
   function renderSummary(data) {
     const total = Number(data?.totalQuestions || 0);
     const questions = Array.isArray(data?.questions) ? data.questions : [];
@@ -154,6 +165,171 @@
     setText('profileSummaryStatus', message);
     renderQuestionRows([]);
     renderTopicSummary([]);
+  }
+
+  function renderStandardsSummaryReport(summary) {
+    const safeSummary = normalizeStandardsSummary(summary);
+    const total = safeSummary.totalQuestions;
+    const tagged = safeSummary.taggedQuestions;
+    const generatedLabel = formatDateTime(safeSummary.generatedAt);
+
+    setText('standardsTotalQuestions', total);
+    setText('standardsTaggedQuestions', tagged);
+    setText('standardsUntaggedQuestions', safeSummary.untaggedQuestions);
+    setText('standardsGeneratedAt', generatedLabel);
+    setText('standardsConfidenceStrong', safeSummary.standardsConfidence.strong);
+    setText('standardsConfidenceMedium', safeSummary.standardsConfidence.medium);
+    setText('standardsConfidenceWeak', safeSummary.standardsConfidence.weak);
+    setText('standardsConfidenceNone', safeSummary.standardsConfidence.none);
+    setText(
+      'standardsSummaryStatus',
+      generatedLabel === 'Not available' ? 'Standards report loaded.' : `Generated ${generatedLabel}.`
+    );
+
+    renderStandardsReportEmptyState(safeSummary);
+    renderStandardsRows(safeSummary.standards);
+    renderConceptRows(safeSummary.concepts);
+    renderUnitRows(safeSummary.units);
+    renderRouteRows(safeSummary.routeTypes);
+    renderRecentTaggedQuestions(safeSummary.recentTaggedQuestions);
+  }
+
+  function renderStandardsSummaryError(message) {
+    const emptySummary = normalizeStandardsSummary({});
+    setText('standardsTotalQuestions', 0);
+    setText('standardsTaggedQuestions', 0);
+    setText('standardsUntaggedQuestions', 0);
+    setText('standardsGeneratedAt', 'Not loaded');
+    setText('standardsConfidenceStrong', 0);
+    setText('standardsConfidenceMedium', 0);
+    setText('standardsConfidenceWeak', 0);
+    setText('standardsConfidenceNone', 0);
+    setText('standardsSummaryStatus', message);
+    renderStandardsReportEmptyState(emptySummary, message);
+    renderStandardsRows([]);
+    renderConceptRows([]);
+    renderUnitRows([]);
+    renderRouteRows([]);
+    renderRecentTaggedQuestions([]);
+  }
+
+  function renderStandardsReportEmptyState(summary, errorMessage = '') {
+    const state = byId('standardsSummaryEmptyState');
+    if (!state) return;
+
+    let message = '';
+    if (errorMessage) {
+      message = errorMessage;
+    } else if (summary.totalQuestions === 0) {
+      message = 'No student questions have been logged yet.';
+    } else if (summary.taggedQuestions === 0) {
+      message = 'Questions have been logged, but no standards/concept tags were found yet.';
+    }
+
+    state.hidden = !message;
+    state.textContent = message;
+  }
+
+  function renderStandardsRows(standards) {
+    const rows = byId('standardsSummaryRows');
+    if (!rows) return;
+
+    if (!standards.length) {
+      rows.innerHTML = '<p class="profile-empty-state" role="row">No standards matched yet.</p>';
+      return;
+    }
+
+    rows.innerHTML = standards.map((item) => `
+      <div class="standards-report-row standards-table-row" role="row">
+        <span role="cell">${escapeHtml(item.standardId || 'Unknown')}</span>
+        <span role="cell" title="${escapeAttr(item.label || '')}">${escapeHtml(truncate(item.label || 'No label', 120))}</span>
+        <span role="cell">${escapeHtml(item.unit || 'Unknown')}</span>
+        <span role="cell">${escapeHtml(formatNumber(item.count))}</span>
+        <span role="cell">${escapeHtml(formatCountMap(item.routeTypes))}</span>
+        <span role="cell">${escapeHtml(formatConfidenceCounts(item.standardsConfidence))}</span>
+        <div role="cell">${renderExampleQuestions(item.exampleQuestions)}</div>
+      </div>
+    `).join('');
+  }
+
+  function renderConceptRows(concepts) {
+    const rows = byId('standardsConceptRows');
+    if (!rows) return;
+
+    if (!concepts.length) {
+      rows.innerHTML = '<p class="profile-empty-state" role="row">No concepts matched yet.</p>';
+      return;
+    }
+
+    rows.innerHTML = concepts.map((item) => `
+      <div class="standards-report-row concepts-table-row" role="row">
+        <span role="cell">${escapeHtml(item.title || item.id || 'Unknown')}</span>
+        <span role="cell">${escapeHtml(item.type || 'Unknown')}</span>
+        <span role="cell">${escapeHtml(item.unit || 'Unknown')}</span>
+        <span role="cell">${escapeHtml(formatNumber(item.count))}</span>
+        <span role="cell">${escapeHtml(formatNumber(item.averageScore))}</span>
+        <div role="cell">${renderExampleQuestions(item.exampleQuestions)}</div>
+      </div>
+    `).join('');
+  }
+
+  function renderUnitRows(units) {
+    const rows = byId('standardsUnitRows');
+    if (!rows) return;
+
+    if (!units.length) {
+      rows.innerHTML = '<p class="profile-empty-state" role="row">No units matched yet.</p>';
+      return;
+    }
+
+    rows.innerHTML = units.map((item) => `
+      <div class="standards-report-row units-table-row" role="row">
+        <span role="cell">${escapeHtml(item.unit || 'Unknown')}</span>
+        <span role="cell">${escapeHtml(formatNumber(item.count))}</span>
+        <span role="cell">${escapeHtml(formatNumber(item.standardsCount))}</span>
+        <span role="cell">${escapeHtml(formatNumber(item.conceptsCount))}</span>
+        <div role="cell">${renderExampleQuestions(item.exampleQuestions)}</div>
+      </div>
+    `).join('');
+  }
+
+  function renderRouteRows(routeTypes) {
+    const rows = byId('standardsRouteRows');
+    if (!rows) return;
+
+    if (!routeTypes.length) {
+      rows.innerHTML = '<p class="profile-empty-state">No route types logged yet.</p>';
+      return;
+    }
+
+    rows.innerHTML = routeTypes.map((item) => `
+      <div>
+        <span>${escapeHtml(item.routeType || 'unknown')}</span>
+        <strong>${escapeHtml(formatNumber(item.count))}</strong>
+      </div>
+    `).join('');
+  }
+
+  function renderRecentTaggedQuestions(rowsData) {
+    const rows = byId('standardsRecentRows');
+    if (!rows) return;
+
+    if (!rowsData.length) {
+      rows.innerHTML = '<p class="profile-empty-state" role="row">No recent tagged questions yet.</p>';
+      return;
+    }
+
+    rows.innerHTML = rowsData.map((item) => `
+      <div class="standards-report-row recent-standards-row" role="row">
+        <span role="cell">${escapeHtml(formatDateTime(item.timestamp))}</span>
+        <span role="cell" title="${escapeAttr(item.question || '')}">${escapeHtml(truncate(item.question || 'No question text', 140))}</span>
+        <span role="cell">${escapeHtml(item.routeType || 'unknown')}</span>
+        <span role="cell">${escapeHtml(item.standardsConfidence || 'none')}</span>
+        <span role="cell">${escapeHtml(formatTextList(item.units))}</span>
+        <span role="cell">${escapeHtml(formatStandardsList(item.standards))}</span>
+        <span role="cell">${escapeHtml(formatConceptsList(item.concepts))}</span>
+      </div>
+    `).join('');
   }
 
   function renderQuestionRows(questions) {
@@ -218,6 +394,11 @@
       loadProfileStatus();
       loadDates(byId('profileDateSelect')?.value || currentDate);
       loadStudentSessions();
+      loadStandardsSummaryReport();
+    });
+
+    byId('profileRefreshStandardsReport')?.addEventListener('click', () => {
+      loadStandardsSummaryReport();
     });
 
     byId('profileConnectGoogleButton')?.addEventListener('click', () => {
@@ -314,12 +495,14 @@
     await loadProfileStatus();
     await loadDates();
     await loadStudentSessions();
+    await loadStandardsSummaryReport();
   }
 
   async function refreshActiveProfileBlade() {
     if (!initialized || !byId('profileDateSelect')) return;
     await loadDates(byId('profileDateSelect')?.value || currentDate);
     await loadStudentSessions();
+    await loadStandardsSummaryReport();
   }
 
   function setText(id, text) {
@@ -432,6 +615,118 @@
       hour: 'numeric',
       minute: '2-digit'
     });
+  }
+
+  function normalizeStandardsSummary(summary) {
+    const confidence = summary?.standardsConfidence && typeof summary.standardsConfidence === 'object'
+      ? summary.standardsConfidence
+      : {};
+    const totalQuestions = toCount(summary?.totalQuestions);
+    const taggedQuestions = toCount(summary?.taggedQuestions);
+
+    return {
+      generatedAt: summary?.generatedAt || '',
+      totalQuestions,
+      taggedQuestions,
+      untaggedQuestions: Number.isFinite(Number(summary?.untaggedQuestions))
+        ? toCount(summary.untaggedQuestions)
+        : Math.max(0, totalQuestions - taggedQuestions),
+      standards: objectRows(summary?.standards),
+      concepts: objectRows(summary?.concepts),
+      units: objectRows(summary?.units),
+      routeTypes: objectRows(summary?.routeTypes),
+      standardsConfidence: {
+        strong: toCount(confidence.strong),
+        medium: toCount(confidence.medium),
+        weak: toCount(confidence.weak),
+        none: toCount(confidence.none)
+      },
+      recentTaggedQuestions: objectRows(summary?.recentTaggedQuestions)
+    };
+  }
+
+  function objectRows(value) {
+    return Array.isArray(value) ? value.filter((item) => item && typeof item === 'object') : [];
+  }
+
+  function renderExampleQuestions(examples) {
+    const questions = Array.isArray(examples)
+      ? examples.map((example) => normalizeExampleQuestion(example)).filter(Boolean).slice(0, 3)
+      : [];
+
+    if (!questions.length) return '<span class="standards-muted">No examples</span>';
+
+    return `
+      <ul class="standards-example-list">
+        ${questions.map((question) => `<li>${escapeHtml(truncate(question, 90))}</li>`).join('')}
+      </ul>
+    `;
+  }
+
+  function normalizeExampleQuestion(example) {
+    if (typeof example === 'string') return example.trim();
+    if (example && typeof example === 'object') return String(example.question || '').trim();
+    return '';
+  }
+
+  function formatTextList(values) {
+    if (!Array.isArray(values)) return 'None';
+    const labels = values.map((value) => String(value || '').trim()).filter(Boolean);
+    return labels.length ? labels.join(', ') : 'None';
+  }
+
+  function formatStandardsList(values) {
+    if (!Array.isArray(values)) return 'None';
+    const labels = values
+      .map((item) => item && typeof item === 'object' ? item.standardId || item.label : item)
+      .map((value) => String(value || '').trim())
+      .filter(Boolean);
+    return labels.length ? labels.join(', ') : 'None';
+  }
+
+  function formatConceptsList(values) {
+    if (!Array.isArray(values)) return 'None';
+    const labels = values
+      .map((item) => item && typeof item === 'object' ? item.title || item.id : item)
+      .map((value) => String(value || '').trim())
+      .filter(Boolean);
+    return labels.length ? labels.join(', ') : 'None';
+  }
+
+  function formatCountMap(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return 'None';
+    const parts = Object.entries(value)
+      .filter(([, count]) => Number(count) > 0)
+      .map(([label, count]) => `${label}: ${formatNumber(count)}`);
+    return parts.length ? parts.join(', ') : 'None';
+  }
+
+  function formatConfidenceCounts(value) {
+    const counts = value && typeof value === 'object' ? value : {};
+    return `S ${toCount(counts.strong)} / M ${toCount(counts.medium)} / W ${toCount(counts.weak)} / N ${toCount(counts.none)}`;
+  }
+
+  function formatDateTime(value) {
+    if (!value) return 'Not available';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleString([], {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    });
+  }
+
+  function formatNumber(value) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return '0';
+    return String(Math.round(number * 10) / 10);
+  }
+
+  function toCount(value) {
+    const number = Number(value);
+    return Number.isFinite(number) && number > 0 ? Math.floor(number) : 0;
   }
 
   function todayKey() {

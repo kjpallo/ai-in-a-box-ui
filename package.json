@@ -9,7 +9,12 @@
     "test": "node scripts/test-router.js",
     "test:bank": "node scripts/test-router-bank.js",
     "test:standards": "node scripts/test-standards-matcher.js",
+    "test:standards-bank": "node scripts/test-missouri-standards-bank.js",
+    "test:standards-profile": "node scripts/test-standards-profile-matcher.js",
     "test:standards-log": "node scripts/test-standards-log-shape.js",
+    "test:standards-log-examples": "node scripts/test-standards-log-metadata-examples.js",
+    "test:standards-summary": "node scripts/test-standards-summary-report.js",
+    "audit:standards-metadata": "node scripts/audit-standards-metadata.js",
     "test:all": "npm test && npm run test:bank",
     "check:cleanup": "node scripts/project-cleanup-check.js"
   },

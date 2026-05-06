@@ -18,6 +18,10 @@ const {
   getDailyQuestionSummary
 } = require('./lib/system/profileSummary');
 const {
+  buildStandardsSummaryReport,
+  loadStudentInteractionLogs
+} = require('./lib/system/standardsSummaryReport');
+const {
   getProfileStatus,
   createGoogleConnectUrl,
   completeGoogleConnect,
@@ -45,6 +49,7 @@ const voicesDir = path.join(__dirname, 'voices');
 const audioDir = path.join(__dirname, 'audio');
 const knowledgeDir = path.join(__dirname, 'knowledge');
 const teacherFactsFile = path.join(knowledgeDir, 'teacher_facts.json');
+const studentInteractionsFile = path.join(__dirname, 'logs', 'student_interactions.json');
 const MAX_KNOWLEDGE_ITEMS = Number(process.env.MAX_KNOWLEDGE_ITEMS || 6);
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'qwen2.5:0.5b';
 const studentSessions = Object.create(null);
@@ -133,6 +138,7 @@ registerProfileRoutes(app, {
   createGoogleConnectUrl,
   getAvailableProfileDates,
   getDailyQuestionSummary,
+  getStandardsSummaryReport: () => buildStandardsSummaryReport(loadStudentInteractionLogs(studentInteractionsFile)),
   getProfileStatus,
   port: PORT,
   sendDailySummaryEmail,

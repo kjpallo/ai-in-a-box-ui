@@ -5,6 +5,7 @@ function registerProfileRoutes(app, {
   createGoogleConnectUrl,
   getAvailableProfileDates,
   getDailyQuestionSummary,
+  getStandardsSummaryReport,
   getProfileStatus,
   port,
   sendDailySummaryEmail,
@@ -141,6 +142,20 @@ function registerProfileRoutes(app, {
 
   app.get('/api/profile/question-summary', (req, res) => {
     res.json(getDailyQuestionSummary(req.query.date));
+  });
+
+  app.get('/api/profile/standards-summary', (_req, res) => {
+    try {
+      res.json({
+        ok: true,
+        summary: getStandardsSummaryReport()
+      });
+    } catch {
+      res.status(500).json({
+        ok: false,
+        error: 'Unable to build standards summary report.'
+      });
+    }
   });
 
   app.post('/api/profile/send-daily-summary', async (req, res) => {

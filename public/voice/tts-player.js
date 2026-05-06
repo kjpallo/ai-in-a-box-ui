@@ -125,6 +125,7 @@
   }
 
   function enqueue(item) {
+    if (isStreamingAudio) return;
     audioQueue.push(item);
     callbacks.setVoiceStatus('Speaking…');
     playNext();
@@ -186,6 +187,7 @@
   }
 
   async function startStreamingSentence(eventData) {
+    stop({ keepStatus: true });
     await ensureStreamingNode(eventData.sampleRate);
     isStreamingAudio = true;
     streamChunksReceived = 0;
@@ -194,7 +196,7 @@
   }
 
   function pushStreamingChunk(eventData) {
-    if (!audioWorkletNode || !eventData.data) return;
+    if (!isStreamingAudio || !audioWorkletNode || !eventData.data) return;
 
     const samples = decodePcmChunkToFloat32(eventData.data);
     if (!samples.length) return;
@@ -297,6 +299,7 @@
 
     isPlayingQueue = false;
     isStreamingAudio = false;
+    streamChunksReceived = 0;
     setOrbSpeaking(false);
 
     if (!keepStatus) {
@@ -308,6 +311,10 @@
   function setOrbSpeaking(isSpeaking) {
     const speaking = Boolean(isSpeaking);
     document.body.classList.toggle('tts-speaking', speaking);
+    window.Charlemagne?.state?.set?.({ isSpeaking: speaking });
+    window.dispatchEvent(new CustomEvent('charlemagne:tts-speaking', {
+      detail: { speaking }
+    }));
 
     if (!voiceOrb) return;
     voiceOrb.classList.toggle('speaking', speaking);
@@ -318,7 +325,7 @@
     return !audioQueue.length && !isPlayingQueue && !isStreamingAudio;
   }
 
-  window.CharlemagneAudio = {
+  const ttsPlayer = {
     init,
     enqueue,
     startStreamingSentence,
@@ -328,5 +335,17 @@
     stop,
     setOrbSpeaking,
     isIdle
+  };
+
+  window.Charlemagne = window.Charlemagne || {};
+  window.Charlemagne.tts = ttsPlayer;
+
+  // Compatibility wrapper. Prefer window.Charlemagne.tts.
+  window.CharlemagneAudio = ttsPlayer;
+
+  // Compatibility wrapper. Prefer window.Charlemagne.tts.stop().
+  window.CharlemagneStopSpeaking = () => {
+    stop();
+    setOrbSpeaking(false);
   };
 })();

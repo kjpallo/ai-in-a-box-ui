@@ -4,33 +4,37 @@ const { matchQuestionToStandards } = require('../lib/standards/standardsMatcher'
 const samples = [
   {
     question: 'What is density?',
-    expectedConfidence: 'strong',
-    expectedStandards: ['PS.MATTER.DENSITY']
+    expectedConfidence: 'medium',
+    expectedConcepts: ['density-formula'],
+    rejectedPrimaryStandards: ['9-12.PS1.A.1']
   },
   {
     question: 'How do I calculate density from mass and volume?',
-    expectedConfidence: 'strong',
-    expectedStandards: ['PS.MATTER.DENSITY']
+    expectedConfidence: 'medium',
+    expectedConcepts: ['density-formula'],
+    rejectedPrimaryStandards: ['9-12.PS1.A.1']
   },
   {
     question: 'Who was Mendeleev?',
-    expectedConfidence: 'strong',
-    expectedStandards: ['CHEM.PERIODIC_TABLE']
+    expectedConfidence: 'medium',
+    expectedConcepts: ['dmitri-mendeleev'],
+    rejectedPrimaryStandards: ['9-12.PS1.A.1']
   },
   {
     question: 'What was Sputnik 1?',
-    expectedConfidence: 'strong',
-    expectedStandards: ['SCI_HISTORY.SPACE_RACE']
+    expectedConfidence: 'medium',
+    expectedConcepts: ['sputnik-1-launch'],
+    rejectedPrimaryStandards: ['9-12.ESS1.B.1']
   },
   {
     question: "What is Newton's second law?",
-    expectedConfidence: 'medium',
-    expectedStandards: ['PS.FORCES.NEWTONS_LAWS']
+    expectedConfidence: 'strong',
+    expectedStandards: ['9-12.PS2.A.1']
   },
   {
     question: 'How does the internet work?',
-    expectedConfidence: 'medium',
-    expectedStandards: ['CS.INTERNET']
+    expectedConfidence: 'none',
+    expectedStandards: []
   },
   {
     question: 'What is a random unrelated question?',
@@ -42,7 +46,9 @@ const samples = [
 let passed = 0;
 
 for (const sample of samples) {
-  const result = matchQuestionToStandards(sample.question);
+  const result = matchQuestionToStandards(sample.question, {
+    includeInactiveStandards: Boolean(sample.includeInactiveStandards)
+  });
   const standardIds = result.standards.map((standard) => standard.standardId);
 
   assert.equal(
@@ -51,16 +57,37 @@ for (const sample of samples) {
     `${sample.question} expected confidence ${sample.expectedConfidence} but got ${result.confidence}`
   );
 
-  for (const expectedStandard of sample.expectedStandards) {
+  for (const expectedStandard of sample.expectedStandards || []) {
     assert.ok(
-      standardIds.includes(expectedStandard),
-      `${sample.question} expected standard ${expectedStandard} but got ${standardIds.join(', ') || 'none'}`
+      standardIds.includes(expectedStandard) || allStandardIds(result).includes(expectedStandard),
+      `${sample.question} expected standard ${expectedStandard} but got ${allStandardIds(result).join(', ') || 'none'}`
+    );
+  }
+
+  for (const expectedConcept of sample.expectedConcepts || []) {
+    assert.ok(
+      result.matchedConcepts.some((concept) => concept.id === expectedConcept),
+      `${sample.question} expected concept ${expectedConcept}`
+    );
+  }
+
+  for (const rejectedStandard of sample.rejectedPrimaryStandards || []) {
+    assert.equal(
+      standardIds.includes(rejectedStandard),
+      false,
+      `${sample.question} should not primary-match ${rejectedStandard}`
     );
   }
 
   passed += 1;
   printResult(result);
 }
+
+const legacyResult = matchQuestionToStandards('How does the internet work?', { useSamplePack: true });
+assert.ok(
+  legacyResult.standards.some((standard) => standard.standardId === 'CS.INTERNET'),
+  'legacy sample pack fallback should still be available when requested'
+);
 
 console.log(`\nStandards matcher samples: ${passed}/${samples.length} passed`);
 
@@ -80,4 +107,9 @@ function printResult(result) {
   console.log('Concepts:', concepts);
   console.log('Standards:', standards);
   console.log('Units:', units);
+}
+
+function allStandardIds(result) {
+  return [...(result.standards || []), ...(result.possibleStandards || [])]
+    .map((standard) => standard.standardId);
 }

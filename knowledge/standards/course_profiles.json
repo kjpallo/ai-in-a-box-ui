@@ -1,0 +1,52 @@
+{
+  "defaultProfileId": "physical_science",
+  "profiles": [
+    {
+      "profileId": "physical_science",
+      "title": "Physical Science",
+      "bankId": "missouri_science_6_12",
+      "gradeBandFocus": "9-12",
+      "activeCoreFilters": [
+        {
+          "gradeBand": "9-12",
+          "strandCode": "PS1"
+        },
+        {
+          "gradeBand": "9-12",
+          "strandCode": "PS2"
+        },
+        {
+          "gradeBand": "9-12",
+          "strandCode": "PS3"
+        },
+        {
+          "gradeBand": "9-12",
+          "strandCode": "PS4"
+        }
+      ],
+      "activeSupportingFilters": [
+        {
+          "gradeBand": "9-12",
+          "strandCode": "ETS1"
+        }
+      ],
+      "availableOffFilters": [
+        {
+          "domainCode": "LS"
+        },
+        {
+          "domainCode": "ESS"
+        },
+        {
+          "gradeBand": "6-8"
+        }
+      ],
+      "relevanceWeights": {
+        "core": 1.25,
+        "supporting": 1,
+        "available_off": 0.25,
+        "out_of_course": 0.1
+      }
+    }
+  ]
+}

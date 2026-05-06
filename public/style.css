@@ -1336,7 +1336,10 @@ button:disabled {
 .system-count-card span,
 .teacher-profile-fields dt,
 .daily-date-card label,
-.profile-table-head span {
+.profile-table-head span,
+.standards-summary-counts span,
+.standards-confidence-grid span,
+.standards-report-row-head span {
   display: block;
   color: #cafff0;
   font-size: 0.72rem;
@@ -1367,7 +1370,8 @@ button:disabled {
 .ai-problem-list,
 .system-health-grid,
 .profile-student-session-rows,
-.profile-table-body {
+.profile-table-body,
+.standards-report-scroll {
   scrollbar-width: thin;
   scrollbar-color: rgba(102, 247, 209, 0.55) rgba(3, 9, 10, 0.5);
 }
@@ -1509,7 +1513,9 @@ button:disabled {
 .question-rundown-card,
 .topic-summary-card,
 .daily-email-card,
-.student-link-card {
+.student-link-card,
+.standards-report-card,
+.standards-report-section {
   display: grid;
   gap: 10px;
 }
@@ -1705,11 +1711,138 @@ button:disabled {
   background: linear-gradient(90deg, var(--neon), var(--neon-2));
 }
 
+.standards-report-card {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.standards-report-head {
+  align-items: flex-start;
+}
+
+.standards-report-head > div {
+  display: grid;
+  gap: 4px;
+}
+
+.standards-summary-counts,
+.standards-confidence-grid,
+.standards-route-list {
+  display: grid;
+  gap: 8px;
+}
+
+.standards-summary-counts {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.standards-confidence-grid,
+.standards-route-list {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.standards-summary-counts > div,
+.standards-confidence-grid > div,
+.standards-route-list > div {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 9px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.standards-summary-counts strong,
+.standards-confidence-grid strong,
+.standards-route-list strong {
+  display: block;
+  margin-top: 4px;
+  color: #f4fffb;
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.standards-route-list span {
+  display: block;
+  color: #cafff0;
+  font-size: 0.78rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.standards-report-scroll {
+  max-height: min(52vh, 620px);
+  overflow: auto;
+  display: grid;
+  gap: 12px;
+  padding-right: 2px;
+}
+
+.standards-report-section h5 {
+  margin: 0;
+  color: #f4fffb;
+  font-size: 0.9rem;
+}
+
+.standards-report-table {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  overflow-x: auto;
+  background: rgba(2, 9, 10, 0.58);
+}
+
+.standards-report-row {
+  display: grid;
+  gap: 8px;
+  padding: 9px;
+  min-width: 760px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.standards-report-row-head {
+  border-top: 0;
+  background: rgba(102, 247, 209, 0.08);
+  border-bottom: 1px solid rgba(102, 247, 209, 0.14);
+}
+
+.standards-table .standards-report-row {
+  grid-template-columns: 1fr 1.45fr 0.85fr 0.45fr 1fr 1.05fr 1.25fr;
+}
+
+.concepts-table .standards-report-row {
+  grid-template-columns: 1.1fr 0.85fr 0.85fr 0.45fr 0.6fr 1.35fr;
+}
+
+.units-table .standards-report-row {
+  grid-template-columns: 1fr 0.55fr 0.75fr 0.75fr 1.8fr;
+}
+
+.recent-standards-table .standards-report-row {
+  grid-template-columns: 0.9fr 1.6fr 0.75fr 0.8fr 0.9fr 1fr 1fr;
+}
+
+.standards-report-row span,
+.standards-report-row div[role="cell"] {
+  min-width: 0;
+  color: #effcf8;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.standards-example-list {
+  margin: 0;
+  padding-left: 16px;
+  color: #effcf8;
+}
+
+.standards-muted {
+  color: #9eb8b6;
+}
+
 .class-activity-panel {
   height: 100%;
   min-height: 0;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(180px, 0.72fr) minmax(240px, 1fr) auto;
   gap: 10px;
 }
 
@@ -2105,6 +2238,9 @@ button:disabled {
   .ai-improvement-toolbar,
   .ai-edit-fields,
   .ai-field-row,
+  .standards-summary-counts,
+  .standards-confidence-grid,
+  .standards-route-list,
   .voice-content-row {
     grid-template-columns: 1fr;
   }

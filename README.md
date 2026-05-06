@@ -16,10 +16,14 @@ Local classroom assistant UI for a Raspberry Pi.
 
 - `public/index.html` = what is on the page
 - `public/style.css` = what it looks like
-- `public/student-ui.js` = student question flow and streamed answer handling
-- `public/teacher-ui.js` = visible status, answer display, recent questions, and voice list UI
-- `public/audio.js` = browser audio playback
+- `public/app.js` = main teacher app startup wiring
+- `public/api-client.js` = browser API calls
+- `public/question-input.js` = teacher question form and streamed answer events
+- `public/answer-renderer.js` = answer panel rendering
+- `public/recent-questions.js` = recent question list
 - `public/blade-ui.js` = side/bottom blade shell UI
+- `public/voice/` = voice input, commands, status, and TTS playback modules
+- `public/student/student-ui.js` = student page/session flow
 - `public/audio-stream-processor.js` = low-latency browser audio playback for Piper PCM chunks
 - `server.js` = local HTTP server and streaming chat endpoint
 - `lib/router/questionRouter.js` = local router that decides which trusted tool should answer
@@ -57,6 +61,14 @@ Teachers will eventually create and edit approved JSON through forms. A future u
 Phase 3 adds a local standards/concept matcher that reads the sample pack and tags likely concepts, units, and standards.
 
 Phase 4 attaches compact standards/concept metadata to completed student interaction logs. Student answers are unchanged. A future phase will summarize logs by standard, concept, unit, and route type.
+
+Phase 5 adds a backend standards summary report endpoint at `/api/profile/standards-summary`. It summarizes completed student interaction logs by standard, concept, unit, route type, and standards confidence without changing student answers, router behavior, formulas, or expected answer text. This phase does not build the teacher dashboard yet; Phase 6 will show this report in the teacher dashboard/report UI.
+
+Phase 6 displays the standards summary report in the teacher/profile Class Activity UI using `/api/profile/standards-summary`. It is a read-only reporting view for totals, confidence counts, standards, concepts, units, route types, and recent tagged questions. It does not add uploads or teacher editing yet. Future Phase 7 will add a manual teacher form to create/edit JSON knowledge items.
+
+Phase 7A adds the `missouri_science_6_12` master standards bank and course profile config. The default `physical_science` profile treats 9-12 PS1, PS2, PS3, and PS4 as core and 9-12 ETS1 as supporting; LS, ESS, and 6-8 standards are in the bank but off/selectable by default for this profile. Student answers, router behavior, formulas, and expected answer text are unchanged. Future Phase 7B will add blade UI for teachers to turn standards/domains on and off.
+
+Phase 7D separates concept confidence from standards confidence in completed interaction logs. `primaryStandards` are counted as official standards matches, while `possibleStandards` are saved for teacher review without counting as primary standards. Student answers are unchanged. A future standards blade UI can use this cleaner log shape.
 
 ## Before pushing to GitHub
 

@@ -203,6 +203,112 @@
             </div>
           </section>
 
+          <section class="teacher-profile-card standards-report-card">
+            <div class="profile-section-head standards-report-head">
+              <div>
+                <h4>Standards Summary Report</h4>
+                <span id="standardsSummaryStatus">No standards report loaded yet.</span>
+              </div>
+              <button type="button" id="profileRefreshStandardsReport" class="small-button secondary-small">Refresh Standards Report</button>
+            </div>
+
+            <div id="standardsSummaryEmptyState" class="profile-empty-state">No standards report loaded yet.</div>
+
+            <div class="standards-summary-counts" aria-label="Standards summary counts">
+              <div>
+                <span>Total questions</span>
+                <strong id="standardsTotalQuestions">0</strong>
+              </div>
+              <div>
+                <span>Tagged questions</span>
+                <strong id="standardsTaggedQuestions">0</strong>
+              </div>
+              <div>
+                <span>Untagged questions</span>
+                <strong id="standardsUntaggedQuestions">0</strong>
+              </div>
+              <div>
+                <span>Generated at</span>
+                <strong id="standardsGeneratedAt">Not loaded</strong>
+              </div>
+            </div>
+
+            <div class="standards-confidence-grid" aria-label="Standards confidence counts">
+              <div><span>Strong</span><strong id="standardsConfidenceStrong">0</strong></div>
+              <div><span>Medium</span><strong id="standardsConfidenceMedium">0</strong></div>
+              <div><span>Weak</span><strong id="standardsConfidenceWeak">0</strong></div>
+              <div><span>None</span><strong id="standardsConfidenceNone">0</strong></div>
+            </div>
+
+            <div class="standards-report-scroll">
+              <section class="standards-report-section">
+                <h5>Top Standards</h5>
+                <div class="standards-report-table standards-table" role="table" aria-label="Top standards">
+                  <div class="standards-report-row standards-report-row-head" role="row">
+                    <span role="columnheader">Standard</span>
+                    <span role="columnheader">Label</span>
+                    <span role="columnheader">Unit</span>
+                    <span role="columnheader">Count</span>
+                    <span role="columnheader">Routes</span>
+                    <span role="columnheader">Confidence</span>
+                    <span role="columnheader">Examples</span>
+                  </div>
+                  <div id="standardsSummaryRows"></div>
+                </div>
+              </section>
+
+              <section class="standards-report-section">
+                <h5>Top Concepts</h5>
+                <div class="standards-report-table concepts-table" role="table" aria-label="Top concepts">
+                  <div class="standards-report-row standards-report-row-head" role="row">
+                    <span role="columnheader">Concept</span>
+                    <span role="columnheader">Type</span>
+                    <span role="columnheader">Unit</span>
+                    <span role="columnheader">Count</span>
+                    <span role="columnheader">Avg score</span>
+                    <span role="columnheader">Examples</span>
+                  </div>
+                  <div id="standardsConceptRows"></div>
+                </div>
+              </section>
+
+              <section class="standards-report-section">
+                <h5>Top Units</h5>
+                <div class="standards-report-table units-table" role="table" aria-label="Top units">
+                  <div class="standards-report-row standards-report-row-head" role="row">
+                    <span role="columnheader">Unit</span>
+                    <span role="columnheader">Count</span>
+                    <span role="columnheader">Standards</span>
+                    <span role="columnheader">Concepts</span>
+                    <span role="columnheader">Examples</span>
+                  </div>
+                  <div id="standardsUnitRows"></div>
+                </div>
+              </section>
+
+              <section class="standards-report-section">
+                <h5>Route Types</h5>
+                <div id="standardsRouteRows" class="standards-route-list"></div>
+              </section>
+
+              <section class="standards-report-section">
+                <h5>Recent Tagged Questions</h5>
+                <div class="standards-report-table recent-standards-table" role="table" aria-label="Recent tagged questions">
+                  <div class="standards-report-row standards-report-row-head" role="row">
+                    <span role="columnheader">Time</span>
+                    <span role="columnheader">Question</span>
+                    <span role="columnheader">Route</span>
+                    <span role="columnheader">Confidence</span>
+                    <span role="columnheader">Units</span>
+                    <span role="columnheader">Standards</span>
+                    <span role="columnheader">Concepts</span>
+                  </div>
+                  <div id="standardsRecentRows"></div>
+                </div>
+              </section>
+            </div>
+          </section>
+
           <div class="class-activity-bottom-grid">
             <section class="teacher-profile-card topic-summary-card">
               <h4>Topic Summary</h4>
@@ -538,9 +644,25 @@
     render(activeBladeIndex, direction);
   }
 
+  function openBlade(bladeId, options = {}) {
+    const index = bladeDefs.findIndex((blade) => blade.id === bladeId);
+    if (index < 0) return;
+    goToBlade(index, options);
+  }
+
+  function closeBlade() {
+    openBlade('main');
+  }
+
+  function toggleBlade(bladeId, options = {}) {
+    const current = bladeDefs[activeBladeIndex]?.id || '';
+    openBlade(current === bladeId ? 'main' : bladeId, options);
+  }
+
   function render(activeIndex, direction = 0) {
     activeBladeIndex = Math.max(0, Math.min(bladeDefs.length - 1, activeIndex));
     setActiveIndex(activeBladeIndex);
+    window.Charlemagne?.state?.set?.({ activeBlade: bladeDefs[activeBladeIndex]?.id || 'main' });
 
     const shell = document.getElementById('bladeUiShell');
     if (shell && direction !== 0) {
@@ -647,4 +769,13 @@
   } else {
     initBladeUi();
   }
+
+  window.Charlemagne = window.Charlemagne || {};
+  window.Charlemagne.blades = {
+    close: closeBlade,
+    goTo: openBlade,
+    init: initBladeUi,
+    open: openBlade,
+    toggle: toggleBlade
+  };
 })();

@@ -235,13 +235,7 @@
     if (status) status.textContent = "Checking local services...";
 
     try {
-      const response = await fetch("/api/system-health", { cache: "no-store" });
-
-      if (!response.ok) {
-        throw new Error("HTTP " + response.status);
-      }
-
-      const data = await response.json();
+      const data = await window.Charlemagne.api.fetchSystemHealth();
       lastBackendChecks = data.checks || [];
       render(lastBackendChecks);
 

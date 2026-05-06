@@ -15,15 +15,16 @@
     document.getElementById('aiProblemList')?.addEventListener('click', handleProblemAction);
   }
 
+  async function fetchJson(url, options = {}) {
+    return window.Charlemagne.api.fetchJson(url, options);
+  }
+
   async function loadProblems() {
     const status = document.getElementById('aiImprovementStatus');
     setStatus('Loading problems...');
 
     try {
-      const response = await fetch('/api/ai-improvement/problems');
-      if (!response.ok) throw new Error('Could not load problem log.');
-
-      const data = await response.json();
+      const data = await fetchJson('/api/ai-improvement/problems');
       state.problems = Array.isArray(data.problems) ? data.problems : [];
       renderProblems();
       setStatus(`Loaded ${state.problems.length} problem${state.problems.length === 1 ? '' : 's'}.`);
@@ -46,7 +47,7 @@
     }
 
     try {
-      const response = await fetch('/api/ai-improvement/problems', {
+      await fetchJson('/api/ai-improvement/problems', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -63,8 +64,6 @@
           debug: interaction.debug || {}
         })
       });
-
-      if (!response.ok) throw new Error('Could not flag the answer.');
 
       if (button) temporarilyLabel(button, 'Flagged');
       setStatus('Flagged for AI Improvement');
@@ -127,13 +126,11 @@
 
   async function patchProblem(id, changes) {
     try {
-      const response = await fetch(`/api/ai-improvement/problems/${encodeURIComponent(id)}`, {
+      await fetchJson(`/api/ai-improvement/problems/${encodeURIComponent(id)}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(changes)
       });
-
-      if (!response.ok) throw new Error('Could not update problem.');
       await loadProblems();
     } catch (error) {
       setStatus(error.message || 'Could not update problem.');
