@@ -4839,6 +4839,74 @@ routerTestBank.push(
     aiAllowed: false
   },
   {
+    category: 'answer_intent',
+    name: 'ambiguous power formula asks clarification',
+    question: 'What is the formula for power?',
+    type: 'formula_only',
+    includes: ['There are two common power formulas:', '1. Electrical power: P = V × I', '2. Work/time power: P = W / t', 'Which one are you working on?'],
+    aiAllowed: false
+  },
+  {
+    category: 'answer_intent',
+    name: 'work time power formula direct',
+    question: 'What is the formula for power using work and time?',
+    type: 'formula_only',
+    includes: ['P = W / t.'],
+    excludes: ['Which one are you working on?', 'P = V × I'],
+    aiAllowed: false
+  },
+  {
+    category: 'answer_intent',
+    name: 'ambiguous acceleration formula asks clarification',
+    question: 'Formula for acceleration',
+    type: 'formula_only',
+    includes: ['There are two common acceleration formulas:', '1. Change in velocity over time: a = (vf - vi) / t', '2. From force and mass: a = F / m', 'Which one are you working on?'],
+    aiAllowed: false
+  },
+  {
+    category: 'answer_intent',
+    name: 'ambiguous V meaning asks clarification',
+    question: 'What does V mean?',
+    type: 'symbol_only',
+    includes: ['V can mean more than one thing:', '1. Volume', '2. Voltage', '3. Velocity or speed', 'Which one are you working on?'],
+    aiAllowed: false
+  },
+  {
+    category: 'answer_intent',
+    name: 'V meaning in density direct',
+    question: 'What does V mean in density?',
+    type: 'symbol_only',
+    includes: ['In density, V means volume.'],
+    excludes: ['Which one are you working on?'],
+    aiAllowed: false
+  },
+  {
+    category: 'answer_intent',
+    name: 'V meaning in electricity direct',
+    question: 'What does V mean in electricity?',
+    type: 'symbol_only',
+    includes: ['In electricity, V means voltage.'],
+    excludes: ['Which one are you working on?'],
+    aiAllowed: false
+  },
+  {
+    category: 'answer_intent',
+    name: 'ambiguous m meaning asks clarification',
+    question: 'What does m mean?',
+    type: 'symbol_only',
+    includes: ['m can mean more than one thing:', '1. Mass', '2. Meter', 'Which one are you working on?'],
+    aiAllowed: false
+  },
+  {
+    category: 'answer_intent',
+    name: 'm meaning in F equals ma direct',
+    question: 'What does m mean in F = ma?',
+    type: 'symbol_only',
+    includes: ['In F = ma, m means mass.'],
+    excludes: ['Which one are you working on?'],
+    aiAllowed: false
+  },
+  {
     category: 'ohms_law_conceptual',
     name: 'formula for volts',
     question: 'what is the formula for volts',
