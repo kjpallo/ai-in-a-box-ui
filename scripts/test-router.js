@@ -241,15 +241,43 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'ambiguous volume formula asks clarification',
+    question: 'What is the formula for volume?',
+    type: 'formula_only',
+    includes: ['There is more than one volume formula:', '1. Density volume: V = m / D', '2. Rectangular volume: V = l × w × h', '3. Cube volume: V = s³', 'Which one are you working on?'],
+    aiAllowed: false
+  },
+  {
+    name: 'misspelled volume formula asks clarification',
+    question: 'What is the formula for vloume?',
+    type: 'formula_only',
+    includes: ['There is more than one volume formula:', '1. Density volume: V = m / D', '2. Rectangular volume: V = l × w × h', '3. Cube volume: V = s³', 'Which one are you working on?'],
+    aiAllowed: false
+  },
+  {
     name: 'ambiguous V meaning asks clarification',
     question: 'What does V mean?',
     type: 'symbol_only',
-    includes: ['V can mean more than one thing:', '1. Volume', '2. Voltage', '3. Velocity or speed', 'Which one are you working on?'],
+    includes: ['v or V can mean more than one thing:', '1. v — velocity or speed', '2. V — volume', '3. V — voltage', 'Which one are you working on?'],
+    aiAllowed: false
+  },
+  {
+    name: 'what is v asks symbol clarification',
+    question: 'what is v',
+    type: 'symbol_only',
+    includes: ['v or V can mean more than one thing:', '1. v — velocity or speed', '2. V — volume', '3. V — voltage', 'Which one are you working on?'],
+    aiAllowed: false
+  },
+  {
+    name: 'what is uppercase V asks symbol clarification',
+    question: 'what is V',
+    type: 'symbol_only',
+    includes: ['v or V can mean more than one thing:', '1. v — velocity or speed', '2. V — volume', '3. V — voltage', 'Which one are you working on?'],
     aiAllowed: false
   },
   {
     name: 'V meaning in density direct',
-    question: 'What does V mean in density?',
+    question: 'what is V in density',
     type: 'symbol_only',
     includes: ['In density, V means volume.'],
     excludes: ['Which one are you working on?'],
@@ -257,9 +285,17 @@ const tests = [
   },
   {
     name: 'V meaning in electricity direct',
-    question: 'What does V mean in electricity?',
+    question: 'what is V in electricity',
     type: 'symbol_only',
     includes: ['In electricity, V means voltage.'],
+    excludes: ['Which one are you working on?'],
+    aiAllowed: false
+  },
+  {
+    name: 'v meaning in speed direct',
+    question: 'what is v in speed',
+    type: 'symbol_only',
+    includes: ['In speed problems, v means velocity or speed.'],
     excludes: ['Which one are you working on?'],
     aiAllowed: false
   },
