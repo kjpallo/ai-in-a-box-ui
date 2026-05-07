@@ -398,29 +398,76 @@
     }
   ];
 
-  // CH_BLADE_CLEANUP_20260430
-  // Hide placeholder blades until they are real tools.
-  // Kept blades: Main, AI Improvement, Teacher Profile, Class Activity, System.
+  // Hide placeholder blades until they are real tools. Future Phase 7B blades should be
+  // added to bladeDefs, then included here when they are ready for teachers.
   const visibleBladeIds = ['main', 'ai-improvement', 'modes', 'class-activity', 'system'];
   bladeDefs.splice(0, bladeDefs.length, ...bladeDefs.filter((blade) => visibleBladeIds.includes(blade.id)));
 
+  const bladeRegistry = new Map();
+
+  function registerBlades(blades) {
+    bladeRegistry.clear();
+    blades.forEach((blade, index) => {
+      if (!blade?.id) return;
+      blade.index = index;
+      bladeRegistry.set(blade.id, blade);
+    });
+  }
+
+  registerBlades(bladeDefs);
+
+  function getBladeById(bladeId) {
+    return bladeRegistry.get(String(bladeId || '')) || null;
+  }
+
+  function getBladeIndex(bladeId) {
+    const blade = getBladeById(bladeId);
+    return blade ? blade.index : -1;
+  }
+
+  function getCurrentBlade() {
+    return bladeDefs[activeBladeIndex] || bladeDefs[getBladeIndex('main')] || bladeDefs[0] || null;
+  }
+
+  function getBladePosition(index) {
+    if (index < activeBladeIndex) return 'left';
+    if (index > activeBladeIndex) return 'right';
+    return 'center';
+  }
+
+  function getStoredBladeId() {
+    try {
+      return localStorage.getItem(BLADE_KEY) || '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function storeBladeId(bladeId) {
+    try {
+      localStorage.setItem(BLADE_KEY, bladeId);
+    } catch (_) {}
+  }
+
 
   function getActiveIndex() {
-    const saved = localStorage.getItem(BLADE_KEY);
-    const idx = bladeDefs.findIndex((blade) => blade.id === saved);
+    const saved = getStoredBladeId();
+    const idx = getBladeIndex(saved);
     if (idx >= 0) return idx;
 
-    const mainIdx = bladeDefs.findIndex((blade) => blade.id === 'main');
+    const mainIdx = getBladeIndex('main');
     return mainIdx >= 0 ? mainIdx : 0;
   }
 
   function setActiveIndex(idx) {
     if (!bladeDefs[idx]) return;
-    localStorage.setItem(BLADE_KEY, bladeDefs[idx].id);
+    storeBladeId(bladeDefs[idx].id);
   }
 
   let activeBladeIndex = getActiveIndex();
   let lastSwishTime = 0;
+  let controlsBound = false;
+  let keyboardBound = false;
 
   // CH_PHASE5_SAFE_SWISH_20260501
   function getBladeAudioContext() {
@@ -562,10 +609,13 @@
 
     const center = shell.querySelector('#bladeCenterPanel');
 
-    bladeDefs.forEach((blade) => {
+    bladeDefs.forEach((blade, index) => {
       const page = document.createElement('section');
       page.className = 'blade-page';
+      page.dataset.blade = blade.id;
+      page.dataset.bladeIndex = String(index);
       page.dataset.bladePage = blade.id;
+      page.dataset.bladePosition = 'right';
 
       if (blade.id === 'main') {
         const header = document.createElement('div');
@@ -600,6 +650,7 @@
       ${bladeDefs.map((blade, index) => `
         <button
           class="blade-nav-item ${index === activeIndex ? 'active' : ''}"
+          data-blade="${blade.id}"
           data-blade-index="${index}"
           type="button"
         >
@@ -613,12 +664,16 @@
 
   function makePreviewBlade(blade, index, activeIndex, side) {
     const btn = document.createElement('button');
-    btn.className = `blade-preview ${side}`;
-    btn.dataset.bladeIndex = index;
-    btn.type = 'button';
-
     const distance = Math.abs(index - activeIndex);
+    btn.className = `blade-preview blade-preview-${side} ${side}`;
+    btn.dataset.blade = blade.id;
+    btn.dataset.bladeIndex = String(index);
+    btn.dataset.bladePosition = side;
+    btn.type = 'button';
+    btn.setAttribute('aria-label', `Open ${blade.label} blade`);
+
     btn.style.setProperty('--preview-depth', String(distance));
+    btn.style.setProperty('--preview-opacity', String(Math.max(0.42, 1 - distance * 0.14)));
 
     btn.innerHTML = `
       <div class="blade-preview-inner">
@@ -645,7 +700,7 @@
   }
 
   function openBlade(bladeId, options = {}) {
-    const index = bladeDefs.findIndex((blade) => blade.id === bladeId);
+    const index = getBladeIndex(bladeId);
     if (index < 0) return;
     goToBlade(index, options);
   }
@@ -655,16 +710,25 @@
   }
 
   function toggleBlade(bladeId, options = {}) {
-    const current = bladeDefs[activeBladeIndex]?.id || '';
+    const current = getCurrentBlade()?.id || '';
     openBlade(current === bladeId ? 'main' : bladeId, options);
   }
 
   function render(activeIndex, direction = 0) {
+    if (!bladeDefs.length) return;
+
     activeBladeIndex = Math.max(0, Math.min(bladeDefs.length - 1, activeIndex));
     setActiveIndex(activeBladeIndex);
-    window.Charlemagne?.state?.set?.({ activeBlade: bladeDefs[activeBladeIndex]?.id || 'main' });
+    const activeBlade = getCurrentBlade();
+    const activeBladeId = activeBlade?.id || 'main';
+    window.Charlemagne?.state?.set?.({ activeBlade: activeBladeId });
 
     const shell = document.getElementById('bladeUiShell');
+    if (shell) {
+      shell.dataset.activeBlade = activeBladeId;
+      shell.dataset.activeBladeIndex = String(activeBladeIndex);
+    }
+
     if (shell && direction !== 0) {
       shell.classList.remove('blade-move-left', 'blade-move-right');
       void shell.offsetWidth;
@@ -674,8 +738,13 @@
       }, 360);
     }
 
-    document.querySelectorAll('.blade-page').forEach((page, idx) => {
-      page.classList.toggle('active', idx === activeBladeIndex);
+    document.querySelectorAll('.blade-page[data-blade]').forEach((page) => {
+      const pageIndex = Number(page.dataset.bladeIndex);
+      const position = Number.isFinite(pageIndex) ? getBladePosition(pageIndex) : 'right';
+      page.dataset.bladePosition = position;
+      page.classList.toggle('active', position === 'center');
+      page.classList.toggle('blade-page-left', position === 'left');
+      page.classList.toggle('blade-page-right', position === 'right');
     });
 
     const leftRail = document.getElementById('bladeLeftRail');
@@ -701,39 +770,82 @@
 
     buildBottomNav(activeBladeIndex);
 
-    // Use onclick assignment instead of stacking addEventListener calls on every render.
-    document.querySelectorAll('[data-blade-index]').forEach((btn) => {
-      btn.onclick = () => {
-        const idx = Number(btn.dataset.bladeIndex);
-        if (!Number.isNaN(idx)) goToBlade(idx);
-      };
-    });
-
-    document.querySelectorAll('[data-blade-shift]').forEach((btn) => {
-      btn.onclick = () => {
-        const shift = Number(btn.dataset.bladeShift);
-        if (Number.isNaN(shift)) return;
-        goToBlade(activeBladeIndex + shift);
-      };
-    });
-
-    const leftArrow = document.querySelector('.blade-arrow-left');
-    const rightArrow = document.querySelector('.blade-arrow-right');
-
-    if (leftArrow) {
-      leftArrow.onclick = () => goToBlade(activeBladeIndex - 1);
-    }
-
-    if (rightArrow) {
-      rightArrow.onclick = () => goToBlade(activeBladeIndex + 1);
-    }
-
     document.dispatchEvent(new CustomEvent('charlemagne:blade-active', {
       detail: {
-        id: bladeDefs[activeBladeIndex]?.id || '',
-        label: bladeDefs[activeBladeIndex]?.label || ''
+        id: activeBladeId,
+        index: activeBladeIndex,
+        label: activeBlade?.label || ''
       }
     }));
+  }
+
+  function handleBladeControl(event) {
+    const target = event.target;
+    if (!target || typeof target.closest !== 'function') return;
+
+    const control = target.closest('button[data-blade], a[data-blade], [role="button"][data-blade], [data-blade-toggle], [data-blade-close], [data-blade-shift], .blade-arrow-left, .blade-arrow-right');
+    if (!control || !document.getElementById('bladeUiShell')?.contains(control)) return;
+
+    if (control.matches('[data-blade-close]')) {
+      event.preventDefault();
+      closeBlade();
+      return;
+    }
+
+    if (control.matches('[data-blade-toggle]')) {
+      event.preventDefault();
+      toggleBlade(control.dataset.bladeToggle);
+      return;
+    }
+
+    if (control.matches('[data-blade-shift]')) {
+      event.preventDefault();
+      const shift = Number(control.dataset.bladeShift);
+      if (!Number.isNaN(shift)) goToBlade(activeBladeIndex + shift);
+      return;
+    }
+
+    if (control.matches('.blade-arrow-left')) {
+      event.preventDefault();
+      goToBlade(activeBladeIndex - 1);
+      return;
+    }
+
+    if (control.matches('.blade-arrow-right')) {
+      event.preventDefault();
+      goToBlade(activeBladeIndex + 1);
+      return;
+    }
+
+    if (control.matches('button[data-blade], a[data-blade], [role="button"][data-blade]')) {
+      event.preventDefault();
+      openBlade(control.dataset.blade);
+    }
+  }
+
+  function bindBladeControls(shell) {
+    if (!shell || controlsBound) return;
+    controlsBound = true;
+    shell.addEventListener('click', handleBladeControl);
+  }
+
+  function bindKeyboardControls() {
+    if (keyboardBound) return;
+    keyboardBound = true;
+
+    document.addEventListener('keydown', (event) => {
+      if (!document.getElementById('bladeUiShell')) return;
+
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        goToBlade(activeBladeIndex - 1);
+      }
+
+      if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        goToBlade(activeBladeIndex + 1);
+      }
+    });
   }
 
   function initBladeUi() {
@@ -749,19 +861,9 @@
     if (!appRoot) return;
 
     buildShell(appRoot);
+    bindBladeControls(document.getElementById('bladeUiShell'));
+    bindKeyboardControls();
     render(activeBladeIndex, 0);
-
-    document.addEventListener('keydown', (event) => {
-      if (event.key === 'ArrowLeft') {
-        event.preventDefault();
-        goToBlade(activeBladeIndex - 1);
-      }
-
-      if (event.key === 'ArrowRight') {
-        event.preventDefault();
-        goToBlade(activeBladeIndex + 1);
-      }
-    });
   }
 
   if (document.readyState === 'loading') {
@@ -773,9 +875,12 @@
   window.Charlemagne = window.Charlemagne || {};
   window.Charlemagne.blades = {
     close: closeBlade,
+    current: () => ({ ...(getCurrentBlade() || {}) }),
     goTo: openBlade,
     init: initBladeUi,
+    list: () => bladeDefs.map((blade) => ({ ...blade })),
     open: openBlade,
+    registry: Object.fromEntries(bladeDefs.map((blade) => [blade.id, { ...blade }])),
     toggle: toggleBlade
   };
 })();
