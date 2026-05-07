@@ -3,6 +3,8 @@ function registerQuestionRoutes(app, {
   questionAnswer,
   tts
 }) {
+  let lastAnsweredPrompt = '';
+
   function sendRouterTestResponse(message, res) {
     const { matchedKnowledge, questionRoute } = questionAnswer.routeMessage(message);
 
@@ -83,6 +85,38 @@ function registerQuestionRoutes(app, {
       let pending = '';
       let speechBuffer = [];
       let firstChunkSent = false;
+      const standardsFollowUp = questionAnswer.answerStandardsFollowUp(message, lastAnsweredPrompt);
+
+      if (standardsFollowUp?.handled) {
+        fullText += standardsFollowUp.response;
+        questionRoute = {
+          type: 'standards_followup',
+          confidence: standardsFollowUp.matched ? 'strong' : 'none',
+          directAnswer: standardsFollowUp.response,
+          aiAllowed: false,
+          public: {
+            type: 'standards_followup',
+            confidence: standardsFollowUp.matched ? 'strong' : 'none',
+            standardId: standardsFollowUp.standardId || ''
+          }
+        };
+        sendEvent({ type: 'router', router: questionRoute.public });
+        sendEvent({ type: 'text_delta', chunk: standardsFollowUp.response });
+        queueSentenceForSpeech(standardsFollowUp.response);
+        questionAnswer.logCompletedInteraction({
+          message,
+          questionRoute,
+          answerGiven: fullText,
+          source: 'chat_standards_followup',
+          debug: {
+            contextQuestion: lastAnsweredPrompt
+          }
+        });
+        await ttsChain;
+        sendEvent({ type: 'done', fullText });
+        res.end();
+        return;
+      }
 
       ({ matchedKnowledge, questionRoute } = questionAnswer.routeMessage(message));
 
@@ -169,6 +203,9 @@ function registerQuestionRoutes(app, {
         answerGiven: fullText,
         source: usedAiFallback ? 'chat_ai_fallback' : 'chat_router'
       });
+      if (fullText.trim()) {
+        lastAnsweredPrompt = message;
+      }
 
       await ttsChain;
 

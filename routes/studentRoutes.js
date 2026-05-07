@@ -17,12 +17,14 @@ function registerStudentRoutes(app, {
     }
 
     try {
-      const result = await answerStudentMessage(message);
+      const lastAnsweredPrompt = findLastAnsweredPrompt(session.messages);
+      const result = await answerStudentMessage(message, { lastAnsweredPrompt });
       const entry = {
         message,
         response: result.response,
         routeType: result.routeType,
         confidence: result.confidence,
+        isStandardsFollowUp: Boolean(result.isStandardsFollowUp),
         createdAt: new Date().toISOString()
       };
 
@@ -51,6 +53,19 @@ function registerStudentRoutes(app, {
       });
     }
   });
+}
+
+function findLastAnsweredPrompt(messages) {
+  if (!Array.isArray(messages)) return '';
+
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const entry = messages[index];
+    if (!entry?.message || entry.isStandardsFollowUp) continue;
+    if (!entry.response) continue;
+    return entry.message;
+  }
+
+  return '';
 }
 
 module.exports = {
