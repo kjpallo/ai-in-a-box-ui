@@ -4767,6 +4767,78 @@ const routerTestBank = [
 
 routerTestBank.push(
   {
+    category: 'answer_intent',
+    name: 'mass units only',
+    question: 'What are the units for mass?',
+    type: 'units_only',
+    includes: ['Mass is measured in g or kg.'],
+    excludes: ['amount of matter', 'Formula:'],
+    aiAllowed: false
+  },
+  {
+    category: 'answer_intent',
+    name: 'volume units only',
+    question: 'What are the units for volume?',
+    type: 'units_only',
+    includes: ['Volume is measured in mL, L, cm³, or m³.'],
+    excludes: ['density', 'D = m / V'],
+    aiAllowed: false
+  },
+  {
+    category: 'answer_intent',
+    name: 'density units only',
+    question: 'What are the units for density?',
+    type: 'units_only',
+    includes: ['Density is measured in g/mL, g/cm³, or kg/m³.'],
+    excludes: ['Use the density formula', 'Example:'],
+    aiAllowed: false
+  },
+  {
+    category: 'answer_intent',
+    name: 'mass symbol only',
+    question: 'What is the symbol for mass?',
+    type: 'symbol_only',
+    includes: ['The symbol for mass is m.'],
+    excludes: ['amount of matter', 'Formula:'],
+    aiAllowed: false
+  },
+  {
+    category: 'answer_intent',
+    name: 'density formula only',
+    question: 'What is the formula for density?',
+    type: 'formula_only',
+    includes: ['D = m / V.'],
+    excludes: ['Example:', 'Use the density formula'],
+    aiAllowed: false
+  },
+  {
+    category: 'answer_intent',
+    name: 'force formula only',
+    question: 'Formula for force',
+    type: 'formula_only',
+    includes: ['F = m × a.'],
+    excludes: ['Use Newton’s second law', 'Example:'],
+    aiAllowed: false
+  },
+  {
+    category: 'answer_intent',
+    name: 'resistance units only',
+    question: 'What unit is resistance measured in?',
+    type: 'units_only',
+    includes: ['Resistance is measured in Ω.'],
+    excludes: ['R = V / I', 'Ohm’s law'],
+    aiAllowed: false
+  },
+  {
+    category: 'answer_intent',
+    name: 'electrical power formula only',
+    question: 'What is the formula for electrical power?',
+    type: 'formula_only',
+    includes: ['P = V × I.'],
+    excludes: ['Use the electrical power formula', 'Example:'],
+    aiAllowed: false
+  },
+  {
     category: 'ohms_law_conceptual',
     name: 'formula for volts',
     question: 'what is the formula for volts',

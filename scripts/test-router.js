@@ -155,6 +155,70 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'mass units stays narrow',
+    question: 'What are the units for mass?',
+    type: 'units_only',
+    includes: ['Mass is measured in g or kg.'],
+    excludes: ['amount of matter', 'Formula:'],
+    aiAllowed: false
+  },
+  {
+    name: 'volume units stays narrow',
+    question: 'What are the units for volume?',
+    type: 'units_only',
+    includes: ['Volume is measured in mL, L, cm³, or m³.'],
+    excludes: ['density', 'D = m / V'],
+    aiAllowed: false
+  },
+  {
+    name: 'density units stays narrow',
+    question: 'What are the units for density?',
+    type: 'units_only',
+    includes: ['Density is measured in g/mL, g/cm³, or kg/m³.'],
+    excludes: ['Use the density formula', 'Example:'],
+    aiAllowed: false
+  },
+  {
+    name: 'mass symbol stays narrow',
+    question: 'What is the symbol for mass?',
+    type: 'symbol_only',
+    includes: ['The symbol for mass is m.'],
+    excludes: ['amount of matter', 'Formula:'],
+    aiAllowed: false
+  },
+  {
+    name: 'density formula stays narrow',
+    question: 'What is the formula for density?',
+    type: 'formula_only',
+    includes: ['D = m / V.'],
+    excludes: ['Example:', 'Use the density formula'],
+    aiAllowed: false
+  },
+  {
+    name: 'force formula stays narrow',
+    question: 'Formula for force',
+    type: 'formula_only',
+    includes: ['F = m × a.'],
+    excludes: ['Use Newton’s second law', 'Example:'],
+    aiAllowed: false
+  },
+  {
+    name: 'resistance units stays narrow',
+    question: 'What unit is resistance measured in?',
+    type: 'units_only',
+    includes: ['Resistance is measured in Ω.'],
+    excludes: ['R = V / I', 'Ohm’s law'],
+    aiAllowed: false
+  },
+  {
+    name: 'electrical power formula stays narrow',
+    question: 'What is the formula for electrical power?',
+    type: 'formula_only',
+    includes: ['P = V × I.'],
+    excludes: ['Use the electrical power formula', 'Example:'],
+    aiAllowed: false
+  },
+  {
     name: 'density numeric mass from density and volume',
     question: 'If density is 4 g/cm^3 and volume is 5 cm^3, what is the mass?',
     matchedKnowledge: [densityFact],
