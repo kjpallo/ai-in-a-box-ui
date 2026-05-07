@@ -30,6 +30,7 @@ function factById(id) {
 
 const weightFact = factById('weight-definition');
 const gravityFact = factById('gravity-earth-acceleration');
+const densityFact = factById('density');
 
 const tests = [
   {
@@ -118,6 +119,47 @@ const tests = [
     question: 'What is weight if mass is 10 kg?',
     type: 'science_formula',
     includes: ['Fg = m × g', '9.8 m/s²', '98 N'],
+    aiAllowed: false
+  },
+  {
+    name: 'density rearranges for mass without numbers',
+    question: 'how would I solve for mass if I had volume and density?',
+    matchedKnowledge: [densityFact],
+    type: 'science_formula',
+    includes: ['mass = density × volume', 'Start with D = m / V', 'm = D × V'],
+    excludes: ['Use the density formula: D = m / V.\nExample'],
+    aiAllowed: false
+  },
+  {
+    name: 'density rearranges for volume without numbers',
+    question: 'How do I solve for volume if I have mass and density?',
+    matchedKnowledge: [densityFact],
+    type: 'science_formula',
+    includes: ['volume = mass / density', 'V = m / D'],
+    aiAllowed: false
+  },
+  {
+    name: 'density formula for density from mass and volume without numbers',
+    question: 'How do I solve for density if I have mass and volume?',
+    matchedKnowledge: [densityFact],
+    type: 'science_formula',
+    includes: ['density = mass / volume', 'D = m / V'],
+    aiAllowed: false
+  },
+  {
+    name: 'density definition stays teacher fact',
+    question: 'What is density?',
+    matchedKnowledge: [densityFact],
+    type: 'definition',
+    includes: ['Density tells how much mass is packed', 'density = mass / volume; D = m / V'],
+    aiAllowed: false
+  },
+  {
+    name: 'density numeric mass from density and volume',
+    question: 'If density is 4 g/cm^3 and volume is 5 cm^3, what is the mass?',
+    matchedKnowledge: [densityFact],
+    type: 'science_formula',
+    includes: ['mass = density × volume', 'm = 20 g'],
     aiAllowed: false
   },
   {
