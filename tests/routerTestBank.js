@@ -4765,4 +4765,96 @@ const routerTestBank = [
   }
 ];
 
+routerTestBank.push(
+  {
+    category: 'ohms_law_conceptual',
+    name: 'formula for volts',
+    question: 'what is the formula for volts',
+    type: 'science_formula',
+    includes: ['Voltage = current × resistance', 'V = I × R'],
+    aiAllowed: false
+  },
+  {
+    category: 'ohms_law_conceptual',
+    name: 'solve for oms misspelling',
+    question: 'how do I solve for oms',
+    type: 'science_formula',
+    includes: ['Resistance = voltage / current', 'R = V / I', 'Ohms are the unit for resistance'],
+    aiAllowed: false
+  },
+  {
+    category: 'ohms_law_conceptual',
+    name: 'solve for ohms',
+    question: 'how do I solve for ohms',
+    type: 'science_formula',
+    includes: ['Resistance = voltage / current', 'R = V / I', 'Ohms are the unit for resistance'],
+    aiAllowed: false
+  },
+  {
+    category: 'ohms_law_conceptual',
+    name: 'solve for electrical resistance',
+    question: 'how do I solve for electrical resistance',
+    type: 'science_formula',
+    includes: ['Resistance = voltage / current', 'R = V / I'],
+    aiAllowed: false
+  },
+  {
+    category: 'ohms_law_conceptual',
+    name: 'solve for current from voltage and resistance',
+    question: 'how do I solve for current if I have voltage and resistance',
+    type: 'science_formula',
+    includes: ['Current = voltage / resistance', 'I = V / R'],
+    aiAllowed: false
+  },
+  {
+    category: 'ohms_law_conceptual',
+    name: 'solve for voltage from current and resistance',
+    question: 'how do I solve for voltage if I have current and resistance',
+    type: 'science_formula',
+    includes: ['Voltage = current × resistance', 'V = I × R'],
+    aiAllowed: false
+  },
+  {
+    category: 'electrical_power',
+    name: 'solve for power from voltage and current',
+    question: 'A small lamp is connected to a 12 volt battery and has a current of 3 amps. Question: What electrical power does the lamp use in watts?',
+    type: 'science_formula',
+    includes: ['P = 12 V × 3 A', 'P = 36 W'],
+    excludes: ['R = 12 V / 3 A', 'R = 4 Ω'],
+    aiAllowed: false
+  },
+  {
+    category: 'mass_clarification',
+    name: 'ambiguous solve for mass asks for values',
+    question: 'how do I solve for mass',
+    type: 'science_formula',
+    includes: ['Which values do you have?', 'mass = density × volume', 'mass = force ÷ acceleration', 'mass = 2KE ÷ velocity²'],
+    aiAllowed: false
+  },
+  {
+    category: 'mass_clarification',
+    name: 'solve for mass from density and volume',
+    question: 'How do I solve for mass if I have density and volume?',
+    type: 'science_formula',
+    includes: ['mass = density × volume'],
+    aiAllowed: false
+  },
+  {
+    category: 'mass_clarification',
+    name: 'solve for mass from force and acceleration',
+    question: 'How do I solve for mass if I have force and acceleration?',
+    type: 'science_formula',
+    includes: ['mass = force / acceleration', 'm = F / a'],
+    aiAllowed: false
+  },
+  {
+    category: 'mass_clarification',
+    name: 'solve for mass from kinetic energy and velocity',
+    question: 'How do I solve for mass if I have kinetic energy and velocity?',
+    type: 'science_formula',
+    includes: ['mass = 2KE / velocity²', 'm = 2KE / v²'],
+    aiAllowed: false
+  }
+);
+
 module.exports = { routerTestBank };

@@ -97,16 +97,28 @@
   }
 
   function addHistoryItem(message, response) {
-    chatHistory.unshift({ message, response });
-    historyCount.textContent = `${chatHistory.length} message${chatHistory.length === 1 ? '' : 's'}`;
+    chatHistory.push({ message, response });
+    renderHistory();
+  }
+
+  function renderHistory() {
+    if (!historyBox || !historyCount) return;
+
+    const messageCount = chatHistory.length * 2;
+    historyCount.textContent = `${messageCount} message${messageCount === 1 ? '' : 's'}`;
     historyBox.innerHTML = chatHistory.map((item) => `
       <article class="student-history-item">
-        <strong>You asked</strong>
-        <p>${escapeHtml(item.message)}</p>
-        <strong>Charlemagne answered</strong>
-        <p>${escapeHtml(item.response)}</p>
+        <div class="student-history-message is-student">
+          <strong>You asked</strong>
+          <p>${escapeHtml(item.message)}</p>
+        </div>
+        <div class="student-history-message is-assistant">
+          <strong>Charlemagne answered</strong>
+          <p>${escapeHtml(item.response)}</p>
+        </div>
       </article>
     `).join('');
+    historyBox.scrollTop = historyBox.scrollHeight;
   }
 
   function escapeHtml(value) {

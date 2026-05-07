@@ -163,6 +163,76 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'ohms law formula for volts',
+    question: 'what is the formula for volts',
+    type: 'science_formula',
+    includes: ['Voltage = current × resistance', 'V = I × R'],
+    aiAllowed: false
+  },
+  {
+    name: 'ohms law resistance handles oms misspelling',
+    question: 'how do I solve for oms',
+    type: 'science_formula',
+    includes: ['Resistance = voltage / current', 'R = V / I', 'Ohms are the unit for resistance'],
+    aiAllowed: false
+  },
+  {
+    name: 'ohms law resistance handles ohms',
+    question: 'how do I solve for ohms',
+    type: 'science_formula',
+    includes: ['Resistance = voltage / current', 'R = V / I', 'Ohms are the unit for resistance'],
+    aiAllowed: false
+  },
+  {
+    name: 'ohms law electrical resistance formula',
+    question: 'how do I solve for electrical resistance',
+    type: 'science_formula',
+    includes: ['Resistance = voltage / current', 'R = V / I'],
+    aiAllowed: false
+  },
+  {
+    name: 'ohms law current formula from voltage and resistance',
+    question: 'how do I solve for current if I have voltage and resistance',
+    type: 'science_formula',
+    includes: ['Current = voltage / resistance', 'I = V / R'],
+    aiAllowed: false
+  },
+  {
+    name: 'ohms law voltage formula from current and resistance',
+    question: 'how do I solve for voltage if I have current and resistance',
+    type: 'science_formula',
+    includes: ['Voltage = current × resistance', 'V = I × R'],
+    aiAllowed: false
+  },
+  {
+    name: 'ambiguous mass formula asks for values',
+    question: 'how do I solve for mass',
+    type: 'science_formula',
+    includes: ['Which values do you have?', 'mass = density × volume', 'mass = force ÷ acceleration', 'mass = 2KE ÷ velocity²'],
+    aiAllowed: false
+  },
+  {
+    name: 'mass formula from density and volume',
+    question: 'How do I solve for mass if I have density and volume?',
+    type: 'science_formula',
+    includes: ['mass = density × volume'],
+    aiAllowed: false
+  },
+  {
+    name: 'mass formula from force and acceleration',
+    question: 'How do I solve for mass if I have force and acceleration?',
+    type: 'science_formula',
+    includes: ['mass = force / acceleration', 'm = F / a'],
+    aiAllowed: false
+  },
+  {
+    name: 'mass formula from kinetic energy and velocity',
+    question: 'How do I solve for mass if I have kinetic energy and velocity?',
+    type: 'science_formula',
+    includes: ['mass = 2KE / velocity²', 'm = 2KE / v²'],
+    aiAllowed: false
+  },
+  {
     name: 'atomic number from protons',
     question: 'A carbon atom has 6 protons. Question: What is carbon’s atomic number?',
     type: 'science_formula',
@@ -373,6 +443,14 @@ const tests = [
     type: 'science_formula',
     includes: ['R = 30 V / 5 A', 'R = 6 Ω'],
     excludes: ['P = 30 V × 5 A', '150 W'],
+    aiAllowed: false
+  },
+  {
+    name: 'electrical power beats ohms law when asking for watts',
+    question: 'A small lamp is connected to a 12 volt battery and has a current of 3 amps. Question: What electrical power does the lamp use in watts?',
+    type: 'science_formula',
+    includes: ['P = 12 V × 3 A', 'P = 36 W'],
+    excludes: ['R = 12 V / 3 A', 'R = 4 Ω'],
     aiAllowed: false
   },
   {
