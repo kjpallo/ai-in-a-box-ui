@@ -118,6 +118,18 @@
     });
   }
 
+  function sendStudentWhyThisMatters(sessionId) {
+    return fetchJson('/api/student/message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId,
+        message: "What's the point?",
+        intent: 'why_this_matters'
+      })
+    });
+  }
+
   const api = {
     askQuestion,
     createStudentSession,
@@ -133,6 +145,7 @@
     reloadTeacherFacts,
     sendDailySummary,
     sendStudentMessage,
+    sendStudentWhyThisMatters,
     sendVoiceTranscript
   };
 

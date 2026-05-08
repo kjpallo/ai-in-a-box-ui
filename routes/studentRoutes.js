@@ -1,3 +1,5 @@
+const { isInstructionalFollowUpPrompt } = require('../lib/standards/standardsFollowUp');
+
 function registerStudentRoutes(app, {
   answerStudentMessage,
   logCompletedInteraction,
@@ -6,6 +8,7 @@ function registerStudentRoutes(app, {
   app.post('/api/student/message', async (req, res) => {
     const sessionId = String(req.body?.sessionId || '').trim();
     const message = String(req.body?.message || '').trim();
+    const intent = String(req.body?.intent || '').trim();
     const session = studentSessions[sessionId];
 
     if (!session) {
@@ -17,9 +20,11 @@ function registerStudentRoutes(app, {
     }
 
     try {
-      const lastAnsweredPrompt = findLastAnsweredPrompt(session.messages);
+      const lastAnsweredContext = findLastAnsweredContext(session.messages);
       const result = await answerStudentMessage(message, {
-        lastAnsweredPrompt,
+        intent,
+        lastAnsweredPrompt: lastAnsweredContext.prompt,
+        lastAnsweredAnswer: lastAnsweredContext.answer,
         pendingClarification: session.pendingClarification || null
       });
       const entry = {
@@ -59,19 +64,24 @@ function registerStudentRoutes(app, {
   });
 }
 
-function findLastAnsweredPrompt(messages) {
-  if (!Array.isArray(messages)) return '';
+function findLastAnsweredContext(messages) {
+  if (!Array.isArray(messages)) return { prompt: '', answer: '' };
 
   for (let index = messages.length - 1; index >= 0; index -= 1) {
     const entry = messages[index];
     if (!entry?.message || entry.isStandardsFollowUp) continue;
+    if (isInstructionalFollowUpPrompt(entry.message)) continue;
     if (!entry.response) continue;
-    return entry.message;
+    return {
+      prompt: entry.message,
+      answer: entry.response
+    };
   }
 
-  return '';
+  return { prompt: '', answer: '' };
 }
 
 module.exports = {
+  findLastAnsweredContext,
   registerStudentRoutes
 };

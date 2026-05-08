@@ -23,6 +23,11 @@
         gap: 1rem;
       }
 
+      .student-response-panel {
+        position: relative;
+        overflow: visible;
+      }
+
       .student-session {
         color: #b9d8d1;
         overflow-wrap: anywhere;
@@ -40,7 +45,98 @@
 
       .student-response {
         min-height: 180px;
+        padding-right: 36px;
         white-space: pre-wrap;
+      }
+
+      .student-response-wrap {
+        position: relative;
+        overflow: visible;
+        z-index: 1;
+      }
+
+      .student-answer-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0.55rem;
+        flex-wrap: wrap;
+      }
+
+      .student-point-button {
+        position: absolute;
+        top: 50%;
+        right: -92px;
+        z-index: 5;
+        width: 78px;
+        height: 78px;
+        min-height: 78px;
+        padding: 0;
+        display: grid;
+        place-items: center;
+        border: 1px solid rgba(126,233,255,0.56);
+        border-radius: 50%;
+        background:
+          radial-gradient(circle at 50% 30%, rgba(126,233,255,0.26), transparent 46%),
+          linear-gradient(180deg, rgba(18,48,58,0.96), rgba(6,24,29,0.98));
+        color: #effff8;
+        font-size: 0.9rem;
+        font-weight: 900;
+        letter-spacing: 0;
+        line-height: 1;
+        text-align: center;
+        transform: translateY(-50%);
+        box-shadow:
+          0 0 22px rgba(126,233,255,0.24),
+          0 0 42px rgba(102,247,209,0.1),
+          inset 0 1px 0 rgba(255,255,255,0.12);
+      }
+
+      .student-point-button:hover {
+        border-color: rgba(102,247,209,0.56);
+        box-shadow:
+          0 0 26px rgba(102,247,209,0.3),
+          0 0 52px rgba(126,233,255,0.16),
+          inset 0 1px 0 rgba(255,255,255,0.12);
+      }
+
+      .student-point-button:active {
+        transform: translateY(-50%) scale(0.97);
+      }
+
+      .student-point-button.is-flashing {
+        animation: pointButtonFlash 620ms ease-out;
+      }
+
+      @keyframes pointButtonFlash {
+        0% {
+          background: linear-gradient(180deg, rgba(35,114,164,0.98), rgba(10,58,93,0.98));
+          border-color: rgba(126,233,255,0.9);
+          box-shadow:
+            0 0 18px rgba(126,233,255,0.78),
+            0 0 54px rgba(126,233,255,0.62),
+            0 0 86px rgba(126,233,255,0.28);
+        }
+
+        55% {
+          background: linear-gradient(180deg, rgba(34,132,96,0.98), rgba(8,65,49,0.98));
+          border-color: rgba(102,247,209,0.95);
+          box-shadow:
+            0 0 24px rgba(102,247,209,0.82),
+            0 0 68px rgba(102,247,209,0.66),
+            0 0 104px rgba(102,247,209,0.32);
+        }
+
+        100% {
+          background:
+            radial-gradient(circle at 50% 30%, rgba(126,233,255,0.26), transparent 46%),
+            linear-gradient(180deg, rgba(18,48,58,0.96), rgba(6,24,29,0.98));
+          border-color: rgba(126,233,255,0.56);
+          box-shadow:
+            0 0 22px rgba(126,233,255,0.24),
+            0 0 42px rgba(102,247,209,0.1),
+            inset 0 1px 0 rgba(255,255,255,0.12);
+        }
       }
 
       .student-history-panel {
@@ -115,6 +211,39 @@
         .student-history {
           max-height: 260px;
         }
+
+        .student-response-wrap {
+          padding-right: 0;
+        }
+
+        .student-point-button {
+          top: auto;
+          right: 0.75rem;
+          bottom: 0.75rem;
+          width: 68px;
+          height: 68px;
+          min-height: 68px;
+          font-size: 0.82rem;
+          transform: none;
+        }
+
+        .student-response {
+          padding-right: 5.5rem;
+          padding-bottom: 5.5rem;
+        }
+
+        .student-point-button:active {
+          transform: scale(0.97);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .student-point-button.is-flashing {
+          animation: none;
+          background: linear-gradient(180deg, rgba(34,132,96,0.98), rgba(8,65,49,0.98));
+          border-color: rgba(102,247,209,0.9);
+          box-shadow: 0 0 34px rgba(102,247,209,0.54);
+        }
       }
     </style>
   </head>
@@ -142,12 +271,23 @@
         </form>
       </section>
 
-      <section class="panel student-panel">
+      <section class="panel student-panel student-response-panel">
         <div class="panel-title-row">
           <h2>Response</h2>
-          <span id="studentRouteInfo" class="stream-status">No route yet</span>
+          <div class="student-answer-actions">
+            <span id="studentRouteInfo" class="stream-status">No route yet</span>
+          </div>
         </div>
-        <div id="studentResponse" class="response-text student-response">Ask a question to see the response here.</div>
+        <div class="student-response-wrap">
+          <div id="studentResponse" class="response-text student-response">Ask a question to see the response here.</div>
+          <button
+            type="button"
+            id="studentPointButton"
+            class="student-point-button"
+            aria-label="What’s the point?"
+            title="What’s the point?"
+          >Point?</button>
+        </div>
       </section>
 
       <section class="panel student-panel student-history-panel" aria-labelledby="studentHistoryTitle">

@@ -4,6 +4,7 @@
   const form = document.getElementById('studentMessageForm');
   const input = document.getElementById('studentMessageInput');
   const sendButton = document.getElementById('studentSendButton');
+  const pointButton = document.getElementById('studentPointButton');
   const responseBox = document.getElementById('studentResponse');
   const sessionText = document.getElementById('sessionIdText');
   const status = document.getElementById('studentStatus');
@@ -22,6 +23,7 @@
     validateSession();
 
     form.addEventListener('submit', handleSubmit);
+    pointButton?.addEventListener('click', handlePointClick);
   }
 
   async function handleSubmit(event) {
@@ -41,6 +43,35 @@
       status.textContent = 'Ready';
       addHistoryItem(message, data.response || 'No response returned.');
       input.value = '';
+    } catch (error) {
+      responseBox.textContent = error.message || 'Could not send message.';
+      routeInfo.textContent = 'Error';
+      status.textContent = 'Error';
+      if (/session/i.test(error.message || '')) {
+        showInvalidSession(error.message);
+      }
+    } finally {
+      setFormEnabled(sessionIsValid);
+      if (sessionIsValid) input.focus();
+    }
+  }
+
+  async function handlePointClick() {
+    if (!sessionIsValid) return;
+
+    flashPointButton();
+    playPointClick();
+    setFormEnabled(false);
+    status.textContent = 'Sending';
+    responseBox.textContent = 'Thinking...';
+    routeInfo.textContent = 'Routing';
+
+    try {
+      const data = await window.Charlemagne.api.sendStudentWhyThisMatters(sessionId);
+      responseBox.textContent = data.response || 'No response returned.';
+      routeInfo.textContent = `${data.routeType || 'unknown'} / ${data.confidence || 'unknown'}`;
+      status.textContent = 'Ready';
+      addHistoryItem("What's the point?", data.response || 'No response returned.');
     } catch (error) {
       responseBox.textContent = error.message || 'Could not send message.';
       routeInfo.textContent = 'Error';
@@ -94,6 +125,45 @@
   function setFormEnabled(enabled) {
     input.disabled = !enabled;
     sendButton.disabled = !enabled;
+    if (pointButton) pointButton.disabled = !enabled;
+  }
+
+  function flashPointButton() {
+    if (!pointButton) return;
+
+    pointButton.classList.remove('is-flashing');
+    void pointButton.offsetWidth;
+    pointButton.classList.add('is-flashing');
+    window.setTimeout(() => {
+      pointButton.classList.remove('is-flashing');
+    }, 660);
+  }
+
+  function playPointClick() {
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+
+      const audioContext = new AudioContext();
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      const now = audioContext.currentTime;
+
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(660, now);
+      oscillator.frequency.exponentialRampToValueAtTime(420, now + 0.055);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.045, now + 0.008);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.07);
+
+      oscillator.connect(gain);
+      gain.connect(audioContext.destination);
+      oscillator.start(now);
+      oscillator.stop(now + 0.075);
+      oscillator.addEventListener('ended', () => audioContext.close().catch(() => {}));
+    } catch {
+      // Browser audio policies can block this; the button still works without sound.
+    }
   }
 
   function addHistoryItem(message, response) {

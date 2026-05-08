@@ -4,12 +4,16 @@ const { routeStudentQuestion } = require('../lib/router/questionRouter');
 const { resolvePendingClarification } = require('../lib/router/pendingClarification');
 const { createQuestionAnswerService } = require('../lib/server/questionAnswerService');
 const { registerQuestionRoutes } = require('../routes/questionRoutes');
+const { findLastAnsweredContext } = require('../routes/studentRoutes');
 const { loadMissouriStandardsBank } = require('../lib/standards/standardsMatcher');
 const {
   NO_CONTEXT_MESSAGE,
+  NO_WHY_CONTEXT_MESSAGE,
   NO_STRONG_MATCH_MESSAGE,
+  answerWhyThisMattersFollowUp,
   answerStandardsFollowUp,
   formatStandardsAnswer,
+  formatWhyThisMattersAnswer,
   getWhyThisMattersForStandard,
   isStandardsFollowUp
 } = require('../lib/standards/standardsFollowUp');
@@ -61,6 +65,16 @@ const cases = [
     ]
   },
   {
+    name: 'stander misspelling after force question',
+    priorQuestion: 'What is the force if mass is 10 kg and acceleration is 2 m/s^2?',
+    followUp: 'what stander is that',
+    includes: [
+      'I can statement:',
+      'Standard code:',
+      '9-12.PS2.A.1'
+    ]
+  },
+  {
     name: 'what is this over after wave speed question',
     priorQuestion: 'If wavelength is 2 m and frequency is 3 Hz, what is wave speed?',
     followUp: 'what is this over',
@@ -102,16 +116,91 @@ assert.equal(
   'normal questions should not be handled as standards follow-ups'
 );
 
+runStandardsContextCarryoverTests();
 runStandardsClarificationTests();
 runWhyThisMattersTests();
 runRequestPathTests()
   .then(() => {
-    console.log(`Standards follow-up tests passed (${cases.length + 31} checks)`);
+    console.log('Standards follow-up tests passed');
   })
   .catch((error) => {
     console.error(error);
     process.exitCode = 1;
   });
+
+function runStandardsContextCarryoverTests() {
+  const gravityPrompt = 'what is the force of gravity';
+  const gravityAnswer = 'Near Earth, gravity is about 9.8 m/s² downward. Use g = 9.8 m/s² in the weight formula Fg = m × g.';
+
+  for (const followUp of ['what standered does this cover', 'what standard does this cover']) {
+    const result = answerStandardsFollowUp(followUp, gravityPrompt, {
+      lastAnsweredAnswer: gravityAnswer
+    });
+
+    assert.equal(result.handled, true, `${followUp} should be handled`);
+    assert.equal(result.matched, true, `${followUp} should use gravity context`);
+    assert.notEqual(result.response, NO_STRONG_MATCH_MESSAGE, `${followUp} should not return no strong match`);
+    assert.ok(result.response.includes('I can statement:'), `${followUp} should keep standards format`);
+    assert.ok(result.response.includes('Standard code:'), `${followUp} should keep standards format`);
+  }
+
+  const carriedContext = findLastAnsweredContext([
+    {
+      message: gravityPrompt,
+      response: gravityAnswer,
+      routeType: 'formula_only',
+      isStandardsFollowUp: false
+    },
+    {
+      message: "What's the point?",
+      response: "What's the point?\n\nThis matters because gravity affects real things like falling objects, weight, sports, ramps, cars, satellites, and why objects speed up as they fall.",
+      routeType: 'why_this_matters_followup',
+      isStandardsFollowUp: false
+    },
+    {
+      message: 'Read the full standard.',
+      response: 'Full official standard:\n...',
+      routeType: 'standards_followup',
+      isStandardsFollowUp: false
+    }
+  ]);
+
+  assert.deepEqual(
+    carriedContext,
+    { prompt: gravityPrompt, answer: gravityAnswer },
+    'student session context should skip point and standards follow-up prompts'
+  );
+
+  const examples = [
+    {
+      prompt: 'what are the units for density',
+      answer: 'Density is measured in g/mL, g/cm³, or kg/m³.'
+    },
+    {
+      prompt: 'how do I solve for power',
+      answer: 'There are two common power formulas: work/time power P = W / t and electrical power P = V × I.'
+    },
+    {
+      prompt: 'what is NaCl',
+      answer: 'NaCl is sodium chloride, also known as table salt. It is an ionic compound made from sodium ions and chloride ions.'
+    },
+    {
+      prompt: 'what is hydrogen',
+      answer: 'Hydrogen is an element made of hydrogen atoms. Its chemical symbol is H.'
+    }
+  ];
+
+  for (const example of examples) {
+    const result = answerStandardsFollowUp('what standard does this cover', example.prompt, {
+      lastAnsweredAnswer: example.answer
+    });
+
+    assert.equal(result.handled, true, `${example.prompt} standards follow-up should be handled`);
+    assert.equal(result.matched, true, `${example.prompt} should find useful standards context`);
+    assert.notEqual(result.response, NO_STRONG_MATCH_MESSAGE, `${example.prompt} should not return no strong match`);
+    assert.ok(result.response.includes('Want the full standard? Ask: "Read the full standard."'));
+  }
+}
 
 function runStandardsClarificationTests() {
   const multiStandardMatcher = () => ({
@@ -358,6 +447,71 @@ function runWhyThisMattersTests() {
     conceptTitle: 'Careful Observations'
   });
   assert.ok(fallback.includes('real situations'), 'generic fallback should still exist');
+
+  const forcePoint = answerWhyThisMattersFollowUp('What is the force if mass is 10 kg and acceleration is 2 m/s^2?');
+  assert.equal(forcePoint.handled, true);
+  assert.equal(forcePoint.matched, true);
+  assert.ok(forcePoint.response.startsWith("What's the point?\n\n"));
+  assert.ok(forcePoint.response.includes('car crashes, seatbelts, sports, ramps'));
+  assertWhyOnlyResponse(forcePoint.response, 'forces what-is-the-point response');
+
+  const gravityPoint = answerWhyThisMattersFollowUp('what is the force of gravity', {
+    lastAnsweredAnswer: 'Near Earth, gravity is about 9.8 m/s² downward. Use g = 9.8 m/s² in the weight formula Fg = m × g.'
+  });
+  assert.equal(gravityPoint.handled, true);
+  assert.equal(gravityPoint.matched, true);
+  assert.notEqual(gravityPoint.response, NO_WHY_CONTEXT_MESSAGE);
+  assert.ok(gravityPoint.response.includes('falling objects, weight, sports, ramps, cars, satellites'));
+  assertWhyOnlyResponse(gravityPoint.response, 'gravity what-is-the-point response');
+
+  const densityPoint = answerWhyThisMattersFollowUp('what is density');
+  assert.equal(densityPoint.handled, true);
+  assert.equal(densityPoint.matched, true);
+  assert.notEqual(densityPoint.response, NO_WHY_CONTEXT_MESSAGE);
+  assert.ok(densityPoint.response.includes('why objects float or sink'));
+  assertWhyOnlyResponse(densityPoint.response, 'density what-is-the-point response');
+
+  const energyPoint = answerWhyThisMattersFollowUp('What is the kinetic energy of a 2 kg cart moving 3 m/s?');
+  assert.equal(energyPoint.handled, true);
+  assert.equal(energyPoint.matched, true);
+  assert.ok(energyPoint.response.includes('machines need fuel or electricity'));
+  assertWhyOnlyResponse(energyPoint.response, 'energy what-is-the-point response');
+
+  const powerPoint = answerWhyThisMattersFollowUp('how do I solve for power');
+  assert.equal(powerPoint.handled, true);
+  assert.equal(powerPoint.matched, true);
+  assert.notEqual(powerPoint.response, NO_WHY_CONTEXT_MESSAGE);
+  assert.ok(powerPoint.response.includes('how quickly energy is used or transferred'));
+  assertWhyOnlyResponse(powerPoint.response, 'power what-is-the-point response');
+
+  const multiPoint = answerWhyThisMattersFollowUp(
+    'We are learning about forces, energy, and motion.',
+    {
+      matcher: () => ({
+        confidence: 'medium',
+        standards: [],
+        possibleStandards: [
+          { standardId: '9-12.PS2.A.1', unit: 'Forces and Motion', label: 'Forces and Motion' },
+          { standardId: '9-12.PS3.A.1', unit: 'Energy', label: 'Energy' },
+          { standardId: '9-12.PS4.A.1', unit: 'Waves', label: 'Waves' }
+        ]
+      })
+    }
+  );
+  assert.equal(multiPoint.standardId, '9-12.PS2.A.1', 'what-is-the-point should pick the highest ranked standard instead of asking');
+  assert.ok(!multiPoint.response.includes('This could match more than one standard.'));
+
+  const noWhyContext = answerWhyThisMattersFollowUp('');
+  assert.equal(noWhyContext.response, NO_WHY_CONTEXT_MESSAGE, 'what-is-the-point before science context should use friendly fallback');
+
+  const directWhy = formatWhyThisMattersAnswer({ standardId: '9-12.PS2.A.1' });
+  assertWhyOnlyResponse(directWhy, 'direct why formatter');
+}
+
+function assertWhyOnlyResponse(response, name) {
+  for (const blocked of ['I can statement', 'Standard code', 'Short summary', 'Full official standard', 'Want the full standard']) {
+    assert.ok(!response.includes(blocked), `${name} should not include "${blocked}"`);
+  }
 }
 
 async function runRequestPathTests() {
@@ -407,6 +561,35 @@ async function runStudentSessionPathTests() {
     !selected.response.includes('science skill your class is practicing'),
     'selected standards clarification should use practical why-this-matters wording'
   );
+
+  const point = await service.answerStudentMessage("What's the point?", {
+    intent: 'why_this_matters',
+    lastAnsweredPrompt: 'What is the force if mass is 10 kg and acceleration is 2 m/s^2?',
+    pendingClarification: null
+  });
+
+  assert.equal(point.routeType, 'why_this_matters_followup');
+  assert.equal(point.pendingClarification, null);
+  assert.ok(point.response.includes('car crashes, seatbelts, sports, ramps'));
+  assertWhyOnlyResponse(point.response, 'student session what-is-the-point');
+
+  const typedPoint = await service.answerStudentMessage("What's the point?", {
+    lastAnsweredPrompt: 'what is the force of gravity',
+    lastAnsweredAnswer: 'Near Earth, gravity is about 9.8 m/s² downward. Use g = 9.8 m/s² in the weight formula Fg = m × g.',
+    pendingClarification: null
+  });
+
+  assert.equal(typedPoint.routeType, 'why_this_matters_followup');
+  assert.ok(typedPoint.response.includes('falling objects, weight, sports, ramps, cars, satellites'));
+  assertWhyOnlyResponse(typedPoint.response, 'typed student session what-is-the-point');
+
+  const noContextPoint = await service.answerStudentMessage("What's the point?", {
+    intent: 'why_this_matters',
+    lastAnsweredPrompt: '',
+    pendingClarification: null
+  });
+
+  assert.equal(noContextPoint.response, NO_WHY_CONTEXT_MESSAGE);
 }
 
 async function runPowerClarificationPathTests() {

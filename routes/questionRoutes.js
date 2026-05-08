@@ -1,9 +1,12 @@
+const { isWhyThisMattersFollowUp } = require('../lib/standards/standardsFollowUp');
+
 function registerQuestionRoutes(app, {
   ollama,
   questionAnswer,
   tts
 }) {
   let lastAnsweredPrompt = '';
+  let lastAnsweredAnswer = '';
   let pendingClarification = null;
 
   function sendRouterTestResponse(message, res) {
@@ -107,7 +110,37 @@ function registerQuestionRoutes(app, {
         return;
       }
 
-      const standardsFollowUp = questionAnswer.answerStandardsFollowUp(message, lastAnsweredPrompt);
+      if (isWhyThisMattersFollowUp(message)) {
+        const whyThisMatters = await questionAnswer.answerStudentMessage(message, {
+          lastAnsweredPrompt,
+          lastAnsweredAnswer,
+          pendingClarification
+        });
+        pendingClarification = whyThisMatters.pendingClarification || null;
+        questionRoute = whyThisMatters.questionRoute;
+        fullText += whyThisMatters.response;
+        sendEvent({ type: 'router', router: questionRoute.public });
+        sendEvent({ type: 'text_delta', chunk: whyThisMatters.response });
+        queueSentenceForSpeech(whyThisMatters.response);
+        questionAnswer.logCompletedInteraction({
+          message,
+          questionRoute,
+          answerGiven: fullText,
+          source: 'chat_why_this_matters_followup',
+          debug: {
+            contextQuestion: lastAnsweredPrompt,
+            contextAnswer: lastAnsweredAnswer
+          }
+        });
+        await ttsChain;
+        sendEvent({ type: 'done', fullText });
+        res.end();
+        return;
+      }
+
+      const standardsFollowUp = questionAnswer.answerStandardsFollowUp(message, lastAnsweredPrompt, {
+        lastAnsweredAnswer
+      });
 
       if (standardsFollowUp?.handled) {
         pendingClarification = standardsFollowUp.pendingClarification || null;
@@ -141,7 +174,8 @@ function registerQuestionRoutes(app, {
           answerGiven: fullText,
           source: 'chat_standards_followup',
           debug: {
-            contextQuestion: lastAnsweredPrompt
+            contextQuestion: lastAnsweredPrompt,
+            contextAnswer: lastAnsweredAnswer
           }
         });
         await ttsChain;
@@ -238,6 +272,7 @@ function registerQuestionRoutes(app, {
       });
       if (fullText.trim()) {
         lastAnsweredPrompt = message;
+        lastAnsweredAnswer = fullText;
       }
 
       await ttsChain;
