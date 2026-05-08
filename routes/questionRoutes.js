@@ -4,6 +4,7 @@ function registerQuestionRoutes(app, {
   tts
 }) {
   let lastAnsweredPrompt = '';
+  let pendingClarification = null;
 
   function sendRouterTestResponse(message, res) {
     const { matchedKnowledge, questionRoute } = questionAnswer.routeMessage(message);
@@ -85,9 +86,31 @@ function registerQuestionRoutes(app, {
       let pending = '';
       let speechBuffer = [];
       let firstChunkSent = false;
+      const clarificationFollowUp = questionAnswer.resolvePendingClarification(message, pendingClarification);
+
+      if (clarificationFollowUp?.handled) {
+        pendingClarification = clarificationFollowUp.pendingClarification || null;
+        questionRoute = clarificationFollowUp.questionRoute;
+        fullText += questionRoute.directAnswer;
+        sendEvent({ type: 'router', router: questionRoute.public });
+        sendEvent({ type: 'text_delta', chunk: questionRoute.directAnswer });
+        queueSentenceForSpeech(questionRoute.directAnswer);
+        questionAnswer.logCompletedInteraction({
+          message,
+          questionRoute,
+          answerGiven: fullText,
+          source: 'chat_router'
+        });
+        await ttsChain;
+        sendEvent({ type: 'done', fullText });
+        res.end();
+        return;
+      }
+
       const standardsFollowUp = questionAnswer.answerStandardsFollowUp(message, lastAnsweredPrompt);
 
       if (standardsFollowUp?.handled) {
+        pendingClarification = null;
         fullText += standardsFollowUp.response;
         questionRoute = {
           type: 'standards_followup',
@@ -119,6 +142,7 @@ function registerQuestionRoutes(app, {
       }
 
       ({ matchedKnowledge, questionRoute } = questionAnswer.routeMessage(message));
+      pendingClarification = questionAnswer.nextPendingClarification(questionRoute);
 
       console.log('Knowledge matches:', matchedKnowledge.map((item) => item.title || item.id));
       console.log('Question route:', questionRoute.public);

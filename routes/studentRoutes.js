@@ -18,7 +18,10 @@ function registerStudentRoutes(app, {
 
     try {
       const lastAnsweredPrompt = findLastAnsweredPrompt(session.messages);
-      const result = await answerStudentMessage(message, { lastAnsweredPrompt });
+      const result = await answerStudentMessage(message, {
+        lastAnsweredPrompt,
+        pendingClarification: session.pendingClarification || null
+      });
       const entry = {
         message,
         response: result.response,
@@ -28,6 +31,7 @@ function registerStudentRoutes(app, {
         createdAt: new Date().toISOString()
       };
 
+      session.pendingClarification = result.pendingClarification || null;
       session.messages.push(entry);
 
       logCompletedInteraction({

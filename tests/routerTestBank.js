@@ -4795,6 +4795,48 @@ routerTestBank.push(
   },
   {
     category: 'answer_intent',
+    name: 'density units handles dinsity misspelling',
+    question: 'what are the units for dinsity',
+    type: 'units_only',
+    includes: ['Density is measured in g/mL, g/cm³, or kg/m³.'],
+    excludes: ['I do not have a trusted local fact'],
+    aiAllowed: false
+  },
+  {
+    category: 'answer_intent',
+    name: 'density units handles densitty misspelling',
+    question: 'what are the units for densitty',
+    type: 'units_only',
+    includes: ['Density is measured in g/mL, g/cm³, or kg/m³.'],
+    excludes: ['I do not have a trusted local fact'],
+    aiAllowed: false
+  },
+  {
+    category: 'answer_intent',
+    name: 'speed units handles messy singular phrasing',
+    question: 'what is the units for speed',
+    type: 'units_only',
+    includes: ['Speed is measured in m/s, km/h, or mph.'],
+    aiAllowed: false
+  },
+  {
+    category: 'answer_intent',
+    name: 'mass units handles use phrasing',
+    question: 'what unit do you use for mass',
+    type: 'units_only',
+    includes: ['Mass is measured in g or kg.'],
+    aiAllowed: false
+  },
+  {
+    category: 'answer_intent',
+    name: 'density units handles use phrasing',
+    question: 'what units do you use for density',
+    type: 'units_only',
+    includes: ['Density is measured in g/mL, g/cm³, or kg/m³.'],
+    aiAllowed: false
+  },
+  {
+    category: 'answer_intent',
     name: 'mass symbol only',
     question: 'What is the symbol for mass?',
     type: 'symbol_only',
@@ -4843,7 +4885,15 @@ routerTestBank.push(
     name: 'ambiguous power formula asks clarification',
     question: 'What is the formula for power?',
     type: 'formula_only',
-    includes: ['There are two common power formulas:', '1. Electrical power: P = V × I', '2. Work/time power: P = W / t', 'Which one are you working on?'],
+    includes: ['There are two common power formulas:', '1. Work/time power: P = W / t', '2. Electrical power: P = V × I', 'Which one are you working on?'],
+    aiAllowed: false
+  },
+  {
+    category: 'answer_intent',
+    name: 'ambiguous power solve asks clarification',
+    question: 'how do I solve for power',
+    type: 'formula_only',
+    includes: ['There are two common power formulas:', '1. Work/time power: P = W / t', '2. Electrical power: P = V × I', 'Which one are you working on?'],
     aiAllowed: false
   },
   {
@@ -4853,6 +4903,42 @@ routerTestBank.push(
     type: 'formula_only',
     includes: ['P = W / t.'],
     excludes: ['Which one are you working on?', 'P = V × I'],
+    aiAllowed: false
+  },
+  {
+    category: 'answer_intent',
+    name: 'work time power solve direct',
+    question: 'how do I solve for power using work and time',
+    type: 'formula_only',
+    includes: ['P = W / t.'],
+    excludes: ['Which one are you working on?', 'P = V × I'],
+    aiAllowed: false
+  },
+  {
+    category: 'answer_intent',
+    name: 'work time power solve with direct',
+    question: 'how do I solve for power with work and time',
+    type: 'formula_only',
+    includes: ['P = W / t.'],
+    excludes: ['Which one are you working on?', 'P = V × I'],
+    aiAllowed: false
+  },
+  {
+    category: 'answer_intent',
+    name: 'electrical power solve direct',
+    question: 'how do I solve for electrical power',
+    type: 'formula_only',
+    includes: ['P = V × I.'],
+    excludes: ['Which one are you working on?', 'P = W / t'],
+    aiAllowed: false
+  },
+  {
+    category: 'answer_intent',
+    name: 'voltage current power solve direct',
+    question: 'how do I solve for power with voltage and current',
+    type: 'formula_only',
+    includes: ['P = V × I.'],
+    excludes: ['Which one are you working on?', 'P = W / t'],
     aiAllowed: false
   },
   {

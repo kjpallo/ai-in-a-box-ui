@@ -2,6 +2,10 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { routeStudentQuestion } = require('../lib/router/questionRouter');
+const {
+  nextPendingClarification,
+  resolvePendingClarification
+} = require('../lib/router/pendingClarification');
 
 const teacherFactsPath = path.join(__dirname, '..', 'knowledge', 'teacher_facts.json');
 const teacherFactsRaw = JSON.parse(fs.readFileSync(teacherFactsPath, 'utf8'));
@@ -179,6 +183,43 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'density units handles dinsity misspelling',
+    question: 'what are the units for dinsity',
+    type: 'units_only',
+    includes: ['Density is measured in g/mL, g/cm³, or kg/m³.'],
+    excludes: ['I do not have a trusted local fact'],
+    aiAllowed: false
+  },
+  {
+    name: 'density units handles densitty misspelling',
+    question: 'what are the units for densitty',
+    type: 'units_only',
+    includes: ['Density is measured in g/mL, g/cm³, or kg/m³.'],
+    excludes: ['I do not have a trusted local fact'],
+    aiAllowed: false
+  },
+  {
+    name: 'speed units handles messy singular phrasing',
+    question: 'what is the units for speed',
+    type: 'units_only',
+    includes: ['Speed is measured in m/s, km/h, or mph.'],
+    aiAllowed: false
+  },
+  {
+    name: 'mass units handles use phrasing',
+    question: 'what unit do you use for mass',
+    type: 'units_only',
+    includes: ['Mass is measured in g or kg.'],
+    aiAllowed: false
+  },
+  {
+    name: 'density units handles use phrasing',
+    question: 'what units do you use for density',
+    type: 'units_only',
+    includes: ['Density is measured in g/mL, g/cm³, or kg/m³.'],
+    aiAllowed: false
+  },
+  {
     name: 'mass symbol stays narrow',
     question: 'What is the symbol for mass?',
     type: 'symbol_only',
@@ -222,7 +263,14 @@ const tests = [
     name: 'ambiguous power formula asks clarification',
     question: 'What is the formula for power?',
     type: 'formula_only',
-    includes: ['There are two common power formulas:', '1. Electrical power: P = V × I', '2. Work/time power: P = W / t', 'Which one are you working on?'],
+    includes: ['There are two common power formulas:', '1. Work/time power: P = W / t', '2. Electrical power: P = V × I', 'Which one are you working on?'],
+    aiAllowed: false
+  },
+  {
+    name: 'ambiguous power solve asks clarification',
+    question: 'how do I solve for power',
+    type: 'formula_only',
+    includes: ['There are two common power formulas:', '1. Work/time power: P = W / t', '2. Electrical power: P = V × I', 'Which one are you working on?'],
     aiAllowed: false
   },
   {
@@ -231,6 +279,38 @@ const tests = [
     type: 'formula_only',
     includes: ['P = W / t.'],
     excludes: ['Which one are you working on?', 'P = V × I'],
+    aiAllowed: false
+  },
+  {
+    name: 'work time power solve direct',
+    question: 'how do I solve for power using work and time',
+    type: 'formula_only',
+    includes: ['P = W / t.'],
+    excludes: ['Which one are you working on?', 'P = V × I'],
+    aiAllowed: false
+  },
+  {
+    name: 'work time power solve with direct',
+    question: 'how do I solve for power with work and time',
+    type: 'formula_only',
+    includes: ['P = W / t.'],
+    excludes: ['Which one are you working on?', 'P = V × I'],
+    aiAllowed: false
+  },
+  {
+    name: 'electrical power solve direct',
+    question: 'how do I solve for electrical power',
+    type: 'formula_only',
+    includes: ['P = V × I.'],
+    excludes: ['Which one are you working on?', 'P = W / t'],
+    aiAllowed: false
+  },
+  {
+    name: 'voltage current power solve direct',
+    question: 'how do I solve for power with voltage and current',
+    type: 'formula_only',
+    includes: ['P = V × I.'],
+    excludes: ['Which one are you working on?', 'P = W / t'],
     aiAllowed: false
   },
   {
@@ -803,9 +883,61 @@ for (const test of tests) {
   }
 }
 
+runPendingClarificationTests();
+
 if (process.exitCode) {
   process.exit(process.exitCode);
 }
 
 console.log(`\n${passed}/${tests.length} router tests passed.`);
 process.exit(0);
+
+function runPendingClarificationTests() {
+  const powerClarificationRoute = routeStudentQuestion('how do I solve for power', []);
+  const pendingPowerClarification = nextPendingClarification(powerClarificationRoute);
+
+  try {
+    assert.ok(pendingPowerClarification, 'power clarification should expose pending choices');
+    assert.equal(pendingPowerClarification.id, 'power_formula');
+    assert.equal(pendingPowerClarification.choices.length, 2);
+
+    const workChoice = resolvePendingClarification('1', pendingPowerClarification);
+    assert.equal(workChoice.handled, true);
+    assert.equal(workChoice.pendingClarification, null);
+    assert.equal(workChoice.questionRoute.type, 'formula_only');
+    assert.ok(workChoice.questionRoute.directAnswer.includes('Power = work ÷ time'));
+    assert.ok(workChoice.questionRoute.directAnswer.includes('P = W / t'));
+    assert.ok(!workChoice.questionRoute.directAnswer.includes('Which one are you working on?'));
+
+    const electricalChoice = resolvePendingClarification('2', pendingPowerClarification);
+    assert.equal(electricalChoice.handled, true);
+    assert.equal(electricalChoice.pendingClarification, null);
+    assert.equal(electricalChoice.questionRoute.type, 'formula_only');
+    assert.ok(electricalChoice.questionRoute.directAnswer.includes('Power = voltage × current'));
+    assert.ok(electricalChoice.questionRoute.directAnswer.includes('P = V × I'));
+    assert.ok(!electricalChoice.questionRoute.directAnswer.includes('Which one are you working on?'));
+
+    const standaloneNumberRoute = routeStudentQuestion('2', []);
+    assert.ok(
+      !String(standaloneNumberRoute.directAnswer || '').includes('Power = voltage × current'),
+      'standalone 2 without pending clarification should not answer electrical power'
+    );
+
+    const invalidChoice = resolvePendingClarification('3', pendingPowerClarification);
+    assert.equal(invalidChoice.handled, true);
+    assert.equal(invalidChoice.pendingClarification, pendingPowerClarification);
+    assert.equal(invalidChoice.questionRoute.directAnswer, 'Please type one of the choices listed, like 1 or 2.');
+
+    const normalQuestion = resolvePendingClarification('What is the formula for force?', pendingPowerClarification);
+    assert.equal(normalQuestion, null);
+    const normalQuestionRoute = routeStudentQuestion('What is the formula for force?', []);
+    assert.equal(normalQuestionRoute.type, 'formula_only');
+    assert.ok(normalQuestionRoute.directAnswer.includes('F = m × a.'));
+
+    console.log('✅ pending clarification: power choices resolve by number');
+  } catch (error) {
+    console.error('❌ pending clarification: power choices resolve by number');
+    console.error(error.message);
+    process.exitCode = 1;
+  }
+}
