@@ -110,7 +110,7 @@ function registerQuestionRoutes(app, {
       const standardsFollowUp = questionAnswer.answerStandardsFollowUp(message, lastAnsweredPrompt);
 
       if (standardsFollowUp?.handled) {
-        pendingClarification = null;
+        pendingClarification = standardsFollowUp.pendingClarification || null;
         fullText += standardsFollowUp.response;
         questionRoute = {
           type: 'standards_followup',
@@ -120,7 +120,16 @@ function registerQuestionRoutes(app, {
           public: {
             type: 'standards_followup',
             confidence: standardsFollowUp.matched ? 'strong' : 'none',
-            standardId: standardsFollowUp.standardId || ''
+            standardId: standardsFollowUp.standardId || '',
+            pendingClarification: standardsFollowUp.pendingClarification
+              ? {
+                id: standardsFollowUp.pendingClarification.id,
+                choices: standardsFollowUp.pendingClarification.choices.map((choice) => ({
+                  number: choice.number,
+                  label: choice.label
+                }))
+              }
+              : undefined
           }
         };
         sendEvent({ type: 'router', router: questionRoute.public });
