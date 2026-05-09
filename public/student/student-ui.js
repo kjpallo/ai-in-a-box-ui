@@ -16,24 +16,37 @@
   const historyBox = document.getElementById('studentHistory');
   const historyCount = document.getElementById('studentHistoryCount');
   const frictionWarning = document.getElementById('studentFrictionWarning');
+  const energyPanel = document.getElementById('studentQuestionEnergy');
+  const energyValue = document.getElementById('studentQuestionEnergyValue');
+  const energyFill = document.getElementById('studentQuestionEnergyFill');
   const chatHistory = [];
   const controls = {
     studentCopyInspectLockEnabled: true,
     studentQuestionRateLimitEnabled: true,
     studentQuestionsPerMinute: 6
   };
+  const rateLimitState = {
+    enabled: false,
+    limit: 6,
+    remaining: 6,
+    windowSeconds: 60,
+    resetInSeconds: 0
+  };
   let sessionIsValid = false;
   let heartbeatTimer = null;
+  let rateLimitStatusTimer = null;
+  let resetTickTimer = null;
   let warningTimer = null;
   let devtoolsTimer = null;
 
-  function init() {
+  async function init() {
     if (!form || !input || !sendButton) return;
 
     sessionText.textContent = sessionId || 'Missing session';
     setFormEnabled(false);
-    loadStudentControls();
-    validateSession();
+    await loadStudentControls();
+    renderRateLimitEnergy();
+    await validateSession();
 
     form.addEventListener('submit', handleSubmit);
     pointButton?.addEventListener('click', handlePointClick);
@@ -53,6 +66,7 @@
 
     try {
       const data = await window.Charlemagne.api.sendStudentMessage(sessionId, message, studentHubId);
+      updateRateLimitState(data.rateLimit);
       responseBox.textContent = data.response || 'No response returned.';
       routeInfo.textContent = `${data.routeType || 'unknown'} / ${data.confidence || 'unknown'}`;
       status.textContent = 'Ready';
@@ -60,6 +74,7 @@
       input.value = '';
     } catch (error) {
       const message = error.message || 'Could not send message.';
+      updateRateLimitState(error.rateLimit);
       responseBox.textContent = friendlyStudentError(message);
       routeInfo.textContent = 'Error';
       status.textContent = 'Error';
@@ -84,12 +99,14 @@
 
     try {
       const data = await window.Charlemagne.api.sendStudentWhyThisMatters(sessionId, studentHubId);
+      updateRateLimitState(data.rateLimit);
       responseBox.textContent = data.response || 'No response returned.';
       routeInfo.textContent = `${data.routeType || 'unknown'} / ${data.confidence || 'unknown'}`;
       status.textContent = 'Ready';
       addHistoryItem("What's the point?", data.response || 'No response returned.');
     } catch (error) {
       const message = error.message || 'Could not send message.';
+      updateRateLimitState(error.rateLimit);
       responseBox.textContent = friendlyStudentError(message);
       routeInfo.textContent = 'Error';
       status.textContent = 'Error';
@@ -110,6 +127,7 @@
 
     try {
       await window.Charlemagne.api.joinStudentSession(sessionId, studentHubId);
+      await refreshRateLimitStatus();
 
       sessionIsValid = true;
       sessionText.textContent = sessionId;
@@ -118,6 +136,7 @@
       responseBox.textContent = 'Ask a question to see the response here.';
       setFormEnabled(true);
       startHeartbeat();
+      startRateLimitRefresh();
       input.focus();
     } catch (error) {
       showInvalidSession(error.message || 'Could not check this student session.');
@@ -130,10 +149,16 @@
       controls.studentCopyInspectLockEnabled = data.studentCopyInspectLockEnabled !== false;
       controls.studentQuestionRateLimitEnabled = data.studentQuestionRateLimitEnabled !== false;
       controls.studentQuestionsPerMinute = Number(data.studentQuestionsPerMinute) || 6;
+      rateLimitState.enabled = controls.studentQuestionRateLimitEnabled;
+      rateLimitState.limit = controls.studentQuestionsPerMinute;
+      rateLimitState.remaining = controls.studentQuestionsPerMinute;
     } catch {
       controls.studentCopyInspectLockEnabled = true;
       controls.studentQuestionRateLimitEnabled = true;
       controls.studentQuestionsPerMinute = 6;
+      rateLimitState.enabled = true;
+      rateLimitState.limit = 6;
+      rateLimitState.remaining = 6;
     }
   }
 
@@ -149,6 +174,72 @@
     }, 30_000);
   }
 
+  async function refreshRateLimitStatus() {
+    if (!sessionId || !studentHubId) return;
+    try {
+      const data = await window.Charlemagne.api.fetchStudentRateLimitStatus(sessionId, studentHubId);
+      updateRateLimitState(data.rateLimit);
+    } catch {
+      renderRateLimitEnergy();
+    }
+  }
+
+  function startRateLimitRefresh() {
+    if (!resetTickTimer) {
+      resetTickTimer = window.setInterval(() => {
+        if (!rateLimitState.enabled || rateLimitState.resetInSeconds <= 0) return;
+        rateLimitState.resetInSeconds = Math.max(0, rateLimitState.resetInSeconds - 1);
+        renderRateLimitEnergy();
+        if (rateLimitState.resetInSeconds === 0) {
+          refreshRateLimitStatus().catch(() => {});
+        }
+      }, 1000);
+    }
+
+    if (rateLimitStatusTimer) return;
+    rateLimitStatusTimer = window.setInterval(() => {
+      refreshRateLimitStatus().catch(() => {});
+    }, 12_000);
+  }
+
+  function updateRateLimitState(rateLimit) {
+    if (!rateLimit || typeof rateLimit !== 'object') return;
+
+    rateLimitState.enabled = rateLimit.enabled === true;
+    rateLimitState.limit = normalizePositiveInteger(rateLimit.limit, controls.studentQuestionsPerMinute);
+    rateLimitState.remaining = Math.max(0, normalizeNonNegativeInteger(rateLimit.remaining, rateLimitState.limit));
+    rateLimitState.windowSeconds = normalizePositiveInteger(rateLimit.windowSeconds, 60);
+    rateLimitState.resetInSeconds = normalizeNonNegativeInteger(rateLimit.resetInSeconds, 0);
+    controls.studentQuestionRateLimitEnabled = rateLimitState.enabled;
+    controls.studentQuestionsPerMinute = rateLimitState.limit;
+    renderRateLimitEnergy();
+  }
+
+  function renderRateLimitEnergy() {
+    if (!energyPanel || !energyValue || !energyFill) return;
+
+    const limit = normalizePositiveInteger(rateLimitState.limit, controls.studentQuestionsPerMinute);
+    const remaining = Math.max(0, Math.min(limit, Number(rateLimitState.remaining) || 0));
+    const percent = rateLimitState.enabled ? Math.max(0, Math.min(100, (remaining / limit) * 100)) : 100;
+
+    energyPanel.hidden = false;
+    energyPanel.classList.toggle('is-off', !rateLimitState.enabled);
+    energyPanel.classList.toggle('is-low', rateLimitState.enabled && remaining > 0 && remaining <= Math.max(1, Math.ceil(limit * 0.25)));
+    energyPanel.classList.toggle('is-empty', rateLimitState.enabled && remaining <= 0);
+    energyFill.style.width = `${percent}%`;
+
+    if (!rateLimitState.enabled) {
+      energyValue.textContent = 'Question limit: Off';
+      energyFill.style.width = '100%';
+      return;
+    }
+
+    const resetText = remaining <= 0 && rateLimitState.resetInSeconds > 0
+      ? ` • resets in ${rateLimitState.resetInSeconds}s`
+      : '';
+    energyValue.textContent = `${remaining} / ${limit} questions left this minute${resetText}`;
+  }
+
   function showInvalidSession(message) {
     sessionIsValid = false;
     sessionMessage.textContent = message;
@@ -162,6 +253,7 @@
     input.disabled = !enabled;
     sendButton.disabled = !enabled;
     if (pointButton) pointButton.disabled = !enabled;
+    if (askHighlightButton) askHighlightButton.disabled = !enabled;
   }
 
   function handleAskHighlightClick() {
@@ -336,6 +428,18 @@
   function createStudentHubId() {
     if (window.crypto?.randomUUID) return window.crypto.randomUUID();
     return `hub-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+
+  function normalizePositiveInteger(value, fallback) {
+    const number = Number(value);
+    if (!Number.isInteger(number) || number < 1) return Number(fallback) || 1;
+    return number;
+  }
+
+  function normalizeNonNegativeInteger(value, fallback) {
+    const number = Number(value);
+    if (!Number.isInteger(number) || number < 0) return Math.max(0, Number(fallback) || 0);
+    return number;
   }
 
   function escapeHtml(value) {

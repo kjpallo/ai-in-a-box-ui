@@ -8,7 +8,11 @@
         window.location.href = '/login.html';
       }
 
-      throw new Error(data.error || data.message || `HTTP ${response.status}`);
+      const error = new Error(data.error || data.message || `HTTP ${response.status}`);
+      error.status = response.status;
+      error.code = data.code || '';
+      error.rateLimit = data.rateLimit || null;
+      throw error;
     }
 
     return data;
@@ -112,6 +116,15 @@
     return fetchJson('/api/student/controls');
   }
 
+  function fetchStudentRateLimitStatus(sessionId, studentHubId = '') {
+    const query = new URLSearchParams({
+      sessionId: String(sessionId || ''),
+      classSessionId: String(sessionId || ''),
+      studentHubId: String(studentHubId || '')
+    });
+    return fetchJson(`/api/student/rate-limit-status?${query.toString()}`);
+  }
+
   function sendDailySummary(date) {
     return fetchJson('/api/profile/send-daily-summary', {
       method: 'POST',
@@ -171,6 +184,7 @@
     fetchStandardsSummary,
     fetchStudentSessions,
     fetchStudentControls,
+    fetchStudentRateLimitStatus,
     fetchSystemHealth,
     fetchVoices,
     joinStudentSession,

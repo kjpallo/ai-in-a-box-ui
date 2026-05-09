@@ -20,6 +20,31 @@ function registerStudentRoutes(app, {
     });
   });
 
+  app.get('/api/student/rate-limit-status', (req, res) => {
+    const sessionId = String(req.query?.sessionId || req.query?.classSessionId || '').trim();
+    const studentHubId = String(req.query?.studentHubId || '').trim();
+    const session = studentSessions[sessionId];
+
+    if (!session) {
+      return res.status(404).json({ error: 'Student session not found.' });
+    }
+
+    if (!studentHubId) {
+      return res.status(400).json({ error: 'Student hub id is required.' });
+    }
+
+    touchAnonymousHub(session, studentHubId);
+    const controls = normalizeStudentControls(getClassroomControls());
+    res.json({
+      rateLimit: getStudentRateLimitInfo({
+        controls,
+        questionRateLimiter,
+        classSessionId: sessionId,
+        studentHubId
+      })
+    });
+  });
+
   app.post('/api/student/join', (req, res) => {
     const sessionId = String(req.body?.sessionId || req.body?.classSessionId || '').trim();
     const studentHubId = String(req.body?.studentHubId || '').trim();
@@ -69,18 +94,32 @@ function registerStudentRoutes(app, {
     try {
       const hub = touchAnonymousHub(session, studentHubId);
       const controls = normalizeStudentControls(getClassroomControls());
+      let rateLimitInfo = getStudentRateLimitInfo({
+        controls,
+        questionRateLimiter,
+        classSessionId: sessionId,
+        studentHubId
+      });
+
       if (controls.studentQuestionRateLimitEnabled) {
         const rateLimit = questionRateLimiter.check({
           classSessionId: sessionId,
           studentHubId,
           questionsPerMinute: controls.studentQuestionsPerMinute
         });
+        rateLimitInfo = toPublicRateLimit({
+          enabled: true,
+          limit: controls.studentQuestionsPerMinute,
+          remaining: rateLimit.remaining,
+          resetInSeconds: rateLimit.resetInSeconds
+        });
 
         if (!rateLimit.allowed) {
           return res.status(429).json({
             error: 'Slow down a little. Try reading the last answer before asking another question.',
             code: 'student_rate_limited',
-            retryAfterMs: rateLimit.retryAfterMs
+            retryAfterMs: rateLimit.retryAfterMs,
+            rateLimit: rateLimitInfo
           });
         }
       }
@@ -126,7 +165,8 @@ function registerStudentRoutes(app, {
       res.json({
         response: result.response,
         routeType: result.routeType,
-        confidence: result.confidence
+        confidence: result.confidence,
+        rateLimit: rateLimitInfo
       });
     } catch (error) {
       console.error('Student message route error:', error);
@@ -154,26 +194,59 @@ function createStudentQuestionRateLimiter({ now = () => Date.now() } = {}) {
   const buckets = new Map();
   const windowMs = 60_000;
 
+  function getBucket(key, currentTime) {
+    const bucket = (buckets.get(key) || []).filter((timestamp) => currentTime - timestamp < windowMs);
+    buckets.set(key, bucket);
+    return bucket;
+  }
+
+  function getStatusForBucket(bucket, limit, currentTime) {
+    const oldest = bucket[0] || currentTime;
+    const remaining = Math.max(0, limit - bucket.length);
+    const resetInMs = bucket.length ? Math.max(0, windowMs - (currentTime - oldest)) : 0;
+    return {
+      limit,
+      remaining,
+      windowSeconds: Math.floor(windowMs / 1000),
+      resetInSeconds: Math.ceil(resetInMs / 1000)
+    };
+  }
+
+  function getKey(classSessionId, studentHubId) {
+    return `${String(classSessionId || '').trim()}::${String(studentHubId || '').trim()}`;
+  }
+
   return {
     check({ classSessionId, studentHubId, questionsPerMinute }) {
       const limit = normalizeQuestionLimit(questionsPerMinute);
-      const key = `${String(classSessionId || '').trim()}::${String(studentHubId || '').trim()}`;
+      const key = getKey(classSessionId, studentHubId);
       const currentTime = now();
-      const bucket = (buckets.get(key) || []).filter((timestamp) => currentTime - timestamp < windowMs);
+      const bucket = getBucket(key, currentTime);
 
       // TODO: Math guided problem-solving questions may use a different rate limit later.
       if (bucket.length >= limit) {
         const oldest = bucket[0] || currentTime;
-        buckets.set(key, bucket);
         return {
           allowed: false,
-          retryAfterMs: Math.max(1000, windowMs - (currentTime - oldest))
+          retryAfterMs: Math.max(1000, windowMs - (currentTime - oldest)),
+          ...getStatusForBucket(bucket, limit, currentTime)
         };
       }
 
       bucket.push(currentTime);
       buckets.set(key, bucket);
-      return { allowed: true, retryAfterMs: 0 };
+      return {
+        allowed: true,
+        retryAfterMs: 0,
+        ...getStatusForBucket(bucket, limit, currentTime)
+      };
+    },
+    status({ classSessionId, studentHubId, questionsPerMinute }) {
+      const limit = normalizeQuestionLimit(questionsPerMinute);
+      const key = getKey(classSessionId, studentHubId);
+      const currentTime = now();
+      const bucket = getBucket(key, currentTime);
+      return getStatusForBucket(bucket, limit, currentTime);
     },
     reset() {
       buckets.clear();
@@ -185,6 +258,40 @@ function normalizeQuestionLimit(value) {
   const number = Number(value);
   if (!Number.isInteger(number) || number < 1) return 6;
   return Math.min(number, 30);
+}
+
+function getStudentRateLimitInfo({ controls, questionRateLimiter, classSessionId, studentHubId }) {
+  if (!controls.studentQuestionRateLimitEnabled) {
+    return toPublicRateLimit({
+      enabled: false,
+      limit: controls.studentQuestionsPerMinute,
+      remaining: controls.studentQuestionsPerMinute,
+      resetInSeconds: 0
+    });
+  }
+
+  const status = questionRateLimiter.status({
+    classSessionId,
+    studentHubId,
+    questionsPerMinute: controls.studentQuestionsPerMinute
+  });
+
+  return toPublicRateLimit({
+    enabled: true,
+    limit: status.limit,
+    remaining: status.remaining,
+    resetInSeconds: status.resetInSeconds
+  });
+}
+
+function toPublicRateLimit({ enabled, limit, remaining, resetInSeconds }) {
+  return {
+    enabled: Boolean(enabled),
+    limit: normalizeQuestionLimit(limit),
+    remaining: Math.max(0, Number.isFinite(Number(remaining)) ? Number(remaining) : 0),
+    windowSeconds: 60,
+    resetInSeconds: Math.max(0, Number.isFinite(Number(resetInSeconds)) ? Math.ceil(Number(resetInSeconds)) : 0)
+  };
 }
 
 function touchAnonymousHub(session, studentHubId) {
@@ -259,7 +366,9 @@ module.exports = {
   findLastAnsweredContext,
   findLastStandardIdForCurrentContext,
   createStudentQuestionRateLimiter,
+  getStudentRateLimitInfo,
   normalizeStudentControls,
+  toPublicRateLimit,
   registerStudentRoutes,
   touchAnonymousHub
 };

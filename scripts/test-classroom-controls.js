@@ -106,23 +106,63 @@ async function testStudentSafeControlsAndRateLimit() {
   assert.equal(publicControls.body.studentCopyInspectLockEnabled, true);
   assert.equal(publicControls.body.teacherOnlySecret, undefined);
 
+  const initialStatus = await getRateLimitStatus(handlers, 'classA', 'student-a');
+  assert.equal(initialStatus.statusCode, 200);
+  assert.deepEqual(Object.keys(initialStatus.body).sort(), ['rateLimit']);
+  assert.equal(initialStatus.body.rateLimit.enabled, true);
+  assert.equal(initialStatus.body.rateLimit.limit, 2);
+  assert.equal(initialStatus.body.rateLimit.remaining, 2);
+  assert.equal(initialStatus.body.rateLimit.windowSeconds, 60);
+  assert.equal(initialStatus.body.teacherOnlySecret, undefined);
+
   const firstA = await sendStudentMessage(handlers, 'classA', 'student-a');
-  const secondA = await sendStudentMessage(handlers, 'classA', 'student-a');
-  const blockedA = await sendStudentMessage(handlers, 'classA', 'student-a');
   assert.equal(firstA.statusCode, 200);
+  assert.equal(firstA.body.rateLimit.enabled, true);
+  assert.equal(firstA.body.rateLimit.limit, 2);
+  assert.equal(firstA.body.rateLimit.remaining, 1);
+
+  const secondA = await sendStudentMessage(handlers, 'classA', 'student-a');
   assert.equal(secondA.statusCode, 200);
+  assert.equal(secondA.body.rateLimit.remaining, 0);
+
+  const blockedA = await sendStudentMessage(handlers, 'classA', 'student-a');
   assert.equal(blockedA.statusCode, 429);
   assert.match(blockedA.body.error, /Slow down a little/);
+  assert.equal(blockedA.body.rateLimit.enabled, true);
+  assert.equal(blockedA.body.rateLimit.limit, 2);
+  assert.equal(blockedA.body.rateLimit.remaining, 0);
+  assert.ok(blockedA.body.rateLimit.resetInSeconds > 0);
+
+  const blockedStatus = await getRateLimitStatus(handlers, 'classA', 'student-a');
+  assert.equal(blockedStatus.body.rateLimit.remaining, 0);
 
   const studentB = await sendStudentMessage(handlers, 'classA', 'student-b');
   assert.equal(studentB.statusCode, 200);
+  assert.equal(studentB.body.rateLimit.remaining, 1);
+
+  const studentBStatus = await getRateLimitStatus(handlers, 'classA', 'student-b');
+  assert.equal(studentBStatus.body.rateLimit.remaining, 1);
+  assert.equal(studentBStatus.body.rateLimit.limit, 2);
 
   const sameStudentDifferentClass = await sendStudentMessage(handlers, 'classB', 'student-a');
   assert.equal(sameStudentDifferentClass.statusCode, 200);
+  assert.equal(sameStudentDifferentClass.body.rateLimit.remaining, 1);
+
+  controls.studentQuestionsPerMinute = 6;
+  const updatedLimitStatus = await getRateLimitStatus(handlers, 'classA', 'student-a');
+  assert.equal(updatedLimitStatus.statusCode, 200);
+  assert.equal(updatedLimitStatus.body.rateLimit.limit, 6);
+  assert.equal(updatedLimitStatus.body.rateLimit.remaining, 4);
 
   controls.studentQuestionRateLimitEnabled = false;
+  const offStatus = await getRateLimitStatus(handlers, 'classA', 'student-a');
+  assert.equal(offStatus.statusCode, 200);
+  assert.equal(offStatus.body.rateLimit.enabled, false);
+  assert.equal(offStatus.body.rateLimit.limit, 6);
+
   const unlimited = await sendStudentMessage(handlers, 'classA', 'student-a');
   assert.equal(unlimited.statusCode, 200);
+  assert.equal(unlimited.body.rateLimit.enabled, false);
 }
 
 async function testInvalidStudentControlsFallBackSafely() {
@@ -191,11 +231,19 @@ async function sendStudentMessage(handlers, classSessionId, studentHubId) {
   });
 }
 
-async function request(handlers, method, route, body = {}) {
+async function getRateLimitStatus(handlers, classSessionId, studentHubId) {
+  return request(handlers, 'GET', '/api/student/rate-limit-status', {}, {
+    classSessionId,
+    sessionId: classSessionId,
+    studentHubId
+  });
+}
+
+async function request(handlers, method, route, body = {}, query = {}) {
   const handler = handlers.get(`${method} ${route}`);
   assert.ok(handler, `Missing handler: ${method} ${route}`);
 
-  const req = { body, query: {}, headers: {} };
+  const req = { body, query, headers: {} };
   const res = createResponse();
   await handler(req, res);
   return res;
