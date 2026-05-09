@@ -13,10 +13,14 @@ const {
   updateClassroomControls
 } = require('../lib/system/classroomControls');
 const { registerClassroomControlsRoutes } = require('../routes/classroomControlsRoutes');
-const { registerStudentRoutes } = require('../routes/studentRoutes');
+const {
+  createStudentQuestionRateLimiter,
+  registerStudentRoutes
+} = require('../routes/studentRoutes');
 
 async function main() {
   await testClassroomControlsStoreAndRoutes();
+  testStudentQuestionTokenBucket();
   await testStudentSafeControlsAndRateLimit();
   await testInvalidStudentControlsFallBackSafely();
   console.log('✅ classroom controls: defaults, auth, validation, safe public controls, and rate limits passed');
@@ -88,6 +92,8 @@ async function testStudentSafeControlsAndRateLimit() {
     studentQuestionsPerMinute: 2,
     teacherOnlySecret: 'must-not-leak'
   };
+  let currentTime = 0;
+  const questionRateLimiter = createStudentQuestionRateLimiter({ now: () => currentTime });
 
   registerStudentRoutes(createApp(handlers), {
     answerStudentMessage: async () => ({
@@ -98,7 +104,8 @@ async function testStudentSafeControlsAndRateLimit() {
     }),
     getClassroomControls: () => controls,
     logCompletedInteraction() {},
-    studentSessions
+    studentSessions,
+    questionRateLimiter
   });
 
   const publicControls = await request(handlers, 'GET', '/api/student/controls');
@@ -111,8 +118,12 @@ async function testStudentSafeControlsAndRateLimit() {
   assert.deepEqual(Object.keys(initialStatus.body).sort(), ['rateLimit']);
   assert.equal(initialStatus.body.rateLimit.enabled, true);
   assert.equal(initialStatus.body.rateLimit.limit, 2);
+  assert.equal(initialStatus.body.rateLimit.max, 2);
   assert.equal(initialStatus.body.rateLimit.remaining, 2);
-  assert.equal(initialStatus.body.rateLimit.windowSeconds, 60);
+  assert.equal(initialStatus.body.rateLimit.remainingWhole, 2);
+  assert.equal(initialStatus.body.rateLimit.refillRatePerSecond, 0.0333);
+  assert.equal(initialStatus.body.rateLimit.secondsUntilNextQuestion, 0);
+  assert.equal(initialStatus.body.rateLimit.secondsUntilFull, 0);
   assert.equal(initialStatus.body.teacherOnlySecret, undefined);
 
   const firstA = await sendStudentMessage(handlers, 'classA', 'student-a');
@@ -120,10 +131,12 @@ async function testStudentSafeControlsAndRateLimit() {
   assert.equal(firstA.body.rateLimit.enabled, true);
   assert.equal(firstA.body.rateLimit.limit, 2);
   assert.equal(firstA.body.rateLimit.remaining, 1);
+  assert.equal(firstA.body.rateLimit.remainingWhole, 1);
 
   const secondA = await sendStudentMessage(handlers, 'classA', 'student-a');
   assert.equal(secondA.statusCode, 200);
   assert.equal(secondA.body.rateLimit.remaining, 0);
+  assert.equal(secondA.body.rateLimit.remainingWhole, 0);
 
   const blockedA = await sendStudentMessage(handlers, 'classA', 'student-a');
   assert.equal(blockedA.statusCode, 429);
@@ -131,7 +144,8 @@ async function testStudentSafeControlsAndRateLimit() {
   assert.equal(blockedA.body.rateLimit.enabled, true);
   assert.equal(blockedA.body.rateLimit.limit, 2);
   assert.equal(blockedA.body.rateLimit.remaining, 0);
-  assert.ok(blockedA.body.rateLimit.resetInSeconds > 0);
+  assert.ok(blockedA.body.rateLimit.secondsUntilNextQuestion > 0);
+  assert.ok(blockedA.body.rateLimit.secondsUntilFull > 0);
 
   const blockedStatus = await getRateLimitStatus(handlers, 'classA', 'student-a');
   assert.equal(blockedStatus.body.rateLimit.remaining, 0);
@@ -152,7 +166,8 @@ async function testStudentSafeControlsAndRateLimit() {
   const updatedLimitStatus = await getRateLimitStatus(handlers, 'classA', 'student-a');
   assert.equal(updatedLimitStatus.statusCode, 200);
   assert.equal(updatedLimitStatus.body.rateLimit.limit, 6);
-  assert.equal(updatedLimitStatus.body.rateLimit.remaining, 4);
+  assert.equal(updatedLimitStatus.body.rateLimit.max, 6);
+  assert.equal(updatedLimitStatus.body.rateLimit.refillRatePerSecond, 0.1);
 
   controls.studentQuestionRateLimitEnabled = false;
   const offStatus = await getRateLimitStatus(handlers, 'classA', 'student-a');
@@ -163,6 +178,87 @@ async function testStudentSafeControlsAndRateLimit() {
   const unlimited = await sendStudentMessage(handlers, 'classA', 'student-a');
   assert.equal(unlimited.statusCode, 200);
   assert.equal(unlimited.body.rateLimit.enabled, false);
+}
+
+function testStudentQuestionTokenBucket() {
+  let currentTime = 0;
+  const limiter = createStudentQuestionRateLimiter({ now: () => currentTime });
+
+  const first = limiter.check({
+    classSessionId: 'classA',
+    studentHubId: 'student-a',
+    questionsPerMinute: 2
+  });
+  assert.equal(first.allowed, true);
+  assert.equal(first.remaining, 1);
+
+  const second = limiter.check({
+    classSessionId: 'classA',
+    studentHubId: 'student-a',
+    questionsPerMinute: 2
+  });
+  assert.equal(second.allowed, true);
+  assert.equal(second.remaining, 0);
+
+  const blocked = limiter.check({
+    classSessionId: 'classA',
+    studentHubId: 'student-a',
+    questionsPerMinute: 2
+  });
+  assert.equal(blocked.allowed, false);
+  assert.equal(blocked.remainingWhole, 0);
+  assert.equal(blocked.secondsUntilNextQuestion, 30);
+
+  currentTime += 29_000;
+  const almostReady = limiter.status({
+    classSessionId: 'classA',
+    studentHubId: 'student-a',
+    questionsPerMinute: 2
+  });
+  assert.ok(almostReady.remaining > 0.96 && almostReady.remaining < 0.98);
+  assert.equal(almostReady.remainingWhole, 0);
+  assert.equal(almostReady.secondsUntilNextQuestion, 1);
+
+  currentTime += 1_000;
+  const readyAfterThirtySeconds = limiter.status({
+    classSessionId: 'classA',
+    studentHubId: 'student-a',
+    questionsPerMinute: 2
+  });
+  assert.equal(readyAfterThirtySeconds.remaining, 1);
+  assert.equal(readyAfterThirtySeconds.remainingWhole, 1);
+
+  const studentB = limiter.check({
+    classSessionId: 'classA',
+    studentHubId: 'student-b',
+    questionsPerMinute: 2
+  });
+  assert.equal(studentB.allowed, true);
+  assert.equal(studentB.remaining, 1);
+
+  const fastLimiter = createStudentQuestionRateLimiter({ now: () => currentTime });
+  for (let index = 0; index < 6; index += 1) {
+    assert.equal(fastLimiter.check({
+      classSessionId: 'classA',
+      studentHubId: 'student-a',
+      questionsPerMinute: 6
+    }).allowed, true);
+  }
+  assert.equal(fastLimiter.check({
+    classSessionId: 'classA',
+    studentHubId: 'student-a',
+    questionsPerMinute: 6
+  }).allowed, false);
+
+  currentTime += 10_000;
+  const fasterRefill = fastLimiter.status({
+    classSessionId: 'classA',
+    studentHubId: 'student-a',
+    questionsPerMinute: 6
+  });
+  assert.equal(fasterRefill.remaining, 1);
+  assert.equal(fasterRefill.remainingWhole, 1);
+  assert.equal(fasterRefill.secondsUntilNextQuestion, 0);
 }
 
 async function testInvalidStudentControlsFallBackSafely() {

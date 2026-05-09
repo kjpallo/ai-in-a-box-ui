@@ -111,6 +111,7 @@ function registerStudentRoutes(app, {
       const contextMessages = hub.messages;
       const lastAnsweredContext = findLastAnsweredContext(contextMessages);
 
+      // Guided tutor messages are already inside a teacher-safe scaffold, so they do not spend question energy.
       if (hub.currentTutorProblem) {
         const previousTutorProblem = hub.currentTutorProblem;
         const tutorResult = answerFormulaTutorStep(previousTutorProblem, message);
@@ -163,6 +164,7 @@ function registerStudentRoutes(app, {
         currentStandardId: findLastStandardIdForCurrentContext(contextMessages),
         recentMessages: contextMessages
       });
+      // Starting a guided tutor also bypasses energy; normal student questions still spend energy below.
       if (canStartFormulaTutor(result.questionRoute)) {
         hub.currentTutorProblem = startFormulaTutor({
           questionRoute: result.questionRoute,
