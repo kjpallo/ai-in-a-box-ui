@@ -56,7 +56,17 @@ npm run test:all
 
 Phase 1 teacher auth uses a local `logs/teacher_auth.json` file for one teacher account. This file is local-only, ignored by git through the `logs/` ignore rule, and should not be committed.
 
-The teacher PIN/password is never stored directly. The app stores a salted `scrypt` hash, plus the teacher username, optional linked Google identity fields (`linkedGoogleEmail`, `linkedGoogleName`, and `googleLinkedAt`), and created/updated timestamps. The auth file is written with `chmod 600` when the local filesystem supports it.
+The teacher PIN/password is never stored directly. The app stores a salted `scrypt` hash, plus the teacher username, optional linked Google identity fields (`linkedGoogleEmail`, `linkedGoogleName`, and `googleLinkedAt`), recovery-code hash metadata, and created/updated timestamps. The auth file is written with `chmod 600` when the local filesystem supports it.
+
+During first-time setup, Charlemagne shows a one-time recovery code. Save this recovery code somewhere safe; it is the local proof needed to reset the teacher PIN/password if Google recovery is not connected yet. The raw recovery code is never stored in `logs/teacher_auth.json`, only a secure hash is stored. When the recovery code is used to reset the PIN/password, Charlemagne rotates it and shows the new recovery code one time.
+
+For owner/admin recovery from the terminal, run:
+
+```bash
+npm run reset:teacher-auth -- --confirm
+```
+
+This moves `logs/teacher_auth.json` to a timestamped backup file so first-time setup can run again. It does not touch `logs/teacher_gmail_auth.json`.
 
 Student routes stay separate from teacher login. The student page and `/api/student/message` do not require teacher authentication, while teacher-only routes such as profile, chat, system health, router test, AI improvement, and Whisper endpoints require the local teacher session cookie.
 

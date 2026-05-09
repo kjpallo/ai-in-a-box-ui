@@ -8,6 +8,7 @@
     "dev": "node server.js",
     "test": "node scripts/test-router.js && node scripts/test-standards-followup.js",
     "test:auth": "node scripts/test-teacher-auth.js",
+    "reset:teacher-auth": "node scripts/reset-teacher-auth.js",
     "test:bank": "node scripts/test-router-bank.js",
     "test:standards": "node scripts/test-standards-matcher.js",
     "test:standards-bank": "node scripts/test-missouri-standards-bank.js",

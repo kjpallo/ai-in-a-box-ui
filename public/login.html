@@ -50,9 +50,16 @@
             <input id="teacherConfirmPin" name="confirmPin" type="password" autocomplete="new-password" />
           </label>
 
+          <label id="recoveryCodeField" hidden>
+            <span>Recovery code</span>
+            <input id="teacherRecoveryCode" name="recoveryCode" autocomplete="one-time-code" />
+          </label>
+
           <p id="teacherLoginMessage" class="teacher-login-message" role="status"></p>
 
           <button id="teacherLoginButton" type="submit">Unlock Teacher Mode</button>
+          <button id="teacherForgotButton" class="teacher-secondary-button" type="button" hidden>Forgot PIN/password?</button>
+          <button id="teacherBackButton" class="teacher-secondary-button" type="button" hidden>Back to login</button>
         </form>
       </section>
     </main>

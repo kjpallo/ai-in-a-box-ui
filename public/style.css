@@ -1179,6 +1179,10 @@ button:disabled {
   text-transform: uppercase;
 }
 
+.teacher-login-form [hidden] {
+  display: none !important;
+}
+
 .teacher-login-form input {
   width: 100%;
   min-height: 48px;
@@ -1223,6 +1227,29 @@ button:disabled {
   margin-right: 9px;
   font-weight: 950;
   transform: rotate(-24deg);
+}
+
+.teacher-secondary-button,
+.teacher-recovery-continue {
+  min-height: 44px;
+  border: 1px solid rgba(126, 233, 255, 0.22);
+  border-radius: 999px;
+  color: #dffcf7;
+  background: rgba(1, 9, 11, 0.58);
+  font-weight: 850;
+}
+
+.teacher-recovery-code {
+  border: 1px solid rgba(126, 233, 255, 0.24);
+  border-radius: 12px;
+  padding: 14px;
+  background: rgba(1, 9, 11, 0.76);
+  color: #f4fffb;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 1.08rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  overflow-wrap: anywhere;
 }
 
 .login-unlock-shell.is-unlocking .login-blade-left {
