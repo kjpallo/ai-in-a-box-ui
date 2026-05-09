@@ -245,6 +245,35 @@ button:disabled {
   background: rgba(215, 239, 240, 0.8);
 }
 
+.lock-teacher-pill {
+  border-color: rgba(126, 233, 255, 0.25);
+  color: #dffcf7;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(126, 233, 255, 0.12), transparent 44%),
+    rgba(9, 24, 27, 0.78);
+}
+
+.lock-teacher-pill span {
+  width: 16px;
+  height: 18px;
+  display: inline-block;
+  border: 2px solid rgba(126, 233, 255, 0.82);
+  border-radius: 4px;
+  position: relative;
+}
+
+.lock-teacher-pill span::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: -9px;
+  width: 8px;
+  height: 8px;
+  border: 2px solid rgba(126, 233, 255, 0.82);
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+}
+
 .layout-grid {
   display: grid;
   grid-template-columns: minmax(280px, 0.82fr) minmax(500px, 1.75fr) minmax(300px, 0.95fr);
@@ -937,6 +966,293 @@ button:disabled {
 @keyframes blink {
   50% {
     opacity: 0;
+  }
+}
+
+/* Teacher login unlock */
+.login-body {
+  height: 100vh;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+.login-unlock-shell {
+  position: relative;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  isolation: isolate;
+  background:
+    linear-gradient(90deg, rgba(102, 247, 209, 0.05) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(126, 233, 255, 0.045) 1px, transparent 1px),
+    radial-gradient(circle at 50% 50%, rgba(102, 247, 209, 0.13), transparent 34%),
+    linear-gradient(180deg, #061112 0%, #020708 100%);
+  background-size: 54px 54px, 54px 54px, auto, auto;
+}
+
+.login-app-preview {
+  position: absolute;
+  inset: 8px 10px;
+  z-index: 0;
+  display: grid;
+  grid-template-rows: 90px minmax(0, 1fr);
+  gap: 10px;
+  padding: 10px;
+  opacity: 0.22;
+  filter: blur(2px) saturate(0.9);
+  transform: scale(0.985);
+  transition: opacity 640ms ease 180ms, filter 640ms ease 180ms, transform 640ms ease 180ms;
+}
+
+.login-preview-header,
+.login-preview-grid > div {
+  border: 1px solid rgba(102, 247, 209, 0.2);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(102, 247, 209, 0.08), transparent 34%),
+    linear-gradient(180deg, rgba(7, 23, 27, 0.84), rgba(2, 10, 12, 0.92));
+  box-shadow: 0 0 28px rgba(102, 247, 209, 0.08);
+}
+
+.login-preview-grid {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(220px, 0.8fr) minmax(360px, 1.6fr) minmax(220px, 0.85fr);
+  gap: 10px;
+}
+
+.login-preview-grid .main {
+  border-color: rgba(126, 233, 255, 0.28);
+  background:
+    radial-gradient(circle at 50% 45%, rgba(255, 255, 255, 0.86), rgba(223, 242, 248, 0.78) 42%, rgba(9, 36, 42, 0.92) 43%),
+    linear-gradient(180deg, rgba(7, 23, 27, 0.84), rgba(2, 10, 12, 0.92));
+}
+
+.login-blade {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 50.4vw;
+  z-index: 1;
+  border: 1px solid rgba(102, 247, 209, 0.24);
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.13), transparent 10%, transparent 90%, rgba(255, 255, 255, 0.06)),
+    repeating-linear-gradient(180deg, rgba(126, 233, 255, 0.07) 0 1px, transparent 1px 58px),
+    linear-gradient(180deg, rgba(13, 31, 34, 0.98), rgba(2, 8, 10, 0.99));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 0 42px rgba(102, 247, 209, 0.08),
+    0 0 36px rgba(102, 247, 209, 0.12);
+  transition: transform 920ms cubic-bezier(0.18, 0.86, 0.28, 1), filter 920ms ease;
+}
+
+.login-blade::before,
+.login-blade::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+.login-blade::before {
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(180deg, transparent, rgba(126, 233, 255, 0.95), rgba(102, 247, 209, 0.95), transparent);
+  box-shadow: 0 0 22px rgba(102, 247, 209, 0.7), 0 0 42px rgba(126, 233, 255, 0.28);
+}
+
+.login-blade::after {
+  inset: 22px;
+  border: 1px solid rgba(102, 247, 209, 0.12);
+  border-radius: 28px;
+}
+
+.login-blade-left {
+  left: 0;
+  transform-origin: left center;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 44px) 50%, 100% 100%, 0 100%);
+}
+
+.login-blade-left::before {
+  right: 8px;
+}
+
+.login-blade-right {
+  right: 0;
+  transform-origin: right center;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 44px 50%);
+}
+
+.login-blade-right::before {
+  left: 8px;
+}
+
+.login-card {
+  width: min(440px, calc(100vw - 32px));
+  position: relative;
+  z-index: 2;
+  display: grid;
+  gap: 22px;
+  padding: 24px;
+  border: 1px solid rgba(102, 247, 209, 0.42);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(126, 233, 255, 0.14), transparent 34%),
+    linear-gradient(180deg, rgba(5, 17, 19, 0.94), rgba(1, 8, 10, 0.98));
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+    0 24px 80px rgba(0, 0, 0, 0.52),
+    0 0 46px rgba(102, 247, 209, 0.18),
+    0 0 76px rgba(126, 233, 255, 0.1);
+  transition: opacity 260ms ease, transform 680ms ease, filter 680ms ease;
+}
+
+.login-card::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -28vh;
+  bottom: -28vh;
+  width: 1px;
+  background: linear-gradient(180deg, transparent, rgba(126, 233, 255, 0.65), rgba(102, 247, 209, 0.76), transparent);
+  box-shadow: 0 0 22px rgba(102, 247, 209, 0.48);
+  pointer-events: none;
+}
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  position: relative;
+  z-index: 1;
+}
+
+.login-brand h1 {
+  margin: 4px 0 0;
+  color: #f4fffb;
+  font-size: 1.35rem;
+  line-height: 1.05;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.login-copy {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 9px;
+}
+
+.login-copy h2 {
+  margin: 0;
+  color: #f4fffb;
+  font-size: 1.28rem;
+  letter-spacing: 0;
+}
+
+.login-copy p,
+.login-copy small {
+  margin: 0;
+  color: #b9d4d2;
+  line-height: 1.5;
+}
+
+.login-copy small {
+  color: #9bdedb;
+}
+
+.teacher-login-form {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 14px;
+}
+
+.teacher-login-form label {
+  display: grid;
+  gap: 7px;
+  color: #dffcf7;
+  font-size: 0.82rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.teacher-login-form input {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid rgba(126, 233, 255, 0.25);
+  border-radius: 14px;
+  outline: none;
+  padding: 0 14px;
+  background: rgba(1, 9, 11, 0.8);
+  color: var(--text);
+  font: inherit;
+  letter-spacing: 0;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+
+.teacher-login-form input:focus {
+  border-color: rgba(102, 247, 209, 0.62);
+  box-shadow: 0 0 0 4px rgba(102, 247, 209, 0.08), inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.teacher-login-message {
+  min-height: 20px;
+  margin: 0;
+  color: #9bdedb;
+  line-height: 1.35;
+}
+
+.teacher-login-message.is-error {
+  color: #ffb8c4;
+}
+
+#teacherLoginButton {
+  min-height: 54px;
+  border-radius: 999px;
+  color: #061314;
+  background: linear-gradient(135deg, #8df7ff, #41dfac);
+  font-weight: 950;
+  box-shadow: 0 0 24px rgba(102, 247, 209, 0.32);
+}
+
+#teacherLoginButton::before {
+  content: ">";
+  margin-right: 9px;
+  font-weight: 950;
+  transform: rotate(-24deg);
+}
+
+.login-unlock-shell.is-unlocking .login-blade-left {
+  transform: translateX(-104%) skewX(-1deg);
+  filter: brightness(1.12);
+}
+
+.login-unlock-shell.is-unlocking .login-blade-right {
+  transform: translateX(104%) skewX(1deg);
+  filter: brightness(1.12);
+}
+
+.login-unlock-shell.is-unlocking .login-card {
+  opacity: 0;
+  transform: scale(0.96);
+  filter: blur(8px);
+  pointer-events: none;
+}
+
+.login-unlock-shell.is-unlocking .login-app-preview {
+  opacity: 1;
+  filter: blur(0) saturate(1.04);
+  transform: scale(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-blade,
+  .login-card,
+  .login-app-preview {
+    transition-duration: 1ms;
   }
 }
 

@@ -31,7 +31,14 @@ const { buildSystemHealthReport } = require('./lib/system/healthReport');
 const { logStudentInteraction } = require('./lib/system/studentInteractionLogger');
 const { createQuestionAnswerService } = require('./lib/server/questionAnswerService');
 const { ensureDir, loadLocalEnv } = require('./lib/server/utils');
+const {
+  createTeacherAuthStore,
+  createTeacherSessionStore,
+  getTeacherSession,
+  requireTeacherAuth
+} = require('./lib/auth/teacherAuth');
 const { registerAiImprovementRoutes } = require('./routes/aiImprovementRoutes');
+const { registerAuthRoutes } = require('./routes/authRoutes');
 const { registerHealthRoutes } = require('./routes/healthRoutes');
 const { registerProfileRoutes } = require('./routes/profileRoutes');
 const { registerQuestionRoutes } = require('./routes/questionRoutes');
@@ -53,6 +60,9 @@ const studentInteractionsFile = path.join(__dirname, 'logs', 'student_interactio
 const MAX_KNOWLEDGE_ITEMS = Number(process.env.MAX_KNOWLEDGE_ITEMS || 6);
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'qwen2.5:0.5b';
 const studentSessions = Object.create(null);
+const teacherAuthStore = createTeacherAuthStore();
+const teacherSessionStore = createTeacherSessionStore();
+const teacherAuthRequired = requireTeacherAuth(teacherSessionStore);
 
 const DEFAULT_SYSTEM_PROMPT = [
   'You are a classroom assistant helping in a 9th-grade science class.',
@@ -108,14 +118,30 @@ tts.pruneAudioDir();
 setInterval(tts.pruneAudioDir, Math.max(60_000, Math.floor(Number(process.env.AUDIO_TTL_MS || 1000 * 60 * 30) / 2))).unref();
 
 app.use(express.json());
+
+app.get('/', (req, res, next) => {
+  if (!teacherAuthStore.exists() || !getTeacherSession(req, teacherSessionStore)) {
+    return res.redirect('/login.html');
+  }
+
+  next();
+});
+
 app.use(express.static(publicDir));
 app.use('/audio', express.static(audioDir));
 
+registerAuthRoutes(app, {
+  authStore: teacherAuthStore,
+  sessionStore: teacherSessionStore
+});
+
 // Voice and audio routes.
+app.use('/api/whisper', teacherAuthRequired);
 registerWhisperRoutes(app);
 registerVoiceRoutes(app, { tts });
 
 // Health and diagnostics routes.
+app.use('/api/system-health', teacherAuthRequired);
 registerHealthRoutes(app, {
   buildSystemHealthReport,
   getTeacherKnowledgeCount: questionAnswer.getTeacherKnowledgeCount,
@@ -129,10 +155,13 @@ registerHealthRoutes(app, {
 });
 
 // Router, AI answer, and review routes.
+app.use(['/api/router-test', '/api/chat'], teacherAuthRequired);
 registerQuestionRoutes(app, { ollama, questionAnswer, tts });
+app.use('/api/ai-improvement', teacherAuthRequired);
 registerAiImprovementRoutes(app, { getProblems, logProblem, updateProblem });
 
 // Profile and student-session routes.
+app.use('/api/profile', teacherAuthRequired);
 registerProfileRoutes(app, {
   completeGoogleConnect,
   createGoogleConnectUrl,

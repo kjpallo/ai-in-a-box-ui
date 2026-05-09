@@ -4,10 +4,18 @@
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
+      if (response.status === 401 && data.error === 'Teacher login required.' && !isStudentPage()) {
+        window.location.href = '/login.html';
+      }
+
       throw new Error(data.error || data.message || `HTTP ${response.status}`);
     }
 
     return data;
+  }
+
+  function isStudentPage() {
+    return window.location.pathname.endsWith('/student.html');
   }
 
   async function askQuestion(question, options = {}) {
@@ -22,6 +30,14 @@
     });
 
     if (!response.ok || !response.body) {
+      if (response.status === 401) {
+        const data = await response.json().catch(() => ({}));
+        if (data.error === 'Teacher login required.' && !isStudentPage()) {
+          window.location.href = '/login.html';
+          throw new Error('Teacher mode is locked. Sign in to continue.');
+        }
+      }
+
       throw new Error('The classroom assistant is not connected right now. Tell your teacher.');
     }
 

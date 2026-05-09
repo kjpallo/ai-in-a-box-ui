@@ -109,6 +109,17 @@
       setFormEnabled(true);
       input.focus();
     } catch (error) {
+      if ((error.message || '') === 'Teacher login required.') {
+        sessionIsValid = true;
+        sessionText.textContent = sessionId;
+        sessionMessage.textContent = 'Connected to classroom link.';
+        status.textContent = 'Connected';
+        responseBox.textContent = 'Ask a question to see the response here.';
+        setFormEnabled(true);
+        input.focus();
+        return;
+      }
+
       showInvalidSession(error.message || 'Could not check this student session.');
     }
   }

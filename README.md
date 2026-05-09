@@ -52,6 +52,16 @@ Run both:
 npm run test:all
 ```
 
+## Teacher Auth
+
+Phase 1 teacher auth uses a local `logs/teacher_auth.json` file for one teacher account. This file is local-only, ignored by git through the `logs/` ignore rule, and should not be committed.
+
+The teacher PIN/password is never stored directly. The app stores a salted `scrypt` hash, plus the teacher username, optional linked Google email, and created/updated timestamps. The auth file is written with `chmod 600` when the local filesystem supports it.
+
+Student routes stay separate from teacher login. The student page and `/api/student/message` do not require teacher authentication, while teacher-only routes such as profile, chat, system health, router test, AI improvement, and Whisper endpoints require the local teacher session cookie.
+
+Gmail OAuth is separate from local teacher login. The existing Gmail token stays in `logs/teacher_gmail_auth.json`, and Google identity/email setup can remain optional for later phases.
+
 ## Teacher Knowledge Packs
 
 `knowledge/schema/` and `knowledge/packs/` contain the first scaffold for teacher-customizable subject knowledge packs. This is data-only groundwork: the current router, formula behavior, and student answer flow are unchanged.

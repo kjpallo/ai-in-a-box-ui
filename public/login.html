@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Charlemagne Teacher Login</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body class="login-body">
+    <main class="login-unlock-shell" aria-label="Teacher login">
+      <div class="login-app-preview" aria-hidden="true">
+        <div class="login-preview-header"></div>
+        <div class="login-preview-grid">
+          <div></div>
+          <div class="main"></div>
+          <div></div>
+        </div>
+      </div>
+
+      <div class="login-blade login-blade-left" aria-hidden="true"></div>
+      <div class="login-blade login-blade-right" aria-hidden="true"></div>
+
+      <section class="login-card" aria-live="polite">
+        <div class="login-brand">
+          <div class="brand-mark" aria-hidden="true"><span></span></div>
+          <div>
+            <p class="eyebrow">Teacher Mode</p>
+            <h1>Charlemagne</h1>
+          </div>
+        </div>
+
+        <div id="loginCopy" class="login-copy">
+          <h2>Checking teacher lock...</h2>
+          <p>Preparing the local classroom console.</p>
+        </div>
+
+        <form id="teacherLoginForm" class="teacher-login-form" hidden>
+          <label>
+            <span>Username</span>
+            <input id="teacherUsername" name="username" autocomplete="username" required />
+          </label>
+
+          <label>
+            <span>PIN/password</span>
+            <input id="teacherPin" name="pin" type="password" autocomplete="current-password" required />
+          </label>
+
+          <label id="confirmPinField" hidden>
+            <span>Confirm PIN/password</span>
+            <input id="teacherConfirmPin" name="confirmPin" type="password" autocomplete="new-password" />
+          </label>
+
+          <p id="teacherLoginMessage" class="teacher-login-message" role="status"></p>
+
+          <button id="teacherLoginButton" type="submit">Unlock Teacher Mode</button>
+        </form>
+      </section>
+    </main>
+
+    <script src="/login.js"></script>
+  </body>
+</html>
