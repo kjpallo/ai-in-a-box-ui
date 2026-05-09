@@ -5,6 +5,22 @@
 // 50 work/power, 50 waves, 50 trap questions, 50 rushed/misspelled,
 // 50 reject/no-match questions. Total: 400 tests.
 
+const massDefinitionFact = {
+  id: 'mass-definition',
+  category: 'definition',
+  title: 'Mass',
+  terms: ['mass', 'what is mass', 'define mass', 'masses'],
+  fact: 'Mass is the amount of matter in an object. Mass does not change when gravity changes and is measured in grams or kilograms.',
+  formula: 'mass can be found from m = F/a or m = density × volume when those values are known',
+  examples: [],
+  source: 'Teacher-created local knowledge base',
+  score: 30,
+  exactTermMatch: true,
+  exactTitleMatch: false,
+  importantKeywordMatches: 1,
+  strongEnoughMatch: true
+};
+
 const routerTestBank = [
   {
     "category": "acceleration",
@@ -5120,6 +5136,35 @@ routerTestBank.push(
     question: 'How do I solve for mass if I have kinetic energy and velocity?',
     type: 'science_formula',
     includes: ['mass = 2KE / velocity²', 'm = 2KE / v²'],
+    aiAllowed: false
+  },
+  {
+    category: 'force_mass_acceleration',
+    name: 'mass from failed student wording',
+    question: 'what is the mass of an object has an acceleration of 3m/sec/sec and a force of 2n',
+    matchedKnowledge: [massDefinitionFact],
+    type: 'science_formula',
+    includes: ['Use Newton’s second law: F = m × a.', 'Solve for mass: m = F / a.', 'm = 2 N / 3 m/s²', 'm = 0.67 kg', 'The mass is about 0.67 kg.'],
+    excludes: ['Mass is the amount of matter'],
+    aiAllowed: false
+  },
+  {
+    category: 'force_mass_acceleration',
+    name: 'mass from clean force acceleration wording',
+    question: 'what is the mass if force is 2 N and acceleration is 3 m/s²',
+    matchedKnowledge: [massDefinitionFact],
+    type: 'science_formula',
+    includes: ['Use Newton’s second law: F = m × a.', 'Solve for mass: m = F / a.', 'm = 2 N / 3 m/s²', 'm = 0.67 kg', 'The mass is about 0.67 kg.'],
+    excludes: ['Mass is the amount of matter'],
+    aiAllowed: false
+  },
+  {
+    category: 'definitions',
+    name: 'mass definition remains teacher fact',
+    question: 'what is mass',
+    matchedKnowledge: [massDefinitionFact],
+    type: 'definition',
+    includes: ['Mass is the amount of matter in an object', 'Formula: mass can be found from m = F/a'],
     aiAllowed: false
   }
 );

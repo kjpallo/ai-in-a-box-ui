@@ -62,6 +62,10 @@ assert.ok(
   'Newton concept confidence should be a valid confidence value'
 );
 
+const gravity = buildStandardsLogMetadata('What is the force of gravity?');
+assertHasStandard(gravity.primaryStandards, '9-12.PS2.B.1', 'force of gravity should match the gravitation standard');
+assert.equal(gravity.standardsConfidence, 'strong', 'force of gravity should have strong standards confidence');
+
 const electricCurrent = buildStandardsLogMetadata('How does an electric current make a magnetic field?');
 assertHasStandard(
   electricCurrent.primaryStandards,
@@ -86,7 +90,7 @@ assert.equal(failed.standardsConfidence, 'none', 'failure should return none sta
 assert.equal(failed.possibleStandardsConfidence, 'none', 'failure should return none possible standards confidence');
 assert.equal(failed.standardsError, 'simulated matcher failure', 'failure should include error message');
 
-for (const metadata of [densityDefinition, densityContext, sputnik, newton, electricCurrent, failed]) {
+for (const metadata of [densityDefinition, densityContext, sputnik, newton, gravity, electricCurrent, failed]) {
   assert.ok(Array.isArray(metadata.matchedConcepts), 'matchedConcepts should be an array');
   assert.ok(Array.isArray(metadata.primaryStandards), 'primaryStandards should be an array');
   assert.ok(Array.isArray(metadata.possibleStandards), 'possibleStandards should be an array');

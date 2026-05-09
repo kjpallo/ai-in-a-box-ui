@@ -35,8 +35,35 @@ function factById(id) {
 const weightFact = factById('weight-definition');
 const gravityFact = factById('gravity-earth-acceleration');
 const densityFact = factById('density');
+const massFact = factById('mass-definition');
 
 const tests = [
+  {
+    name: 'Newton second law mass from failed student wording',
+    question: 'what is the mass of an object has an acceleration of 3m/sec/sec and a force of 2n',
+    matchedKnowledge: [massFact],
+    type: 'science_formula',
+    includes: ['Use Newton’s second law: F = m × a.', 'Solve for mass: m = F / a.', 'm = 2 N / 3 m/s²', 'm = 0.67 kg', 'The mass is about 0.67 kg.'],
+    excludes: ['Mass is the amount of matter'],
+    aiAllowed: false
+  },
+  {
+    name: 'Newton second law mass from clean force acceleration wording',
+    question: 'what is the mass if force is 2 N and acceleration is 3 m/s²',
+    matchedKnowledge: [massFact],
+    type: 'science_formula',
+    includes: ['Use Newton’s second law: F = m × a.', 'Solve for mass: m = F / a.', 'm = 2 N / 3 m/s²', 'm = 0.67 kg', 'The mass is about 0.67 kg.'],
+    excludes: ['Mass is the amount of matter'],
+    aiAllowed: false
+  },
+  {
+    name: 'mass definition remains teacher fact',
+    question: 'what is mass',
+    matchedKnowledge: [massFact],
+    type: 'definition',
+    includes: ['Mass is the amount of matter in an object', 'Formula: mass can be found from m = F/a'],
+    aiAllowed: false
+  },
   {
     name: 'acceleration starts from rest clean parser',
     question: 'A skateboarder starts from rest and reaches a speed of 12 m/s in 4 seconds. Question: What is the skateboarder acceleration?',

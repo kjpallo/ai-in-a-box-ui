@@ -138,7 +138,7 @@ registerProfileRoutes(app, {
   createGoogleConnectUrl,
   getAvailableProfileDates,
   getDailyQuestionSummary,
-  getStandardsSummaryReport: () => buildStandardsSummaryReport(loadStudentInteractionLogs(studentInteractionsFile)),
+  getStandardsSummaryReport: (date) => buildStandardsSummaryReport(loadStudentInteractionLogs(studentInteractionsFile), { date }),
   getProfileStatus,
   port: PORT,
   sendDailySummaryEmail,

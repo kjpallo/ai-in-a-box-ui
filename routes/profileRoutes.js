@@ -144,11 +144,11 @@ function registerProfileRoutes(app, {
     res.json(getDailyQuestionSummary(req.query.date));
   });
 
-  app.get('/api/profile/standards-summary', (_req, res) => {
+  app.get('/api/profile/standards-summary', (req, res) => {
     try {
       res.json({
         ok: true,
-        summary: getStandardsSummaryReport()
+        summary: getStandardsSummaryReport(req.query.date)
       });
     } catch {
       res.status(500).json({

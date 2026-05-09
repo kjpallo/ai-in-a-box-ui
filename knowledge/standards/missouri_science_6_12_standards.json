@@ -1512,25 +1512,32 @@
       "statement": "Analyze data to explain types of interactions in motion and stability: forces and interactions.",
       "classroomArea": "Physics",
       "unit": "Types of Interactions",
-      "keywords": [
-        "Newton law of gravitation",
-        "gravitational force",
-        "masses and distance",
-        "distance affects gravity",
-        "gravitational fields",
+    "keywords": [
+      "Newton law of gravitation",
+      "gravitational force",
+      "force of gravity",
+      "gravity force",
+      "force due to gravity",
+      "gravitational pull",
+      "masses and distance",
+      "distance affects gravity",
+      "gravitational fields",
         "inverse square gravity",
         "attraction between masses",
         "mass distance gravity",
         "mass and distance"
       ],
-      "questionTriggers": [
-        "mass and distance affect gravitational force",
-        "how mass and distance affect gravitational force",
-        "Newton law of gravitation",
-        "gravitational force between masses",
-        "distance affects gravity",
-        "gravitational fields"
-      ],
+    "questionTriggers": [
+      "mass and distance affect gravitational force",
+      "how mass and distance affect gravitational force",
+      "Newton law of gravitation",
+      "gravitational force between masses",
+      "force of gravity",
+      "gravity force",
+      "force due to gravity",
+      "distance affects gravity",
+      "gravitational fields"
+    ],
       "relatedFormulas": [],
       "courseTags": [
         "high_school",

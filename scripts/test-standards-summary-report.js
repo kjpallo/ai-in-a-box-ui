@@ -65,6 +65,11 @@ const entries = [
     standardsBankId: 'missouri_science_6_12'
   },
   {
+    timestamp: '2026-05-01T10:05:30.000Z',
+    studentQuestion: 'Legacy log without standards metadata: what is density?',
+    routeType: 'definition'
+  },
+  {
     timestamp: '2026-05-01T10:06:00.000Z',
     studentQuestion: 'Old log with only legacy standards',
     routeType: 'formula',
@@ -114,8 +119,8 @@ const summary = buildStandardsSummaryReport(entries, {
 });
 
 assert.equal(summary.generatedAt, '2026-05-04T12:00:00.000Z');
-assert.equal(summary.totalQuestions, 7, 'totalQuestions should count valid object log entries');
-assert.equal(summary.taggedQuestions, 5, 'taggedQuestions should count entries with standards, possible standards, concepts, or units');
+assert.equal(summary.totalQuestions, 8, 'totalQuestions should count valid object log entries');
+assert.equal(summary.taggedQuestions, 6, 'taggedQuestions should count entries with standards, possible standards, concepts, units, or inferred legacy matches');
 assert.equal(summary.untaggedQuestions, 2, 'untaggedQuestions should be total minus tagged');
 
 assert.deepEqual(
@@ -145,42 +150,43 @@ assert.deepEqual(
 assert.deepEqual(
   summary.concepts.map((row) => [row.id, row.count]),
   [
-    ['density-formula', 1],
+    ['density-formula', 2],
     ['force-formula', 1],
     ['sputnik-1-launch', 1]
   ],
   'concept counts should include concept-only logs'
 );
+assert.equal(summary.concepts.find((row) => row.id === 'density-formula').count, 2);
 assert.equal(summary.concepts.find((row) => row.id === 'density-formula').averageScore, 15);
 
 assert.deepEqual(summary.standardsConfidence, {
   strong: 2,
   medium: 1,
   weak: 0,
-  none: 4
+  none: 5
 });
 
 assert.deepEqual(summary.conceptConfidence, {
   strong: 0,
-  medium: 2,
+  medium: 3,
   weak: 0,
   none: 5
 });
 
 assert.deepEqual(summary.courseProfileIds, [
-  { courseProfileId: 'physical_science', count: 3 }
+  { courseProfileId: 'physical_science', count: 4 }
 ]);
 assert.deepEqual(summary.standardsBankIds, [
-  { standardsBankId: 'missouri_science_6_12', count: 3 }
+  { standardsBankId: 'missouri_science_6_12', count: 4 }
 ]);
 
 assert.equal(summary.standards[0].exampleQuestions.length, 1, 'standard examples should be present');
-assert.equal(summary.concepts[0].exampleQuestions.length, 1, 'concept examples should be present');
+assert.equal(summary.concepts[0].exampleQuestions.length, 2, 'concept examples should include inferred legacy matches');
 assert.equal(summary.units[0].exampleQuestions.length <= 2, true, 'unit examples should be limited');
 assert.equal(summary.recentTaggedQuestions.length, 3, 'recent tagged examples should be limited');
 assert.deepEqual(
   summary.recentTaggedQuestions.map((entry) => entry.question),
-  ['What was Sputnik 1?', 'Old log with only legacy standards', 'How does an electric current make a magnetic field?'],
+  ['What was Sputnik 1?', 'Old log with only legacy standards', 'Legacy log without standards metadata: what is density?'],
   'recent tagged examples should be newest first'
 );
 
@@ -218,5 +224,19 @@ const emptySummary = buildStandardsSummaryReport({ not: 'an array' });
 assert.equal(emptySummary.totalQuestions, 0, 'non-array input should behave like an empty log');
 assert.deepEqual(emptySummary.standards, [], 'non-array input should not produce standards');
 assert.deepEqual(emptySummary.possibleStandardsSummary, [], 'non-array input should not produce possible standards');
+
+const dateFilteredSummary = buildStandardsSummaryReport(entries, {
+  now: new Date('2026-05-04T12:00:00.000Z'),
+  date: '2026-05-01'
+});
+assert.equal(dateFilteredSummary.totalQuestions, 8, 'date filter should keep entries from the selected day');
+assert.equal(dateFilteredSummary.taggedQuestions, 6, 'date filter should still infer missing legacy standards metadata');
+
+const emptyDateSummary = buildStandardsSummaryReport(entries, {
+  now: new Date('2026-05-04T12:00:00.000Z'),
+  date: '2026-05-02'
+});
+assert.equal(emptyDateSummary.totalQuestions, 0, 'date filter should exclude other days');
+assert.equal(emptyDateSummary.taggedQuestions, 0, 'empty filtered day should have no tagged questions');
 
 console.log('Standards summary report checks passed');

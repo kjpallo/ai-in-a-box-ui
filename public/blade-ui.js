@@ -160,173 +160,19 @@
     },
 
     {
-      id: 'class-activity',
-      label: 'Class Activity',
-      short: 'ACTIVITY',
+      id: 'live-activity',
+      label: 'Live Activity',
+      short: 'LIVE',
+      icon: '📡',
+      body: renderLiveActivityBlade()
+    },
+
+    {
+      id: 'reports',
+      label: 'Reports',
+      short: 'REPORTS',
       icon: '📊',
-      body: `
-        <section class="class-activity-panel" aria-label="Class Activity">
-          <div class="class-activity-top">
-            <div>
-              <h3>Class Activity</h3>
-              <p>Review student questions, common topics, and daily report tools.</p>
-            </div>
-            <section class="teacher-profile-card daily-date-card class-activity-date-card">
-              <label for="profileDateSelect">Daily Summary Date</label>
-              <select id="profileDateSelect" disabled>
-                <option>Today</option>
-                <option>No activity dates loaded yet</option>
-              </select>
-              <button type="button" id="profileRefreshSummary" class="small-button secondary-small">Refresh Summary</button>
-              <span id="profileDateStatus">No activity dates loaded yet.</span>
-            </section>
-          </div>
-
-          <section class="teacher-profile-card question-rundown-card class-activity-rundown-card">
-            <div class="profile-section-head">
-              <h4>Daily Question Rundown</h4>
-              <span id="profileSummaryStatus">No question activity loaded yet.</span>
-              <strong id="profileTotalQuestions">0 questions</strong>
-            </div>
-            <div class="profile-table-shell" role="table" aria-label="Daily question activity placeholder">
-              <div class="profile-table-head" role="row">
-                <span role="columnheader">Time</span>
-                <span role="columnheader">Topic</span>
-                <span role="columnheader">Question</span>
-                <span role="columnheader">Response Preview</span>
-                <span role="columnheader">Route/Type</span>
-                <span role="columnheader">Confidence</span>
-              </div>
-              <div id="profileQuestionRows" class="profile-table-body">
-                <p class="profile-empty-state" role="row">No question activity loaded yet.</p>
-              </div>
-            </div>
-          </section>
-
-          <section class="teacher-profile-card standards-report-card">
-            <div class="profile-section-head standards-report-head">
-              <div>
-                <h4>Standards Summary Report</h4>
-                <span id="standardsSummaryStatus">No standards report loaded yet.</span>
-              </div>
-              <button type="button" id="profileRefreshStandardsReport" class="small-button secondary-small">Refresh Standards Report</button>
-            </div>
-
-            <div id="standardsSummaryEmptyState" class="profile-empty-state">No standards report loaded yet.</div>
-
-            <div class="standards-summary-counts" aria-label="Standards summary counts">
-              <div>
-                <span>Total questions</span>
-                <strong id="standardsTotalQuestions">0</strong>
-              </div>
-              <div>
-                <span>Tagged questions</span>
-                <strong id="standardsTaggedQuestions">0</strong>
-              </div>
-              <div>
-                <span>Untagged questions</span>
-                <strong id="standardsUntaggedQuestions">0</strong>
-              </div>
-              <div>
-                <span>Generated at</span>
-                <strong id="standardsGeneratedAt">Not loaded</strong>
-              </div>
-            </div>
-
-            <div class="standards-confidence-grid" aria-label="Standards confidence counts">
-              <div><span>Strong</span><strong id="standardsConfidenceStrong">0</strong></div>
-              <div><span>Medium</span><strong id="standardsConfidenceMedium">0</strong></div>
-              <div><span>Weak</span><strong id="standardsConfidenceWeak">0</strong></div>
-              <div><span>None</span><strong id="standardsConfidenceNone">0</strong></div>
-            </div>
-
-            <div class="standards-report-scroll">
-              <section class="standards-report-section">
-                <h5>Top Standards</h5>
-                <div class="standards-report-table standards-table" role="table" aria-label="Top standards">
-                  <div class="standards-report-row standards-report-row-head" role="row">
-                    <span role="columnheader">Standard</span>
-                    <span role="columnheader">Label</span>
-                    <span role="columnheader">Unit</span>
-                    <span role="columnheader">Count</span>
-                    <span role="columnheader">Routes</span>
-                    <span role="columnheader">Confidence</span>
-                    <span role="columnheader">Examples</span>
-                  </div>
-                  <div id="standardsSummaryRows"></div>
-                </div>
-              </section>
-
-              <section class="standards-report-section">
-                <h5>Top Concepts</h5>
-                <div class="standards-report-table concepts-table" role="table" aria-label="Top concepts">
-                  <div class="standards-report-row standards-report-row-head" role="row">
-                    <span role="columnheader">Concept</span>
-                    <span role="columnheader">Type</span>
-                    <span role="columnheader">Unit</span>
-                    <span role="columnheader">Count</span>
-                    <span role="columnheader">Avg score</span>
-                    <span role="columnheader">Examples</span>
-                  </div>
-                  <div id="standardsConceptRows"></div>
-                </div>
-              </section>
-
-              <section class="standards-report-section">
-                <h5>Top Units</h5>
-                <div class="standards-report-table units-table" role="table" aria-label="Top units">
-                  <div class="standards-report-row standards-report-row-head" role="row">
-                    <span role="columnheader">Unit</span>
-                    <span role="columnheader">Count</span>
-                    <span role="columnheader">Standards</span>
-                    <span role="columnheader">Concepts</span>
-                    <span role="columnheader">Examples</span>
-                  </div>
-                  <div id="standardsUnitRows"></div>
-                </div>
-              </section>
-
-              <section class="standards-report-section">
-                <h5>Route Types</h5>
-                <div id="standardsRouteRows" class="standards-route-list"></div>
-              </section>
-
-              <section class="standards-report-section">
-                <h5>Recent Tagged Questions</h5>
-                <div class="standards-report-table recent-standards-table" role="table" aria-label="Recent tagged questions">
-                  <div class="standards-report-row standards-report-row-head" role="row">
-                    <span role="columnheader">Time</span>
-                    <span role="columnheader">Question</span>
-                    <span role="columnheader">Route</span>
-                    <span role="columnheader">Confidence</span>
-                    <span role="columnheader">Units</span>
-                    <span role="columnheader">Standards</span>
-                    <span role="columnheader">Concepts</span>
-                  </div>
-                  <div id="standardsRecentRows"></div>
-                </div>
-              </section>
-            </div>
-          </section>
-
-          <div class="class-activity-bottom-grid">
-            <section class="teacher-profile-card topic-summary-card">
-              <h4>Topic Summary</h4>
-              <div id="profileTopicSummary" class="topic-summary-placeholder">
-                <span class="topic-ring-placeholder" aria-hidden="true"></span>
-                <p>Topic summary will appear here after question activity is available.</p>
-              </div>
-            </section>
-
-            <section class="teacher-profile-card daily-email-card">
-              <h4>Daily Email Report</h4>
-              <p>Daily email reports will summarize question topics and common student needs.</p>
-              <button type="button" id="profileSendDailyEmail" class="small-button secondary-small" disabled>Send daily summary email</button>
-              <span id="profileEmailNotice">Connect Gmail before sending daily reports.</span>
-            </section>
-          </div>
-        </section>
-      `
+      body: renderReportsBlade()
     },
 
     {
@@ -398,10 +244,220 @@
     }
   ];
 
+  function renderLiveActivityBlade() {
+    return `
+        <section class="live-activity-panel" aria-label="Live Activity">
+          <div class="live-activity-header">
+            <div>
+              <h3>Live Activity</h3>
+              <p>See what students are asking right now and what needs attention.</p>
+            </div>
+            <div class="live-activity-controls">
+              <label class="sr-only" for="profileDateSelect">Activity date</label>
+              <select id="profileDateSelect" disabled>
+                <option>Today</option>
+                <option>No activity dates loaded yet</option>
+              </select>
+              <button type="button" id="profileRefreshSummary" class="small-button secondary-small">Refresh</button>
+            </div>
+          </div>
+
+          <span id="profileDateStatus" class="live-activity-date-status">No activity dates loaded yet.</span>
+
+          <div class="live-summary-grid" aria-label="Live activity summary">
+            <section class="live-summary-card">
+              <span class="live-summary-icon" aria-hidden="true">?</span>
+              <div>
+                <span>Total questions</span>
+                <strong id="profileTotalQuestions">0</strong>
+              </div>
+            </section>
+            <section class="live-summary-card attention">
+              <span class="live-summary-icon" aria-hidden="true">!</span>
+              <div>
+                <span>Needs review</span>
+                <strong id="profileNeedsReviewValue">0</strong>
+              </div>
+            </section>
+            <section class="live-summary-card">
+              <span class="live-summary-icon" aria-hidden="true">#</span>
+              <div>
+                <span>Top topic</span>
+                <strong id="profileTopTopicValue">-</strong>
+              </div>
+            </section>
+            <section class="live-summary-card">
+              <span class="live-summary-icon" aria-hidden="true">✓</span>
+              <div>
+                <span>Standards tagged</span>
+                <strong id="liveStandardsTaggedValue">0</strong>
+              </div>
+            </section>
+          </div>
+
+          <section class="live-attention-card" aria-label="Needs teacher attention">
+            <div class="live-attention-head">
+              <h4>Needs Teacher Attention</h4>
+              <button type="button" id="profileReviewQuestions" class="small-button secondary-small">Review Questions</button>
+            </div>
+            <div class="live-attention-list">
+              <p><span aria-hidden="true"></span><strong id="profileNoMatchAttention">0 no-match questions need review</strong></p>
+              <p><span aria-hidden="true"></span><strong id="profileMissingStandardsAttention">0 questions missing standards tags</strong></p>
+              <p><span aria-hidden="true"></span><strong id="profileCommonTopicAttention">Most common topic: none yet</strong></p>
+            </div>
+          </section>
+
+          <section class="recent-questions-card">
+            <div class="profile-section-head">
+              <div>
+                <h4>Recent Questions</h4>
+                <span id="profileSummaryStatus">No question activity loaded yet.</span>
+              </div>
+            </div>
+
+            <div class="profile-table-shell live-question-table" role="table" aria-label="Recent question activity">
+              <div class="profile-table-head" role="row">
+                <span role="columnheader">Time</span>
+                <span role="columnheader">Topic</span>
+                <span role="columnheader">Question</span>
+                <span role="columnheader">Status</span>
+                <span role="columnheader">Confidence</span>
+              </div>
+              <div id="profileQuestionRows" class="profile-table-body">
+                <p class="profile-empty-state" role="row">No question activity loaded yet.</p>
+              </div>
+            </div>
+          </section>
+        </section>
+      `;
+  }
+
+  function renderReportsBlade() {
+    return `
+        <section class="reports-panel" aria-label="Reports">
+          <div class="reports-header">
+            <div>
+              <h3>Reports</h3>
+              <p>Review trends, standards coverage, and daily summaries.</p>
+            </div>
+          </div>
+
+          <div class="reports-summary-grid" aria-label="Reports summary">
+            <section class="report-summary-card">
+              <span>Standards tagged</span>
+              <strong id="reportStandardsTaggedValue">0</strong>
+            </section>
+            <section class="report-summary-card">
+              <span>Untagged questions</span>
+              <strong id="reportUntaggedQuestionsValue">0</strong>
+            </section>
+            <section class="report-summary-card">
+              <span>Top topic</span>
+              <strong id="reportTopTopicValue">-</strong>
+            </section>
+            <section class="report-summary-card attention">
+              <span>Needs review</span>
+              <strong id="reportNeedsReviewValue">0</strong>
+            </section>
+          </div>
+
+          <div class="reports-content-grid">
+            <section class="reports-card standards-coverage-card">
+              <div class="reports-card-head">
+                <div>
+                  <h4>Standards Coverage</h4>
+                  <span id="standardsSummaryStatus">No standards report loaded yet.</span>
+                </div>
+                <button type="button" id="profileRefreshStandardsReport" class="small-button secondary-small">Refresh Report</button>
+              </div>
+
+              <div class="standards-coverage-body">
+                <div class="coverage-donut" id="standardsCoverageDonut" style="--coverage-percent: 0">
+                  <strong id="standardsTaggedPercent">0%</strong>
+                  <span>tagged</span>
+                </div>
+                <div class="standards-summary-counts" aria-label="Standards summary counts">
+                  <div>
+                    <span>Total questions</span>
+                    <strong id="standardsTotalQuestions">0</strong>
+                  </div>
+                  <div>
+                    <span>Tagged questions</span>
+                    <strong id="standardsTaggedQuestions">0</strong>
+                  </div>
+                  <div>
+                    <span>Untagged questions</span>
+                    <strong id="standardsUntaggedQuestions">0</strong>
+                  </div>
+                  <div>
+                    <span>Percentage tagged</span>
+                    <strong id="standardsTaggedPercentValue">0%</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div id="standardsSummaryEmptyState" class="profile-empty-state">No standards report loaded yet.</div>
+            </section>
+
+            <section class="reports-card topic-summary-card">
+              <h4>Topic Summary</h4>
+              <div id="profileTopicSummary" class="topic-summary-placeholder">
+                <span class="topic-ring-placeholder" aria-hidden="true"></span>
+                <p>Topic summary will appear here after question activity is available.</p>
+              </div>
+            </section>
+
+            <section class="reports-card standards-report-card">
+              <div class="profile-section-head standards-report-head">
+                <div>
+                  <h4>Top Standards / Concepts</h4>
+                  <span id="standardsGeneratedAt">Not loaded</span>
+                </div>
+              </div>
+
+              <div class="standards-report-table standards-table" role="table" aria-label="Top standards and concepts">
+                <div class="standards-report-row standards-report-row-head" role="row">
+                  <span role="columnheader">Rank</span>
+                  <span role="columnheader">Standard / Concept</span>
+                  <span role="columnheader">Count</span>
+                  <span role="columnheader">% of Tagged</span>
+                  <span role="columnheader">Examples</span>
+                </div>
+                <div id="standardsSummaryRows"></div>
+              </div>
+            </section>
+
+            <section class="reports-card daily-email-card reports-email-card">
+              <h4>Daily Email Report</h4>
+              <span id="profileEmailNotice">Connect Gmail before sending daily reports.</span>
+              <p id="profileDailySummaryText">Daily email reports summarize question topics and common student needs.</p>
+              <button type="button" id="profileSendDailyEmail" class="small-button secondary-small" disabled>Send daily summary email</button>
+            </section>
+          </div>
+
+          <div class="reports-hidden-metrics" aria-hidden="true">
+            <span id="profileStandardsTaggedValue">0</span>
+            <span id="standardsConfidenceStrong">0</span>
+            <span id="standardsConfidenceMedium">0</span>
+            <span id="standardsConfidenceWeak">0</span>
+            <span id="standardsConfidenceNone">0</span>
+            <div id="standardsConceptRows"></div>
+            <div id="standardsUnitRows"></div>
+            <div id="standardsRouteRows"></div>
+            <div id="standardsRecentRows"></div>
+          </div>
+        </section>
+      `;
+  }
+
   // Hide placeholder blades until they are real tools. Future Phase 7B blades should be
   // added to bladeDefs, then included here when they are ready for teachers.
-  const visibleBladeIds = ['main', 'ai-improvement', 'modes', 'class-activity', 'system'];
-  bladeDefs.splice(0, bladeDefs.length, ...bladeDefs.filter((blade) => visibleBladeIds.includes(blade.id)));
+  const visibleBladeIds = ['main', 'live-activity', 'reports', 'ai-improvement', 'modes', 'system'];
+  bladeDefs.splice(
+    0,
+    bladeDefs.length,
+    ...visibleBladeIds.map((id) => bladeDefs.find((blade) => blade.id === id)).filter(Boolean)
+  );
 
   const bladeRegistry = new Map();
 
@@ -452,7 +508,8 @@
 
   function getActiveIndex() {
     const saved = getStoredBladeId();
-    const idx = getBladeIndex(saved);
+    const savedBladeId = saved === 'class-activity' ? 'live-activity' : saved;
+    const idx = getBladeIndex(savedBladeId);
     if (idx >= 0) return idx;
 
     const mainIdx = getBladeIndex('main');
@@ -685,7 +742,7 @@
     return btn;
   }
 
-  function goToBlade(nextIndex, options = {}) {
+  function setActiveBlade(nextIndex, options = {}) {
     const safeNext = Math.max(0, Math.min(bladeDefs.length - 1, Number(nextIndex)));
     if (Number.isNaN(safeNext) || safeNext === activeBladeIndex) return;
 
@@ -699,10 +756,14 @@
     render(activeBladeIndex, direction);
   }
 
+  function goToBlade(nextIndex, options = {}) {
+    setActiveBlade(nextIndex, options);
+  }
+
   function openBlade(bladeId, options = {}) {
-    const index = getBladeIndex(bladeId);
+    const index = getBladeIndex(bladeId === 'class-activity' ? 'live-activity' : bladeId);
     if (index < 0) return;
-    goToBlade(index, options);
+    setActiveBlade(index, options);
   }
 
   function closeBlade() {
@@ -801,19 +862,19 @@
     if (control.matches('[data-blade-shift]')) {
       event.preventDefault();
       const shift = Number(control.dataset.bladeShift);
-      if (!Number.isNaN(shift)) goToBlade(activeBladeIndex + shift);
+      if (!Number.isNaN(shift)) setActiveBlade(activeBladeIndex + shift);
       return;
     }
 
     if (control.matches('.blade-arrow-left')) {
       event.preventDefault();
-      goToBlade(activeBladeIndex - 1);
+      setActiveBlade(activeBladeIndex - 1);
       return;
     }
 
     if (control.matches('.blade-arrow-right')) {
       event.preventDefault();
-      goToBlade(activeBladeIndex + 1);
+      setActiveBlade(activeBladeIndex + 1);
       return;
     }
 
@@ -838,12 +899,12 @@
 
       if (event.key === 'ArrowLeft') {
         event.preventDefault();
-        goToBlade(activeBladeIndex - 1);
+        setActiveBlade(activeBladeIndex - 1);
       }
 
       if (event.key === 'ArrowRight') {
         event.preventDefault();
-        goToBlade(activeBladeIndex + 1);
+        setActiveBlade(activeBladeIndex + 1);
       }
     });
   }

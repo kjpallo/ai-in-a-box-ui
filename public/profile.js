@@ -3,6 +3,9 @@
   let currentDate = '';
   let currentProfileStatus = null;
   let currentStudentUrl = '';
+  let currentStandardsTagged = 0;
+  let currentQuestions = [];
+  let showingReviewQuestions = false;
 
   function byId(id) {
     return document.getElementById(id);
@@ -131,7 +134,8 @@
     if (refreshButton) refreshButton.disabled = true;
 
     try {
-      const data = await fetchJson('/api/profile/standards-summary');
+      const selectedDate = currentDate || byId('profileDateSelect')?.value || todayKey();
+      const data = await fetchJson('/api/profile/standards-summary?date=' + encodeURIComponent(selectedDate));
       if (data?.ok === false) {
         renderStandardsSummaryError(data.error || 'Could not load standards summary report.');
         return;
@@ -149,20 +153,62 @@
     const total = Number(data?.totalQuestions || 0);
     const questions = Array.isArray(data?.questions) ? data.questions : [];
     const topics = Array.isArray(data?.topics) ? data.topics : [];
+    const noMatchCount = questions.filter(isNoMatchQuestion).length;
+    const topTopic = topics[0]?.topic ? titleCaseLabel(topics[0].topic) : '-';
+    const untaggedQuestions = Math.max(0, total - currentStandardsTagged);
 
-    setText('profileTotalQuestions', `${total} question${total === 1 ? '' : 's'}`);
+    setText('profileTotalQuestions', total);
+    setText('profileNeedsReviewValue', noMatchCount);
+    setText('profileTopTopicValue', topTopic);
+    setText('profileStandardsTaggedValue', currentStandardsTagged);
+    setText('liveStandardsTaggedValue', currentStandardsTagged);
+    setText('reportStandardsTaggedValue', currentStandardsTagged);
+    setText('reportUntaggedQuestionsValue', untaggedQuestions);
+    setText('reportTopTopicValue', topTopic);
+    setText('reportNeedsReviewValue', noMatchCount);
+    setText(
+      'profileNoMatchAttention',
+      `${noMatchCount} no-match question${noMatchCount === 1 ? '' : 's'} need${noMatchCount === 1 ? 's' : ''} review`
+    );
+    setText(
+      'profileMissingStandardsAttention',
+      `${Math.max(0, total - currentStandardsTagged)} question${Math.max(0, total - currentStandardsTagged) === 1 ? '' : 's'} missing standards tags`
+    );
+    setText('profileCommonTopicAttention', `Most common topic: ${topTopic === '-' ? 'none yet' : topTopic.toLowerCase()}`);
     setText(
       'profileSummaryStatus',
       total ? `Showing activity for ${data.date || currentDate}.` : 'No question activity loaded yet.'
     );
+    setText(
+      'profileDailySummaryText',
+      total
+        ? `${total} question${total === 1 ? '' : 's'} on ${data.date || currentDate}; top topic is ${topTopic === '-' ? 'none yet' : topTopic}.`
+        : 'No question activity was logged for this date yet.'
+    );
 
-    renderQuestionRows(questions);
+    currentQuestions = questions;
+    showingReviewQuestions = false;
+    renderQuestionRows(currentQuestions);
     renderTopicSummary(topics);
   }
 
   function renderSummaryError(message) {
-    setText('profileTotalQuestions', '0 questions');
+    setText('profileTotalQuestions', 0);
+    setText('profileNeedsReviewValue', 0);
+    setText('profileTopTopicValue', '-');
+    setText('profileStandardsTaggedValue', currentStandardsTagged);
+    setText('liveStandardsTaggedValue', currentStandardsTagged);
+    setText('reportStandardsTaggedValue', currentStandardsTagged);
+    setText('reportUntaggedQuestionsValue', 0);
+    setText('reportTopTopicValue', '-');
+    setText('reportNeedsReviewValue', 0);
+    setText('profileNoMatchAttention', '0 no-match questions need review');
+    setText('profileMissingStandardsAttention', '0 questions missing standards tags');
+    setText('profileCommonTopicAttention', 'Most common topic: none yet');
     setText('profileSummaryStatus', message);
+    setText('profileDailySummaryText', message);
+    currentQuestions = [];
+    showingReviewQuestions = false;
     renderQuestionRows([]);
     renderTopicSummary([]);
   }
@@ -171,11 +217,15 @@
     const safeSummary = normalizeStandardsSummary(summary);
     const total = safeSummary.totalQuestions;
     const tagged = safeSummary.taggedQuestions;
+    const percentTagged = total ? Math.round((tagged / total) * 1000) / 10 : 0;
     const generatedLabel = formatDateTime(safeSummary.generatedAt);
+    currentStandardsTagged = tagged;
 
     setText('standardsTotalQuestions', total);
     setText('standardsTaggedQuestions', tagged);
     setText('standardsUntaggedQuestions', safeSummary.untaggedQuestions);
+    setText('standardsTaggedPercent', formatPercent(percentTagged));
+    setText('standardsTaggedPercentValue', formatPercent(percentTagged));
     setText('standardsGeneratedAt', generatedLabel);
     setText('standardsConfidenceStrong', safeSummary.standardsConfidence.strong);
     setText('standardsConfidenceMedium', safeSummary.standardsConfidence.medium);
@@ -185,9 +235,21 @@
       'standardsSummaryStatus',
       generatedLabel === 'Not available' ? 'Standards report loaded.' : `Generated ${generatedLabel}.`
     );
+    setText('profileStandardsTaggedValue', tagged);
+    setText('liveStandardsTaggedValue', tagged);
+    setText('reportStandardsTaggedValue', tagged);
+    setText('reportUntaggedQuestionsValue', safeSummary.untaggedQuestions);
+    const coverageDonut = byId('standardsCoverageDonut');
+    if (coverageDonut) coverageDonut.style.setProperty('--coverage-percent', String(Math.max(0, Math.min(100, percentTagged))));
+    const liveTotal = Number(byId('profileTotalQuestions')?.textContent || 0);
+    const missingLiveStandards = Math.max(0, liveTotal - tagged);
+    setText(
+      'profileMissingStandardsAttention',
+      `${missingLiveStandards} question${missingLiveStandards === 1 ? '' : 's'} missing standards tags`
+    );
 
     renderStandardsReportEmptyState(safeSummary);
-    renderStandardsRows(safeSummary.standards);
+    renderStandardsRows(safeSummary.standards, safeSummary.concepts, safeSummary.taggedQuestions);
     renderConceptRows(safeSummary.concepts);
     renderUnitRows(safeSummary.units);
     renderRouteRows(safeSummary.routeTypes);
@@ -199,6 +261,8 @@
     setText('standardsTotalQuestions', 0);
     setText('standardsTaggedQuestions', 0);
     setText('standardsUntaggedQuestions', 0);
+    setText('standardsTaggedPercent', '0%');
+    setText('standardsTaggedPercentValue', '0%');
     setText('standardsGeneratedAt', 'Not loaded');
     setText('standardsConfidenceStrong', 0);
     setText('standardsConfidenceMedium', 0);
@@ -223,31 +287,48 @@
     } else if (summary.totalQuestions === 0) {
       message = 'No student questions have been logged yet.';
     } else if (summary.taggedQuestions === 0) {
-      message = 'Questions have been logged, but no standards/concept tags were found yet.';
+      message = 'No standards were tagged for this date.';
     }
 
     state.hidden = !message;
     state.textContent = message;
   }
 
-  function renderStandardsRows(standards) {
+  function renderStandardsRows(standards, concepts = [], taggedTotal = 0) {
     const rows = byId('standardsSummaryRows');
     if (!rows) return;
+    const standardsRows = Array.isArray(standards) ? standards : [];
+    const conceptRows = Array.isArray(concepts) ? concepts : [];
+    const combinedRows = [
+      ...standardsRows.map((item) => ({
+        label: item.standardId ? `${item.standardId}: ${item.label || 'No label'}` : item.label || 'Unknown standard',
+        count: toCount(item.count),
+        examples: item.exampleQuestions
+      })),
+      ...conceptRows.map((item) => ({
+        label: item.title || item.id || 'Unknown concept',
+        count: toCount(item.count),
+        examples: item.exampleQuestions
+      }))
+    ].sort((a, b) => b.count - a.count || String(a.label).localeCompare(String(b.label)));
 
-    if (!standards.length) {
-      rows.innerHTML = '<p class="profile-empty-state" role="row">No standards matched yet.</p>';
+    if (!combinedRows.length) {
+      rows.innerHTML = `
+        <div class="profile-empty-state standards-empty-block" role="row">
+          <strong>No standards matched yet.</strong>
+          <span>Tag questions to start building your standards report.</span>
+        </div>
+      `;
       return;
     }
 
-    rows.innerHTML = standards.map((item) => `
+    rows.innerHTML = combinedRows.map((item, index) => `
       <div class="standards-report-row standards-table-row" role="row">
-        <span role="cell">${escapeHtml(item.standardId || 'Unknown')}</span>
-        <span role="cell" title="${escapeAttr(item.label || '')}">${escapeHtml(truncate(item.label || 'No label', 120))}</span>
-        <span role="cell">${escapeHtml(item.unit || 'Unknown')}</span>
+        <span role="cell">${index + 1}</span>
+        <span role="cell" title="${escapeAttr(item.label || '')}">${escapeHtml(truncate(item.label || 'No label', 150))}</span>
         <span role="cell">${escapeHtml(formatNumber(item.count))}</span>
-        <span role="cell">${escapeHtml(formatCountMap(item.routeTypes))}</span>
-        <span role="cell">${escapeHtml(formatConfidenceCounts(item.standardsConfidence))}</span>
-        <div role="cell">${renderExampleQuestions(item.exampleQuestions)}</div>
+        <span role="cell">${escapeHtml(formatPercent(taggedTotal ? (item.count / taggedTotal) * 100 : 0))}</span>
+        <div role="cell">${renderExampleQuestions(item.examples)}</div>
       </div>
     `).join('');
   }
@@ -337,37 +418,51 @@
     if (!rows) return;
 
     if (!questions.length) {
-      rows.innerHTML = '<p class="profile-empty-state" role="row">No question activity loaded yet.</p>';
+      rows.innerHTML = `<p class="profile-empty-state" role="row">${
+        showingReviewQuestions ? 'No review-needed questions found for this date.' : 'No question activity loaded yet.'
+      }</p>`;
       return;
     }
 
     rows.innerHTML = questions.map((item) => `
-      <div class="profile-table-row" role="row">
+      <div class="profile-table-row ${isNoMatchQuestion(item) ? 'needs-review-row' : ''}" role="row">
         <span role="cell">${escapeHtml(item.time || '')}</span>
-        <span role="cell">${escapeHtml(item.topic || 'other')}</span>
-        <span role="cell" title="${escapeAttr(item.question || '')}">${escapeHtml(truncate(item.question, 160))}</span>
-        <span role="cell" title="${escapeAttr(item.responsePreview || '')}">${escapeHtml(truncate(item.responsePreview, 160))}</span>
-        <span role="cell">${escapeHtml(item.routeType || 'unknown')}</span>
-        <span role="cell">${escapeHtml(item.confidence || 'unknown')}</span>
+        <span role="cell">${escapeHtml(titleCaseLabel(item.topic || 'other'))}</span>
+        <span role="cell" title="${escapeAttr(item.question || '')}">${escapeHtml(truncate(item.question, 130))}</span>
+        <span role="cell"><span class="live-status-pill ${isNoMatchQuestion(item) ? 'no-match' : 'matched'}">${escapeHtml(statusLabel(item))}</span></span>
+        <span role="cell"><span class="live-confidence-pill ${confidenceClass(item.confidence)}">${escapeHtml(confidenceLabel(item.confidence))}</span></span>
       </div>
     `).join('');
+  }
+
+  function reviewQuestions() {
+    const reviewQuestions = currentQuestions.filter(isNoMatchQuestion);
+    const table = byId('profileQuestionRows');
+
+    showingReviewQuestions = true;
+    renderQuestionRows(reviewQuestions);
+
+    if (reviewQuestions.length) {
+      setText(
+        'profileSummaryStatus',
+        `Showing ${reviewQuestions.length} no-match question${reviewQuestions.length === 1 ? '' : 's'} that need review.`
+      );
+      table?.closest('.recent-questions-card')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      table?.querySelector('.needs-review-row')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      return;
+    }
+
+    setText('profileSummaryStatus', 'No review-needed questions found for this date.');
+    table?.closest('.recent-questions-card')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
   function renderTopicSummary(topics) {
     const summary = byId('profileTopicSummary');
     if (!summary) return;
 
-    if (!topics.length) {
-      summary.className = 'topic-summary-placeholder';
-      summary.innerHTML = `
-        <span class="topic-ring-placeholder" aria-hidden="true"></span>
-        <p>Topic summary will appear here after question activity is available.</p>
-      `;
-      return;
-    }
-
+    const rows = buildTopicSummaryRows(topics);
     summary.className = 'topic-summary-list';
-    summary.innerHTML = topics.map((item) => {
+    summary.innerHTML = rows.map((item) => {
       const percent = Number(item.percent || 0);
       const width = Math.max(0, Math.min(100, percent));
 
@@ -385,20 +480,59 @@
     }).join('');
   }
 
-  function bindEvents() {
-    byId('profileDateSelect')?.addEventListener('change', (event) => {
-      loadSummary(event.target.value);
+  function buildTopicSummaryRows(topics) {
+    const sourceRows = Array.isArray(topics) ? topics : [];
+    const keyed = new Map();
+    const total = sourceRows.reduce((sum, item) => sum + toCount(item?.count), 0);
+
+    sourceRows.forEach((item) => {
+      const key = topicBucketKey(item?.topic);
+      if (!key) return;
+      const existing = keyed.get(key) || { topic: topicLabelForKey(key), count: 0, percent: 0 };
+      existing.count += toCount(item.count);
+      keyed.set(key, existing);
     });
 
-    byId('profileRefreshSummary')?.addEventListener('click', () => {
-      loadProfileStatus();
-      loadDates(byId('profileDateSelect')?.value || currentDate);
-      loadStudentSessions();
-      loadStandardsSummaryReport();
+    const preferredKeys = ['definition', 'science formula', 'no match'];
+    const preferredRows = preferredKeys.map((key) => {
+      const row = keyed.get(key) || { topic: topicLabelForKey(key), count: 0, percent: 0 };
+      return {
+        topic: row.topic,
+        count: row.count,
+        percent: total ? (row.count / total) * 100 : 0
+      };
+    });
+
+    const extraRows = Array.from(keyed.entries())
+      .filter(([key]) => !preferredKeys.includes(key))
+      .map(([, row]) => ({
+        topic: row.topic,
+        count: row.count,
+        percent: total ? (row.count / total) * 100 : 0
+      }));
+
+    return [...preferredRows, ...extraRows];
+  }
+
+  function bindEvents() {
+    byId('profileDateSelect')?.addEventListener('change', async (event) => {
+      await loadSummary(event.target.value);
+      await loadStandardsSummaryReport();
+    });
+
+    byId('profileRefreshSummary')?.addEventListener('click', async () => {
+      await loadProfileStatus();
+      await loadDates(byId('profileDateSelect')?.value || currentDate);
+      await loadStudentSessions();
+      await loadStandardsSummaryReport();
     });
 
     byId('profileRefreshStandardsReport')?.addEventListener('click', () => {
       loadStandardsSummaryReport();
+    });
+
+    byId('profileReviewQuestions')?.addEventListener('click', () => {
+      reviewQuestions();
     });
 
     byId('profileConnectGoogleButton')?.addEventListener('click', () => {
@@ -601,6 +735,52 @@
     return text.slice(0, limit - 3) + '...';
   }
 
+  function normalizeKey(value) {
+    return String(value || '').trim().toLowerCase().replace(/[_-]+/g, ' ');
+  }
+
+  function titleCaseLabel(value) {
+    const text = normalizeKey(value).replace(/\s+/g, ' ').trim();
+    if (!text) return '';
+    return text.replace(/\b\w/g, (letter) => letter.toUpperCase());
+  }
+
+  function topicBucketKey(value) {
+    const key = normalizeKey(value);
+    if (!key) return '';
+    if (key === 'no trusted answer' || key === 'no_match' || key === 'no-match') return 'no match';
+    if (key === 'formula' || key === 'science formulas') return 'science formula';
+    return key;
+  }
+
+  function topicLabelForKey(key) {
+    if (key === 'definition') return 'definition';
+    if (key === 'science formula') return 'science formula';
+    if (key === 'no match') return 'no match';
+    return key || 'other';
+  }
+
+  function isNoMatchQuestion(item) {
+    const route = normalizeKey(item?.routeType || item?.type);
+    const topic = normalizeKey(item?.topic);
+    return route === 'no match' || topic === 'no trusted answer';
+  }
+
+  function statusLabel(item) {
+    return isNoMatchQuestion(item) ? 'No Match' : 'Matched';
+  }
+
+  function confidenceLabel(value) {
+    const confidence = normalizeKey(value);
+    if (confidence === 'strong' || confidence === 'high') return 'Strong';
+    if (confidence === 'none' || confidence === 'no confidence') return 'None';
+    return 'Medium';
+  }
+
+  function confidenceClass(value) {
+    return confidenceLabel(value).toLowerCase();
+  }
+
   function formatPercent(value) {
     return `${Math.round(value * 10) / 10}%`;
   }
@@ -739,7 +919,7 @@
 
   document.addEventListener('DOMContentLoaded', init);
   document.addEventListener('charlemagne:blade-active', (event) => {
-    if (event.detail?.id === 'modes') {
+    if (['modes', 'live-activity', 'reports'].includes(event.detail?.id)) {
       refreshActiveProfileBlade();
     }
   });
