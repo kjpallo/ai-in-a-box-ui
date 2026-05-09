@@ -114,10 +114,12 @@
 
   function renderStudentControls(controls) {
     const copyLock = byId('studentCopyInspectLockEnabled');
+    const guidedFormulaTutor = byId('studentGuidedFormulaTutoringEnabled');
     const rateLimit = byId('studentQuestionRateLimitEnabled');
     const perMinute = byId('studentQuestionsPerMinute');
 
     if (copyLock) copyLock.checked = controls?.studentCopyInspectLockEnabled !== false;
+    if (guidedFormulaTutor) guidedFormulaTutor.checked = controls?.studentGuidedFormulaTutoringEnabled !== false;
     if (rateLimit) rateLimit.checked = controls?.studentQuestionRateLimitEnabled !== false;
     if (perMinute) perMinute.value = String(Number(controls?.studentQuestionsPerMinute) || 6);
   }
@@ -126,6 +128,7 @@
     if (loadingStudentControls) return;
 
     const copyLock = byId('studentCopyInspectLockEnabled');
+    const guidedFormulaTutor = byId('studentGuidedFormulaTutoringEnabled');
     const rateLimit = byId('studentQuestionRateLimitEnabled');
     const perMinute = byId('studentQuestionsPerMinute');
     const questionsPerMinute = Number(perMinute?.value || 6);
@@ -144,6 +147,7 @@
         },
         body: JSON.stringify({
           studentCopyInspectLockEnabled: Boolean(copyLock?.checked),
+          studentGuidedFormulaTutoringEnabled: Boolean(guidedFormulaTutor?.checked),
           studentQuestionRateLimitEnabled: Boolean(rateLimit?.checked),
           studentQuestionsPerMinute: questionsPerMinute
         })
@@ -712,6 +716,7 @@
     });
 
     byId('studentCopyInspectLockEnabled')?.addEventListener('change', saveStudentControls);
+    byId('studentGuidedFormulaTutoringEnabled')?.addEventListener('change', saveStudentControls);
     byId('studentQuestionRateLimitEnabled')?.addEventListener('change', saveStudentControls);
     byId('studentQuestionsPerMinute')?.addEventListener('change', saveStudentControls);
   }

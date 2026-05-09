@@ -20,6 +20,12 @@ function createRouteHarness(options = {}) {
     }
   };
   const studentSessions = Object.create(null);
+  const classroomControls = {
+    studentCopyInspectLockEnabled: true,
+    studentGuidedFormulaTutoringEnabled: options.studentGuidedFormulaTutoringEnabled !== false,
+    studentQuestionRateLimitEnabled: options.studentQuestionRateLimitEnabled === true,
+    studentQuestionsPerMinute: options.studentQuestionsPerMinute || 6
+  };
   const questionAnswer = createQuestionAnswerService({
     teacherFactsFile,
     maxKnowledgeItems: 6,
@@ -64,11 +70,7 @@ function createRouteHarness(options = {}) {
 
   registerStudentRoutes(app, {
     answerStudentMessage: questionAnswer.answerStudentMessage,
-    getClassroomControls: () => ({
-      studentCopyInspectLockEnabled: true,
-      studentQuestionRateLimitEnabled: options.studentQuestionRateLimitEnabled === true,
-      studentQuestionsPerMinute: options.studentQuestionsPerMinute || 6
-    }),
+    getClassroomControls: () => classroomControls,
     logCompletedInteraction: questionAnswer.logCompletedInteraction,
     studentSessions
   });
@@ -90,7 +92,7 @@ function createRouteHarness(options = {}) {
     return res;
   }
 
-  return { request, questionAnswer, studentSessions };
+  return { request, questionAnswer, studentSessions, classroomControls };
 }
 
 function createResponse() {
@@ -272,6 +274,8 @@ async function main() {
   assert.equal(studentSessions[classSessionId].anonymousHubs['student-b'].messages.length, 1);
 
   await testFormulaTutorBypassesQuestionEnergy();
+  await testGuidedFormulaTutorDisabled();
+  await testActiveFormulaTutorStopsWhenDisabled();
   await testExpandedFormulaTutorFlows();
   await testExpandedFormulaTutorIsolation();
 
@@ -559,6 +563,83 @@ async function testFormulaTutorBypassesQuestionEnergy() {
   assert.equal(studentBNormal.statusCode, 200);
   assert.equal(studentBNormal.body.rateLimit.remainingWhole, 0);
   assert.equal(studentSessions[classSessionId].anonymousHubs['student-b'].currentTutorProblem, null);
+}
+
+async function testGuidedFormulaTutorDisabled() {
+  const { request, questionAnswer, studentSessions } = createRouteHarness({
+    studentGuidedFormulaTutoringEnabled: false,
+    studentQuestionRateLimitEnabled: true,
+    studentQuestionsPerMinute: 2
+  });
+
+  const create = await request('POST', '/api/profile/create-student-session');
+  assert.equal(create.statusCode, 201);
+  const classSessionId = create.body.sessionId;
+  const forceQuestion = 'A box has a mass of 10 kg and accelerates at 3 m/s². What force is needed?';
+
+  const teacherDirect = await questionAnswer.answerStudentMessage(forceQuestion);
+  assert.match(teacherDirect.response, /F = 30 N/i);
+
+  const disabledFormula = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'student-a',
+    message: forceQuestion
+  });
+  assert.equal(disabledFormula.statusCode, 200);
+  assert.notEqual(disabledFormula.body.routeType, 'formula_tutor');
+  assert.match(disabledFormula.body.response, /F = 30 N/i);
+  assert.equal(disabledFormula.body.tutor, undefined);
+  assert.equal(disabledFormula.body.rateLimit.remainingWhole, 1);
+  assert.equal(studentSessions[classSessionId].anonymousHubs['student-a'].currentTutorProblem, null);
+
+  const normalQuestion = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'student-a',
+    message: 'What is mass?'
+  });
+  assert.equal(normalQuestion.statusCode, 200);
+  assert.equal(normalQuestion.body.rateLimit.remainingWhole, 0);
+}
+
+async function testActiveFormulaTutorStopsWhenDisabled() {
+  const { request, studentSessions, classroomControls } = createRouteHarness();
+
+  const create = await request('POST', '/api/profile/create-student-session');
+  assert.equal(create.statusCode, 201);
+  const classSessionId = create.body.sessionId;
+  const forceQuestion = 'A box has a mass of 10 kg and accelerates at 3 m/s². What force is needed?';
+
+  const start = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'student-a',
+    message: forceQuestion
+  });
+  assert.equal(start.statusCode, 200);
+  assert.equal(start.body.routeType, 'formula_tutor');
+  assert.ok(studentSessions[classSessionId].anonymousHubs['student-a'].currentTutorProblem);
+
+  classroomControls.studentGuidedFormulaTutoringEnabled = false;
+
+  const stopped = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'student-a',
+    message: '1'
+  });
+  assert.equal(stopped.statusCode, 200);
+  assert.equal(stopped.body.routeType, 'formula_tutor');
+  assert.match(stopped.body.response, /Guided formula tutoring is turned off right now/i);
+  assert.equal(stopped.body.tutor, null);
+  assert.equal(studentSessions[classSessionId].anonymousHubs['student-a'].currentTutorProblem, null);
+
+  const normalFormula = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'student-a',
+    message: forceQuestion
+  });
+  assert.equal(normalFormula.statusCode, 200);
+  assert.notEqual(normalFormula.body.routeType, 'formula_tutor');
+  assert.match(normalFormula.body.response, /F = 30 N/i);
+  assert.equal(studentSessions[classSessionId].anonymousHubs['student-a'].currentTutorProblem, null);
 }
 
 function escapeRegExp(value) {

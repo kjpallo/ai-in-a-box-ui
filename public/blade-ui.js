@@ -169,6 +169,13 @@
                 <span>Lock copying and inspect shortcuts on student page</span>
               </label>
               <label class="profile-control-row">
+                <input type="checkbox" id="studentGuidedFormulaTutoringEnabled" />
+                <span>
+                  Guided Formula Tutor
+                  <small>When on, student formula questions are solved step-by-step instead of showing the final answer immediately.</small>
+                </span>
+              </label>
+              <label class="profile-control-row">
                 <input type="checkbox" id="studentQuestionRateLimitEnabled" />
                 <span>Limit student question speed</span>
               </label>

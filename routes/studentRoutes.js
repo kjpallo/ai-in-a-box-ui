@@ -11,6 +11,7 @@ function registerStudentRoutes(app, {
   answerStudentMessage,
   getClassroomControls = () => ({
     studentCopyInspectLockEnabled: true,
+    studentGuidedFormulaTutoringEnabled: true,
     studentQuestionRateLimitEnabled: true,
     studentQuestionsPerMinute: 6
   }),
@@ -111,6 +112,44 @@ function registerStudentRoutes(app, {
       const contextMessages = hub.messages;
       const lastAnsweredContext = findLastAnsweredContext(contextMessages);
 
+      if (hub.currentTutorProblem && !controls.studentGuidedFormulaTutoringEnabled) {
+        hub.currentTutorProblem = null;
+        const response = 'Guided formula tutoring is turned off right now. Ask your formula question again for a normal answer.';
+        const entry = appendStudentHubEntry({
+          session,
+          hub,
+          message,
+          response,
+          routeType: 'formula_tutor',
+          confidence: 'strong'
+        });
+
+        logCompletedInteraction({
+          message,
+          questionRoute: makeFormulaTutorRoute(null, entry),
+          answerGiven: response,
+          source: 'student',
+          sessionId,
+          debug: {
+            className: session.className || '',
+            studentHubId,
+            formulaTutor: {
+              active: false,
+              stopped: true,
+              disabledByControl: true
+            }
+          }
+        });
+
+        return res.json({
+          response,
+          routeType: 'formula_tutor',
+          confidence: 'strong',
+          rateLimit: rateLimitInfo,
+          tutor: null
+        });
+      }
+
       // Guided tutor messages are already inside a teacher-safe scaffold, so they do not spend question energy.
       if (hub.currentTutorProblem) {
         const previousTutorProblem = hub.currentTutorProblem;
@@ -165,7 +204,7 @@ function registerStudentRoutes(app, {
         recentMessages: contextMessages
       });
       // Starting a guided tutor also bypasses energy; normal student questions still spend energy below.
-      if (canStartFormulaTutor(result.questionRoute)) {
+      if (controls.studentGuidedFormulaTutoringEnabled && canStartFormulaTutor(result.questionRoute)) {
         hub.currentTutorProblem = startFormulaTutor({
           questionRoute: result.questionRoute,
           originalQuestion: message
@@ -272,6 +311,9 @@ function normalizeStudentControls(value = {}) {
   return {
     studentCopyInspectLockEnabled: typeof controls.studentCopyInspectLockEnabled === 'boolean'
       ? controls.studentCopyInspectLockEnabled
+      : true,
+    studentGuidedFormulaTutoringEnabled: typeof controls.studentGuidedFormulaTutoringEnabled === 'boolean'
+      ? controls.studentGuidedFormulaTutoringEnabled
       : true,
     studentQuestionRateLimitEnabled: typeof controls.studentQuestionRateLimitEnabled === 'boolean'
       ? controls.studentQuestionRateLimitEnabled

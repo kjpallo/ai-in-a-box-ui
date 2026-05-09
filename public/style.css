@@ -1960,6 +1960,14 @@ button:disabled {
   accent-color: var(--neon);
 }
 
+.profile-control-row small {
+  display: block;
+  margin-top: 4px;
+  color: #b7d1cf;
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
 .profile-control-field span {
   color: #cafff0;
   font-size: 0.72rem;

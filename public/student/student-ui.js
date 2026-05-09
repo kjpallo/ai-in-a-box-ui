@@ -380,7 +380,9 @@
     if (!tutorCard) return;
 
     if (!tutor || typeof tutor !== 'object') {
-      if (!tutorCard.dataset.hasTutor) tutorCard.hidden = true;
+      delete tutorCard.dataset.hasTutor;
+      tutorCard.hidden = true;
+      tutorCard.classList.remove('is-complete', 'is-stopped');
       return;
     }
 

@@ -56,15 +56,24 @@ async function testClassroomControlsStoreAndRoutes() {
 
     const updated = await request(handlers, 'POST', '/api/classroom-controls', {
       studentCopyInspectLockEnabled: false,
+      studentGuidedFormulaTutoringEnabled: false,
       studentQuestionRateLimitEnabled: true,
       studentQuestionsPerMinute: 2
     });
     assert.equal(updated.statusCode, 200);
     assert.equal(updated.body.controls.studentCopyInspectLockEnabled, false);
+    assert.equal(updated.body.controls.studentGuidedFormulaTutoringEnabled, false);
     assert.equal(updated.body.controls.studentQuestionRateLimitEnabled, true);
     assert.equal(updated.body.controls.studentQuestionsPerMinute, 2);
 
+    const guidedTutorOn = await request(handlers, 'POST', '/api/classroom-controls', {
+      studentGuidedFormulaTutoringEnabled: true
+    });
+    assert.equal(guidedTutorOn.statusCode, 200);
+    assert.equal(guidedTutorOn.body.controls.studentGuidedFormulaTutoringEnabled, true);
+
     const saved = getClassroomControls(controlsFile);
+    assert.equal(saved.studentGuidedFormulaTutoringEnabled, true);
     assert.equal(saved.studentQuestionRateLimitEnabled, true);
     assert.equal(saved.studentQuestionsPerMinute, 2);
   } finally {
