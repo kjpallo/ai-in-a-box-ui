@@ -25,13 +25,15 @@ function registerStudentRoutes(app, {
         intent,
         lastAnsweredPrompt: lastAnsweredContext.prompt,
         lastAnsweredAnswer: lastAnsweredContext.answer,
-        pendingClarification: session.pendingClarification || null
+        pendingClarification: session.pendingClarification || null,
+        currentStandardId: findLastStandardIdForCurrentContext(session.messages)
       });
       const entry = {
         message,
         response: result.response,
         routeType: result.routeType,
         confidence: result.confidence,
+        standardId: result.standardId || result.questionRoute?.standardId || result.questionRoute?.public?.standardId || '',
         isStandardsFollowUp: Boolean(result.isStandardsFollowUp),
         createdAt: new Date().toISOString()
       };
@@ -70,7 +72,8 @@ function findLastAnsweredContext(messages) {
   for (let index = messages.length - 1; index >= 0; index -= 1) {
     const entry = messages[index];
     if (!entry?.message || entry.isStandardsFollowUp) continue;
-    if (isInstructionalFollowUpPrompt(entry.message)) continue;
+    if (entry.routeType === 'no_match') continue;
+    if (isInstructionalFollowUpPrompt(entry.message) && !isResolvedNumberChoice(entry)) continue;
     if (!entry.response) continue;
     return {
       prompt: entry.message,
@@ -81,7 +84,37 @@ function findLastAnsweredContext(messages) {
   return { prompt: '', answer: '' };
 }
 
+function findLastStandardIdForCurrentContext(messages) {
+  if (!Array.isArray(messages)) return '';
+
+  let contextIndex = -1;
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const entry = messages[index];
+    if (!entry?.message || entry.isStandardsFollowUp) continue;
+    if (entry.routeType === 'no_match') continue;
+    if (isInstructionalFollowUpPrompt(entry.message) && !isResolvedNumberChoice(entry)) continue;
+    if (!entry.response) continue;
+    contextIndex = index;
+    break;
+  }
+
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    if (contextIndex >= 0 && index <= contextIndex) break;
+    const standardId = String(messages[index]?.standardId || '').trim();
+    if (standardId) return standardId;
+  }
+
+  return '';
+}
+
+function isResolvedNumberChoice(entry) {
+  return /^\s*\d+\s*$/.test(String(entry?.message || '')) &&
+    entry.routeType &&
+    !['no_match', 'standards_followup', 'clarification_followup'].includes(entry.routeType);
+}
+
 module.exports = {
   findLastAnsweredContext,
+  findLastStandardIdForCurrentContext,
   registerStudentRoutes
 };

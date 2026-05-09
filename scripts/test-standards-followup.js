@@ -8,13 +8,16 @@ const { findLastAnsweredContext } = require('../routes/studentRoutes');
 const { loadMissouriStandardsBank } = require('../lib/standards/standardsMatcher');
 const {
   NO_CONTEXT_MESSAGE,
+  NO_FULL_STANDARD_CONTEXT_MESSAGE,
   NO_WHY_CONTEXT_MESSAGE,
   NO_STRONG_MATCH_MESSAGE,
   answerWhyThisMattersFollowUp,
   answerStandardsFollowUp,
+  formatFullStandardAnswer,
   formatStandardsAnswer,
   formatWhyThisMattersAnswer,
   getWhyThisMattersForStandard,
+  isFullStandardFollowUp,
   isStandardsFollowUp
 } = require('../lib/standards/standardsFollowUp');
 
@@ -119,6 +122,7 @@ assert.equal(
 runStandardsContextCarryoverTests();
 runStandardsClarificationTests();
 runWhyThisMattersTests();
+runFullStandardFollowUpTests();
 runRequestPathTests()
   .then(() => {
     console.log('Standards follow-up tests passed');
@@ -508,6 +512,104 @@ function runWhyThisMattersTests() {
   assertWhyOnlyResponse(directWhy, 'direct why formatter');
 }
 
+function runFullStandardFollowUpTests() {
+  for (const prompt of [
+    'read the full standard',
+    'read full standard',
+    'show full standard',
+    'what is the full standard',
+    'official standard',
+    'show official standard',
+    'what does the standard say',
+    'read the standard',
+    'read the standered',
+    'full standered',
+    'official standerd'
+  ]) {
+    assert.equal(isFullStandardFollowUp(prompt), true, `${prompt} should be detected as a full-standard request`);
+    assert.equal(isStandardsFollowUp(prompt), true, `${prompt} should still be a standards follow-up`);
+  }
+
+  const density = answerStandardsFollowUp('read the full standard', 'what is density', {
+    lastAnsweredAnswer: 'Density tells how much mass is packed into a certain volume. Use D = m / V.'
+  });
+  assertFullStandardResponse(density, '9-12.PS1.A.3', 'density full-standard follow-up');
+
+  const densityStandard = answerStandardsFollowUp('what standard is this over', 'what is density', {
+    lastAnsweredAnswer: 'Density tells how much mass is packed into a certain volume. Use D = m / V.'
+  });
+  assert.equal(densityStandard.standardId, '9-12.PS1.A.3');
+  const densityAfterStandard = answerStandardsFollowUp('read the full standard', 'what is density', {
+    lastAnsweredAnswer: densityStandard.response,
+    currentStandardId: densityStandard.standardId
+  });
+  assertFullStandardResponse(densityAfterStandard, '9-12.PS1.A.3', 'full standard after standards follow-up');
+
+  const gravityAfterPoint = answerStandardsFollowUp('read the full standard', 'what is the force of gravity', {
+    lastAnsweredAnswer: "What's the point?\n\nThis matters because gravity affects real things like falling objects, weight, sports, ramps, cars, satellites, and why objects speed up as they fall."
+  });
+  assertFullStandardResponse(gravityAfterPoint, '9-12.PS2.A.1', 'full standard after what-is-the-point');
+
+  const misspelled = answerStandardsFollowUp('read the full standered', 'what is density', {
+    lastAnsweredAnswer: 'Density is mass divided by volume.'
+  });
+  assertFullStandardResponse(misspelled, '9-12.PS1.A.3', 'misspelled full-standard follow-up');
+
+  const noContext = answerStandardsFollowUp('read the full standard', '');
+  assert.equal(noContext.response, NO_FULL_STANDARD_CONTEXT_MESSAGE, 'full-standard follow-up without context should be helpful');
+
+  const clarification = answerStandardsFollowUp(
+    'read the full standard',
+    'We are learning about forces, energy, and motion.',
+    {
+      matcher: () => ({
+        confidence: 'medium',
+        standards: [],
+        possibleStandards: [
+          { standardId: '9-12.PS2.A.1', unit: 'Forces and Motion', label: 'Forces and Motion' },
+          { standardId: '9-12.PS3.A.1', unit: 'Energy', label: 'Energy' },
+          { standardId: '9-12.PS4.A.1', unit: 'Waves', label: 'Waves' }
+        ]
+      })
+    }
+  );
+  assert.equal(clarification.reason, 'multiple_standard_matches');
+  assert.ok(clarification.response.includes('I found more than one possible standard.'));
+  assert.ok(clarification.response.includes('Type the number of the one you want me to read.'));
+  assert.ok(!clarification.response.includes('Official wording:'), 'multiple matches should not dump full standard text');
+  assert.ok(!clarification.response.includes('Standard code:\n9-12.PS2.A.1'), 'multiple matches should not dump unrelated standards');
+
+  const selected = resolvePendingClarification('2', clarification.pendingClarification);
+  assert.equal(selected.questionRoute.standardId, '9-12.PS3.A.1');
+  assertFullStandardText(selected.questionRoute.directAnswer, '9-12.PS3.A.1', 'numbered selection should return full standard');
+
+  const laterReadSelected = answerStandardsFollowUp('read the full standard', 'We are learning about forces, energy, and motion.', {
+    currentStandardId: selected.questionRoute.standardId
+  });
+  assertFullStandardResponse(laterReadSelected, '9-12.PS3.A.1', 'later full-standard request should keep numbered selection');
+
+  const bank = loadMissouriStandardsBank();
+  const standard = bank.standards.find((item) => item.standardId === '9-12.PS1.A.3');
+  assertFullStandardText(formatFullStandardAnswer(standard), '9-12.PS1.A.3', 'direct full-standard formatter');
+}
+
+function assertFullStandardResponse(result, standardId, name) {
+  assert.equal(result.handled, true, `${name} should be handled`);
+  assert.equal(result.matched, true, `${name} should match`);
+  assert.equal(result.standardId, standardId, `${name} should use ${standardId}`);
+  assertFullStandardText(result.response, standardId, name);
+}
+
+function assertFullStandardText(response, standardId, name) {
+  assert.ok(response.startsWith('Full standard\n\n'), `${name} should start with Full standard`);
+  assert.ok(response.includes(`Standard code:\n${standardId}`), `${name} should include the standard code`);
+  assert.ok(response.includes('Short summary:'), `${name} should include a short summary`);
+  assert.ok(response.includes('Official wording:'), `${name} should include official wording`);
+  assert.ok(!response.includes('I can statement:'), `${name} should not include the I can statement`);
+  assert.ok(!response.includes("What's the point?"), `${name} should not include what-is-the-point content`);
+  assert.ok(!response.includes('Want the full standard?'), `${name} should not include the regular standards follow-up prompt`);
+}
+
 function assertWhyOnlyResponse(response, name) {
   for (const blocked of ['I can statement', 'Standard code', 'Short summary', 'Full official standard', 'Want the full standard']) {
     assert.ok(!response.includes(blocked), `${name} should not include "${blocked}"`);
@@ -590,6 +692,28 @@ async function runStudentSessionPathTests() {
   });
 
   assert.equal(noContextPoint.response, NO_WHY_CONTEXT_MESSAGE);
+
+  const symbolQuestion = await service.answerStudentMessage('what is v', {
+    lastAnsweredPrompt: '',
+    pendingClarification: null
+  });
+  assert.ok(symbolQuestion.pendingClarification, 'ambiguous V should keep a numbered clarification');
+
+  const selectedVolume = await service.answerStudentMessage('2', {
+    lastAnsweredPrompt: 'what is v',
+    lastAnsweredAnswer: symbolQuestion.response,
+    pendingClarification: symbolQuestion.pendingClarification
+  });
+  assert.equal(selectedVolume.pendingClarification, null);
+  assert.ok(selectedVolume.response.includes('V means volume'));
+
+  const volumeStandard = await service.answerStudentMessage('read the full standard', {
+    lastAnsweredPrompt: '2',
+    lastAnsweredAnswer: selectedVolume.response,
+    pendingClarification: null
+  });
+  assert.equal(volumeStandard.standardId, '9-12.PS1.A.3');
+  assertFullStandardText(volumeStandard.response, '9-12.PS1.A.3', 'full standard after V volume selection');
 }
 
 async function runPowerClarificationPathTests() {

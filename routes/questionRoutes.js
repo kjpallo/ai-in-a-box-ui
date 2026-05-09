@@ -8,6 +8,7 @@ function registerQuestionRoutes(app, {
   let lastAnsweredPrompt = '';
   let lastAnsweredAnswer = '';
   let pendingClarification = null;
+  let currentStandardId = '';
 
   function sendRouterTestResponse(message, res) {
     const { matchedKnowledge, questionRoute } = questionAnswer.routeMessage(message);
@@ -94,6 +95,7 @@ function registerQuestionRoutes(app, {
       if (clarificationFollowUp?.handled) {
         pendingClarification = clarificationFollowUp.pendingClarification || null;
         questionRoute = clarificationFollowUp.questionRoute;
+        currentStandardId = questionRoute.standardId || questionRoute.public?.standardId || currentStandardId;
         fullText += questionRoute.directAnswer;
         sendEvent({ type: 'router', router: questionRoute.public });
         sendEvent({ type: 'text_delta', chunk: questionRoute.directAnswer });
@@ -139,17 +141,20 @@ function registerQuestionRoutes(app, {
       }
 
       const standardsFollowUp = questionAnswer.answerStandardsFollowUp(message, lastAnsweredPrompt, {
-        lastAnsweredAnswer
+        lastAnsweredAnswer,
+        currentStandardId
       });
 
       if (standardsFollowUp?.handled) {
         pendingClarification = standardsFollowUp.pendingClarification || null;
+        currentStandardId = standardsFollowUp.standardId || currentStandardId;
         fullText += standardsFollowUp.response;
         questionRoute = {
           type: 'standards_followup',
           confidence: standardsFollowUp.matched ? 'strong' : 'none',
           directAnswer: standardsFollowUp.response,
           aiAllowed: false,
+          standardId: standardsFollowUp.standardId || '',
           public: {
             type: 'standards_followup',
             confidence: standardsFollowUp.matched ? 'strong' : 'none',
@@ -273,6 +278,7 @@ function registerQuestionRoutes(app, {
       if (fullText.trim()) {
         lastAnsweredPrompt = message;
         lastAnsweredAnswer = fullText;
+        currentStandardId = '';
       }
 
       await ttsChain;
