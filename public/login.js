@@ -45,7 +45,7 @@
       ? `
         <h2>First-time setup</h2>
         <p>Create the local teacher login for this Charlemagne box.</p>
-        <small>Google can be connected later for email/identity features.</small>
+        <small>Google can be connected later for email and identity features.</small>
       `
       : `
         <h2>Teacher login</h2>

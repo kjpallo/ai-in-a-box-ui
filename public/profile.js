@@ -36,6 +36,7 @@
       renderProfileStatus({
         googleConnected: false,
         gmailConnected: false,
+        teacherAuthenticated: false,
         teacher: null,
         message: 'Could not load profile status.'
       });
@@ -45,22 +46,30 @@
   function renderProfileStatus(data) {
     currentProfileStatus = data || null;
     const teacher = data && data.teacher && typeof data.teacher === 'object' ? data.teacher : null;
-    const hasRealTeacher = Boolean(teacher && (teacher.email || teacher.firstName || teacher.lastName));
     const googleConfigured = Boolean(data && data.googleConfigured);
     const gmailConnected = Boolean(data && data.gmailConnected);
+    const teacherAuthenticated = Boolean(data && (data.teacherAuthenticated || data.authenticated));
+    const localUsername = data?.username || teacher?.username || '';
+    const linkedGoogleEmail = data?.linkedGoogleEmail || teacher?.linkedGoogleEmail || '';
+    const linkedGoogleName = data?.linkedGoogleName || teacher?.linkedGoogleName || '';
 
     setText('profileConnectionMessage', data?.message || 'Google sign-in is not connected yet.');
-    setText('profileStatusPill', hasRealTeacher ? 'Signed in' : 'Not signed in');
+    setText('profileStatusPill', teacherAuthenticated ? 'Local login active' : 'Not signed in');
     setText(
       'profileHelpText',
-      hasRealTeacher
-        ? 'Teacher profile information is loaded from the local profile API.'
-        : 'Connect Gmail to show teacher profile information.'
+      gmailConnected
+        ? 'Google identity is linked to this local teacher account.'
+        : 'Google can be connected later for email and identity features.'
     );
-    setText('profileEmail', hasRealTeacher ? teacher.email || 'Not available' : 'Not signed in');
-    setText('profileFirstName', hasRealTeacher ? teacher.firstName || 'Not available' : 'Not available');
-    setText('profileLastName', hasRealTeacher ? teacher.lastName || 'Not available' : 'Not available');
-    setText('profileAvatar', hasRealTeacher ? initialsForTeacher(teacher) : 'TP');
+    setText('profileLocalUsername', localUsername || 'Not available');
+    setText('profileGoogleStatus', gmailConnected ? 'Connected' : 'Not connected');
+    setText('profileEmail', linkedGoogleEmail || 'Not connected');
+    setText('profileGoogleName', linkedGoogleName || 'Not available');
+    setText('profileAvatar', initialsForTeacher({
+      firstName: linkedGoogleName.split(/\s+/)[0] || '',
+      lastName: linkedGoogleName.split(/\s+/).slice(1).join(' '),
+      email: linkedGoogleEmail || localUsername || 'T'
+    }));
     setText(
       'profileEmailNotice',
       gmailConnected ? 'Gmail is connected for future daily reports.' : 'Connect Gmail before sending daily reports.'
@@ -72,10 +81,16 @@
     const connectButton = byId('profileConnectGoogleButton');
     if (connectButton) {
       connectButton.disabled = !googleConfigured;
-      connectButton.textContent = gmailConnected ? 'Reconnect Gmail' : 'Connect Gmail';
+      connectButton.textContent = gmailConnected ? 'Reconnect Google' : 'Connect Google';
       connectButton.title = googleConfigured
         ? 'Connect this local app to a teacher Gmail account.'
         : 'Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env, then restart the app.';
+    }
+
+    const disconnectButton = byId('profileDisconnectGoogleButton');
+    if (disconnectButton) {
+      disconnectButton.hidden = !gmailConnected;
+      disconnectButton.disabled = !gmailConnected;
     }
   }
 
@@ -542,6 +557,22 @@
       }
 
       window.location.href = currentProfileStatus.connectUrl || '/api/profile/google/start';
+    });
+
+    byId('profileDisconnectGoogleButton')?.addEventListener('click', async () => {
+      const disconnectButton = byId('profileDisconnectGoogleButton');
+      try {
+        if (disconnectButton) disconnectButton.disabled = true;
+        setText('profileConnectionMessage', 'Disconnecting Google...');
+        await fetchJson(currentProfileStatus?.disconnectUrl || '/api/profile/google/disconnect', {
+          method: 'POST'
+        });
+        await loadProfileStatus();
+      } catch (error) {
+        setText('profileConnectionMessage', error.message || 'Could not disconnect Google.');
+      } finally {
+        if (disconnectButton) disconnectButton.disabled = !currentProfileStatus?.gmailConnected;
+      }
     });
 
     byId('profileSendDailyEmail')?.addEventListener('click', async () => {

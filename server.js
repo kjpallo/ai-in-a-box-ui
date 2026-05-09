@@ -22,9 +22,10 @@ const {
   loadStudentInteractionLogs
 } = require('./lib/system/standardsSummaryReport');
 const {
-  getProfileStatus,
+  getProfileStatus: getGmailProfileStatus,
   createGoogleConnectUrl,
   completeGoogleConnect,
+  disconnectGoogle,
   sendDailySummaryEmail
 } = require('./lib/system/gmailConnector');
 const { buildSystemHealthReport } = require('./lib/system/healthReport');
@@ -35,7 +36,8 @@ const {
   createTeacherAuthStore,
   createTeacherSessionStore,
   getTeacherSession,
-  requireTeacherAuth
+  requireTeacherAuth,
+  sanitizeTeacherProfileStatus
 } = require('./lib/auth/teacherAuth');
 const { registerAiImprovementRoutes } = require('./routes/aiImprovementRoutes');
 const { registerAuthRoutes } = require('./routes/authRoutes');
@@ -163,12 +165,19 @@ registerAiImprovementRoutes(app, { getProblems, logProblem, updateProblem });
 // Profile and student-session routes.
 app.use('/api/profile', teacherAuthRequired);
 registerProfileRoutes(app, {
+  clearGoogleIdentity: () => teacherAuthStore.clearGoogleIdentity(),
   completeGoogleConnect,
   createGoogleConnectUrl,
+  disconnectGoogle,
   getAvailableProfileDates,
   getDailyQuestionSummary,
   getStandardsSummaryReport: (date) => buildStandardsSummaryReport(loadStudentInteractionLogs(studentInteractionsFile), { date }),
-  getProfileStatus,
+  getProfileStatus: (req) => sanitizeTeacherProfileStatus({
+    authStore: teacherAuthStore,
+    authenticated: Boolean(getTeacherSession(req, teacherSessionStore)),
+    gmailStatus: getGmailProfileStatus()
+  }),
+  linkGoogleIdentity: (teacher) => teacherAuthStore.updateGoogleIdentity(teacher),
   port: PORT,
   sendDailySummaryEmail,
   studentSessions

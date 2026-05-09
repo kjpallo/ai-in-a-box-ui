@@ -5,6 +5,7 @@ const path = require('path');
 const {
   createTeacherAuthStore,
   hashPin,
+  sanitizeTeacherProfileStatus,
   verifyPin
 } = require('../lib/auth/teacherAuth');
 
@@ -41,6 +42,42 @@ async function run() {
     const saved = store.read();
     assert(saved.username === 'teacher', 'auth store should read the saved username');
     assert(saved.pinHash && saved.pinHash.algorithm === 'scrypt', 'auth store should save a scrypt PIN/password hash');
+    const originalPinHash = JSON.stringify(saved.pinHash);
+
+    const linkedTeacher = await store.updateGoogleIdentity({
+      email: 'teacher.google@example.com',
+      name: 'Teacher Google'
+    });
+    assert(linkedTeacher.linkedGoogleEmail === 'teacher.google@example.com', 'auth store should update linked Google email');
+    assert(linkedTeacher.linkedGoogleName === 'Teacher Google', 'auth store should update linked Google name');
+
+    const linkedSaved = store.read();
+    assert(JSON.stringify(linkedSaved.pinHash) === originalPinHash, 'updating Google identity should not change the PIN/password hash');
+    assert(linkedSaved.googleLinkedAt, 'auth store should record when Google was linked');
+    const linkedRaw = await fsp.readFile(authFile, 'utf8');
+    assert(!linkedRaw.includes('accessToken'), 'teacher_auth.json should not store Gmail access tokens');
+    assert(!linkedRaw.includes('refreshToken'), 'teacher_auth.json should not store Gmail refresh tokens');
+
+    const profileStatus = sanitizeTeacherProfileStatus({
+      authStore: store,
+      authenticated: true,
+      gmailStatus: {
+        googleConfigured: true,
+        googleConnected: true,
+        gmailConnected: true,
+        canSendEmail: true,
+        accessToken: 'secret-access-token',
+        refreshToken: 'secret-refresh-token'
+      }
+    });
+    assert(profileStatus.localTeacherAuthExists, 'profile status should report that local teacher auth exists');
+    assert(profileStatus.teacherAuthenticated, 'profile status should report authenticated teacher state');
+    assert(profileStatus.gmailConnected, 'profile status should report connected Gmail state');
+    assert(profileStatus.linkedGoogleEmail === 'teacher.google@example.com', 'profile status should expose linked Google email');
+    const statusRaw = JSON.stringify(profileStatus);
+    assert(!statusRaw.includes('secret-access-token'), 'profile status should not expose access tokens');
+    assert(!statusRaw.includes('secret-refresh-token'), 'profile status should not expose refresh tokens');
+    assert(!statusRaw.includes('pinHash'), 'profile status should not expose PIN/password hashes');
 
     const verified = store.verifyLogin({ username: 'teacher', pin });
     assert(verified && verified.username === 'teacher', 'auth store should verify the saved teacher login');

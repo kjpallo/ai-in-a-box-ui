@@ -3,16 +3,19 @@ const crypto = require('crypto');
 function registerProfileRoutes(app, {
   completeGoogleConnect,
   createGoogleConnectUrl,
+  clearGoogleIdentity,
+  disconnectGoogle,
   getAvailableProfileDates,
   getDailyQuestionSummary,
   getStandardsSummaryReport,
   getProfileStatus,
+  linkGoogleIdentity,
   port,
   sendDailySummaryEmail,
   studentSessions
 }) {
-  app.get('/api/profile/status', (_req, res) => {
-    res.json(getProfileStatus());
+  app.get('/api/profile/status', (req, res) => {
+    res.json(getProfileStatus(req));
   });
 
   app.post('/api/profile/create-student-session', (req, res) => {
@@ -59,7 +62,12 @@ function registerProfileRoutes(app, {
 
   app.get('/api/profile/google/callback', async (req, res) => {
     try {
-      await completeGoogleConnect(req.query);
+      const googleStatus = await completeGoogleConnect(req.query);
+      const teacher = googleStatus?.teacher || {};
+      await linkGoogleIdentity({
+        email: teacher.email || '',
+        name: teacher.name || [teacher.firstName, teacher.lastName].filter(Boolean).join(' ')
+      });
       res.send(`
         <!doctype html>
         <html lang="en">
@@ -133,6 +141,16 @@ function registerProfileRoutes(app, {
           </body>
         </html>
       `);
+    }
+  });
+
+  app.post('/api/profile/google/disconnect', async (_req, res) => {
+    try {
+      disconnectGoogle();
+      const teacher = await clearGoogleIdentity();
+      res.json({ ok: true, teacher });
+    } catch (error) {
+      sendProfileError(res, error);
     }
   });
 

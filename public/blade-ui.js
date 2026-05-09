@@ -103,10 +103,11 @@
           <div class="teacher-profile-top">
             <div>
               <h3>Teacher Profile</h3>
-              <p>Connect a teacher Gmail account to unlock profile details and daily report tools.</p>
+              <p>Local teacher login is used every day. Google is optional for email and identity features.</p>
             </div>
             <div class="gmail-connection-card">
-              <button type="button" id="profileConnectGoogleButton" class="small-button" disabled>Connect Gmail</button>
+              <button type="button" id="profileConnectGoogleButton" class="small-button" disabled>Connect Google</button>
+              <button type="button" id="profileDisconnectGoogleButton" class="small-button secondary-small" hidden>Disconnect Google</button>
               <span id="profileConnectionMessage">Google sign-in is not connected yet.</span>
             </div>
           </div>
@@ -117,20 +118,24 @@
               <div class="teacher-profile-copy">
                 <span id="profileStatusPill" class="profile-status-pill">Not signed in</span>
                 <h4>Teacher profile</h4>
-                <p id="profileHelpText">Connect Gmail to show teacher profile information.</p>
+                <p id="profileHelpText">Google can be connected later for email and identity features.</p>
               </div>
               <dl class="teacher-profile-fields">
+                <div>
+                  <dt>Local Username</dt>
+                  <dd id="profileLocalUsername">Not available</dd>
+                </div>
+                <div>
+                  <dt>Google Status</dt>
+                  <dd id="profileGoogleStatus">Not connected</dd>
+                </div>
                 <div>
                   <dt>Email</dt>
                   <dd id="profileEmail">Not signed in</dd>
                 </div>
                 <div>
-                  <dt>First Name</dt>
-                  <dd id="profileFirstName">Not available</dd>
-                </div>
-                <div>
-                  <dt>Last Name</dt>
-                  <dd id="profileLastName">Not available</dd>
+                  <dt>Google Name</dt>
+                  <dd id="profileGoogleName">Not available</dd>
                 </div>
               </dl>
             </section>
