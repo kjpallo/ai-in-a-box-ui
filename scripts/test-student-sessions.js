@@ -272,8 +272,196 @@ async function main() {
   assert.equal(studentSessions[classSessionId].anonymousHubs['student-b'].messages.length, 1);
 
   await testFormulaTutorBypassesQuestionEnergy();
+  await testExpandedFormulaTutorFlows();
+  await testExpandedFormulaTutorIsolation();
 
   console.log('✅ student sessions: anonymous hubs, same-hub context, and formula tutoring are isolated');
+}
+
+async function testExpandedFormulaTutorFlows() {
+  await runGuidedFormulaFlow({
+    name: 'density',
+    question: 'A rock has a mass of 180 g and a volume of 30 mL. What is its density?',
+    finalAnswer: '6 g/mL',
+    formulaId: 'density_mass_volume',
+    steps: [
+      { message: '1', match: /mass/i },
+      { message: '180 g', match: /volume/i },
+      { message: '30 mL', match: /What is 180 \/ 30\?/i },
+      { message: '6', match: /6 g\/mL/i }
+    ]
+  });
+
+  await runGuidedFormulaFlow({
+    name: 'speed',
+    question: 'A car travels 72 meters in 12 seconds. What is its speed?',
+    finalAnswer: '6 m/s',
+    formulaId: 'speed_distance_time',
+    steps: [
+      { message: '1', match: /distance/i },
+      { message: '72 m', match: /time/i },
+      { message: '12 s', match: /What is 72 \/ 12\?/i },
+      { message: '6', match: /6 m\/s/i }
+    ]
+  });
+
+  await runGuidedFormulaFlow({
+    name: 'voltage',
+    question: 'A circuit has a current of 2 A and a resistance of 5 ohms. What is the voltage?',
+    finalAnswer: '10 V',
+    formulaId: 'voltage_current_resistance',
+    steps: [
+      { message: '1', match: /current/i },
+      { message: '2 A', match: /resistance/i },
+      { message: '5 ohms', match: /What is 2 × 5\?/i },
+      { message: '10', match: /10 V/i }
+    ]
+  });
+
+  await testExpandedFormulaTutorEnergyBypass();
+}
+
+async function runGuidedFormulaFlow({ name, question, finalAnswer, formulaId, steps }) {
+  const { request, questionAnswer, studentSessions } = createRouteHarness();
+
+  const create = await request('POST', '/api/profile/create-student-session');
+  assert.equal(create.statusCode, 201);
+  const classSessionId = create.body.sessionId;
+
+  const teacherDirect = await questionAnswer.answerStudentMessage(question);
+  assert.match(teacherDirect.response, new RegExp(escapeRegExp(finalAnswer), 'i'));
+
+  const start = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: `${name}-student`,
+    message: question
+  });
+  assert.equal(start.statusCode, 200);
+  assert.equal(start.body.routeType, 'formula_tutor');
+  assert.equal(start.body.tutor.formulaId, formulaId);
+  assert.equal(start.body.tutor.active, true);
+  assert.doesNotMatch(start.body.response, new RegExp(escapeRegExp(finalAnswer), 'i'));
+  assert.match(start.body.response, /Which formula should we use\?/i);
+  assert.ok(!start.body.tutor.finalAnswerDisplay);
+
+  let response = start;
+  for (const [index, step] of steps.entries()) {
+    response = await request('POST', '/api/student/message', {
+      sessionId: classSessionId,
+      studentHubId: `${name}-student`,
+      message: step.message
+    });
+
+    assert.equal(response.statusCode, 200);
+    assert.match(response.body.response, step.match);
+
+    if (index < steps.length - 1) {
+      assert.equal(response.body.tutor.active, true);
+      assert.ok(!response.body.tutor.finalAnswerDisplay);
+    }
+  }
+
+  assert.equal(response.body.tutor.active, false);
+  assert.equal(response.body.tutor.completed, true);
+  assert.equal(response.body.tutor.finalAnswerDisplay, finalAnswer);
+  assert.equal(studentSessions[classSessionId].anonymousHubs[`${name}-student`].currentTutorProblem, null);
+}
+
+async function testExpandedFormulaTutorEnergyBypass() {
+  const { request } = createRouteHarness({
+    studentQuestionRateLimitEnabled: true,
+    studentQuestionsPerMinute: 1
+  });
+
+  const create = await request('POST', '/api/profile/create-student-session');
+  assert.equal(create.statusCode, 201);
+  const classSessionId = create.body.sessionId;
+
+  const normalQuestion = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'student-a',
+    message: 'What is mass?'
+  });
+  assert.equal(normalQuestion.statusCode, 200);
+  assert.equal(normalQuestion.body.rateLimit.remainingWhole, 0);
+
+  const tutorScenarios = [
+    {
+      question: 'A rock has a mass of 180 g and a volume of 30 mL. What is its density?',
+      answers: ['1', '180 g', '30 mL', '6']
+    },
+    {
+      question: 'A car travels 72 meters in 12 seconds. What is its speed?',
+      answers: ['1', '72 m', '12 s', '6']
+    },
+    {
+      question: 'A circuit has a current of 2 A and a resistance of 5 ohms. What is the voltage?',
+      answers: ['1', '2 A', '5 ohms', '10']
+    }
+  ];
+
+  for (const [index, scenario] of tutorScenarios.entries()) {
+    const studentHubId = index === 0 ? 'student-a' : `student-${index + 1}`;
+    const expectedRemaining = index === 0 ? 0 : 1;
+    const start = await request('POST', '/api/student/message', {
+      sessionId: classSessionId,
+      studentHubId,
+      message: scenario.question
+    });
+    assert.equal(start.statusCode, 200);
+    assert.equal(start.body.routeType, 'formula_tutor');
+    assert.equal(start.body.rateLimit.remainingWhole, expectedRemaining);
+
+    for (const answer of scenario.answers) {
+      const step = await request('POST', '/api/student/message', {
+        sessionId: classSessionId,
+        studentHubId,
+        message: answer
+      });
+      assert.equal(step.statusCode, 200);
+      assert.equal(step.body.rateLimit.remainingWhole, expectedRemaining);
+    }
+  }
+
+  const blockedNormal = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'student-a',
+    message: 'What is volume?'
+  });
+  assert.equal(blockedNormal.statusCode, 429);
+}
+
+async function testExpandedFormulaTutorIsolation() {
+  const { request, studentSessions } = createRouteHarness();
+
+  const create = await request('POST', '/api/profile/create-student-session');
+  assert.equal(create.statusCode, 201);
+  const classSessionId = create.body.sessionId;
+
+  const densityStart = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'student-a',
+    message: 'A rock has a mass of 180 g and a volume of 30 mL. What is its density?'
+  });
+  assert.equal(densityStart.statusCode, 200);
+  assert.equal(densityStart.body.tutor.formulaId, 'density_mass_volume');
+
+  const speedStart = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'student-b',
+    message: 'A car travels 72 meters in 12 seconds. What is its speed?'
+  });
+  assert.equal(speedStart.statusCode, 200);
+  assert.equal(speedStart.body.tutor.formulaId, 'speed_distance_time');
+
+  assert.equal(
+    studentSessions[classSessionId].anonymousHubs['student-a'].currentTutorProblem.formulaId,
+    'density_mass_volume'
+  );
+  assert.equal(
+    studentSessions[classSessionId].anonymousHubs['student-b'].currentTutorProblem.formulaId,
+    'speed_distance_time'
+  );
 }
 
 async function testFormulaTutorBypassesQuestionEnergy() {
@@ -371,6 +559,10 @@ async function testFormulaTutorBypassesQuestionEnergy() {
   assert.equal(studentBNormal.statusCode, 200);
   assert.equal(studentBNormal.body.rateLimit.remainingWhole, 0);
   assert.equal(studentSessions[classSessionId].anonymousHubs['student-b'].currentTutorProblem, null);
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 main().catch((error) => {

@@ -634,6 +634,24 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'force answer text unchanged with formula work',
+    question: 'A box has a mass of 10 kg and accelerates at 3 m/s². What force is needed?',
+    type: 'science_formula',
+    includes: [
+      'Use Newton’s second law: F = m × a.',
+      'F = 10 kg × 3 m/s²',
+      'F = 30 N'
+    ],
+    formulaWork: {
+      formulaId: 'force_mass_acceleration',
+      massValue: 10,
+      accelerationValue: 3,
+      finalAnswerValue: 30,
+      minStepCount: 4
+    },
+    aiAllowed: false
+  },
+  {
     name: 'force target beats extra distance and time',
     question: 'A robot moves 10 meters in 2 seconds, but that is extra. Its mass is 5 kg and acceleration is 2 m/s^2. What is the force?',
     type: 'science_formula',
@@ -754,6 +772,18 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'ohms law voltage returns formula work',
+    question: 'A circuit has a current of 2 A and a resistance of 5 ohms. What is the voltage?',
+    type: 'science_formula',
+    includes: ['V = 2 A × 5 Ω', 'V = 10 V'],
+    formulaWork: {
+      formulaId: 'voltage_current_resistance',
+      finalAnswerDisplay: '10 V',
+      minStepCount: 4
+    },
+    aiAllowed: false
+  },
+  {
     name: 'ohms law current adds two battery voltages',
     question: 'During a circut lab, a student connects two batteries together to power a small motor. One battery provides twelve volts and the other battery provides six volts. The motor has a resitance of three ohms. Question: What current flows through the motor in amps?',
     type: 'science_formula',
@@ -775,6 +805,18 @@ const tests = [
     type: 'science_formula',
     includes: ['speed = 72 m / 12 s', 'speed = 6 m/s'],
     excludes: ['PE = 10 N × 72 m', 'PE = 720 J', 'force × height'],
+    aiAllowed: false
+  },
+  {
+    name: 'motion speed returns formula work',
+    question: 'A car travels 72 meters in 12 seconds. What is its speed?',
+    type: 'science_formula',
+    includes: ['speed = 72 m / 12 s', 'speed = 6 m/s'],
+    formulaWork: {
+      formulaId: 'speed_distance_time',
+      finalAnswerDisplay: '6 m/s',
+      minStepCount: 4
+    },
     aiAllowed: false
   },
   {
@@ -823,6 +865,18 @@ const tests = [
     type: 'science_formula',
     includes: ['volume = 80 mL - 50 mL', 'volume = 30 mL', 'D = 180 g / 30 mL', 'D = 6 g/mL'],
     excludes: ['D = 180 g / 50 mL', 'D = 3.6 g/mL'],
+    aiAllowed: false
+  },
+  {
+    name: 'density mass volume returns formula work',
+    question: 'A rock has a mass of 180 g and a volume of 30 mL. What is its density?',
+    type: 'science_formula',
+    includes: ['D = 180 g / 30 mL', 'D = 6 g/mL'],
+    formulaWork: {
+      formulaId: 'density_mass_volume',
+      finalAnswerDisplay: '6 g/mL',
+      minStepCount: 4
+    },
     aiAllowed: false
   },
   {
@@ -921,6 +975,34 @@ for (const test of tests) {
         !answerText.includes(unexpected),
         `Expected answer not to include "${unexpected}" but got:\n${answerText}`
       );
+    }
+
+    if (test.formulaWork) {
+      assert.ok(route.formulaWork, 'Expected questionRoute.formulaWork to exist');
+      assert.equal(route.formulaWork.formulaId, test.formulaWork.formulaId);
+      if (Object.prototype.hasOwnProperty.call(test.formulaWork, 'massValue')) {
+        assert.equal(route.formulaWork.variables.mass.value, test.formulaWork.massValue);
+      }
+      if (Object.prototype.hasOwnProperty.call(test.formulaWork, 'accelerationValue')) {
+        assert.equal(route.formulaWork.variables.acceleration.value, test.formulaWork.accelerationValue);
+      }
+      if (Object.prototype.hasOwnProperty.call(test.formulaWork, 'finalAnswerValue')) {
+        assert.equal(route.formulaWork.finalAnswer.value, test.formulaWork.finalAnswerValue);
+      }
+      if (Object.prototype.hasOwnProperty.call(test.formulaWork, 'finalAnswerDisplay')) {
+        assert.equal(route.formulaWork.finalAnswer.display, test.formulaWork.finalAnswerDisplay);
+      }
+      assert.ok(
+        Array.isArray(route.formulaWork.steps) && route.formulaWork.steps.length >= test.formulaWork.minStepCount,
+        `Expected formulaWork.steps to have at least ${test.formulaWork.minStepCount} steps`
+      );
+      assert.deepEqual(route.public.formulaWork, {
+        formulaId: route.formulaWork.formulaId,
+        family: route.formulaWork.family,
+        solveFor: route.formulaWork.solveFor,
+        formula: route.formulaWork.formula,
+        hasGuidedSteps: true
+      });
     }
 
     passed += 1;
