@@ -9,7 +9,7 @@ const { registerStudentRoutes } = require('../routes/studentRoutes');
 
 const teacherFactsFile = path.join(__dirname, '..', 'knowledge', 'teacher_facts.json');
 
-function createRouteHarness() {
+function createRouteHarness(options = {}) {
   const handlers = new Map();
   const app = {
     get(route, handler) {
@@ -66,8 +66,8 @@ function createRouteHarness() {
     answerStudentMessage: questionAnswer.answerStudentMessage,
     getClassroomControls: () => ({
       studentCopyInspectLockEnabled: true,
-      studentQuestionRateLimitEnabled: false,
-      studentQuestionsPerMinute: 6
+      studentQuestionRateLimitEnabled: options.studentQuestionRateLimitEnabled === true,
+      studentQuestionsPerMinute: options.studentQuestionsPerMinute || 6
     }),
     logCompletedInteraction: questionAnswer.logCompletedInteraction,
     studentSessions
@@ -90,7 +90,7 @@ function createRouteHarness() {
     return res;
   }
 
-  return { request, studentSessions };
+  return { request, questionAnswer, studentSessions };
 }
 
 function createResponse() {
@@ -117,7 +117,7 @@ function createResponse() {
 }
 
 async function main() {
-  const { request, studentSessions } = createRouteHarness();
+  const { request, questionAnswer, studentSessions } = createRouteHarness();
 
   const create = await request('POST', '/api/profile/create-student-session');
   assert.equal(create.statusCode, 201);
@@ -209,6 +209,56 @@ async function main() {
   assert.match(studentBFollowUp.body.response, /What topic do you mean/i);
   assert.doesNotMatch(studentBFollowUp.body.response, /mass/i);
 
+  const forceQuestion = 'What is the force if mass is 10 kg and acceleration is 3 m/s²?';
+  const teacherDirect = await questionAnswer.answerStudentMessage(forceQuestion);
+  assert.match(teacherDirect.response, /F = 30 N/i);
+
+  const forceTutorStart = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'student-a',
+    message: forceQuestion
+  });
+  assert.equal(forceTutorStart.statusCode, 200);
+  assert.equal(forceTutorStart.body.routeType, 'formula_tutor');
+  assert.doesNotMatch(forceTutorStart.body.response, /F = 30 N/i);
+  assert.match(forceTutorStart.body.response, /Which formula should we use\?/i);
+  assert.ok(studentSessions[classSessionId].anonymousHubs['student-a'].currentTutorProblem);
+  assert.equal(studentSessions[classSessionId].anonymousHubs['student-b'].currentTutorProblem, null);
+
+  const forceFormula = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'student-a',
+    message: '1'
+  });
+  assert.equal(forceFormula.statusCode, 200);
+  assert.match(forceFormula.body.response, /mass/i);
+
+  const forceMass = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'student-a',
+    message: '10 kg'
+  });
+  assert.equal(forceMass.statusCode, 200);
+  assert.match(forceMass.body.response, /acceleration/i);
+
+  const forceAcceleration = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'student-a',
+    message: '3 m/s²'
+  });
+  assert.equal(forceAcceleration.statusCode, 200);
+  assert.match(forceAcceleration.body.response, /What is 10 × 3\?/i);
+
+  const forceCalculation = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'student-a',
+    message: '30'
+  });
+  assert.equal(forceCalculation.statusCode, 200);
+  assert.match(forceCalculation.body.response, /Correct/i);
+  assert.match(forceCalculation.body.response, /30 N/i);
+  assert.equal(studentSessions[classSessionId].anonymousHubs['student-a'].currentTutorProblem, null);
+
   summary = await request('GET', '/api/profile/student-sessions');
   const updatedSession = summary.body.sessions.find((session) => session.classSessionId === classSessionId);
   assert.ok(updatedSession, 'profile summary should use same classSessionId as generated link');
@@ -218,10 +268,109 @@ async function main() {
     ['Anonymous Student 1', 'Anonymous Student 2']
   );
 
-  assert.equal(studentSessions[classSessionId].anonymousHubs['student-a'].messages.length, 6);
+  assert.equal(studentSessions[classSessionId].anonymousHubs['student-a'].messages.length, 11);
   assert.equal(studentSessions[classSessionId].anonymousHubs['student-b'].messages.length, 1);
 
-  console.log('✅ student sessions: anonymous hubs, active count, and same-hub context are isolated');
+  await testFormulaTutorBypassesQuestionEnergy();
+
+  console.log('✅ student sessions: anonymous hubs, same-hub context, and formula tutoring are isolated');
+}
+
+async function testFormulaTutorBypassesQuestionEnergy() {
+  const { request, questionAnswer, studentSessions } = createRouteHarness({
+    studentQuestionRateLimitEnabled: true,
+    studentQuestionsPerMinute: 1
+  });
+
+  const create = await request('POST', '/api/profile/create-student-session');
+  assert.equal(create.statusCode, 201);
+  const classSessionId = create.body.sessionId;
+
+  const normalQuestion = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'student-a',
+    message: 'What is mass?'
+  });
+  assert.equal(normalQuestion.statusCode, 200);
+  assert.equal(normalQuestion.body.rateLimit.remainingWhole, 0);
+
+  const forceQuestion = 'A box has a mass of 10 kg and accelerates at 3 m/s². What force is needed?';
+  const teacherDirect = await questionAnswer.answerStudentMessage(forceQuestion);
+  assert.match(teacherDirect.response, /F = 30 N/i);
+
+  const forceTutorStart = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'student-a',
+    message: forceQuestion
+  });
+  assert.equal(forceTutorStart.statusCode, 200);
+  assert.equal(forceTutorStart.body.routeType, 'formula_tutor');
+  assert.equal(forceTutorStart.body.rateLimit.remainingWhole, 0);
+  assert.equal(forceTutorStart.body.tutor.active, true);
+  assert.equal(forceTutorStart.body.tutor.currentStepIndex, 0);
+  assert.doesNotMatch(forceTutorStart.body.response, /30 N/i);
+  assert.ok(studentSessions[classSessionId].anonymousHubs['student-a'].currentTutorProblem);
+
+  const chooseFormula = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'student-a',
+    message: '1'
+  });
+  assert.equal(chooseFormula.statusCode, 200);
+  assert.equal(chooseFormula.body.rateLimit.remainingWhole, 0);
+  assert.equal(chooseFormula.body.tutor.currentStepIndex, 1);
+  assert.deepEqual(chooseFormula.body.tutor.knownValues, []);
+
+  const mass = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'student-a',
+    message: '10 kg'
+  });
+  assert.equal(mass.statusCode, 200);
+  assert.equal(mass.body.rateLimit.remainingWhole, 0);
+  assert.deepEqual(mass.body.tutor.knownValues, [
+    { label: 'mass', symbol: 'm', display: '10 kg' }
+  ]);
+
+  const acceleration = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'student-a',
+    message: '3 m/s²'
+  });
+  assert.equal(acceleration.statusCode, 200);
+  assert.equal(acceleration.body.rateLimit.remainingWhole, 0);
+  assert.deepEqual(acceleration.body.tutor.knownValues, [
+    { label: 'mass', symbol: 'm', display: '10 kg' },
+    { label: 'acceleration', symbol: 'a', display: '3 m/s²' }
+  ]);
+
+  const finalStep = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'student-a',
+    message: '30'
+  });
+  assert.equal(finalStep.statusCode, 200);
+  assert.equal(finalStep.body.rateLimit.remainingWhole, 0);
+  assert.equal(finalStep.body.tutor.active, false);
+  assert.equal(finalStep.body.tutor.completed, true);
+  assert.equal(finalStep.body.tutor.finalAnswerDisplay, '30 N');
+
+  const blockedNormal = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'student-a',
+    message: 'What is volume?'
+  });
+  assert.equal(blockedNormal.statusCode, 429);
+  assert.equal(blockedNormal.body.code, 'student_rate_limited');
+
+  const studentBNormal = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'student-b',
+    message: 'What is mass?'
+  });
+  assert.equal(studentBNormal.statusCode, 200);
+  assert.equal(studentBNormal.body.rateLimit.remainingWhole, 0);
+  assert.equal(studentSessions[classSessionId].anonymousHubs['student-b'].currentTutorProblem, null);
 }
 
 main().catch((error) => {

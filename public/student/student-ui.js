@@ -12,12 +12,26 @@
   const sessionText = document.getElementById('sessionIdText');
   const status = document.getElementById('studentStatus');
   const routeInfo = document.getElementById('studentRouteInfo');
+  const copyAnswerButton = document.getElementById('studentCopyAnswerButton');
+  const clearButton = document.getElementById('studentClearButton');
+  const tutorCard = document.getElementById('studentTutorCard');
+  const tutorTitle = document.getElementById('studentTutorTitle');
+  const tutorProgress = document.getElementById('studentTutorProgress');
+  const tutorSolveFor = document.getElementById('studentTutorSolveFor');
+  const tutorFormula = document.getElementById('studentTutorFormula');
+  const tutorKnownValues = document.getElementById('studentTutorKnownValues');
+  const tutorPrompt = document.getElementById('studentTutorPrompt');
+  const tutorHintWrap = document.getElementById('studentTutorHintWrap');
+  const tutorHint = document.getElementById('studentTutorHint');
+  const tutorFinalWrap = document.getElementById('studentTutorFinalWrap');
+  const tutorFinal = document.getElementById('studentTutorFinal');
   const sessionMessage = document.getElementById('studentSessionMessage');
   const historyBox = document.getElementById('studentHistory');
   const historyCount = document.getElementById('studentHistoryCount');
   const frictionWarning = document.getElementById('studentFrictionWarning');
   const energyPanel = document.getElementById('studentQuestionEnergy');
   const energyValue = document.getElementById('studentQuestionEnergyValue');
+  const energyHelper = document.getElementById('studentQuestionEnergyHelper');
   const energyFill = document.getElementById('studentQuestionEnergyFill');
   const chatHistory = [];
   const controls = {
@@ -28,9 +42,15 @@
   const rateLimitState = {
     enabled: false,
     limit: 6,
+    max: 6,
     remaining: 6,
+    remainingWhole: 6,
+    refillRatePerSecond: 0.1,
+    secondsUntilNextQuestion: 0,
+    secondsUntilFull: 0,
     windowSeconds: 60,
-    resetInSeconds: 0
+    resetInSeconds: 0,
+    updatedAtMs: Date.now()
   };
   let sessionIsValid = false;
   let heartbeatTimer = null;
@@ -51,6 +71,9 @@
     form.addEventListener('submit', handleSubmit);
     pointButton?.addEventListener('click', handlePointClick);
     askHighlightButton?.addEventListener('click', handleAskHighlightClick);
+    copyAnswerButton?.addEventListener('click', handleCopyAnswerClick);
+    clearButton?.addEventListener('click', handleClearClick);
+    tutorCard?.addEventListener('click', handleTutorCardClick);
     installClassroomFrictionHandlers();
   }
 
@@ -65,12 +88,8 @@
     routeInfo.textContent = 'Routing';
 
     try {
-      const data = await window.Charlemagne.api.sendStudentMessage(sessionId, message, studentHubId);
-      updateRateLimitState(data.rateLimit);
-      responseBox.textContent = data.response || 'No response returned.';
-      routeInfo.textContent = `${data.routeType || 'unknown'} / ${data.confidence || 'unknown'}`;
-      status.textContent = 'Ready';
-      addHistoryItem(message, data.response || 'No response returned.');
+      const data = await sendStudentMessage(message);
+      renderStudentMessageResult(data, message);
       input.value = '';
     } catch (error) {
       const message = error.message || 'Could not send message.';
@@ -99,11 +118,7 @@
 
     try {
       const data = await window.Charlemagne.api.sendStudentWhyThisMatters(sessionId, studentHubId);
-      updateRateLimitState(data.rateLimit);
-      responseBox.textContent = data.response || 'No response returned.';
-      routeInfo.textContent = `${data.routeType || 'unknown'} / ${data.confidence || 'unknown'}`;
-      status.textContent = 'Ready';
-      addHistoryItem("What's the point?", data.response || 'No response returned.');
+      renderStudentMessageResult(data, "What's the point?");
     } catch (error) {
       const message = error.message || 'Could not send message.';
       updateRateLimitState(error.rateLimit);
@@ -151,14 +166,26 @@
       controls.studentQuestionsPerMinute = Number(data.studentQuestionsPerMinute) || 6;
       rateLimitState.enabled = controls.studentQuestionRateLimitEnabled;
       rateLimitState.limit = controls.studentQuestionsPerMinute;
+      rateLimitState.max = controls.studentQuestionsPerMinute;
       rateLimitState.remaining = controls.studentQuestionsPerMinute;
+      rateLimitState.remainingWhole = controls.studentQuestionsPerMinute;
+      rateLimitState.refillRatePerSecond = controls.studentQuestionsPerMinute / 60;
+      rateLimitState.secondsUntilNextQuestion = 0;
+      rateLimitState.secondsUntilFull = 0;
+      rateLimitState.updatedAtMs = Date.now();
     } catch {
       controls.studentCopyInspectLockEnabled = true;
       controls.studentQuestionRateLimitEnabled = true;
       controls.studentQuestionsPerMinute = 6;
       rateLimitState.enabled = true;
       rateLimitState.limit = 6;
+      rateLimitState.max = 6;
       rateLimitState.remaining = 6;
+      rateLimitState.remainingWhole = 6;
+      rateLimitState.refillRatePerSecond = 0.1;
+      rateLimitState.secondsUntilNextQuestion = 0;
+      rateLimitState.secondsUntilFull = 0;
+      rateLimitState.updatedAtMs = Date.now();
     }
   }
 
@@ -187,12 +214,8 @@
   function startRateLimitRefresh() {
     if (!resetTickTimer) {
       resetTickTimer = window.setInterval(() => {
-        if (!rateLimitState.enabled || rateLimitState.resetInSeconds <= 0) return;
-        rateLimitState.resetInSeconds = Math.max(0, rateLimitState.resetInSeconds - 1);
+        advanceLocalRateLimit();
         renderRateLimitEnergy();
-        if (rateLimitState.resetInSeconds === 0) {
-          refreshRateLimitStatus().catch(() => {});
-        }
       }, 1000);
     }
 
@@ -207,37 +230,70 @@
 
     rateLimitState.enabled = rateLimit.enabled === true;
     rateLimitState.limit = normalizePositiveInteger(rateLimit.limit, controls.studentQuestionsPerMinute);
-    rateLimitState.remaining = Math.max(0, normalizeNonNegativeInteger(rateLimit.remaining, rateLimitState.limit));
+    rateLimitState.max = normalizePositiveInteger(rateLimit.max, rateLimitState.limit);
+    rateLimitState.remaining = Math.max(0, Math.min(rateLimitState.max, normalizeNonNegativeNumber(rateLimit.remaining, rateLimitState.max)));
+    rateLimitState.remainingWhole = Math.max(0, Math.min(rateLimitState.max, normalizeNonNegativeInteger(rateLimit.remainingWhole, Math.floor(rateLimitState.remaining))));
+    rateLimitState.refillRatePerSecond = normalizePositiveNumber(rateLimit.refillRatePerSecond, rateLimitState.limit / 60);
+    rateLimitState.secondsUntilNextQuestion = normalizeNonNegativeInteger(rateLimit.secondsUntilNextQuestion, 0);
+    rateLimitState.secondsUntilFull = normalizeNonNegativeInteger(rateLimit.secondsUntilFull, 0);
     rateLimitState.windowSeconds = normalizePositiveInteger(rateLimit.windowSeconds, 60);
     rateLimitState.resetInSeconds = normalizeNonNegativeInteger(rateLimit.resetInSeconds, 0);
+    rateLimitState.updatedAtMs = Date.now();
     controls.studentQuestionRateLimitEnabled = rateLimitState.enabled;
     controls.studentQuestionsPerMinute = rateLimitState.limit;
     renderRateLimitEnergy();
+  }
+
+  function advanceLocalRateLimit() {
+    if (!rateLimitState.enabled) return;
+
+    const nowMs = Date.now();
+    const elapsedSeconds = Math.max(0, (nowMs - rateLimitState.updatedAtMs) / 1000);
+    const max = normalizePositiveInteger(rateLimitState.max, rateLimitState.limit);
+    const refillRate = normalizePositiveNumber(rateLimitState.refillRatePerSecond, rateLimitState.limit / 60);
+
+    rateLimitState.remaining = Math.min(max, Math.max(0, rateLimitState.remaining) + (elapsedSeconds * refillRate));
+    rateLimitState.remainingWhole = Math.max(0, Math.min(max, Math.floor(rateLimitState.remaining)));
+    rateLimitState.secondsUntilNextQuestion = rateLimitState.remaining >= 1
+      ? 0
+      : Math.ceil((1 - rateLimitState.remaining) / refillRate);
+    rateLimitState.secondsUntilFull = Math.ceil(Math.max(0, max - rateLimitState.remaining) / refillRate);
+    rateLimitState.resetInSeconds = rateLimitState.secondsUntilNextQuestion;
+    rateLimitState.updatedAtMs = nowMs;
   }
 
   function renderRateLimitEnergy() {
     if (!energyPanel || !energyValue || !energyFill) return;
 
     const limit = normalizePositiveInteger(rateLimitState.limit, controls.studentQuestionsPerMinute);
-    const remaining = Math.max(0, Math.min(limit, Number(rateLimitState.remaining) || 0));
-    const percent = rateLimitState.enabled ? Math.max(0, Math.min(100, (remaining / limit) * 100)) : 100;
+    const max = normalizePositiveInteger(rateLimitState.max, limit);
+    const remaining = Math.max(0, Math.min(max, Number(rateLimitState.remaining) || 0));
+    const remainingWhole = Math.max(0, Math.min(max, Math.floor(remaining)));
+    const percent = rateLimitState.enabled ? Math.max(0, Math.min(100, (remaining / max) * 100)) : 100;
 
     energyPanel.hidden = false;
     energyPanel.classList.toggle('is-off', !rateLimitState.enabled);
-    energyPanel.classList.toggle('is-low', rateLimitState.enabled && remaining > 0 && remaining <= Math.max(1, Math.ceil(limit * 0.25)));
-    energyPanel.classList.toggle('is-empty', rateLimitState.enabled && remaining <= 0);
+    energyPanel.classList.toggle('is-low', rateLimitState.enabled && remaining > 0 && remaining <= Math.max(1, Math.ceil(max * 0.25)));
+    energyPanel.classList.toggle('is-empty', rateLimitState.enabled && remainingWhole <= 0);
     energyFill.style.width = `${percent}%`;
 
     if (!rateLimitState.enabled) {
       energyValue.textContent = 'Question limit: Off';
+      if (energyHelper) energyHelper.textContent = '';
       energyFill.style.width = '100%';
       return;
     }
 
-    const resetText = remaining <= 0 && rateLimitState.resetInSeconds > 0
-      ? ` • resets in ${rateLimitState.resetInSeconds}s`
-      : '';
-    energyValue.textContent = `${remaining} / ${limit} questions left this minute${resetText}`;
+    energyValue.textContent = `${remainingWhole} / ${max} questions ready`;
+    if (energyHelper) {
+      const nextQuestionSeconds = normalizeNonNegativeInteger(rateLimitState.secondsUntilNextQuestion, 0);
+      const fullSeconds = normalizeNonNegativeInteger(rateLimitState.secondsUntilFull, 0);
+      energyHelper.textContent = fullSeconds > 0 && remainingWhole <= 0
+        ? `Next question in ${nextQuestionSeconds}s`
+        : fullSeconds > 0 && remainingWhole <= Math.max(1, Math.floor(max * 0.25))
+          ? `Full in ${fullSeconds}s`
+        : '';
+    }
   }
 
   function showInvalidSession(message) {
@@ -254,6 +310,147 @@
     sendButton.disabled = !enabled;
     if (pointButton) pointButton.disabled = !enabled;
     if (askHighlightButton) askHighlightButton.disabled = !enabled;
+    if (copyAnswerButton) copyAnswerButton.disabled = !enabled;
+    if (clearButton) clearButton.disabled = !enabled;
+    if (tutorCard) {
+      for (const button of tutorCard.querySelectorAll('[data-tutor-action]')) {
+        button.disabled = !enabled;
+      }
+    }
+  }
+
+  async function sendStudentMessage(message) {
+    return window.Charlemagne.api.sendStudentMessage(sessionId, message, studentHubId);
+  }
+
+  function renderStudentMessageResult(data, message) {
+    updateRateLimitState(data.rateLimit);
+    responseBox.textContent = data.response || 'No response returned.';
+    routeInfo.textContent = `${data.routeType || 'unknown'} / ${data.confidence || 'unknown'}`;
+    status.textContent = 'Ready';
+    renderTutorCard(data.tutor);
+    addHistoryItem(message, data.response || 'No response returned.');
+  }
+
+  async function handleTutorCardClick(event) {
+    const button = event.target.closest('[data-tutor-action]');
+    if (!button || !sessionIsValid) return;
+
+    const command = button.getAttribute('data-tutor-action') || '';
+    if (!command) return;
+
+    setFormEnabled(false);
+    status.textContent = 'Sending';
+    responseBox.textContent = 'Thinking...';
+    routeInfo.textContent = 'Routing';
+
+    try {
+      const data = await sendStudentMessage(command);
+      renderStudentMessageResult(data, command);
+    } catch (error) {
+      const message = error.message || 'Could not send message.';
+      updateRateLimitState(error.rateLimit);
+      responseBox.textContent = friendlyStudentError(message);
+      routeInfo.textContent = 'Error';
+      status.textContent = 'Error';
+    } finally {
+      setFormEnabled(sessionIsValid);
+      if (sessionIsValid) input.focus();
+    }
+  }
+
+  async function handleCopyAnswerClick() {
+    const text = responseBox?.textContent?.trim() || '';
+    if (!text) return;
+
+    try {
+      await navigator.clipboard.writeText(text);
+      showTeacherToolsWarning('Answer copied.');
+    } catch {
+      showTeacherToolsWarning('Could not copy from this browser.');
+    }
+  }
+
+  function handleClearClick() {
+    responseBox.textContent = 'Ask a question to see the response here.';
+    routeInfo.textContent = 'No route yet';
+  }
+
+  function renderTutorCard(tutor) {
+    if (!tutorCard) return;
+
+    if (!tutor || typeof tutor !== 'object') {
+      if (!tutorCard.dataset.hasTutor) tutorCard.hidden = true;
+      return;
+    }
+
+    tutorCard.dataset.hasTutor = 'true';
+    tutorCard.hidden = false;
+    tutorCard.classList.toggle('is-complete', tutor.completed === true);
+    tutorCard.classList.toggle('is-stopped', tutor.stopped === true);
+
+    if (tutor.stopped) {
+      tutorTitle.textContent = 'Guided Tutor Stopped';
+      tutorProgress.textContent = '';
+      tutorSolveFor.textContent = '';
+      tutorFormula.textContent = '';
+      tutorKnownValues.innerHTML = '';
+      tutorPrompt.textContent = 'Guided tutor stopped.';
+      setTutorHint('');
+      setTutorFinal('');
+      return;
+    }
+
+    if (tutor.completed) {
+      tutorTitle.textContent = 'Guided Formula Tutor Complete';
+      tutorProgress.textContent = '';
+      tutorSolveFor.textContent = tutor.solveFor || '';
+      tutorFormula.textContent = tutor.formula || '';
+      tutorKnownValues.innerHTML = '';
+      tutorPrompt.textContent = 'Final answer unlocked.';
+      setTutorHint('');
+      setTutorFinal(tutor.finalAnswerDisplay || '');
+      return;
+    }
+
+    const stepNumber = Number(tutor.currentStepIndex) + 1;
+    const totalSteps = Number(tutor.totalSteps) || 0;
+    tutorTitle.textContent = 'Guided Formula Tutor';
+    tutorProgress.textContent = totalSteps > 0 ? `Step ${stepNumber} of ${totalSteps}` : '';
+    tutorSolveFor.textContent = tutor.solveFor || '';
+    tutorFormula.textContent = tutor.formula || '';
+    tutorPrompt.textContent = tutor.currentStepPrompt || '';
+    renderKnownValues(tutor.knownValues);
+    setTutorHint(tutor.currentHint || '');
+    setTutorFinal('');
+  }
+
+  function renderKnownValues(values) {
+    if (!tutorKnownValues) return;
+    const safeValues = Array.isArray(values) ? values : [];
+    if (!safeValues.length) {
+      tutorKnownValues.innerHTML = '<div><dt>Not filled in yet</dt><dd></dd></div>';
+      return;
+    }
+
+    tutorKnownValues.innerHTML = safeValues.map((value) => {
+      const label = [value.label, value.symbol ? `(${value.symbol})` : ''].filter(Boolean).join(' ');
+      return `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value.display || '')}</dd></div>`;
+    }).join('');
+  }
+
+  function setTutorHint(value) {
+    if (!tutorHintWrap || !tutorHint) return;
+    const text = String(value || '').trim();
+    tutorHintWrap.hidden = !text;
+    tutorHint.textContent = text;
+  }
+
+  function setTutorFinal(value) {
+    if (!tutorFinalWrap || !tutorFinal) return;
+    const text = String(value || '').trim();
+    tutorFinalWrap.hidden = !text;
+    tutorFinal.textContent = text;
   }
 
   function handleAskHighlightClick() {
@@ -439,6 +636,18 @@
   function normalizeNonNegativeInteger(value, fallback) {
     const number = Number(value);
     if (!Number.isInteger(number) || number < 0) return Math.max(0, Number(fallback) || 0);
+    return number;
+  }
+
+  function normalizePositiveNumber(value, fallback) {
+    const number = Number(value);
+    if (!Number.isFinite(number) || number <= 0) return Number(fallback) || 1;
+    return number;
+  }
+
+  function normalizeNonNegativeNumber(value, fallback) {
+    const number = Number(value);
+    if (!Number.isFinite(number) || number < 0) return Math.max(0, Number(fallback) || 0);
     return number;
   }
 

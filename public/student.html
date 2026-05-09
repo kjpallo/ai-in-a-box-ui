@@ -8,14 +8,28 @@
     <style>
       body {
         min-height: 100vh;
+        overflow-y: auto;
       }
 
       .student-shell {
-        width: min(920px, calc(100% - 2rem));
+        width: min(1120px, calc(100% - 2rem));
         margin: 0 auto;
         padding: 1.5rem 0 2rem;
         display: grid;
         gap: 1rem;
+      }
+
+      .student-workspace {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 178px;
+        align-items: start;
+        gap: 1rem;
+      }
+
+      .student-main-stack {
+        display: grid;
+        gap: 1rem;
+        min-width: 0;
       }
 
       .student-panel {
@@ -43,24 +57,72 @@
         min-height: 130px;
       }
 
-      .student-input-actions {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
+      .student-action-column {
+        position: sticky;
+        top: 1rem;
+        display: grid;
         gap: 0.75rem;
-        flex-wrap: wrap;
+        padding: 0.85rem;
+        border: 1px solid rgba(126,233,255,0.2);
+        border-radius: 12px;
+        background:
+          radial-gradient(circle at 50% 0%, rgba(126,233,255,0.1), transparent 52%),
+          rgba(3,12,14,0.76);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 0 24px rgba(102,247,209,0.08);
       }
 
-      .student-input-actions .button-row {
-        margin: 0;
+      .student-action-button {
+        width: 100%;
+        min-height: 48px;
+        padding: 0.75rem 0.85rem;
+        border: 1px solid rgba(126,233,255,0.48);
+        border-radius: 12px;
+        background:
+          linear-gradient(180deg, rgba(14,38,45,0.94), rgba(4,18,22,0.98));
+        color: #effff8;
+        font-size: 0.88rem;
+        font-weight: 800;
+        letter-spacing: 0;
+        text-align: center;
+        box-shadow:
+          0 0 18px rgba(126,233,255,0.14),
+          inset 0 1px 0 rgba(255,255,255,0.1);
+      }
+
+      .student-action-button:hover,
+      .student-action-button:focus-visible {
+        border-color: rgba(102,247,209,0.72);
+        background:
+          linear-gradient(180deg, rgba(15,52,55,0.98), rgba(4,23,26,0.98));
+        box-shadow:
+          0 0 20px rgba(102,247,209,0.28),
+          0 0 36px rgba(126,233,255,0.16),
+          inset 0 1px 0 rgba(255,255,255,0.14);
+        outline: none;
+      }
+
+      .student-action-button:active {
+        transform: translateY(1px);
+      }
+
+      .student-action-button:disabled {
+        border-color: rgba(126,233,255,0.2);
+        background: rgba(6,20,23,0.62);
+        color: rgba(223,253,246,0.52);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+      }
+
+      .student-send-button {
+        border-color: rgba(102,247,209,0.56);
+        color: #dffdf6;
+        background:
+          radial-gradient(circle at 50% 0%, rgba(102,247,209,0.18), transparent 55%),
+          linear-gradient(180deg, rgba(13,48,47,0.98), rgba(3,22,25,0.98));
       }
 
       .student-highlight-button {
-        min-height: 34px;
-        padding: 0.45rem 0.7rem;
-        border-radius: 8px;
-        font-size: 0.78rem;
-        box-shadow: 0 0 18px rgba(126,233,255,0.1);
+        min-height: 58px;
+        line-height: 1.22;
       }
 
       .student-energy {
@@ -94,6 +156,12 @@
       .student-energy-value {
         color: #b9d8d1;
         text-align: right;
+      }
+
+      .student-energy-helper {
+        min-height: 1rem;
+        color: #7ee9ff;
+        font-size: 0.76rem;
       }
 
       .student-energy-track {
@@ -130,7 +198,6 @@
 
       .student-response {
         min-height: 180px;
-        padding-right: 36px;
         white-space: pre-wrap;
       }
 
@@ -144,6 +211,155 @@
         display: flex;
         align-items: center;
         justify-content: flex-end;
+        gap: 0.55rem;
+        flex-wrap: wrap;
+      }
+
+      .panel-action-button {
+        min-height: 38px;
+        padding: 0.55rem 0.8rem;
+        border: 1px solid rgba(126,233,255,0.52);
+        border-radius: 999px;
+        background:
+          radial-gradient(circle at 50% 18%, rgba(239,255,248,0.24), transparent 22%),
+          radial-gradient(circle at 50% 28%, rgba(126,233,255,0.24), transparent 58%),
+          linear-gradient(180deg, rgba(22,72,82,0.98), rgba(5,28,34,0.98));
+        color: #effff8;
+        font-size: 0.82rem;
+        font-weight: 850;
+        letter-spacing: 0;
+        box-shadow:
+          0 5px 0 rgba(3,20,24,0.92),
+          0 0 20px rgba(126,233,255,0.2),
+          0 0 36px rgba(102,247,209,0.08),
+          inset 0 1px 0 rgba(255,255,255,0.2);
+        transition: transform 110ms ease, border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
+      }
+
+      .panel-action-button:hover,
+      .panel-action-button:focus-visible {
+        border-color: rgba(102,247,209,0.78);
+        background:
+          radial-gradient(circle at 50% 18%, rgba(239,255,248,0.28), transparent 22%),
+          radial-gradient(circle at 50% 28%, rgba(102,247,209,0.24), transparent 58%),
+          linear-gradient(180deg, rgba(27,89,87,0.98), rgba(5,34,36,0.98));
+        box-shadow:
+          0 5px 0 rgba(3,20,24,0.92),
+          0 0 26px rgba(102,247,209,0.32),
+          0 0 50px rgba(126,233,255,0.16),
+          inset 0 1px 0 rgba(255,255,255,0.24);
+        outline: none;
+      }
+
+      .panel-action-button:active {
+        transform: translateY(4px);
+        box-shadow:
+          0 1px 0 rgba(3,20,24,0.92),
+          0 0 26px rgba(126,233,255,0.42),
+          inset 0 1px 0 rgba(255,255,255,0.18);
+      }
+
+      .panel-action-button:disabled {
+        border-color: rgba(126,233,255,0.18);
+        background: rgba(6,20,23,0.62);
+        color: rgba(223,253,246,0.5);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+        transform: none;
+      }
+
+      .student-tutor-card {
+        position: sticky;
+        top: 1rem;
+        z-index: 4;
+        display: grid;
+        gap: 0.8rem;
+        border-color: rgba(102,247,209,0.28);
+        background:
+          radial-gradient(circle at 18% 0%, rgba(102,247,209,0.14), transparent 34%),
+          radial-gradient(circle at 88% 12%, rgba(126,233,255,0.12), transparent 32%),
+          rgba(3,12,14,0.9);
+      }
+
+      .student-tutor-card[hidden] {
+        display: none;
+      }
+
+      .student-tutor-card.is-complete {
+        border-color: rgba(102,247,209,0.46);
+      }
+
+      .student-tutor-card.is-stopped {
+        border-color: rgba(255,214,102,0.42);
+      }
+
+      .student-tutor-meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+      }
+
+      .student-tutor-progress {
+        color: #7ee9ff;
+        font-size: 0.82rem;
+        font-weight: 800;
+      }
+
+      .student-tutor-grid {
+        display: grid;
+        grid-template-columns: minmax(160px, 0.85fr) minmax(220px, 1.15fr);
+        gap: 0.75rem;
+      }
+
+      .student-tutor-detail {
+        display: grid;
+        gap: 0.35rem;
+        padding: 0.7rem;
+        border: 1px solid rgba(126,233,255,0.14);
+        border-radius: 8px;
+        background: rgba(2,8,10,0.36);
+      }
+
+      .student-tutor-detail strong {
+        color: #b9d8d1;
+        font-size: 0.72rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .student-tutor-detail span,
+      .student-tutor-detail p {
+        margin: 0;
+        color: #effff8;
+        line-height: 1.42;
+        white-space: pre-wrap;
+      }
+
+      .student-tutor-known-values {
+        display: grid;
+        gap: 0.35rem;
+        margin: 0;
+      }
+
+      .student-tutor-known-values div {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.75rem;
+        color: #effff8;
+      }
+
+      .student-tutor-known-values dt {
+        color: #b9d8d1;
+      }
+
+      .student-tutor-known-values dd {
+        margin: 0;
+        font-weight: 800;
+      }
+
+      .student-tutor-actions {
+        display: flex;
         gap: 0.55rem;
         flex-wrap: wrap;
       }
@@ -167,47 +383,89 @@
       }
 
       .student-point-button {
-        position: absolute;
-        top: 50%;
-        right: -92px;
-        z-index: 5;
-        width: 78px;
-        height: 78px;
-        min-height: 78px;
+        position: relative;
+        width: 100%;
+        height: 94px;
+        min-height: 94px;
         padding: 0;
         display: grid;
         place-items: center;
-        border: 1px solid rgba(126,233,255,0.56);
-        border-radius: 50%;
+        border: 0;
+        border-radius: 18px;
+        background: transparent;
+        transform: none;
+        overflow: visible;
+      }
+
+      .student-point-base {
+        position: absolute;
+        inset: 22px 10px 6px;
+        border: 1px solid rgba(126,233,255,0.34);
+        border-radius: 999px;
         background:
-          radial-gradient(circle at 50% 30%, rgba(126,233,255,0.26), transparent 46%),
-          linear-gradient(180deg, rgba(18,48,58,0.96), rgba(6,24,29,0.98));
+          radial-gradient(circle at 50% 15%, rgba(126,233,255,0.18), transparent 54%),
+          linear-gradient(180deg, rgba(5,29,35,0.96), rgba(1,8,10,0.98));
+        box-shadow:
+          0 12px 22px rgba(0,0,0,0.44),
+          inset 0 1px 0 rgba(255,255,255,0.08),
+          inset 0 -10px 18px rgba(0,0,0,0.38);
+      }
+
+      .student-point-cap {
+        position: relative;
+        z-index: 1;
+        width: 82px;
+        height: 62px;
+        display: grid;
+        place-items: center;
+        border: 1px solid rgba(126,233,255,0.68);
+        border-radius: 999px;
+        background:
+          radial-gradient(circle at 50% 24%, rgba(239,255,248,0.34), transparent 18%),
+          radial-gradient(circle at 50% 32%, rgba(126,233,255,0.34), transparent 52%),
+          linear-gradient(180deg, rgba(26,83,96,0.98), rgba(6,35,42,0.98));
         color: #effff8;
         font-size: 0.9rem;
         font-weight: 900;
         letter-spacing: 0;
         line-height: 1;
         text-align: center;
-        transform: translateY(-50%);
+        transform: translateY(-7px);
+        transition: transform 110ms ease, border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
         box-shadow:
+          0 9px 0 rgba(3,20,24,0.96),
           0 0 22px rgba(126,233,255,0.24),
           0 0 42px rgba(102,247,209,0.1),
-          inset 0 1px 0 rgba(255,255,255,0.12);
+          inset 0 1px 0 rgba(255,255,255,0.28);
       }
 
       .student-point-button:hover {
-        border-color: rgba(102,247,209,0.56);
+        transform: none;
+      }
+
+      .student-point-button:hover .student-point-cap,
+      .student-point-button:focus-visible .student-point-cap {
+        border-color: rgba(102,247,209,0.74);
         box-shadow:
-          0 0 26px rgba(102,247,209,0.3),
-          0 0 52px rgba(126,233,255,0.16),
-          inset 0 1px 0 rgba(255,255,255,0.12);
+          0 9px 0 rgba(3,20,24,0.96),
+          0 0 28px rgba(102,247,209,0.34),
+          0 0 56px rgba(126,233,255,0.18),
+          inset 0 1px 0 rgba(255,255,255,0.28);
       }
 
-      .student-point-button:active {
-        transform: translateY(-50%) scale(0.97);
+      .student-point-button:focus-visible {
+        outline: none;
       }
 
-      .student-point-button.is-flashing {
+      .student-point-button:active .student-point-cap {
+        transform: translateY(3px);
+        box-shadow:
+          0 2px 0 rgba(3,20,24,0.96),
+          0 0 30px rgba(126,233,255,0.58),
+          inset 0 1px 0 rgba(255,255,255,0.24);
+      }
+
+      .student-point-button.is-flashing .student-point-cap {
         animation: pointButtonFlash 620ms ease-out;
       }
 
@@ -311,6 +569,15 @@
           padding-top: 1rem;
         }
 
+        .student-workspace {
+          grid-template-columns: 1fr;
+        }
+
+        .student-action-column {
+          position: static;
+          grid-row: 2;
+        }
+
         .student-history {
           max-height: 260px;
         }
@@ -319,29 +586,21 @@
           padding-right: 0;
         }
 
-        .student-point-button {
-          top: auto;
-          right: 0.75rem;
-          bottom: 0.75rem;
-          width: 68px;
-          height: 68px;
-          min-height: 68px;
-          font-size: 0.82rem;
-          transform: none;
+        .student-action-column {
+          grid-template-columns: 1fr;
         }
 
-        .student-response {
-          padding-right: 5.5rem;
-          padding-bottom: 5.5rem;
+        .student-tutor-card {
+          position: static;
         }
 
-        .student-point-button:active {
-          transform: scale(0.97);
+        .student-tutor-grid {
+          grid-template-columns: 1fr;
         }
       }
 
       @media (prefers-reduced-motion: reduce) {
-        .student-point-button.is-flashing {
+        .student-point-button.is-flashing .student-point-cap {
           animation: none;
           background: linear-gradient(180deg, rgba(34,132,96,0.98), rgba(8,65,49,0.98));
           border-color: rgba(102,247,209,0.9);
@@ -352,68 +611,115 @@
   </head>
   <body>
     <main class="student-shell">
-      <section class="panel student-panel">
-        <div class="panel-title-row">
-          <h1>Ask Charlemagne</h1>
-          <span id="studentStatus" class="status-pill">Checking link</span>
-        </div>
-        <p class="student-session" id="studentSessionMessage">Checking your classroom session...</p>
-        <p class="student-session">Session: <strong id="sessionIdText">Missing session</strong></p>
+      <div class="student-workspace">
+        <div class="student-main-stack">
+          <section class="panel student-panel">
+            <div class="panel-title-row">
+              <h1>Ask Charlemagne</h1>
+              <span id="studentStatus" class="status-pill">Checking link</span>
+            </div>
+            <p class="student-session" id="studentSessionMessage">Checking your classroom session...</p>
+            <p class="student-session">Session: <strong id="sessionIdText">Missing session</strong></p>
 
-        <form id="studentMessageForm" class="student-form">
-          <label class="sr-only" for="studentMessageInput">Message</label>
-          <textarea
-            id="studentMessageInput"
-            name="message"
-            placeholder="Ask a science question..."
-            rows="6"
-          ></textarea>
-          <div id="studentQuestionEnergy" class="student-energy" role="status" aria-live="polite" hidden>
-            <div class="student-energy-top">
-              <strong>Question Energy</strong>
-              <span id="studentQuestionEnergyValue" class="student-energy-value">Question limit: Off</span>
-            </div>
-            <div class="student-energy-track" aria-hidden="true">
-              <div id="studentQuestionEnergyFill" class="student-energy-fill"></div>
-            </div>
-          </div>
-          <div class="student-input-actions">
-            <div class="button-row">
-              <button type="submit" id="studentSendButton">Send</button>
-            </div>
-            <button type="button" id="studentAskHighlightButton" class="small-button secondary-small student-highlight-button">Ask about highlighted text</button>
-          </div>
-        </form>
-      </section>
+            <form id="studentMessageForm" class="student-form">
+              <label class="sr-only" for="studentMessageInput">Message</label>
+              <textarea
+                id="studentMessageInput"
+                name="message"
+                placeholder="Ask a science question..."
+                rows="6"
+              ></textarea>
+              <div id="studentQuestionEnergy" class="student-energy" role="status" aria-live="polite" hidden>
+                <div class="student-energy-top">
+                  <strong>Question Energy</strong>
+                  <span id="studentQuestionEnergyValue" class="student-energy-value">Question limit: Off</span>
+                </div>
+                <div class="student-energy-track" aria-hidden="true">
+                  <div id="studentQuestionEnergyFill" class="student-energy-fill"></div>
+                </div>
+                <span id="studentQuestionEnergyHelper" class="student-energy-helper"></span>
+              </div>
+            </form>
+          </section>
 
-      <section class="panel student-panel student-response-panel">
-        <div class="panel-title-row">
-          <h2>Response</h2>
-          <div class="student-answer-actions">
-            <span id="studentRouteInfo" class="stream-status">No route yet</span>
-          </div>
+          <section id="studentTutorCard" class="panel student-panel student-tutor-card" aria-labelledby="studentTutorTitle" hidden>
+            <div class="student-tutor-meta">
+              <h2 id="studentTutorTitle">Guided Formula Tutor</h2>
+              <span id="studentTutorProgress" class="student-tutor-progress"></span>
+            </div>
+            <div class="student-tutor-grid">
+              <div class="student-tutor-detail">
+                <strong>Solving for</strong>
+                <span id="studentTutorSolveFor"></span>
+              </div>
+              <div class="student-tutor-detail">
+                <strong>Formula</strong>
+                <span id="studentTutorFormula"></span>
+              </div>
+              <div class="student-tutor-detail">
+                <strong>Known values</strong>
+                <dl id="studentTutorKnownValues" class="student-tutor-known-values"></dl>
+              </div>
+              <div class="student-tutor-detail">
+                <strong>Current step</strong>
+                <p id="studentTutorPrompt"></p>
+              </div>
+              <div id="studentTutorHintWrap" class="student-tutor-detail" hidden>
+                <strong>Hint</strong>
+                <p id="studentTutorHint"></p>
+              </div>
+              <div id="studentTutorFinalWrap" class="student-tutor-detail" hidden>
+                <strong>Final answer</strong>
+                <span id="studentTutorFinal"></span>
+              </div>
+            </div>
+            <div class="student-tutor-actions">
+              <button type="button" class="panel-action-button" data-tutor-action="hint">Hint</button>
+              <button type="button" class="panel-action-button" data-tutor-action="restart">Restart</button>
+              <button type="button" class="panel-action-button" data-tutor-action="stop">Stop</button>
+            </div>
+          </section>
+
+          <section class="panel student-panel student-response-panel">
+            <div class="panel-title-row">
+              <h2>Response</h2>
+              <div class="student-answer-actions">
+                <span id="studentRouteInfo" class="stream-status">No route yet</span>
+                <button type="button" id="studentCopyAnswerButton" class="panel-action-button">Copy Answer</button>
+                <button type="button" id="studentClearButton" class="panel-action-button">Clear</button>
+              </div>
+            </div>
+            <div class="student-response-wrap">
+              <div id="studentResponse" class="response-text student-response">Ask a question to see the response here.</div>
+            </div>
+          </section>
+
+          <section class="panel student-panel student-history-panel" aria-labelledby="studentHistoryTitle">
+            <div class="panel-title-row">
+              <h2 id="studentHistoryTitle">Chat History</h2>
+              <span id="studentHistoryCount" class="stream-status">0 messages</span>
+            </div>
+            <div id="studentHistory" class="student-history" aria-live="polite" aria-label="Chat history">
+              <p class="student-session">Your questions and answers will stay here during this page session.</p>
+            </div>
+          </section>
         </div>
-        <div class="student-response-wrap">
-          <div id="studentResponse" class="response-text student-response">Ask a question to see the response here.</div>
+
+        <aside class="student-action-column" aria-label="Student actions">
+          <button type="submit" form="studentMessageForm" id="studentSendButton" class="student-action-button student-send-button">Send</button>
+          <button type="button" id="studentAskHighlightButton" class="student-action-button student-highlight-button">Ask about highlighted text</button>
           <button
             type="button"
             id="studentPointButton"
             class="student-point-button"
             aria-label="What’s the point?"
             title="What’s the point?"
-          >Point?</button>
-        </div>
-      </section>
-
-      <section class="panel student-panel student-history-panel" aria-labelledby="studentHistoryTitle">
-        <div class="panel-title-row">
-          <h2 id="studentHistoryTitle">Chat History</h2>
-          <span id="studentHistoryCount" class="stream-status">0 messages</span>
-        </div>
-        <div id="studentHistory" class="student-history" aria-live="polite" aria-label="Chat history">
-          <p class="student-session">Your questions and answers will stay here during this page session.</p>
-        </div>
-      </section>
+          >
+            <span class="student-point-base" aria-hidden="true"></span>
+            <span class="student-point-cap">Point?</span>
+          </button>
+        </aside>
+      </div>
     </main>
     <div id="studentFrictionWarning" class="student-warning" role="status" aria-live="polite" hidden></div>
 
