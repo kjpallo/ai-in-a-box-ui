@@ -28,7 +28,8 @@ function registerProfileRoutes(app, {
       className,
       createdAt: new Date().toISOString(),
       studentUrl,
-      messages: []
+      messages: [],
+      anonymousHubs: Object.create(null)
     };
 
     res.status(201).json({
@@ -41,12 +42,7 @@ function registerProfileRoutes(app, {
 
   app.get('/api/profile/student-sessions', (_req, res) => {
     const sessions = Object.values(studentSessions)
-      .map((session) => ({
-        className: session.className || '',
-        sessionId: session.sessionId,
-        createdAt: session.createdAt,
-        studentUrl: session.studentUrl || `/student.html?sessionId=${encodeURIComponent(session.sessionId)}`
-      }))
+      .map(serializeClassSession)
       .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
 
     res.json({ sessions });
@@ -206,6 +202,43 @@ function buildStudentUrl(req, sessionId, port) {
   const host = req.get('host') || `localhost:${port}`;
   const protocol = req.protocol || 'http';
   return `${protocol}://${host}/student.html?sessionId=${encodeURIComponent(sessionId)}`;
+}
+
+function serializeClassSession(session) {
+  const now = Date.now();
+  const hubs = Object.values(session.anonymousHubs || {})
+    .map((hub, index) => ({
+      label: `Anonymous Student ${index + 1}`,
+      studentHubId: hub.studentHubId || '',
+      firstSeenAt: hub.firstSeenAt || '',
+      lastSeenAt: hub.lastSeenAt || '',
+      messageCount: Number(hub.messageCount || 0),
+      active: isRecentlyActive(hub.lastSeenAt, now)
+    }))
+    .sort((a, b) => {
+      if (a.active !== b.active) return a.active ? -1 : 1;
+      return String(a.firstSeenAt || '').localeCompare(String(b.firstSeenAt || ''));
+    })
+    .map((hub, index) => ({
+      ...hub,
+      label: `Anonymous Student ${index + 1}`
+    }));
+
+  return {
+    className: session.className || '',
+    sessionId: session.sessionId,
+    classSessionId: session.sessionId,
+    createdAt: session.createdAt,
+    studentUrl: session.studentUrl || `/student.html?sessionId=${encodeURIComponent(session.sessionId)}`,
+    activeAnonymousHubCount: hubs.filter((hub) => hub.active).length,
+    anonymousHubs: hubs
+  };
+}
+
+function isRecentlyActive(value, now = Date.now()) {
+  const time = Date.parse(value || '');
+  if (!Number.isFinite(time)) return false;
+  return now - time <= 1000 * 60 * 5;
 }
 
 function escapeHtml(value) {

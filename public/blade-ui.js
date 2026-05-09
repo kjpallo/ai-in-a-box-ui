@@ -142,20 +142,20 @@
 
             <section class="teacher-profile-card student-link-card">
               <h4>Student Link</h4>
-              <p>Create a local student help page for this classroom session.</p>
+              <p>Share one class link. Each student browser joins as an anonymous hub.</p>
               <button type="button" id="profileCreateStudentLink" class="small-button">Create Student Link</button>
               <div id="profileStudentLinkPanel" class="profile-student-link-panel" hidden>
                 <a id="profileStudentUrl" href="#" target="_blank" rel="noreferrer"></a>
-                <button type="button" id="profileCopyStudentLink" class="small-button secondary-small">Copy</button>
+                <button type="button" id="profileCopyStudentLink" class="small-button secondary-small">Copy link</button>
               </div>
               <span id="profileStudentLinkStatus">No student link created yet.</span>
               <div class="profile-student-session-list" aria-label="Active student sessions">
                 <div class="profile-student-session-head">
-                  <strong>Active Sessions</strong>
+                  <strong>Active anonymous hubs</strong>
                   <span id="profileStudentSessionCount">0 active</span>
                 </div>
                 <div id="profileStudentSessions" class="profile-student-session-rows">
-                  <p class="profile-empty-state">No active student sessions yet.</p>
+                  <p class="profile-empty-state">No anonymous hubs yet.</p>
                 </div>
               </div>
             </section>

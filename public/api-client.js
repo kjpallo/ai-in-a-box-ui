@@ -126,20 +126,30 @@
     });
   }
 
-  function sendStudentMessage(sessionId, message) {
-    return fetchJson('/api/student/message', {
+  function joinStudentSession(sessionId, studentHubId) {
+    return fetchJson('/api/student/join', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sessionId, message })
+      body: JSON.stringify({ sessionId, classSessionId: sessionId, studentHubId })
     });
   }
 
-  function sendStudentWhyThisMatters(sessionId) {
+  function sendStudentMessage(sessionId, message, studentHubId = '') {
+    return fetchJson('/api/student/message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId, classSessionId: sessionId, message, studentHubId })
+    });
+  }
+
+  function sendStudentWhyThisMatters(sessionId, studentHubId = '') {
     return fetchJson('/api/student/message', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         sessionId,
+        classSessionId: sessionId,
+        studentHubId,
         message: "What's the point?",
         intent: 'why_this_matters'
       })
@@ -158,6 +168,7 @@
     fetchStudentSessions,
     fetchSystemHealth,
     fetchVoices,
+    joinStudentSession,
     reloadTeacherFacts,
     sendDailySummary,
     sendStudentMessage,

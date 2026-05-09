@@ -2017,7 +2017,7 @@ button:disabled {
 }
 
 .profile-student-session-row {
-  grid-template-columns: minmax(8rem, 1fr) minmax(7rem, auto) minmax(9rem, 1.2fr) auto;
+  grid-template-columns: minmax(0, 1fr) minmax(7rem, auto);
   align-items: center;
 }
 
@@ -2026,6 +2026,23 @@ button:disabled {
 .profile-student-session-row time {
   color: #dff4ef;
   font-size: 0.78rem;
+}
+
+.profile-student-debug {
+  margin-top: 6px;
+  color: #9fb9b3;
+  font-size: 0.72rem;
+}
+
+.profile-student-debug summary {
+  cursor: pointer;
+}
+
+.profile-student-debug code {
+  display: block;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+  color: #cbece4;
 }
 
 .profile-section-head {

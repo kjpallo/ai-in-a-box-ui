@@ -5,8 +5,36 @@ function registerStudentRoutes(app, {
   logCompletedInteraction,
   studentSessions
 }) {
+  app.post('/api/student/join', (req, res) => {
+    const sessionId = String(req.body?.sessionId || req.body?.classSessionId || '').trim();
+    const studentHubId = String(req.body?.studentHubId || '').trim();
+    const session = studentSessions[sessionId];
+
+    if (!session) {
+      return res.status(404).json({ error: 'Student session not found.' });
+    }
+
+    if (!studentHubId) {
+      return res.status(400).json({ error: 'Student hub id is required.' });
+    }
+
+    const hub = touchAnonymousHub(session, studentHubId);
+    res.json({
+      ok: true,
+      sessionId,
+      classSessionId: sessionId,
+      studentHub: {
+        label: hub.label,
+        firstSeenAt: hub.firstSeenAt,
+        lastSeenAt: hub.lastSeenAt,
+        messageCount: hub.messageCount
+      }
+    });
+  });
+
   app.post('/api/student/message', async (req, res) => {
-    const sessionId = String(req.body?.sessionId || '').trim();
+    const sessionId = String(req.body?.sessionId || req.body?.classSessionId || '').trim();
+    const studentHubId = String(req.body?.studentHubId || '').trim();
     const message = String(req.body?.message || '').trim();
     const intent = String(req.body?.intent || '').trim();
     const session = studentSessions[sessionId];
@@ -20,13 +48,16 @@ function registerStudentRoutes(app, {
     }
 
     try {
-      const lastAnsweredContext = findLastAnsweredContext(session.messages);
+      const hub = studentHubId ? touchAnonymousHub(session, studentHubId) : null;
+      const contextMessages = hub ? hub.messages : [];
+      const lastAnsweredContext = findLastAnsweredContext(contextMessages);
       const result = await answerStudentMessage(message, {
         intent,
         lastAnsweredPrompt: lastAnsweredContext.prompt,
         lastAnsweredAnswer: lastAnsweredContext.answer,
-        pendingClarification: session.pendingClarification || null,
-        currentStandardId: findLastStandardIdForCurrentContext(session.messages)
+        pendingClarification: hub ? hub.pendingClarification || null : null,
+        currentStandardId: findLastStandardIdForCurrentContext(contextMessages),
+        recentMessages: contextMessages
       });
       const entry = {
         message,
@@ -38,8 +69,13 @@ function registerStudentRoutes(app, {
         createdAt: new Date().toISOString()
       };
 
-      session.pendingClarification = result.pendingClarification || null;
       session.messages.push(entry);
+      if (hub) {
+        hub.pendingClarification = result.pendingClarification || null;
+        hub.messages.push(entry);
+        hub.messageCount += 1;
+        hub.lastMessageAt = entry.createdAt;
+      }
 
       logCompletedInteraction({
         message,
@@ -48,7 +84,8 @@ function registerStudentRoutes(app, {
         source: 'student',
         sessionId,
         debug: {
-          className: session.className || ''
+          className: session.className || '',
+          studentHubId
         }
       });
 
@@ -64,6 +101,27 @@ function registerStudentRoutes(app, {
       });
     }
   });
+}
+
+function touchAnonymousHub(session, studentHubId) {
+  session.anonymousHubs = session.anonymousHubs || Object.create(null);
+  const now = new Date().toISOString();
+  const existingHubCount = Object.keys(session.anonymousHubs).length;
+  const hub = session.anonymousHubs[studentHubId] || {
+    studentHubId,
+    label: `Anonymous Student ${existingHubCount + 1}`,
+    firstSeenAt: now,
+    lastSeenAt: now,
+    lastMessageAt: '',
+    messageCount: 0,
+    messages: [],
+    pendingClarification: null
+  };
+
+  hub.lastSeenAt = now;
+  if (!Array.isArray(hub.messages)) hub.messages = [];
+  session.anonymousHubs[studentHubId] = hub;
+  return hub;
 }
 
 function findLastAnsweredContext(messages) {
@@ -116,5 +174,6 @@ function isResolvedNumberChoice(entry) {
 module.exports = {
   findLastAnsweredContext,
   findLastStandardIdForCurrentContext,
-  registerStudentRoutes
+  registerStudentRoutes,
+  touchAnonymousHub
 };

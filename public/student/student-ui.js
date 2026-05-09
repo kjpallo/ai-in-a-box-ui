@@ -1,6 +1,8 @@
 (() => {
+  const STUDENT_HUB_STORAGE_KEY = 'charlemagne.anonymousStudentHubId';
   const params = new URLSearchParams(window.location.search);
-  const sessionId = params.get('sessionId') || '';
+  const sessionId = params.get('sessionId') || params.get('classSessionId') || '';
+  const studentHubId = getOrCreateStudentHubId();
   const form = document.getElementById('studentMessageForm');
   const input = document.getElementById('studentMessageInput');
   const sendButton = document.getElementById('studentSendButton');
@@ -14,6 +16,7 @@
   const historyCount = document.getElementById('studentHistoryCount');
   const chatHistory = [];
   let sessionIsValid = false;
+  let heartbeatTimer = null;
 
   function init() {
     if (!form || !input || !sendButton) return;
@@ -37,7 +40,7 @@
     routeInfo.textContent = 'Routing';
 
     try {
-      const data = await window.Charlemagne.api.sendStudentMessage(sessionId, message);
+      const data = await window.Charlemagne.api.sendStudentMessage(sessionId, message, studentHubId);
       responseBox.textContent = data.response || 'No response returned.';
       routeInfo.textContent = `${data.routeType || 'unknown'} / ${data.confidence || 'unknown'}`;
       status.textContent = 'Ready';
@@ -67,7 +70,7 @@
     routeInfo.textContent = 'Routing';
 
     try {
-      const data = await window.Charlemagne.api.sendStudentWhyThisMatters(sessionId);
+      const data = await window.Charlemagne.api.sendStudentWhyThisMatters(sessionId, studentHubId);
       responseBox.textContent = data.response || 'No response returned.';
       routeInfo.textContent = `${data.routeType || 'unknown'} / ${data.confidence || 'unknown'}`;
       status.textContent = 'Ready';
@@ -92,14 +95,7 @@
     }
 
     try {
-      const data = await window.Charlemagne.api.fetchStudentSessions();
-      const sessions = Array.isArray(data.sessions) ? data.sessions : [];
-      const session = sessions.find((item) => item.sessionId === sessionId);
-
-      if (!session) {
-        showInvalidSession('This student session is not active. Ask your teacher for a new link.');
-        return;
-      }
+      await window.Charlemagne.api.joinStudentSession(sessionId, studentHubId);
 
       sessionIsValid = true;
       sessionText.textContent = sessionId;
@@ -107,21 +103,23 @@
       status.textContent = 'Connected';
       responseBox.textContent = 'Ask a question to see the response here.';
       setFormEnabled(true);
+      startHeartbeat();
       input.focus();
     } catch (error) {
-      if ((error.message || '') === 'Teacher login required.') {
-        sessionIsValid = true;
-        sessionText.textContent = sessionId;
-        sessionMessage.textContent = 'Connected to classroom link.';
-        status.textContent = 'Connected';
-        responseBox.textContent = 'Ask a question to see the response here.';
-        setFormEnabled(true);
-        input.focus();
-        return;
-      }
-
       showInvalidSession(error.message || 'Could not check this student session.');
     }
+  }
+
+  async function sendHeartbeat() {
+    if (!sessionId || !studentHubId) return;
+    await window.Charlemagne.api.joinStudentSession(sessionId, studentHubId);
+  }
+
+  function startHeartbeat() {
+    if (heartbeatTimer) return;
+    heartbeatTimer = window.setInterval(() => {
+      sendHeartbeat().catch(() => {});
+    }, 30_000);
   }
 
   function showInvalidSession(message) {
@@ -200,6 +198,24 @@
       </article>
     `).join('');
     historyBox.scrollTop = historyBox.scrollHeight;
+  }
+
+  function getOrCreateStudentHubId() {
+    try {
+      const existingId = window.localStorage.getItem(STUDENT_HUB_STORAGE_KEY);
+      if (existingId) return existingId;
+
+      const nextId = createStudentHubId();
+      window.localStorage.setItem(STUDENT_HUB_STORAGE_KEY, nextId);
+      return nextId;
+    } catch {
+      return createStudentHubId();
+    }
+  }
+
+  function createStudentHubId() {
+    if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+    return `hub-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
   }
 
   function escapeHtml(value) {

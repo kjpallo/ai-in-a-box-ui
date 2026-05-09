@@ -6,6 +6,7 @@
   let currentStandardsTagged = 0;
   let currentQuestions = [];
   let showingReviewQuestions = false;
+  let studentSessionRefreshTimer = null;
 
   function byId(id) {
     return document.getElementById(id);
@@ -660,6 +661,7 @@
     await loadProfileStatus();
     await loadDates();
     await loadStudentSessions();
+    startStudentSessionRefresh();
     await loadStandardsSummaryReport();
   }
 
@@ -688,7 +690,7 @@
 
     setText(
       'profileStudentLinkStatus',
-      studentUrl ? 'Student link ready for local classroom use.' : 'No student link created yet.'
+      studentUrl ? 'Class link ready. Copy and share this one link with students.' : 'No class link created yet.'
     );
   }
 
@@ -703,37 +705,75 @@
     }
   }
 
+  function startStudentSessionRefresh() {
+    if (studentSessionRefreshTimer) return;
+
+    studentSessionRefreshTimer = window.setInterval(() => {
+      if (byId('profileStudentSessions')) {
+        loadStudentSessions();
+      }
+    }, 15_000);
+  }
+
   function renderStudentSessions(sessions, errorMessage = '') {
     const rows = byId('profileStudentSessions');
     if (!rows) return;
 
-    setText('profileStudentSessionCount', `${sessions.length} active`);
-
     if (errorMessage) {
+      setText('profileStudentSessionCount', 'Unavailable');
       rows.innerHTML = `<p class="profile-empty-state">${escapeHtml(errorMessage)}</p>`;
       return;
     }
 
     if (!sessions.length) {
-      rows.innerHTML = '<p class="profile-empty-state">No active student sessions yet.</p>';
+      setText('profileStudentSessionCount', '0 active');
+      rows.innerHTML = '<p class="profile-empty-state">Create a class link to start anonymous student hubs.</p>';
+      if (!currentStudentUrl) renderStudentLink('');
       return;
     }
 
-    rows.innerHTML = sessions.map((session) => `
+    const activeSession = sessions[0] || {};
+    const studentUrl = activeSession.studentUrl || '';
+    if (studentUrl && !currentStudentUrl) renderStudentLink(studentUrl);
+
+    const hubs = Array.isArray(activeSession.anonymousHubs) ? activeSession.anonymousHubs : [];
+    const activeCount = Number(activeSession.activeAnonymousHubCount ?? hubs.length) || 0;
+    setText('profileStudentSessionCount', `${activeCount} active`);
+
+    if (!hubs.length) {
+      rows.innerHTML = `
+        <div class="profile-student-session-row is-class-session">
+          <div>
+            <strong>Class link status</strong>
+            <span>Waiting for anonymous student hubs.</span>
+          </div>
+          <time datetime="${escapeAttr(activeSession.createdAt || '')}">${escapeHtml(formatSessionTime(activeSession.createdAt))}</time>
+        </div>
+      `;
+      return;
+    }
+
+    rows.innerHTML = hubs.slice(0, 3).map((hub, index) => `
       <div class="profile-student-session-row">
         <div>
-          <strong>${escapeHtml(session.className || 'Class session')}</strong>
-          <span>${escapeHtml(session.sessionId || '')}</span>
+          <strong>${escapeHtml(hub.label || `Anonymous Student ${index + 1}`)}</strong>
+          <span>${escapeHtml(formatHubActivity(hub))}</span>
+          ${hub.studentHubId ? `
+            <details class="profile-student-debug">
+              <summary>Technical</summary>
+              <code>${escapeHtml(hub.studentHubId)}</code>
+            </details>
+          ` : ''}
         </div>
-        <time datetime="${escapeAttr(session.createdAt || '')}">${escapeHtml(formatSessionTime(session.createdAt))}</time>
-        <a href="${escapeAttr(session.studentUrl || '#')}" target="_blank" rel="noreferrer">${escapeHtml(session.studentUrl || '')}</a>
-        <button
-          type="button"
-          class="small-button secondary-small"
-          data-copy-student-url="${escapeAttr(session.studentUrl || '')}"
-        >Copy</button>
+        <time datetime="${escapeAttr(hub.lastSeenAt || '')}">${escapeHtml(formatSessionTime(hub.lastSeenAt))}</time>
       </div>
     `).join('');
+  }
+
+  function formatHubActivity(hub) {
+    const messageCount = Number(hub?.messageCount || 0);
+    const noun = messageCount === 1 ? 'message' : 'messages';
+    return `${messageCount} ${noun}`;
   }
 
   async function copyText(text) {
