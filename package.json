@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "test": "node scripts/test-router.js && node scripts/test-standards-followup.js && node scripts/test-student-sessions.js",
+    "test": "node scripts/test-router.js && node scripts/test-standards-followup.js && node scripts/test-student-sessions.js && node scripts/test-classroom-controls.js",
     "test:auth": "node scripts/test-teacher-auth.js",
     "reset:teacher-auth": "node scripts/reset-teacher-auth.js",
     "test:bank": "node scripts/test-router-bank.js",

@@ -7,6 +7,7 @@
   const input = document.getElementById('studentMessageInput');
   const sendButton = document.getElementById('studentSendButton');
   const pointButton = document.getElementById('studentPointButton');
+  const askHighlightButton = document.getElementById('studentAskHighlightButton');
   const responseBox = document.getElementById('studentResponse');
   const sessionText = document.getElementById('sessionIdText');
   const status = document.getElementById('studentStatus');
@@ -14,19 +15,30 @@
   const sessionMessage = document.getElementById('studentSessionMessage');
   const historyBox = document.getElementById('studentHistory');
   const historyCount = document.getElementById('studentHistoryCount');
+  const frictionWarning = document.getElementById('studentFrictionWarning');
   const chatHistory = [];
+  const controls = {
+    studentCopyInspectLockEnabled: true,
+    studentQuestionRateLimitEnabled: true,
+    studentQuestionsPerMinute: 6
+  };
   let sessionIsValid = false;
   let heartbeatTimer = null;
+  let warningTimer = null;
+  let devtoolsTimer = null;
 
   function init() {
     if (!form || !input || !sendButton) return;
 
     sessionText.textContent = sessionId || 'Missing session';
     setFormEnabled(false);
+    loadStudentControls();
     validateSession();
 
     form.addEventListener('submit', handleSubmit);
     pointButton?.addEventListener('click', handlePointClick);
+    askHighlightButton?.addEventListener('click', handleAskHighlightClick);
+    installClassroomFrictionHandlers();
   }
 
   async function handleSubmit(event) {
@@ -47,7 +59,8 @@
       addHistoryItem(message, data.response || 'No response returned.');
       input.value = '';
     } catch (error) {
-      responseBox.textContent = error.message || 'Could not send message.';
+      const message = error.message || 'Could not send message.';
+      responseBox.textContent = friendlyStudentError(message);
       routeInfo.textContent = 'Error';
       status.textContent = 'Error';
       if (/session/i.test(error.message || '')) {
@@ -76,7 +89,8 @@
       status.textContent = 'Ready';
       addHistoryItem("What's the point?", data.response || 'No response returned.');
     } catch (error) {
-      responseBox.textContent = error.message || 'Could not send message.';
+      const message = error.message || 'Could not send message.';
+      responseBox.textContent = friendlyStudentError(message);
       routeInfo.textContent = 'Error';
       status.textContent = 'Error';
       if (/session/i.test(error.message || '')) {
@@ -110,6 +124,19 @@
     }
   }
 
+  async function loadStudentControls() {
+    try {
+      const data = await window.Charlemagne.api.fetchStudentControls();
+      controls.studentCopyInspectLockEnabled = data.studentCopyInspectLockEnabled !== false;
+      controls.studentQuestionRateLimitEnabled = data.studentQuestionRateLimitEnabled !== false;
+      controls.studentQuestionsPerMinute = Number(data.studentQuestionsPerMinute) || 6;
+    } catch {
+      controls.studentCopyInspectLockEnabled = true;
+      controls.studentQuestionRateLimitEnabled = true;
+      controls.studentQuestionsPerMinute = 6;
+    }
+  }
+
   async function sendHeartbeat() {
     if (!sessionId || !studentHubId) return;
     await window.Charlemagne.api.joinStudentSession(sessionId, studentHubId);
@@ -135,6 +162,99 @@
     input.disabled = !enabled;
     sendButton.disabled = !enabled;
     if (pointButton) pointButton.disabled = !enabled;
+  }
+
+  function handleAskHighlightClick() {
+    const selectedText = getHighlightedText();
+    if (!selectedText) {
+      showTeacherToolsWarning('Highlight part of the answer first.');
+      return;
+    }
+
+    const cappedText = selectedText.length > 300 ? `${selectedText.slice(0, 297)}...` : selectedText;
+    input.value = `About this: "${cappedText}"`;
+    input.focus();
+  }
+
+  function getHighlightedText() {
+    const selection = window.getSelection();
+    const text = String(selection?.toString() || '').replace(/\s+/g, ' ').trim();
+    if (!text || !selection?.rangeCount) return '';
+
+    const range = selection.getRangeAt(0);
+    if (!selectionTouchesStudentAnswerArea(range)) return '';
+    return text;
+  }
+
+  function installClassroomFrictionHandlers() {
+    // This is classroom friction only. It guides behavior on the student page, but a determined user can bypass it.
+    document.addEventListener('copy', (event) => {
+      if (!controls.studentCopyInspectLockEnabled) return;
+      const selection = window.getSelection();
+      if (!selection?.rangeCount || !selectionTouchesStudentAnswerArea(selection.getRangeAt(0))) return;
+
+      event.preventDefault();
+      showTeacherToolsWarning('Use highlighted text as a reference instead of copying.');
+    });
+
+    document.addEventListener('contextmenu', (event) => {
+      if (!controls.studentCopyInspectLockEnabled) return;
+      event.preventDefault();
+      showTeacherToolsWarning('Teacher tools are locked on this page.');
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (!controls.studentCopyInspectLockEnabled) return;
+      if (!isInspectShortcut(event)) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      showTeacherToolsWarning('Teacher tools are locked on this page.');
+    }, true);
+
+    devtoolsTimer = window.setInterval(() => {
+      if (!controls.studentCopyInspectLockEnabled) return;
+      const widthGap = Math.abs((window.outerWidth || 0) - (window.innerWidth || 0));
+      const heightGap = Math.abs((window.outerHeight || 0) - (window.innerHeight || 0));
+      if (widthGap > 160 || heightGap > 160) {
+        showTeacherToolsWarning('Teacher tools are locked on this page.');
+      }
+    }, 2000);
+  }
+
+  function selectionTouchesStudentAnswerArea(range) {
+    return [responseBox, historyBox].some((element) => {
+      if (!element) return false;
+      return range.intersectsNode(element);
+    });
+  }
+
+  function isInspectShortcut(event) {
+    const key = String(event.key || '').toLowerCase();
+    if (key === 'f12') return true;
+
+    const ctrlShift = event.ctrlKey && event.shiftKey;
+    const cmdOption = event.metaKey && event.altKey;
+    return (ctrlShift || cmdOption) && ['i', 'j', 'c'].includes(key);
+  }
+
+  function showTeacherToolsWarning(message = 'Teacher tools are locked on this page.') {
+    if (!frictionWarning) return;
+
+    frictionWarning.textContent = message;
+    frictionWarning.hidden = false;
+    window.clearTimeout(warningTimer);
+    warningTimer = window.setTimeout(() => {
+      frictionWarning.hidden = true;
+    }, 3000);
+  }
+
+  function friendlyStudentError(message) {
+    if (/slow down|rate/i.test(message)) {
+      return 'Slow down a little. Try reading the last answer before asking another question.';
+    }
+
+    return message;
   }
 
   function flashPointButton() {

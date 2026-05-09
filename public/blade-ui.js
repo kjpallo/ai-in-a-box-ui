@@ -159,6 +159,25 @@
                 </div>
               </div>
             </section>
+
+            <section class="teacher-profile-card student-controls-card">
+              <h4>Student Controls</h4>
+              <p>This adds classroom friction. It does not replace school browser/device management.</p>
+              <p>Students can highlight text and use it as a reference instead of copying.</p>
+              <label class="profile-control-row">
+                <input type="checkbox" id="studentCopyInspectLockEnabled" />
+                <span>Lock copying and inspect shortcuts on student page</span>
+              </label>
+              <label class="profile-control-row">
+                <input type="checkbox" id="studentQuestionRateLimitEnabled" />
+                <span>Limit student question speed</span>
+              </label>
+              <label class="profile-control-field" for="studentQuestionsPerMinute">
+                <span>Questions per minute</span>
+                <input type="number" id="studentQuestionsPerMinute" min="1" max="30" step="1" value="6" />
+              </label>
+              <span id="studentControlsStatus" class="profile-control-status">Loading student controls...</span>
+            </section>
           </div>
         </section>
       `

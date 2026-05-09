@@ -186,6 +186,31 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'volume definition stays volume-specific',
+    question: 'what is volume',
+    matchedKnowledge: [densityFact],
+    type: 'definition',
+    includes: ['Volume is the amount of space an object or substance takes up.', 'mL, L, cm³, or m³', 'density = mass / volume'],
+    excludes: ['Density tells how much mass is packed'],
+    aiAllowed: false
+  },
+  {
+    name: 'time formula search lists multiple formulas',
+    question: 'what formulas have time',
+    type: 'formula_collection',
+    includes: ['Speed = distance / time', 'Acceleration = change in velocity / time', 'Power = work / time', 'Final velocity = initial velocity + acceleration × time'],
+    excludes: ['Speed tells how fast'],
+    aiAllowed: false
+  },
+  {
+    name: 'velocity formula search lists multiple formulas',
+    question: 'what formulas have velocity',
+    type: 'formula_collection',
+    includes: ['Acceleration = (final velocity - initial velocity) / time', 'Kinetic energy = 1/2 × mass × velocity²', 'Momentum = mass × velocity', 'Speed or velocity = distance / time'],
+    excludes: ['Velocity is speed in a specific direction'],
+    aiAllowed: false
+  },
+  {
     name: 'mass units stays narrow',
     question: 'What are the units for mass?',
     type: 'units_only',

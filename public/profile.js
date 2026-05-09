@@ -7,6 +7,7 @@
   let currentQuestions = [];
   let showingReviewQuestions = false;
   let studentSessionRefreshTimer = null;
+  let loadingStudentControls = false;
 
   function byId(id) {
     return document.getElementById(id);
@@ -92,6 +93,65 @@
     if (disconnectButton) {
       disconnectButton.hidden = !gmailConnected;
       disconnectButton.disabled = !gmailConnected;
+    }
+  }
+
+  async function loadStudentControls() {
+    if (!byId('studentCopyInspectLockEnabled')) return;
+
+    try {
+      loadingStudentControls = true;
+      setText('studentControlsStatus', 'Loading student controls...');
+      const data = await fetchJson('/api/classroom-controls');
+      renderStudentControls(data.controls || data);
+      setText('studentControlsStatus', 'Student controls loaded.');
+    } catch (error) {
+      setText('studentControlsStatus', error.message || 'Could not load student controls.');
+    } finally {
+      loadingStudentControls = false;
+    }
+  }
+
+  function renderStudentControls(controls) {
+    const copyLock = byId('studentCopyInspectLockEnabled');
+    const rateLimit = byId('studentQuestionRateLimitEnabled');
+    const perMinute = byId('studentQuestionsPerMinute');
+
+    if (copyLock) copyLock.checked = controls?.studentCopyInspectLockEnabled !== false;
+    if (rateLimit) rateLimit.checked = controls?.studentQuestionRateLimitEnabled !== false;
+    if (perMinute) perMinute.value = String(Number(controls?.studentQuestionsPerMinute) || 6);
+  }
+
+  async function saveStudentControls() {
+    if (loadingStudentControls) return;
+
+    const copyLock = byId('studentCopyInspectLockEnabled');
+    const rateLimit = byId('studentQuestionRateLimitEnabled');
+    const perMinute = byId('studentQuestionsPerMinute');
+    const questionsPerMinute = Number(perMinute?.value || 6);
+
+    if (!Number.isInteger(questionsPerMinute) || questionsPerMinute < 1 || questionsPerMinute > 30) {
+      setText('studentControlsStatus', 'Questions per minute must be from 1 to 30.');
+      return;
+    }
+
+    try {
+      setText('studentControlsStatus', 'Saving student controls...');
+      const data = await fetchJson('/api/classroom-controls', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          studentCopyInspectLockEnabled: Boolean(copyLock?.checked),
+          studentQuestionRateLimitEnabled: Boolean(rateLimit?.checked),
+          studentQuestionsPerMinute: questionsPerMinute
+        })
+      });
+      renderStudentControls(data.controls || data);
+      setText('studentControlsStatus', 'Saved.');
+    } catch (error) {
+      setText('studentControlsStatus', error.message || 'Could not save student controls.');
     }
   }
 
@@ -650,6 +710,10 @@
         button.disabled = false;
       }
     });
+
+    byId('studentCopyInspectLockEnabled')?.addEventListener('change', saveStudentControls);
+    byId('studentQuestionRateLimitEnabled')?.addEventListener('change', saveStudentControls);
+    byId('studentQuestionsPerMinute')?.addEventListener('change', saveStudentControls);
   }
 
   async function init() {
@@ -659,6 +723,7 @@
     initialized = true;
     bindEvents();
     await loadProfileStatus();
+    await loadStudentControls();
     await loadDates();
     await loadStudentSessions();
     startStudentSessionRefresh();
@@ -668,6 +733,7 @@
   async function refreshActiveProfileBlade() {
     if (!initialized || !byId('profileDateSelect')) return;
     await loadDates(byId('profileDateSelect')?.value || currentDate);
+    await loadStudentControls();
     await loadStudentSessions();
     await loadStandardsSummaryReport();
   }

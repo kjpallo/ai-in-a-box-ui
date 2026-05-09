@@ -108,6 +108,10 @@
     return fetchJson('/api/profile/student-sessions');
   }
 
+  function fetchStudentControls() {
+    return fetchJson('/api/student/controls');
+  }
+
   function sendDailySummary(date) {
     return fetchJson('/api/profile/send-daily-summary', {
       method: 'POST',
@@ -166,6 +170,7 @@
     fetchProfileStatus,
     fetchStandardsSummary,
     fetchStudentSessions,
+    fetchStudentControls,
     fetchSystemHealth,
     fetchVoices,
     joinStudentSession,

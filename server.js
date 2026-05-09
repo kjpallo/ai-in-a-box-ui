@@ -41,12 +41,17 @@ const {
 } = require('./lib/auth/teacherAuth');
 const { registerAiImprovementRoutes } = require('./routes/aiImprovementRoutes');
 const { registerAuthRoutes } = require('./routes/authRoutes');
+const { registerClassroomControlsRoutes } = require('./routes/classroomControlsRoutes');
 const { registerHealthRoutes } = require('./routes/healthRoutes');
 const { registerProfileRoutes } = require('./routes/profileRoutes');
 const { registerQuestionRoutes } = require('./routes/questionRoutes');
 const { registerStudentRoutes } = require('./routes/studentRoutes');
 const { registerVoiceRoutes } = require('./routes/voiceRoutes');
 const { registerWhisperRoutes } = require('./routes/whisperRoutes');
+const {
+  getClassroomControls,
+  updateClassroomControls
+} = require('./lib/system/classroomControls');
 
 loadLocalEnv(path.join(__dirname, '.env'));
 
@@ -164,6 +169,7 @@ registerAiImprovementRoutes(app, { getProblems, logProblem, updateProblem });
 
 // Profile and student-session routes.
 app.use('/api/profile', teacherAuthRequired);
+app.use('/api/classroom-controls', teacherAuthRequired);
 registerProfileRoutes(app, {
   clearGoogleIdentity: () => teacherAuthStore.clearGoogleIdentity(),
   completeGoogleConnect,
@@ -182,8 +188,13 @@ registerProfileRoutes(app, {
   sendDailySummaryEmail,
   studentSessions
 });
+registerClassroomControlsRoutes(app, {
+  getClassroomControls,
+  updateClassroomControls
+});
 registerStudentRoutes(app, {
   answerStudentMessage: questionAnswer.answerStudentMessage,
+  getClassroomControls,
   logCompletedInteraction: questionAnswer.logCompletedInteraction,
   studentSessions
 });

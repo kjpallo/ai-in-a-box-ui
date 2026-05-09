@@ -2,9 +2,24 @@ const { isInstructionalFollowUpPrompt } = require('../lib/standards/standardsFol
 
 function registerStudentRoutes(app, {
   answerStudentMessage,
+  getClassroomControls = () => ({
+    studentCopyInspectLockEnabled: true,
+    studentQuestionRateLimitEnabled: true,
+    studentQuestionsPerMinute: 6
+  }),
   logCompletedInteraction,
-  studentSessions
+  studentSessions,
+  questionRateLimiter = createStudentQuestionRateLimiter()
 }) {
+  app.get('/api/student/controls', (_req, res) => {
+    const controls = normalizeStudentControls(getClassroomControls());
+    res.json({
+      studentCopyInspectLockEnabled: controls.studentCopyInspectLockEnabled,
+      studentQuestionRateLimitEnabled: controls.studentQuestionRateLimitEnabled,
+      studentQuestionsPerMinute: controls.studentQuestionsPerMinute
+    });
+  });
+
   app.post('/api/student/join', (req, res) => {
     const sessionId = String(req.body?.sessionId || req.body?.classSessionId || '').trim();
     const studentHubId = String(req.body?.studentHubId || '').trim();
@@ -47,15 +62,36 @@ function registerStudentRoutes(app, {
       return res.status(400).json({ error: 'Message is required.' });
     }
 
+    if (!studentHubId) {
+      return res.status(400).json({ error: 'Student hub id is required.' });
+    }
+
     try {
-      const hub = studentHubId ? touchAnonymousHub(session, studentHubId) : null;
-      const contextMessages = hub ? hub.messages : [];
+      const hub = touchAnonymousHub(session, studentHubId);
+      const controls = normalizeStudentControls(getClassroomControls());
+      if (controls.studentQuestionRateLimitEnabled) {
+        const rateLimit = questionRateLimiter.check({
+          classSessionId: sessionId,
+          studentHubId,
+          questionsPerMinute: controls.studentQuestionsPerMinute
+        });
+
+        if (!rateLimit.allowed) {
+          return res.status(429).json({
+            error: 'Slow down a little. Try reading the last answer before asking another question.',
+            code: 'student_rate_limited',
+            retryAfterMs: rateLimit.retryAfterMs
+          });
+        }
+      }
+
+      const contextMessages = hub.messages;
       const lastAnsweredContext = findLastAnsweredContext(contextMessages);
       const result = await answerStudentMessage(message, {
         intent,
         lastAnsweredPrompt: lastAnsweredContext.prompt,
         lastAnsweredAnswer: lastAnsweredContext.answer,
-        pendingClarification: hub ? hub.pendingClarification || null : null,
+        pendingClarification: hub.pendingClarification || null,
         currentStandardId: findLastStandardIdForCurrentContext(contextMessages),
         recentMessages: contextMessages
       });
@@ -70,12 +106,10 @@ function registerStudentRoutes(app, {
       };
 
       session.messages.push(entry);
-      if (hub) {
-        hub.pendingClarification = result.pendingClarification || null;
-        hub.messages.push(entry);
-        hub.messageCount += 1;
-        hub.lastMessageAt = entry.createdAt;
-      }
+      hub.pendingClarification = result.pendingClarification || null;
+      hub.messages.push(entry);
+      hub.messageCount += 1;
+      hub.lastMessageAt = entry.createdAt;
 
       logCompletedInteraction({
         message,
@@ -101,6 +135,56 @@ function registerStudentRoutes(app, {
       });
     }
   });
+}
+
+function normalizeStudentControls(value = {}) {
+  const controls = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  return {
+    studentCopyInspectLockEnabled: typeof controls.studentCopyInspectLockEnabled === 'boolean'
+      ? controls.studentCopyInspectLockEnabled
+      : true,
+    studentQuestionRateLimitEnabled: typeof controls.studentQuestionRateLimitEnabled === 'boolean'
+      ? controls.studentQuestionRateLimitEnabled
+      : true,
+    studentQuestionsPerMinute: normalizeQuestionLimit(controls.studentQuestionsPerMinute)
+  };
+}
+
+function createStudentQuestionRateLimiter({ now = () => Date.now() } = {}) {
+  const buckets = new Map();
+  const windowMs = 60_000;
+
+  return {
+    check({ classSessionId, studentHubId, questionsPerMinute }) {
+      const limit = normalizeQuestionLimit(questionsPerMinute);
+      const key = `${String(classSessionId || '').trim()}::${String(studentHubId || '').trim()}`;
+      const currentTime = now();
+      const bucket = (buckets.get(key) || []).filter((timestamp) => currentTime - timestamp < windowMs);
+
+      // TODO: Math guided problem-solving questions may use a different rate limit later.
+      if (bucket.length >= limit) {
+        const oldest = bucket[0] || currentTime;
+        buckets.set(key, bucket);
+        return {
+          allowed: false,
+          retryAfterMs: Math.max(1000, windowMs - (currentTime - oldest))
+        };
+      }
+
+      bucket.push(currentTime);
+      buckets.set(key, bucket);
+      return { allowed: true, retryAfterMs: 0 };
+    },
+    reset() {
+      buckets.clear();
+    }
+  };
+}
+
+function normalizeQuestionLimit(value) {
+  const number = Number(value);
+  if (!Number.isInteger(number) || number < 1) return 6;
+  return Math.min(number, 30);
 }
 
 function touchAnonymousHub(session, studentHubId) {
@@ -174,6 +258,8 @@ function isResolvedNumberChoice(entry) {
 module.exports = {
   findLastAnsweredContext,
   findLastStandardIdForCurrentContext,
+  createStudentQuestionRateLimiter,
+  normalizeStudentControls,
   registerStudentRoutes,
   touchAnonymousHub
 };

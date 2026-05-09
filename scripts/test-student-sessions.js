@@ -64,6 +64,11 @@ function createRouteHarness() {
 
   registerStudentRoutes(app, {
     answerStudentMessage: questionAnswer.answerStudentMessage,
+    getClassroomControls: () => ({
+      studentCopyInspectLockEnabled: true,
+      studentQuestionRateLimitEnabled: false,
+      studentQuestionsPerMinute: 6
+    }),
     logCompletedInteraction: questionAnswer.logCompletedInteraction,
     studentSessions
   });
@@ -152,6 +157,48 @@ async function main() {
   assert.match(massFollowUp.body.response, /mass = density × volume/i);
   assert.doesNotMatch(massFollowUp.body.response, /ionic/i);
 
+  const volumeDefinition = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'student-a',
+    message: 'what is volume'
+  });
+  assert.equal(volumeDefinition.statusCode, 200);
+  assert.match(volumeDefinition.body.response, /Volume is the amount of space/i);
+  assert.doesNotMatch(volumeDefinition.body.response, /Density tells how much mass is packed/i);
+
+  const volumeFollowUp = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'student-a',
+    message: 'how do I solve fro it'
+  });
+  assert.equal(volumeFollowUp.statusCode, 200);
+  assert.match(volumeFollowUp.body.response, /You were asking about volume/i);
+  assert.match(volumeFollowUp.body.response, /I read "fro" as "for."/i);
+  assert.match(volumeFollowUp.body.response, /V = m \/ D/i);
+  assert.match(volumeFollowUp.body.response, /V = l × w × h/i);
+  assert.match(volumeFollowUp.body.response, /Water displacement/i);
+  assert.doesNotMatch(volumeFollowUp.body.response, /Density tells how much mass is packed/i);
+
+  const timeFormulas = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'student-a',
+    message: 'what formulas have time'
+  });
+  assert.equal(timeFormulas.statusCode, 200);
+  assert.match(timeFormulas.body.response, /Speed = distance \/ time/i);
+  assert.match(timeFormulas.body.response, /Acceleration = change in velocity \/ time/i);
+  assert.match(timeFormulas.body.response, /Power = work \/ time/i);
+
+  const velocityFormulas = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'student-a',
+    message: 'what formulas have velocity'
+  });
+  assert.equal(velocityFormulas.statusCode, 200);
+  assert.match(velocityFormulas.body.response, /Acceleration = \(final velocity - initial velocity\) \/ time/i);
+  assert.match(velocityFormulas.body.response, /Kinetic energy = 1\/2 × mass × velocity²/i);
+  assert.match(velocityFormulas.body.response, /Momentum = mass × velocity/i);
+
   const studentBFollowUp = await request('POST', '/api/student/message', {
     sessionId: classSessionId,
     studentHubId: 'student-b',
@@ -171,7 +218,7 @@ async function main() {
     ['Anonymous Student 1', 'Anonymous Student 2']
   );
 
-  assert.equal(studentSessions[classSessionId].anonymousHubs['student-a'].messages.length, 2);
+  assert.equal(studentSessions[classSessionId].anonymousHubs['student-a'].messages.length, 6);
   assert.equal(studentSessions[classSessionId].anonymousHubs['student-b'].messages.length, 1);
 
   console.log('✅ student sessions: anonymous hubs, active count, and same-hub context are isolated');
