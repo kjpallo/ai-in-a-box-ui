@@ -4,6 +4,7 @@ const {
   buildFormulaTutorMetadata,
   buildFormulaTutorPrompt,
   canStartFormulaTutor,
+  isLikelyNewFormulaQuestionDuringTutor,
   startFormulaTutor
 } = require('../lib/tutor/formulaTutor');
 
@@ -153,6 +154,105 @@ function registerStudentRoutes(app, {
       // Guided tutor messages are already inside a teacher-safe scaffold, so they do not spend question energy.
       if (hub.currentTutorProblem) {
         const previousTutorProblem = hub.currentTutorProblem;
+        if (isLikelyNewFormulaQuestionDuringTutor(message)) {
+          const result = await answerStudentMessage(message, {
+            intent,
+            lastAnsweredPrompt: lastAnsweredContext.prompt,
+            lastAnsweredAnswer: lastAnsweredContext.answer,
+            pendingClarification: null,
+            currentStandardId: findLastStandardIdForCurrentContext(contextMessages),
+            recentMessages: contextMessages
+          });
+
+          if (controls.studentGuidedFormulaTutoringEnabled && canStartFormulaTutor(result.questionRoute)) {
+            hub.currentTutorProblem = startFormulaTutor({
+              questionRoute: result.questionRoute,
+              originalQuestion: message
+            });
+            const response = [
+              'It looks like you are starting a new problem. I’ll start a new Guided Formula Tutor problem for this question.',
+              '',
+              buildFormulaTutorPrompt(hub.currentTutorProblem)
+            ].join('\n');
+            const tutorMetadata = buildFormulaTutorMetadata(hub.currentTutorProblem);
+            const entry = appendStudentHubEntry({
+              session,
+              hub,
+              message,
+              response,
+              routeType: 'formula_tutor',
+              confidence: result.confidence,
+              standardId: result.standardId || result.questionRoute?.standardId || result.questionRoute?.public?.standardId || '',
+              isStandardsFollowUp: Boolean(result.isStandardsFollowUp)
+            });
+
+            hub.pendingClarification = null;
+
+            logCompletedInteraction({
+              message,
+              questionRoute: makeFormulaTutorRoute(hub.currentTutorProblem, entry),
+              answerGiven: response,
+              source: 'student',
+              sessionId,
+              debug: {
+                className: session.className || '',
+                studentHubId,
+                formulaTutor: {
+                  active: true,
+                  restartedWithNewQuestion: true,
+                  previousQuestion: previousTutorProblem.originalQuestion || ''
+                }
+              }
+            });
+
+            return res.json({
+              response,
+              routeType: 'formula_tutor',
+              confidence: result.confidence,
+              rateLimit: rateLimitInfo,
+              tutor: tutorMetadata
+            });
+          }
+
+          hub.currentTutorProblem = null;
+          hub.pendingClarification = result.pendingClarification || null;
+          const entry = appendStudentHubEntry({
+            session,
+            hub,
+            message,
+            response: result.response,
+            routeType: result.routeType,
+            confidence: result.confidence,
+            standardId: result.standardId || result.questionRoute?.standardId || result.questionRoute?.public?.standardId || '',
+            isStandardsFollowUp: Boolean(result.isStandardsFollowUp)
+          });
+
+          logCompletedInteraction({
+            message,
+            questionRoute: result.questionRoute || makeFormulaTutorRoute(null, entry),
+            answerGiven: result.response,
+            source: 'student',
+            sessionId,
+            debug: {
+              className: session.className || '',
+              studentHubId,
+              formulaTutor: {
+                active: false,
+                stoppedForNewQuestion: true,
+                previousQuestion: previousTutorProblem.originalQuestion || ''
+              }
+            }
+          });
+
+          return res.json({
+            response: result.response,
+            routeType: result.routeType,
+            confidence: result.confidence,
+            rateLimit: rateLimitInfo,
+            tutor: null
+          });
+        }
+
         const tutorResult = answerFormulaTutorStep(previousTutorProblem, message);
         hub.currentTutorProblem = tutorResult.currentTutorProblem;
         const tutorMetadata = buildFormulaTutorMetadata(

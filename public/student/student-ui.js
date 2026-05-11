@@ -79,6 +79,7 @@
     await validateSession();
 
     form.addEventListener('submit', handleSubmit);
+    input.addEventListener('keydown', handleInputKeydown);
     pointButton?.addEventListener('click', handlePointClick);
     askHighlightButton?.addEventListener('click', handleAskHighlightClick);
     copyAnswerButton?.addEventListener('click', handleCopyAnswerClick);
@@ -114,6 +115,17 @@
     } finally {
       setFormEnabled(sessionIsValid);
       if (sessionIsValid) input.focus();
+    }
+  }
+
+  function handleInputKeydown(event) {
+    if (event.key !== 'Enter' || event.shiftKey) return;
+    event.preventDefault();
+    if (!input.value.trim() || sendButton.disabled) return;
+    if (typeof form.requestSubmit === 'function') {
+      form.requestSubmit(sendButton);
+    } else {
+      sendButton.click();
     }
   }
 

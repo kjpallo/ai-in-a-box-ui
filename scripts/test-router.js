@@ -844,6 +844,96 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'manual smoke final velocity from rest beats definition',
+    question: 'A car starts from rest and accelerates at 3 m/s² for 8 seconds. What is its final velocity?',
+    matchedKnowledge: [
+      { title: 'Velocity', answer: 'Velocity is speed in a direction.', exactTermMatch: true, score: 30 }
+    ],
+    type: 'science_formula',
+    includes: ['vf = vi + a × t', 'vf = 0 m/s + 3 m/s² × 8 s', 'vf = 24 m/s'],
+    excludes: ['Velocity is', 'speed in a direction', 'speed = distance / time'],
+    formulaWork: {
+      formulaId: 'acceleration_velocity_time',
+      finalAnswerDisplay: '24 m/s',
+      minStepCount: 4
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'plain velocity definition still uses definition lookup',
+    question: 'What is velocity?',
+    matchedKnowledge: [
+      { title: 'Velocity', answer: 'Velocity is speed in a direction.', exactTermMatch: true, score: 30 }
+    ],
+    type: 'definition',
+    includes: ['Velocity'],
+    excludes: ['vf =', 'final velocity'],
+    aiAllowed: false
+  },
+  {
+    name: 'manual smoke distance from work stays work distance',
+    question: 'A machine does 240 J of work using 60 N of force. How far did it move the object?',
+    type: 'science_formula',
+    includes: ['distance = work / force', 'distance = 240 J / 60 N', 'distance = 4 m'],
+    excludes: ['potential energy', 'height =', 'PE ='],
+    formulaWork: {
+      formulaId: 'work_force_distance',
+      finalAnswerDisplay: '4 m',
+      minStepCount: 4
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'manual smoke height from potential energy beats kinetic energy',
+    question: 'A 10 kg object has 196 J of gravitational potential energy. How high is it?',
+    type: 'science_formula',
+    includes: ['height = PE / (mass × gravity)', 'height = 196 J / (10 kg × 9.8 m/s²)', 'height = 2 m'],
+    excludes: ['kinetic energy', 'KE =', 'velocity =', 'v = √'],
+    formulaWork: {
+      formulaId: 'potential_energy',
+      finalAnswerDisplay: '2 m',
+      minStepCount: 4
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'manual smoke specific heat energy beats water chemistry',
+    question: 'How much heat is needed to raise 2 kg of water by 4°C if water’s specific heat is 4,184 J/kg°C?',
+    matchedKnowledge: [
+      { title: 'H2O', answer: 'H2O is water.', exactTermMatch: true, score: 30 }
+    ],
+    type: 'science_formula',
+    includes: ['q = m × c × ΔT', 'q = 2 kg × 4184 J/kg°C × 4°C', 'q = 33472 J'],
+    excludes: ['H2O is water', 'compound'],
+    formulaWork: {
+      formulaId: 'specific_heat',
+      finalAnswerDisplay: '33472 J',
+      minStepCount: 4
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'manual smoke specific heat capacity beats kinetic energy',
+    question: 'A substance absorbs 900 J of heat. Its mass is 3 kg and its temperature increases by 5°C. What is its specific heat?',
+    type: 'science_formula',
+    includes: ['c = q / (m × ΔT)', 'c = 900 J / (3 kg × 5°C)', 'c = 60 J/kg°C'],
+    excludes: ['kinetic energy', 'KE =', 'velocity =', 'v = √'],
+    formulaWork: {
+      formulaId: 'specific_heat',
+      finalAnswerDisplay: '60 J/kg°C',
+      minStepCount: 4
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'plain H2O chemistry still works',
+    question: 'What is H2O?',
+    type: 'chemistry_formula',
+    includes: ['H2O is water', 'hydrogen and oxygen'],
+    excludes: ['q = m × c × ΔT'],
+    aiAllowed: false
+  },
+  {
     name: 'specific heat finds heat energy from temperature change',
     question: 'During a science lab, a student heats a 200 g piece of aluminum. The aluminum’s temperature increases from 20°C to 50°C. Aluminum has a specific heat of 0.90 J/g°C. Question: How much heat energy was added to the aluminum?',
     type: 'science_formula',

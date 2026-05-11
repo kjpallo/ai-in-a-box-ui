@@ -8,61 +8,95 @@
     <style>
       body {
         min-height: 100vh;
-        overflow-y: auto;
+        min-height: 100dvh;
+        overflow: hidden;
       }
 
       .student-shell {
-        width: min(1120px, calc(100% - 2rem));
+        width: min(1240px, calc(100% - 1.25rem));
+        height: 100vh;
+        height: 100dvh;
         margin: 0 auto;
-        padding: 1.5rem 0 2rem;
+        padding: 0.65rem 0;
         display: grid;
-        gap: 1rem;
+        min-height: 0;
       }
 
       .student-workspace {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) 178px;
-        align-items: start;
-        gap: 1rem;
+        grid-template-columns: minmax(0, 1fr) 164px;
+        align-items: stretch;
+        gap: 0.65rem;
+        min-height: 0;
       }
 
       .student-main-stack {
         display: grid;
-        gap: 1rem;
+        grid-template-rows: auto auto minmax(104px, 0.72fr) minmax(126px, 0.78fr);
+        gap: 0.55rem;
         min-width: 0;
+        min-height: 0;
       }
 
       .student-panel {
         display: grid;
-        gap: 1rem;
+        gap: 0.55rem;
+        min-height: 0;
+        padding: 0.8rem;
+      }
+
+      .student-panel .panel-title-row {
+        margin-bottom: 0;
+      }
+
+      .student-panel .panel-title-row h1,
+      .student-panel .panel-title-row h2 {
+        margin: 0;
+        line-height: 1.05;
+      }
+
+      .student-panel .panel-title-row h1 {
+        color: #f5fffb;
+        font-size: clamp(1.15rem, 2vw, 1.55rem);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
       }
 
       .student-response-panel {
         position: relative;
-        overflow: visible;
+        overflow: hidden;
       }
 
       .student-session {
+        margin: 0;
         color: #b9d8d1;
+        font-size: 0.82rem;
+        line-height: 1.25;
         overflow-wrap: anywhere;
       }
 
       .student-form {
         display: grid;
-        gap: 0.75rem;
+        grid-template-columns: minmax(0, 1fr) minmax(220px, 260px);
+        align-items: stretch;
+        gap: 0.45rem;
       }
 
       .student-form textarea {
         width: 100%;
-        min-height: 130px;
+        min-height: 48px;
+        max-height: 76px;
+        resize: vertical;
       }
 
       .student-action-column {
         position: sticky;
-        top: 1rem;
+        top: 0.65rem;
         display: grid;
-        gap: 0.75rem;
-        padding: 0.85rem;
+        align-content: start;
+        gap: 0.55rem;
+        max-height: calc(100dvh - 1.3rem);
+        padding: 0.65rem;
         border: 1px solid rgba(126,233,255,0.2);
         border-radius: 12px;
         background:
@@ -73,8 +107,8 @@
 
       .student-action-button {
         width: 100%;
-        min-height: 48px;
-        padding: 0.75rem 0.85rem;
+        min-height: 42px;
+        padding: 0.6rem 0.7rem;
         border: 1px solid rgba(126,233,255,0.48);
         border-radius: 12px;
         background:
@@ -121,14 +155,15 @@
       }
 
       .student-highlight-button {
-        min-height: 58px;
+        min-height: 52px;
         line-height: 1.22;
       }
 
       .student-energy {
         display: grid;
-        gap: 0.45rem;
-        padding: 0.65rem 0.75rem;
+        align-content: center;
+        gap: 0.3rem;
+        padding: 0.48rem 0.6rem;
         border: 1px solid rgba(126,233,255,0.2);
         border-radius: 8px;
         background: rgba(4,14,17,0.62);
@@ -159,13 +194,14 @@
       }
 
       .student-energy-helper {
-        min-height: 1rem;
+        min-height: 0.9rem;
         color: #7ee9ff;
         font-size: 0.76rem;
+        line-height: 1.2;
       }
 
       .student-energy-track {
-        height: 13px;
+        height: 10px;
         padding: 2px;
         border: 1px solid rgba(126,233,255,0.3);
         border-radius: 999px;
@@ -197,13 +233,19 @@
       }
 
       .student-response {
-        min-height: 180px;
+        height: 100%;
+        min-height: 86px;
+        max-height: 20vh;
+        padding: 1rem 1.1rem;
+        border-radius: 14px;
         white-space: pre-wrap;
       }
 
       .student-response-wrap {
         position: relative;
-        overflow: visible;
+        display: grid;
+        min-height: 0;
+        overflow: hidden;
         z-index: 1;
       }
 
@@ -268,11 +310,9 @@
       }
 
       .student-tutor-card {
-        position: sticky;
-        top: 1rem;
         z-index: 4;
         display: grid;
-        gap: 0.8rem;
+        gap: 0.55rem;
         border-color: rgba(102,247,209,0.28);
         background:
           radial-gradient(circle at 18% 0%, rgba(102,247,209,0.14), transparent 34%),
@@ -306,24 +346,65 @@
         font-weight: 800;
       }
 
+      .student-tutor-body {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(260px, 330px);
+        align-items: start;
+        gap: 0.65rem;
+        min-height: 0;
+      }
+
+      .student-tutor-body:has(.student-calculator[hidden]) {
+        grid-template-columns: 1fr;
+      }
+
       .student-tutor-grid {
         display: grid;
         grid-template-columns: minmax(160px, 0.85fr) minmax(220px, 1.15fr);
-        gap: 0.75rem;
+        gap: 0.45rem;
+        min-height: 0;
       }
 
-      .student-tutor-question {
+      .student-tutor-detail.student-tutor-question {
         grid-column: 1 / -1;
-        border-color: rgba(102,247,209,0.28);
+        border-color: rgba(102,247,209,0.48);
         background:
-          linear-gradient(90deg, rgba(102,247,209,0.1), rgba(126,233,255,0.05)),
+          linear-gradient(90deg, rgba(102,247,209,0.16), rgba(126,233,255,0.08)),
+          rgba(2,8,10,0.58);
+        box-shadow:
+          0 0 18px rgba(102,247,209,0.14),
+          inset 0 1px 0 rgba(255,255,255,0.08);
+      }
+
+      .student-tutor-detail.student-tutor-question p {
+        color: #f7fffb;
+        font-size: clamp(1rem, 1.55vw, 1.1rem);
+        font-weight: 800;
+        line-height: 1.36;
+        text-shadow: 0 0 12px rgba(102,247,209,0.22);
+      }
+
+      .student-tutor-detail.student-tutor-current-step {
+        padding: 0.62rem 0.68rem;
+        border-color: rgba(126,233,255,0.36);
+        background:
+          linear-gradient(180deg, rgba(126,233,255,0.09), rgba(102,247,209,0.05)),
           rgba(2,8,10,0.48);
+        box-shadow:
+          0 0 16px rgba(126,233,255,0.1),
+          inset 0 1px 0 rgba(255,255,255,0.07);
+      }
+
+      .student-tutor-detail.student-tutor-current-step p {
+        font-size: 1rem;
+        font-weight: 750;
+        line-height: 1.38;
       }
 
       .student-tutor-detail {
         display: grid;
-        gap: 0.35rem;
-        padding: 0.7rem;
+        gap: 0.22rem;
+        padding: 0.5rem 0.55rem;
         border: 1px solid rgba(126,233,255,0.14);
         border-radius: 8px;
         background: rgba(2,8,10,0.36);
@@ -340,7 +421,7 @@
       .student-tutor-detail p {
         margin: 0;
         color: #effff8;
-        line-height: 1.42;
+        line-height: 1.3;
         white-space: pre-wrap;
       }
 
@@ -351,7 +432,7 @@
 
       .student-tutor-known-values {
         display: grid;
-        gap: 0.35rem;
+        gap: 0.22rem;
         margin: 0;
       }
 
@@ -373,16 +454,16 @@
 
       .student-tutor-actions {
         display: flex;
-        gap: 0.55rem;
+        gap: 0.45rem;
         flex-wrap: wrap;
       }
 
       .student-calculator {
         display: grid;
-        gap: 0.65rem;
-        width: min(100%, 390px);
-        margin: 0.05rem auto 0;
-        padding: 0.75rem;
+        gap: 0.45rem;
+        width: 100%;
+        margin: 0;
+        padding: 0.55rem;
         border: 1px solid rgba(102,247,209,0.24);
         border-radius: 10px;
         background:
@@ -398,15 +479,15 @@
       }
 
       .student-calculator-display {
-        min-height: 58px;
-        padding: 0.65rem 0.75rem;
+        min-height: 38px;
+        padding: 0.42rem 0.55rem;
         border: 1px solid rgba(157,255,129,0.48);
         border-radius: 7px;
         background:
           linear-gradient(180deg, rgba(16,45,28,0.96), rgba(4,24,16,0.98));
         color: #b8ff89;
         font-family: "Courier New", monospace;
-        font-size: clamp(1.35rem, 3vw, 1.85rem);
+        font-size: clamp(1.1rem, 2.2vw, 1.45rem);
         font-weight: 800;
         line-height: 1.1;
         text-align: right;
@@ -420,12 +501,12 @@
 
       .student-calculator-keys {
         display: grid;
-        grid-template-columns: repeat(4, minmax(54px, 1fr));
-        gap: 0.5rem;
+        grid-template-columns: repeat(4, minmax(48px, 1fr));
+        gap: 0.42rem;
       }
 
       .student-calculator-button {
-        min-height: 48px;
+        min-height: 42px;
         border: 1px solid rgba(126,233,255,0.34);
         border-radius: 8px;
         background:
@@ -459,14 +540,32 @@
 
       .student-calculator-button.is-operator {
         color: #7ee9ff;
+        border-color: rgba(126,233,255,0.48);
+        background:
+          linear-gradient(180deg, rgba(17,57,66,0.98), rgba(4,22,28,0.98));
+        box-shadow:
+          0 3px 0 rgba(2,12,15,0.92),
+          0 0 18px rgba(126,233,255,0.16),
+          inset 0 1px 0 rgba(255,255,255,0.12);
       }
 
       .student-calculator-button.is-clear {
         color: #ffd666;
+        border-color: rgba(255,214,102,0.5);
+      }
+
+      .student-calculator-button.is-backspace {
+        color: #ffefb5;
+        border-color: rgba(255,214,102,0.4);
+      }
+
+      .student-calculator-button.is-fraction {
+        color: #b8ff89;
+        border-color: rgba(157,255,129,0.4);
       }
 
       .student-calculator-button.is-equals {
-        grid-column: span 3;
+        grid-column: span 2;
         border-color: rgba(102,247,209,0.52);
         color: #dffdf6;
         background:
@@ -560,8 +659,8 @@
       .student-point-button {
         position: relative;
         width: 100%;
-        height: 94px;
-        min-height: 94px;
+        height: 82px;
+        min-height: 82px;
         padding: 0;
         display: grid;
         place-items: center;
@@ -574,7 +673,7 @@
 
       .student-point-base {
         position: absolute;
-        inset: 22px 10px 6px;
+        inset: 19px 8px 5px;
         border: 1px solid rgba(126,233,255,0.34);
         border-radius: 999px;
         background:
@@ -589,8 +688,8 @@
       .student-point-cap {
         position: relative;
         z-index: 1;
-        width: 82px;
-        height: 62px;
+        width: 76px;
+        height: 54px;
         display: grid;
         place-items: center;
         border: 1px solid rgba(126,233,255,0.68);
@@ -677,16 +776,18 @@
 
       .student-history-panel {
         min-height: 0;
+        overflow: hidden;
       }
 
       .student-history {
         position: relative;
         z-index: 1;
+        height: 100%;
         display: grid;
-        gap: 0.75rem;
+        gap: 0.5rem;
         align-content: start;
-        max-height: min(34vh, 290px);
-        min-height: 170px;
+        max-height: none;
+        min-height: 0;
         overflow-y: auto;
         padding: 0.25rem 0.35rem 0.25rem 0;
         overscroll-behavior: contain;
@@ -695,8 +796,8 @@
 
       .student-history-item {
         display: grid;
-        gap: 0.65rem;
-        padding: 0.75rem;
+        gap: 0.45rem;
+        padding: 0.55rem;
         border: 1px solid rgba(255,255,255,0.08);
         border-radius: 8px;
         background: rgba(3,9,10,0.34);
@@ -714,9 +815,9 @@
       }
 
       .student-history-message p {
-        padding: 0.65rem 0.75rem;
+        padding: 0.5rem 0.6rem;
         border-radius: 10px;
-        line-height: 1.45;
+        line-height: 1.34;
       }
 
       .student-history-message.is-student p {
@@ -739,8 +840,14 @@
       }
 
       @media (max-width: 760px) {
+        body {
+          overflow-y: auto;
+        }
+
         .student-shell {
           width: min(100% - 1rem, 680px);
+          height: auto;
+          min-height: 100dvh;
           padding-top: 1rem;
         }
 
@@ -748,13 +855,23 @@
           grid-template-columns: 1fr;
         }
 
+        .student-main-stack {
+          grid-template-rows: none;
+        }
+
+        .student-form {
+          grid-template-columns: 1fr;
+        }
+
         .student-action-column {
           position: static;
           grid-row: 2;
+          max-height: none;
         }
 
         .student-history {
           max-height: 260px;
+          min-height: 150px;
         }
 
         .student-response-wrap {
@@ -769,12 +886,20 @@
           position: static;
         }
 
+        .student-tutor-body {
+          grid-template-columns: 1fr;
+        }
+
         .student-tutor-grid {
           grid-template-columns: 1fr;
         }
 
         .student-calculator {
           width: 100%;
+        }
+
+        .student-calculator-button {
+          min-height: 38px;
         }
 
         .student-firework-burst {
@@ -816,7 +941,7 @@
                 id="studentMessageInput"
                 name="message"
                 placeholder="Ask a science question..."
-                rows="6"
+                rows="3"
               ></textarea>
               <div id="studentQuestionEnergy" class="student-energy" role="status" aria-live="polite" hidden>
                 <div class="student-energy-top">
@@ -836,67 +961,70 @@
               <h2 id="studentTutorTitle">Guided Formula Tutor</h2>
               <span id="studentTutorProgress" class="student-tutor-progress"></span>
             </div>
-            <div class="student-tutor-grid">
-              <div class="student-tutor-detail student-tutor-question">
-                <strong>Original question</strong>
-                <p id="studentTutorOriginalQuestion"></p>
+            <div class="student-tutor-body">
+              <div class="student-tutor-grid">
+                <div class="student-tutor-detail student-tutor-question">
+                  <strong>Original question</strong>
+                  <p id="studentTutorOriginalQuestion"></p>
+                </div>
+                <div class="student-tutor-detail">
+                  <strong>Solving for</strong>
+                  <span id="studentTutorSolveFor"></span>
+                </div>
+                <div class="student-tutor-detail">
+                  <strong>Formula</strong>
+                  <span id="studentTutorFormula"></span>
+                </div>
+                <div class="student-tutor-detail">
+                  <strong>Known values</strong>
+                  <dl id="studentTutorKnownValues" class="student-tutor-known-values"></dl>
+                </div>
+                <div class="student-tutor-detail student-tutor-current-step">
+                  <strong>Current step</strong>
+                  <p id="studentTutorPrompt"></p>
+                </div>
+                <div class="student-tutor-detail">
+                  <strong>Substitution</strong>
+                  <span id="studentTutorSubstitution"></span>
+                </div>
+                <div id="studentTutorHintWrap" class="student-tutor-detail" hidden>
+                  <strong>Hint</strong>
+                  <p id="studentTutorHint"></p>
+                </div>
+                <div id="studentTutorFinalWrap" class="student-tutor-detail" hidden>
+                  <strong>Answer</strong>
+                  <span id="studentTutorFinal"></span>
+                </div>
               </div>
-              <div class="student-tutor-detail">
-                <strong>Solving for</strong>
-                <span id="studentTutorSolveFor"></span>
-              </div>
-              <div class="student-tutor-detail">
-                <strong>Formula</strong>
-                <span id="studentTutorFormula"></span>
-              </div>
-              <div class="student-tutor-detail">
-                <strong>Known values</strong>
-                <dl id="studentTutorKnownValues" class="student-tutor-known-values"></dl>
-              </div>
-              <div class="student-tutor-detail">
-                <strong>Current step</strong>
-                <p id="studentTutorPrompt"></p>
-              </div>
-              <div class="student-tutor-detail">
-                <strong>Substitution</strong>
-                <span id="studentTutorSubstitution"></span>
-              </div>
-              <div id="studentTutorHintWrap" class="student-tutor-detail" hidden>
-                <strong>Hint</strong>
-                <p id="studentTutorHint"></p>
-              </div>
-              <div id="studentTutorFinalWrap" class="student-tutor-detail" hidden>
-                <strong>Answer</strong>
-                <span id="studentTutorFinal"></span>
+              <div id="studentTutorCalculator" class="student-calculator" aria-label="Guided Formula Tutor calculator" hidden>
+                <div id="studentCalculatorDisplay" class="student-calculator-display" role="status" aria-live="polite">0</div>
+                <div class="student-calculator-keys">
+                  <button type="button" class="student-calculator-button" data-calculator-key="7">7</button>
+                  <button type="button" class="student-calculator-button" data-calculator-key="8">8</button>
+                  <button type="button" class="student-calculator-button" data-calculator-key="9">9</button>
+                  <button type="button" class="student-calculator-button is-operator" data-calculator-key="/">÷</button>
+                  <button type="button" class="student-calculator-button" data-calculator-key="4">4</button>
+                  <button type="button" class="student-calculator-button" data-calculator-key="5">5</button>
+                  <button type="button" class="student-calculator-button" data-calculator-key="6">6</button>
+                  <button type="button" class="student-calculator-button is-operator" data-calculator-key="*">×</button>
+                  <button type="button" class="student-calculator-button" data-calculator-key="1">1</button>
+                  <button type="button" class="student-calculator-button" data-calculator-key="2">2</button>
+                  <button type="button" class="student-calculator-button" data-calculator-key="3">3</button>
+                  <button type="button" class="student-calculator-button is-operator" data-calculator-key="-">−</button>
+                  <button type="button" class="student-calculator-button" data-calculator-key="0">0</button>
+                  <button type="button" class="student-calculator-button" data-calculator-key=".">.</button>
+                  <button type="button" class="student-calculator-button is-clear" data-calculator-key="clear">C</button>
+                  <button type="button" class="student-calculator-button is-operator" data-calculator-key="+">+</button>
+                  <button type="button" class="student-calculator-button is-backspace" data-calculator-key="backspace">⌫</button>
+                  <button type="button" class="student-calculator-button is-fraction" data-calculator-key="/">a/b</button>
+                  <button type="button" class="student-calculator-button is-equals" data-calculator-key="equals">=</button>
+                </div>
               </div>
             </div>
             <div class="student-tutor-actions">
               <button type="button" class="panel-action-button" data-tutor-action="hint">Hint</button>
               <button type="button" class="panel-action-button" data-tutor-action="restart">Restart</button>
               <button type="button" class="panel-action-button" data-tutor-action="stop">Stop</button>
-            </div>
-            <div id="studentTutorCalculator" class="student-calculator" aria-label="Guided Formula Tutor calculator" hidden>
-              <div id="studentCalculatorDisplay" class="student-calculator-display" role="status" aria-live="polite">0</div>
-              <div class="student-calculator-keys">
-                <button type="button" class="student-calculator-button" data-calculator-key="7">7</button>
-                <button type="button" class="student-calculator-button" data-calculator-key="8">8</button>
-                <button type="button" class="student-calculator-button" data-calculator-key="9">9</button>
-                <button type="button" class="student-calculator-button is-operator" data-calculator-key="/">÷</button>
-                <button type="button" class="student-calculator-button" data-calculator-key="4">4</button>
-                <button type="button" class="student-calculator-button" data-calculator-key="5">5</button>
-                <button type="button" class="student-calculator-button" data-calculator-key="6">6</button>
-                <button type="button" class="student-calculator-button is-operator" data-calculator-key="*">×</button>
-                <button type="button" class="student-calculator-button" data-calculator-key="1">1</button>
-                <button type="button" class="student-calculator-button" data-calculator-key="2">2</button>
-                <button type="button" class="student-calculator-button" data-calculator-key="3">3</button>
-                <button type="button" class="student-calculator-button is-operator" data-calculator-key="-">−</button>
-                <button type="button" class="student-calculator-button" data-calculator-key="0">0</button>
-                <button type="button" class="student-calculator-button" data-calculator-key=".">.</button>
-                <button type="button" class="student-calculator-button is-clear" data-calculator-key="clear">C</button>
-                <button type="button" class="student-calculator-button is-operator" data-calculator-key="+">+</button>
-                <button type="button" class="student-calculator-button is-equals" data-calculator-key="equals">=</button>
-                <button type="button" class="student-calculator-button" data-calculator-key="backspace">⌫</button>
-              </div>
             </div>
           </section>
 

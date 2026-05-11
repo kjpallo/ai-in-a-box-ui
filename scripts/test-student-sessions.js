@@ -297,12 +297,195 @@ async function main() {
   await testElectricityVoltageCurrentClarification();
   await testPointFollowUpAfterDirectFormulaAnswer();
   await testActiveFormulaTutorStopsWhenDisabled();
+  await testGuidedFormulaTutorActiveSessionControls();
   await testGuidedFormulaTutorRequiredFormulaPaths();
+  await testPhase6FormulaTutorCoverage();
   await testFormulaTutorAnswerParsing();
   await testExpandedFormulaTutorFlows();
   await testExpandedFormulaTutorIsolation();
 
   console.log('✅ student sessions: anonymous hubs, same-hub context, and formula tutoring are isolated');
+}
+
+async function testPhase6FormulaTutorCoverage() {
+  const cases = [
+    {
+      name: 'acceleration-velocity-change',
+      question: 'A skateboarder speeds up from 6 m/s to 18 m/s in 3 seconds. What is the acceleration?',
+      formulaId: 'acceleration_velocity_time',
+      solveFor: 'acceleration',
+      directAnswer: /a = 4 m\/s²/i
+    },
+    {
+      name: 'final-velocity',
+      question: 'A car starts from rest and accelerates at 3 m/s² for 8 seconds. What is its final velocity?',
+      formulaId: 'acceleration_velocity_time',
+      solveFor: 'final velocity',
+      directAnswer: /vf = 24 m\/s/i,
+      excludes: [/Velocity is/i, /speed = distance/i]
+    },
+    {
+      name: 'weight',
+      question: 'A 15 kg backpack is on Earth. What is its weight?',
+      formulaId: 'weight_mass_gravity',
+      solveFor: 'weight',
+      directAnswer: /147 N/i
+    },
+    {
+      name: 'work',
+      question: 'A student pushes a box with 30 N of force for 4 meters. How much work is done?',
+      formulaId: 'work_force_distance',
+      solveFor: 'work',
+      directAnswer: /W = 120 J/i
+    },
+    {
+      name: 'work-distance',
+      question: 'A machine does 240 J of work using 60 N of force. How far did it move the object?',
+      formulaId: 'work_force_distance',
+      solveFor: 'distance',
+      directAnswer: /distance = 4 m/i,
+      excludes: [/potential energy/i, /PE =/i]
+    },
+    {
+      name: 'power',
+      question: 'A motor does 500 J of work in 10 seconds. What is its power?',
+      formulaId: 'work_power_time',
+      solveFor: 'power',
+      directAnswer: /P = 50 W/i
+    },
+    {
+      name: 'work-from-power',
+      question: 'A machine has a power of 75 W and runs for 8 seconds. How much work does it do?',
+      formulaId: 'work_power_time',
+      solveFor: 'work',
+      directAnswer: /W = 600 J/i
+    },
+    {
+      name: 'momentum',
+      question: 'A 6 kg ball rolls at 5 m/s. What is its momentum?',
+      formulaId: 'momentum_mass_velocity',
+      solveFor: 'momentum',
+      directAnswer: /p = 30 kg·m\/s/i
+    },
+    {
+      name: 'momentum-mass',
+      question: 'A cart has a momentum of 48 kg·m/s and moves at 8 m/s. What is its mass?',
+      formulaId: 'momentum_mass_velocity',
+      solveFor: 'mass',
+      directAnswer: /m = 6 kg/i
+    },
+    {
+      name: 'ohms-current',
+      question: 'A circuit has a voltage of 18 V and a resistance of 6 ohms. What is the current?',
+      formulaId: 'voltage_current_resistance',
+      solveFor: 'current',
+      directAnswer: /I = 3 A/i
+    },
+    {
+      name: 'ohms-resistance',
+      question: 'A circuit has a voltage of 24 V and a current of 6 A. What is the resistance?',
+      formulaId: 'voltage_current_resistance',
+      solveFor: 'resistance',
+      directAnswer: /R = 4 Ω/i
+    },
+    {
+      name: 'wave-speed',
+      question: 'A wave has a frequency of 6 Hz and a wavelength of 3 meters. What is its wave speed?',
+      formulaId: 'wave_speed_frequency_wavelength',
+      solveFor: 'wave speed',
+      directAnswer: /wave speed = 18 m\/s/i
+    },
+    {
+      name: 'wavelength',
+      question: 'A wave travels at 40 m/s and has a frequency of 8 Hz. What is its wavelength?',
+      formulaId: 'wave_speed_frequency_wavelength',
+      solveFor: 'wavelength',
+      directAnswer: /wavelength = 5 m/i
+    },
+    {
+      name: 'frequency',
+      question: 'A wave travels at 45 m/s and has a wavelength of 9 meters. What is its frequency?',
+      formulaId: 'wave_speed_frequency_wavelength',
+      solveFor: 'frequency',
+      directAnswer: /frequency = 5 Hz/i
+    },
+    {
+      name: 'kinetic-energy',
+      question: 'A 5 kg object moves at 4 m/s. What is its kinetic energy?',
+      formulaId: 'kinetic_energy',
+      solveFor: 'kinetic energy',
+      directAnswer: /KE = 40 J/i
+    },
+    {
+      name: 'potential-energy',
+      question: 'A 4 kg object is lifted 3 meters above the ground. What is its gravitational potential energy?',
+      formulaId: 'potential_energy',
+      solveFor: 'potential energy',
+      directAnswer: /PE = 117\.6 J/i
+    },
+    {
+      name: 'potential-height',
+      question: 'A 10 kg object has 196 J of gravitational potential energy. How high is it?',
+      formulaId: 'potential_energy',
+      solveFor: 'height',
+      directAnswer: /height = 2 m/i,
+      excludes: [/kinetic energy/i, /KE =/i]
+    },
+    {
+      name: 'specific-heat-energy',
+      question: 'How much heat is needed to raise 2 kg of water by 4°C if water’s specific heat is 4,184 J/kg°C?',
+      formulaId: 'specific_heat',
+      solveFor: 'heat energy',
+      directAnswer: /q = 33472 J/i,
+      excludes: [/H2O/i, /compound/i]
+    },
+    {
+      name: 'specific-heat-capacity',
+      question: 'A substance absorbs 900 J of heat. Its mass is 3 kg and its temperature increases by 5°C. What is its specific heat?',
+      formulaId: 'specific_heat',
+      solveFor: 'specific heat',
+      directAnswer: /c = 60 J\/kg°C/i,
+      excludes: [/kinetic energy/i, /KE =/i]
+    }
+  ];
+
+  for (const testCase of cases) {
+    const enabled = createRouteHarness({ studentGuidedFormulaTutoringEnabled: true });
+    const enabledCreate = await enabled.request('POST', '/api/profile/create-student-session');
+    assert.equal(enabledCreate.statusCode, 201);
+    const start = await enabled.request('POST', '/api/student/message', {
+      sessionId: enabledCreate.body.sessionId,
+      studentHubId: testCase.name,
+      message: testCase.question
+    });
+    assert.equal(start.statusCode, 200, `${testCase.name} enabled status`);
+    assert.equal(start.body.routeType, 'formula_tutor', `${testCase.name} should start Guided Formula Tutor`);
+    assert.equal(start.body.tutor.formulaId, testCase.formulaId, `${testCase.name} formulaId`);
+    assert.equal(start.body.tutor.solveFor, testCase.solveFor, `${testCase.name} solveFor`);
+    assert.equal(start.body.tutor.active, true, `${testCase.name} active tutor`);
+    assert.match(start.body.response, /What variable are we solving for\?/i);
+    assert.doesNotMatch(start.body.response, testCase.directAnswer, `${testCase.name} should not reveal final answer in tutor start`);
+
+    const disabled = createRouteHarness({ studentGuidedFormulaTutoringEnabled: false });
+    const disabledCreate = await disabled.request('POST', '/api/profile/create-student-session');
+    assert.equal(disabledCreate.statusCode, 201);
+    const direct = await disabled.request('POST', '/api/student/message', {
+      sessionId: disabledCreate.body.sessionId,
+      studentHubId: testCase.name,
+      message: testCase.question
+    });
+    assert.equal(direct.statusCode, 200, `${testCase.name} disabled status`);
+    assert.notEqual(direct.body.routeType, 'formula_tutor', `${testCase.name} should answer directly when tutor disabled`);
+    assert.match(direct.body.response, testCase.directAnswer, `${testCase.name} direct answer`);
+    for (const excluded of testCase.excludes || []) {
+      assert.doesNotMatch(direct.body.response, excluded, `${testCase.name} bad route guard`);
+    }
+  }
+
+  const { questionAnswer } = createRouteHarness();
+  const gravity = await questionAnswer.answerStudentMessage('What is the acceleration due to gravity near Earth?');
+  assert.match(gravity.response, /9\.8 m\/s²/i);
+  assert.ok(!gravity.questionRoute.formulaWork, 'gravity constant should remain a direct fact answer');
 }
 
 async function testExpandedFormulaTutorFlows() {
@@ -359,21 +542,24 @@ async function testGuidedFormulaTutorRequiredFormulaPaths() {
       formulaId: 'speed_distance_time',
       solveFor: 'speed',
       directAnswer: /speed = 50 miles per hour/i,
-      notDirectAnswer: /v = 50 mile\/hr/i
+      notDirectAnswer: /v = 50 mile\/hr/i,
+      stepOneClue: /The question says “What is its speed,” so we are solving for speed\./
     },
     {
       name: 'time-required',
       question: 'A student bikes 12 kilometers at a speed of 4 km/h. How long did the trip take?',
       formulaId: 'speed_distance_time',
       solveFor: 'time',
-      directAnswer: /time = 3 hr/i
+      directAnswer: /time = 3 hr/i,
+      stepOneClue: /The question says “How long,” so we are solving for time\./
     },
     {
       name: 'distance-required',
-      question: 'A train moves at 20 m/s for 15 seconds. How far does it travel?',
+      question: 'A train moves at 25 m/s for 12 seconds. How far does it travel?',
       formulaId: 'speed_distance_time',
       solveFor: 'distance',
-      directAnswer: /distance = 300 m/i
+      directAnswer: /distance = 300 m/i,
+      stepOneClue: /The question says “How far,” so we are solving for distance\./
     },
     {
       name: 'density-required',
@@ -434,6 +620,12 @@ async function testGuidedFormulaTutorRequiredFormulaPaths() {
     assert.equal(start.body.tutor.solveFor, testCase.solveFor);
     assert.equal(start.body.tutor.active, true);
     assert.match(start.body.response, /What variable are we solving for\?/i);
+    if (testCase.formulaId === 'speed_distance_time') {
+      assert.match(start.body.response, /1\. speed — how fast something moves/);
+      assert.match(start.body.response, /2\. distance — how far something travels/);
+      assert.match(start.body.response, /3\. time — how long it takes/);
+      assert.match(start.body.response, testCase.stepOneClue);
+    }
     assert.doesNotMatch(start.body.response, testCase.directAnswer);
   }
 }
@@ -444,10 +636,20 @@ async function testFormulaTutorAnswerParsing() {
     assert.match(response.body.response, /What is 150 \/ 3\?/i, `time alias should be accepted: ${answer}`);
   }
 
+  const timeWithoutUnit = await answerSpeedTutorTimeStep('3');
+  assert.match(timeWithoutUnit.body.response, /Correct\. time = 3 hr\./i);
+  assert.doesNotMatch(timeWithoutUnit.body.response, /Correct number\. Add the unit too/i);
+  assert.match(timeWithoutUnit.body.response, /What is 150 \/ 3\?/i);
+
   for (const answer of ['120g', '120grams', '120 grams']) {
     const response = await answerDensityTutorMassStep(answer);
     assert.match(response.body.response, /volume/i, `mass alias should be accepted: ${answer}`);
   }
+
+  const massWithoutUnit = await answerDensityTutorMassStep('120');
+  assert.match(massWithoutUnit.body.response, /Correct\. mass = 120 g\./i);
+  assert.doesNotMatch(massWithoutUnit.body.response, /Correct number\. Add the unit too/i);
+  assert.match(massWithoutUnit.body.response, /volume/i);
 
   for (const answer of ['30ml', '30 milliliters']) {
     const response = await answerDensityTutorVolumeStep(answer);
@@ -999,6 +1201,114 @@ async function testActiveFormulaTutorStopsWhenDisabled() {
   assert.notEqual(normalFormula.body.routeType, 'formula_tutor');
   assert.match(normalFormula.body.response, /F = 30 N/i);
   assert.equal(studentSessions[classSessionId].anonymousHubs['student-a'].currentTutorProblem, null);
+}
+
+async function testGuidedFormulaTutorActiveSessionControls() {
+  const { request, studentSessions } = createRouteHarness();
+  const create = await request('POST', '/api/profile/create-student-session');
+  assert.equal(create.statusCode, 201);
+  const classSessionId = create.body.sessionId;
+  const studentHubId = 'student-a';
+  const massQuestion = 'A block has a density of 8 g/cm³ and a volume of 5 cm³. What is its mass?';
+
+  let start = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId,
+    message: massQuestion
+  });
+  assert.equal(start.statusCode, 200);
+  assert.equal(start.body.routeType, 'formula_tutor');
+  assert.equal(start.body.tutor.solveFor, 'mass');
+  assert.match(start.body.response, /What variable are we solving for\?/i);
+
+  const firstWrong = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId,
+    message: '1'
+  });
+  assert.equal(firstWrong.statusCode, 200);
+  assert.match(firstWrong.body.response, /asks .+mass/i);
+  assert.match(firstWrong.body.response, /2\. mass/i);
+  assert.match(firstWrong.body.response, /stop/i);
+
+  const secondWrong = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId,
+    message: '1'
+  });
+  assert.equal(secondWrong.statusCode, 200);
+  assert.match(secondWrong.body.response, /Type 2/i);
+
+  const correctShortAnswer = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId,
+    message: '2'
+  });
+  assert.equal(correctShortAnswer.statusCode, 200);
+  assert.equal(correctShortAnswer.body.tutor.currentStepIndex, 1);
+  assert.match(correctShortAnswer.body.response, /Which formula should we use\?/i);
+
+  start = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'student-b',
+    message: massQuestion
+  });
+  assert.equal(start.statusCode, 200);
+  const stopped = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'student-b',
+    message: 'stop'
+  });
+  assert.equal(stopped.statusCode, 200);
+  assert.match(stopped.body.response, /Guided Formula Tutor stopped/i);
+  assert.equal(studentSessions[classSessionId].anonymousHubs['student-b'].currentTutorProblem, null);
+
+  const afterStop = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'student-b',
+    message: massQuestion
+  });
+  assert.equal(afterStop.statusCode, 200);
+  assert.equal(afterStop.body.routeType, 'formula_tutor');
+  assert.equal(afterStop.body.tutor.solveFor, 'mass');
+
+  start = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'student-c',
+    message: massQuestion
+  });
+  assert.equal(start.statusCode, 200);
+  await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'student-c',
+    message: '1'
+  });
+  const restarted = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'student-c',
+    message: 'restart'
+  });
+  assert.equal(restarted.statusCode, 200);
+  assert.equal(restarted.body.tutor.currentStepIndex, 0);
+  assert.equal(studentSessions[classSessionId].anonymousHubs['student-c'].currentTutorProblem.originalQuestion, massQuestion);
+  assert.match(restarted.body.response, /What variable are we solving for\?/i);
+
+  start = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'student-d',
+    message: massQuestion
+  });
+  assert.equal(start.statusCode, 200);
+  const newQuestion = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'student-d',
+    message: 'A train moves at 25 m/s for 12 seconds. How far does it travel?'
+  });
+  assert.equal(newQuestion.statusCode, 200);
+  assert.equal(newQuestion.body.routeType, 'formula_tutor');
+  assert.equal(newQuestion.body.tutor.solveFor, 'distance');
+  assert.match(newQuestion.body.response, /starting a new problem/i);
+  assert.doesNotMatch(newQuestion.body.response, /^Not quite yet\./i);
 }
 
 function escapeRegExp(value) {
