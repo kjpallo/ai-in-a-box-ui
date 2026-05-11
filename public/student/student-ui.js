@@ -17,14 +17,19 @@
   const tutorCard = document.getElementById('studentTutorCard');
   const tutorTitle = document.getElementById('studentTutorTitle');
   const tutorProgress = document.getElementById('studentTutorProgress');
+  const tutorOriginalQuestion = document.getElementById('studentTutorOriginalQuestion');
   const tutorSolveFor = document.getElementById('studentTutorSolveFor');
   const tutorFormula = document.getElementById('studentTutorFormula');
   const tutorKnownValues = document.getElementById('studentTutorKnownValues');
   const tutorPrompt = document.getElementById('studentTutorPrompt');
+  const tutorSubstitution = document.getElementById('studentTutorSubstitution');
   const tutorHintWrap = document.getElementById('studentTutorHintWrap');
   const tutorHint = document.getElementById('studentTutorHint');
   const tutorFinalWrap = document.getElementById('studentTutorFinalWrap');
   const tutorFinal = document.getElementById('studentTutorFinal');
+  const calculator = document.getElementById('studentTutorCalculator');
+  const calculatorDisplay = document.getElementById('studentCalculatorDisplay');
+  const fireworks = document.getElementById('studentTutorFireworks');
   const sessionMessage = document.getElementById('studentSessionMessage');
   const historyBox = document.getElementById('studentHistory');
   const historyCount = document.getElementById('studentHistoryCount');
@@ -58,6 +63,11 @@
   let resetTickTimer = null;
   let warningTimer = null;
   let devtoolsTimer = null;
+  let activeTutorQuestion = '';
+  let calculatorExpression = '';
+  let calculatorJustEvaluated = false;
+  let completedCelebrationKey = '';
+  let fireworksTimer = null;
 
   async function init() {
     if (!form || !input || !sendButton) return;
@@ -74,6 +84,7 @@
     copyAnswerButton?.addEventListener('click', handleCopyAnswerClick);
     clearButton?.addEventListener('click', handleClearClick);
     tutorCard?.addEventListener('click', handleTutorCardClick);
+    calculator?.addEventListener('click', handleCalculatorClick);
     installClassroomFrictionHandlers();
   }
 
@@ -328,7 +339,10 @@
     responseBox.textContent = data.response || 'No response returned.';
     routeInfo.textContent = `${data.routeType || 'unknown'} / ${data.confidence || 'unknown'}`;
     status.textContent = 'Ready';
-    renderTutorCard(data.tutor);
+    renderTutorCard(data.tutor, {
+      response: data.response || '',
+      submittedMessage: message
+    });
     addHistoryItem(message, data.response || 'No response returned.');
   }
 
@@ -376,14 +390,26 @@
     routeInfo.textContent = 'No route yet';
   }
 
-  function renderTutorCard(tutor) {
+  function renderTutorCard(tutor, context = {}) {
     if (!tutorCard) return;
 
     if (!tutor || typeof tutor !== 'object') {
       delete tutorCard.dataset.hasTutor;
       tutorCard.hidden = true;
       tutorCard.classList.remove('is-complete', 'is-stopped');
+      hideCalculator(true);
+      resetTutorWork();
+      activeTutorQuestion = '';
       return;
+    }
+
+    const work = tutor.work && typeof tutor.work === 'object' ? tutor.work : {};
+    const submittedMessage = String(context.submittedMessage || '').trim();
+    const response = String(context.response || '');
+    if (work.originalQuestion) {
+      activeTutorQuestion = work.originalQuestion;
+    } else if (tutor.active === true && Number(tutor.currentStepIndex) === 0 && submittedMessage && /^We are solving for\b/i.test(response)) {
+      activeTutorQuestion = submittedMessage;
     }
 
     tutorCard.dataset.hasTutor = 'true';
@@ -394,35 +420,43 @@
     if (tutor.stopped) {
       tutorTitle.textContent = 'Guided Tutor Stopped';
       tutorProgress.textContent = '';
-      tutorSolveFor.textContent = '';
-      tutorFormula.textContent = '';
-      tutorKnownValues.innerHTML = '';
+      hideCalculator(true);
+      resetTutorWork();
       tutorPrompt.textContent = 'Guided tutor stopped.';
       setTutorHint('');
       setTutorFinal('');
+      activeTutorQuestion = '';
       return;
     }
 
     if (tutor.completed) {
       tutorTitle.textContent = 'Guided Formula Tutor Complete';
       tutorProgress.textContent = '';
-      tutorSolveFor.textContent = tutor.solveFor || '';
-      tutorFormula.textContent = tutor.formula || '';
-      tutorKnownValues.innerHTML = '';
+      hideCalculator(true);
+      setTutorText(tutorOriginalQuestion, work.originalQuestion || tutor.originalQuestion || activeTutorQuestion);
+      setTutorText(tutorSolveFor, work.solveFor || tutor.solveFor || '');
+      setTutorText(tutorFormula, work.formula || tutor.formula || '');
+      renderKnownValues(work.knownValues || tutor.knownValues);
+      setTutorText(tutorSubstitution, work.substitution || '');
       tutorPrompt.textContent = 'Final answer unlocked.';
       setTutorHint('');
-      setTutorFinal(tutor.finalAnswerDisplay || '');
+      setTutorFinal(work.answer || formatTutorAnswer(tutor.solveFor, tutor.finalAnswerDisplay));
+      maybeCelebrateTutorCompletion(tutor, work, context);
       return;
     }
 
+    showCalculator();
+    completedCelebrationKey = '';
     const stepNumber = Number(tutor.currentStepIndex) + 1;
     const totalSteps = Number(tutor.totalSteps) || 0;
     tutorTitle.textContent = 'Guided Formula Tutor';
     tutorProgress.textContent = totalSteps > 0 ? `Step ${stepNumber} of ${totalSteps}` : '';
-    tutorSolveFor.textContent = tutor.solveFor || '';
-    tutorFormula.textContent = tutor.formula || '';
+    setTutorText(tutorOriginalQuestion, work.originalQuestion || tutor.originalQuestion || activeTutorQuestion);
+    setTutorText(tutorSolveFor, work.solveFor || '');
+    setTutorText(tutorFormula, work.formula || '');
     tutorPrompt.textContent = tutor.currentStepPrompt || '';
-    renderKnownValues(tutor.knownValues);
+    renderKnownValues(work.knownValues || tutor.knownValues);
+    setTutorText(tutorSubstitution, work.substitution || '');
     setTutorHint(tutor.currentHint || '');
     setTutorFinal('');
   }
@@ -431,7 +465,7 @@
     if (!tutorKnownValues) return;
     const safeValues = Array.isArray(values) ? values : [];
     if (!safeValues.length) {
-      tutorKnownValues.innerHTML = '<div><dt>Not filled in yet</dt><dd></dd></div>';
+      tutorKnownValues.innerHTML = '<div class="student-tutor-pending"><dt>Waiting...</dt><dd></dd></div>';
       return;
     }
 
@@ -439,6 +473,28 @@
       const label = [value.label, value.symbol ? `(${value.symbol})` : ''].filter(Boolean).join(' ');
       return `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value.display || '')}</dd></div>`;
     }).join('');
+  }
+
+  function resetTutorWork() {
+    setTutorText(tutorOriginalQuestion, '');
+    setTutorText(tutorSolveFor, '');
+    setTutorText(tutorFormula, '');
+    setTutorText(tutorSubstitution, '');
+    if (tutorKnownValues) tutorKnownValues.innerHTML = '';
+  }
+
+  function setTutorText(element, value) {
+    if (!element) return;
+    const text = String(value || '').trim();
+    element.textContent = text || 'Waiting...';
+    element.classList.toggle('student-tutor-pending', !text);
+  }
+
+  function formatTutorAnswer(label, value) {
+    const answer = String(value || '').trim();
+    const solveFor = String(label || '').trim();
+    if (solveFor && answer) return `${solveFor} = ${answer}`;
+    return answer;
   }
 
   function setTutorHint(value) {
@@ -453,6 +509,250 @@
     const text = String(value || '').trim();
     tutorFinalWrap.hidden = !text;
     tutorFinal.textContent = text;
+  }
+
+  function showCalculator() {
+    if (!calculator) return;
+    calculator.hidden = false;
+    updateCalculatorDisplay();
+  }
+
+  function hideCalculator(reset = false) {
+    if (!calculator) return;
+    calculator.hidden = true;
+    if (reset) resetCalculator();
+  }
+
+  function handleCalculatorClick(event) {
+    const button = event.target.closest('[data-calculator-key]');
+    if (!button || !calculator?.contains(button)) return;
+
+    const key = button.getAttribute('data-calculator-key') || '';
+    if (!key) return;
+
+    if (key === 'clear') {
+      resetCalculator();
+      return;
+    }
+
+    if (key === 'backspace') {
+      calculatorExpression = calculatorExpression.slice(0, -1);
+      calculatorJustEvaluated = false;
+      updateCalculatorDisplay();
+      return;
+    }
+
+    if (key === 'equals') {
+      calculateExpression();
+      return;
+    }
+
+    appendCalculatorKey(key);
+  }
+
+  function appendCalculatorKey(key) {
+    if (!/^[0-9.+\-*/]$/.test(key)) return;
+
+    const isOperator = /[+\-*/]/.test(key);
+    if (calculatorExpression === 'Error') {
+      calculatorExpression = '';
+    }
+    if (calculatorJustEvaluated && !isOperator) {
+      calculatorExpression = '';
+    }
+    if (isOperator && !calculatorExpression.trim()) return;
+    if (key === '.' && calculatorCurrentNumberHasDecimal()) return;
+    if (isOperator && /[+\-*/]\s*$/.test(calculatorExpression)) {
+      calculatorExpression = calculatorExpression.replace(/[+\-*/]\s*$/, `${key} `);
+      updateCalculatorDisplay();
+      return;
+    }
+
+    calculatorJustEvaluated = false;
+    calculatorExpression = `${calculatorExpression}${isOperator ? ` ${key} ` : key}`.replace(/\s+/g, ' ').trimStart();
+    if (calculatorExpression.length > 42) {
+      calculatorExpression = calculatorExpression.slice(0, 42).trim();
+    }
+    updateCalculatorDisplay();
+  }
+
+  function calculatorCurrentNumberHasDecimal() {
+    const currentNumber = calculatorExpression.split(/[+\-*/]/).pop() || '';
+    return currentNumber.includes('.');
+  }
+
+  function calculateExpression() {
+    try {
+      const result = evaluateCalculatorExpression(calculatorExpression);
+      calculatorExpression = formatCalculatorResult(result);
+      calculatorJustEvaluated = true;
+    } catch {
+      calculatorExpression = 'Error';
+      calculatorJustEvaluated = true;
+    }
+    updateCalculatorDisplay();
+  }
+
+  function resetCalculator() {
+    calculatorExpression = '';
+    calculatorJustEvaluated = false;
+    updateCalculatorDisplay();
+  }
+
+  function updateCalculatorDisplay() {
+    if (!calculatorDisplay) return;
+    calculatorDisplay.textContent = formatCalculatorExpression(calculatorExpression) || '0';
+  }
+
+  function formatCalculatorExpression(value) {
+    return String(value || '')
+      .replaceAll('*', '×')
+      .replaceAll('/', '÷')
+      .replaceAll('-', '−');
+  }
+
+  function evaluateCalculatorExpression(value) {
+    const expression = String(value || '')
+      .replaceAll('×', '*')
+      .replaceAll('÷', '/')
+      .replaceAll('−', '-')
+      .trim();
+
+    if (!expression || expression === 'Error' || !/^[0-9+\-*/.\s]+$/.test(expression)) {
+      throw new Error('Invalid calculator expression');
+    }
+
+    const tokens = tokenizeCalculatorExpression(expression);
+    if (!tokens.length) throw new Error('Invalid calculator expression');
+
+    const multiplied = [];
+    for (let index = 0; index < tokens.length; index += 1) {
+      const token = tokens[index];
+      if (token === '*' || token === '/') {
+        const previous = multiplied.pop();
+        const next = tokens[index + 1];
+        if (typeof previous !== 'number' || typeof next !== 'number') {
+          throw new Error('Invalid calculator expression');
+        }
+        if (token === '/' && next === 0) throw new Error('Cannot divide by zero');
+        multiplied.push(token === '*' ? previous * next : previous / next);
+        index += 1;
+      } else {
+        multiplied.push(token);
+      }
+    }
+
+    let result = multiplied[0];
+    if (typeof result !== 'number') throw new Error('Invalid calculator expression');
+    for (let index = 1; index < multiplied.length; index += 2) {
+      const operator = multiplied[index];
+      const next = multiplied[index + 1];
+      if ((operator !== '+' && operator !== '-') || typeof next !== 'number') {
+        throw new Error('Invalid calculator expression');
+      }
+      result = operator === '+' ? result + next : result - next;
+    }
+
+    if (!Number.isFinite(result)) throw new Error('Invalid calculator result');
+    return result;
+  }
+
+  function tokenizeCalculatorExpression(expression) {
+    const tokens = [];
+    let index = 0;
+    let expectingNumber = true;
+
+    while (index < expression.length) {
+      const character = expression[index];
+      if (/\s/.test(character)) {
+        index += 1;
+        continue;
+      }
+
+      if (/[+\-]/.test(character) && expectingNumber) {
+        const signedNumber = readCalculatorNumber(expression, index);
+        tokens.push(signedNumber.value);
+        index = signedNumber.nextIndex;
+        expectingNumber = false;
+        continue;
+      }
+
+      if (/[0-9.]/.test(character)) {
+        const number = readCalculatorNumber(expression, index);
+        tokens.push(number.value);
+        index = number.nextIndex;
+        expectingNumber = false;
+        continue;
+      }
+
+      if (/[+\-*/]/.test(character) && !expectingNumber) {
+        tokens.push(character);
+        index += 1;
+        expectingNumber = true;
+        continue;
+      }
+
+      throw new Error('Invalid calculator token');
+    }
+
+    if (expectingNumber) throw new Error('Calculator expression ended early');
+    return tokens;
+  }
+
+  function readCalculatorNumber(expression, startIndex) {
+    let index = startIndex;
+    let sign = '';
+    if (/[+\-]/.test(expression[index])) {
+      sign = expression[index];
+      index += 1;
+    }
+
+    let raw = '';
+    let decimalCount = 0;
+    while (index < expression.length && /[0-9.]/.test(expression[index])) {
+      if (expression[index] === '.') decimalCount += 1;
+      raw += expression[index];
+      index += 1;
+    }
+
+    if (!raw || raw === '.' || decimalCount > 1) {
+      throw new Error('Invalid calculator number');
+    }
+
+    const value = Number(`${sign}${raw}`);
+    if (!Number.isFinite(value)) throw new Error('Invalid calculator number');
+    return { value, nextIndex: index };
+  }
+
+  function formatCalculatorResult(value) {
+    const rounded = Math.round((value + Number.EPSILON) * 100000000) / 100000000;
+    return String(rounded).replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1');
+  }
+
+  function maybeCelebrateTutorCompletion(tutor, work, context = {}) {
+    if (!fireworks || !context.submittedMessage) return;
+
+    const completionKey = [
+      work.originalQuestion || tutor.originalQuestion || activeTutorQuestion,
+      work.formula || tutor.formula,
+      work.answer || tutor.finalAnswerDisplay
+    ].map((part) => String(part || '').trim()).join('|');
+
+    if (!completionKey || completionKey === completedCelebrationKey) return;
+    completedCelebrationKey = completionKey;
+    showTutorFireworks();
+  }
+
+  function showTutorFireworks() {
+    if (!fireworks) return;
+
+    window.clearTimeout(fireworksTimer);
+    fireworks.hidden = true;
+    void fireworks.offsetWidth;
+    fireworks.hidden = false;
+    fireworksTimer = window.setTimeout(() => {
+      fireworks.hidden = true;
+    }, 3000);
   }
 
   function handleAskHighlightClick() {

@@ -312,6 +312,14 @@
         gap: 0.75rem;
       }
 
+      .student-tutor-question {
+        grid-column: 1 / -1;
+        border-color: rgba(102,247,209,0.28);
+        background:
+          linear-gradient(90deg, rgba(102,247,209,0.1), rgba(126,233,255,0.05)),
+          rgba(2,8,10,0.48);
+      }
+
       .student-tutor-detail {
         display: grid;
         gap: 0.35rem;
@@ -334,6 +342,11 @@
         color: #effff8;
         line-height: 1.42;
         white-space: pre-wrap;
+      }
+
+      .student-tutor-pending {
+        color: rgba(223,253,246,0.58);
+        font-style: italic;
       }
 
       .student-tutor-known-values {
@@ -362,6 +375,168 @@
         display: flex;
         gap: 0.55rem;
         flex-wrap: wrap;
+      }
+
+      .student-calculator {
+        display: grid;
+        gap: 0.65rem;
+        width: min(100%, 390px);
+        margin: 0.05rem auto 0;
+        padding: 0.75rem;
+        border: 1px solid rgba(102,247,209,0.24);
+        border-radius: 10px;
+        background:
+          radial-gradient(circle at 50% 0%, rgba(102,247,209,0.14), transparent 56%),
+          linear-gradient(180deg, rgba(5,25,27,0.92), rgba(2,9,11,0.92));
+        box-shadow:
+          0 0 28px rgba(102,247,209,0.1),
+          inset 0 1px 0 rgba(255,255,255,0.07);
+      }
+
+      .student-calculator[hidden] {
+        display: none;
+      }
+
+      .student-calculator-display {
+        min-height: 58px;
+        padding: 0.65rem 0.75rem;
+        border: 1px solid rgba(157,255,129,0.48);
+        border-radius: 7px;
+        background:
+          linear-gradient(180deg, rgba(16,45,28,0.96), rgba(4,24,16,0.98));
+        color: #b8ff89;
+        font-family: "Courier New", monospace;
+        font-size: clamp(1.35rem, 3vw, 1.85rem);
+        font-weight: 800;
+        line-height: 1.1;
+        text-align: right;
+        overflow-wrap: anywhere;
+        text-shadow: 0 0 10px rgba(184,255,137,0.8);
+        box-shadow:
+          0 0 24px rgba(157,255,129,0.2),
+          inset 0 0 18px rgba(157,255,129,0.08),
+          inset 0 1px 0 rgba(255,255,255,0.14);
+      }
+
+      .student-calculator-keys {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(54px, 1fr));
+        gap: 0.5rem;
+      }
+
+      .student-calculator-button {
+        min-height: 48px;
+        border: 1px solid rgba(126,233,255,0.34);
+        border-radius: 8px;
+        background:
+          linear-gradient(180deg, rgba(16,45,52,0.98), rgba(4,17,21,0.98));
+        color: #effff8;
+        font-size: 1.08rem;
+        font-weight: 900;
+        letter-spacing: 0;
+        box-shadow:
+          0 3px 0 rgba(2,12,15,0.92),
+          0 0 16px rgba(126,233,255,0.1),
+          inset 0 1px 0 rgba(255,255,255,0.1);
+      }
+
+      .student-calculator-button:hover,
+      .student-calculator-button:focus-visible {
+        border-color: rgba(102,247,209,0.7);
+        box-shadow:
+          0 3px 0 rgba(2,12,15,0.92),
+          0 0 22px rgba(102,247,209,0.24),
+          inset 0 1px 0 rgba(255,255,255,0.14);
+        outline: none;
+      }
+
+      .student-calculator-button:active {
+        transform: translateY(2px);
+        box-shadow:
+          0 1px 0 rgba(2,12,15,0.92),
+          0 0 18px rgba(102,247,209,0.22);
+      }
+
+      .student-calculator-button.is-operator {
+        color: #7ee9ff;
+      }
+
+      .student-calculator-button.is-clear {
+        color: #ffd666;
+      }
+
+      .student-calculator-button.is-equals {
+        grid-column: span 3;
+        border-color: rgba(102,247,209,0.52);
+        color: #dffdf6;
+        background:
+          radial-gradient(circle at 50% 0%, rgba(102,247,209,0.18), transparent 58%),
+          linear-gradient(180deg, rgba(16,74,65,0.98), rgba(4,25,28,0.98));
+      }
+
+      .student-fireworks {
+        position: fixed;
+        inset: 0;
+        z-index: 12;
+        pointer-events: none;
+        overflow: hidden;
+      }
+
+      .student-fireworks[hidden] {
+        display: none;
+      }
+
+      .student-firework-burst {
+        position: absolute;
+        top: 22%;
+        width: 150px;
+        height: 150px;
+        transform: translateY(-50%);
+      }
+
+      .student-firework-burst.is-left {
+        left: clamp(0.5rem, 4vw, 3rem);
+      }
+
+      .student-firework-burst.is-right {
+        right: clamp(0.5rem, 4vw, 3rem);
+      }
+
+      .student-firework-burst span {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: var(--spark-color, #66f7d1);
+        box-shadow: 0 0 14px var(--spark-color, #66f7d1);
+        opacity: 0;
+        animation: student-firework-pop 1.15s ease-out forwards;
+        animation-delay: var(--spark-delay, 0s);
+      }
+
+      .student-firework-burst span:nth-child(1) { --spark-x: 0px; --spark-y: -70px; --spark-color: #66f7d1; }
+      .student-firework-burst span:nth-child(2) { --spark-x: 50px; --spark-y: -50px; --spark-color: #7ee9ff; --spark-delay: 0.04s; }
+      .student-firework-burst span:nth-child(3) { --spark-x: 72px; --spark-y: 0px; --spark-color: #ffd666; --spark-delay: 0.08s; }
+      .student-firework-burst span:nth-child(4) { --spark-x: 50px; --spark-y: 50px; --spark-color: #ff8ff0; --spark-delay: 0.02s; }
+      .student-firework-burst span:nth-child(5) { --spark-x: 0px; --spark-y: 72px; --spark-color: #66f7d1; --spark-delay: 0.1s; }
+      .student-firework-burst span:nth-child(6) { --spark-x: -50px; --spark-y: 50px; --spark-color: #7ee9ff; --spark-delay: 0.05s; }
+      .student-firework-burst span:nth-child(7) { --spark-x: -72px; --spark-y: 0px; --spark-color: #ffd666; --spark-delay: 0.09s; }
+      .student-firework-burst span:nth-child(8) { --spark-x: -50px; --spark-y: -50px; --spark-color: #ff8ff0; --spark-delay: 0.03s; }
+
+      @keyframes student-firework-pop {
+        0% {
+          opacity: 0;
+          transform: translate(-50%, -50%) scale(0.25);
+        }
+        18% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0;
+          transform: translate(calc(-50% + var(--spark-x)), calc(-50% + var(--spark-y))) scale(1);
+        }
       }
 
       .student-warning {
@@ -597,6 +772,16 @@
         .student-tutor-grid {
           grid-template-columns: 1fr;
         }
+
+        .student-calculator {
+          width: 100%;
+        }
+
+        .student-firework-burst {
+          top: 18%;
+          width: 118px;
+          height: 118px;
+        }
       }
 
       @media (prefers-reduced-motion: reduce) {
@@ -605,6 +790,10 @@
           background: linear-gradient(180deg, rgba(34,132,96,0.98), rgba(8,65,49,0.98));
           border-color: rgba(102,247,209,0.9);
           box-shadow: 0 0 34px rgba(102,247,209,0.54);
+        }
+
+        .student-firework-burst span {
+          animation-duration: 0.45s;
         }
       }
     </style>
@@ -648,6 +837,10 @@
               <span id="studentTutorProgress" class="student-tutor-progress"></span>
             </div>
             <div class="student-tutor-grid">
+              <div class="student-tutor-detail student-tutor-question">
+                <strong>Original question</strong>
+                <p id="studentTutorOriginalQuestion"></p>
+              </div>
               <div class="student-tutor-detail">
                 <strong>Solving for</strong>
                 <span id="studentTutorSolveFor"></span>
@@ -664,12 +857,16 @@
                 <strong>Current step</strong>
                 <p id="studentTutorPrompt"></p>
               </div>
+              <div class="student-tutor-detail">
+                <strong>Substitution</strong>
+                <span id="studentTutorSubstitution"></span>
+              </div>
               <div id="studentTutorHintWrap" class="student-tutor-detail" hidden>
                 <strong>Hint</strong>
                 <p id="studentTutorHint"></p>
               </div>
               <div id="studentTutorFinalWrap" class="student-tutor-detail" hidden>
-                <strong>Final answer</strong>
+                <strong>Answer</strong>
                 <span id="studentTutorFinal"></span>
               </div>
             </div>
@@ -677,6 +874,29 @@
               <button type="button" class="panel-action-button" data-tutor-action="hint">Hint</button>
               <button type="button" class="panel-action-button" data-tutor-action="restart">Restart</button>
               <button type="button" class="panel-action-button" data-tutor-action="stop">Stop</button>
+            </div>
+            <div id="studentTutorCalculator" class="student-calculator" aria-label="Guided Formula Tutor calculator" hidden>
+              <div id="studentCalculatorDisplay" class="student-calculator-display" role="status" aria-live="polite">0</div>
+              <div class="student-calculator-keys">
+                <button type="button" class="student-calculator-button" data-calculator-key="7">7</button>
+                <button type="button" class="student-calculator-button" data-calculator-key="8">8</button>
+                <button type="button" class="student-calculator-button" data-calculator-key="9">9</button>
+                <button type="button" class="student-calculator-button is-operator" data-calculator-key="/">÷</button>
+                <button type="button" class="student-calculator-button" data-calculator-key="4">4</button>
+                <button type="button" class="student-calculator-button" data-calculator-key="5">5</button>
+                <button type="button" class="student-calculator-button" data-calculator-key="6">6</button>
+                <button type="button" class="student-calculator-button is-operator" data-calculator-key="*">×</button>
+                <button type="button" class="student-calculator-button" data-calculator-key="1">1</button>
+                <button type="button" class="student-calculator-button" data-calculator-key="2">2</button>
+                <button type="button" class="student-calculator-button" data-calculator-key="3">3</button>
+                <button type="button" class="student-calculator-button is-operator" data-calculator-key="-">−</button>
+                <button type="button" class="student-calculator-button" data-calculator-key="0">0</button>
+                <button type="button" class="student-calculator-button" data-calculator-key=".">.</button>
+                <button type="button" class="student-calculator-button is-clear" data-calculator-key="clear">C</button>
+                <button type="button" class="student-calculator-button is-operator" data-calculator-key="+">+</button>
+                <button type="button" class="student-calculator-button is-equals" data-calculator-key="equals">=</button>
+                <button type="button" class="student-calculator-button" data-calculator-key="backspace">⌫</button>
+              </div>
             </div>
           </section>
 
@@ -721,6 +941,14 @@
         </aside>
       </div>
     </main>
+    <div id="studentTutorFireworks" class="student-fireworks" aria-hidden="true" hidden>
+      <div class="student-firework-burst is-left">
+        <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+      </div>
+      <div class="student-firework-burst is-right">
+        <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+      </div>
+    </div>
     <div id="studentFrictionWarning" class="student-warning" role="status" aria-live="polite" hidden></div>
 
     <script src="/ui-state.js"></script>

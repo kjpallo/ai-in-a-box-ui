@@ -166,7 +166,8 @@ function registerStudentRoutes(app, {
           message,
           response: tutorResult.response,
           routeType: 'formula_tutor',
-          confidence: 'strong'
+          confidence: 'strong',
+          contextPrompt: previousTutorProblem.originalQuestion || ''
         });
 
         logCompletedInteraction({
@@ -564,7 +565,8 @@ function appendStudentHubEntry({
   routeType,
   confidence,
   standardId = '',
-  isStandardsFollowUp = false
+  isStandardsFollowUp = false,
+  contextPrompt = ''
 }) {
   const entry = {
     message,
@@ -573,6 +575,7 @@ function appendStudentHubEntry({
     confidence,
     standardId,
     isStandardsFollowUp,
+    contextPrompt,
     createdAt: new Date().toISOString()
   };
 
@@ -626,7 +629,7 @@ function findLastAnsweredContext(messages) {
     if (isInstructionalFollowUpPrompt(entry.message) && !isResolvedNumberChoice(entry)) continue;
     if (!entry.response) continue;
     return {
-      prompt: entry.message,
+      prompt: entry.contextPrompt || entry.message,
       answer: entry.response
     };
   }
