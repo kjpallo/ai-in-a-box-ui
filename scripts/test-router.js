@@ -670,6 +670,7 @@ const tests = [
     question: 'Kenny pushes a box with 10 N to the left. Michael pushes with 15 N to the right. What is the net force? Is it balanced or unbalanced?',
     type: 'science_formula',
     includes: ['15 N right - 10 N left = 5 N right', 'The net force is 5 N right.', 'unbalanced'],
+    diagramIncludes: ['[box]', '10 N left', '15 N right', 'Net force = 5 N right', 'Unbalanced'],
     aiAllowed: false
   },
   {
@@ -677,6 +678,7 @@ const tests = [
     question: 'Abby applies 100 N to the left while Thomas applies 100 N to the right. What is the net force?',
     type: 'science_formula',
     includes: ['100 N left and 100 N right cancel out.', 'Net force = 0 N.', 'balanced'],
+    diagramIncludes: ['[box]', '100 N left', '100 N right', 'Net force = 0 N', 'Balanced'],
     aiAllowed: false
   },
   {
@@ -1324,6 +1326,17 @@ for (const test of tests) {
       );
     }
 
+    if (test.diagramIncludes) {
+      const diagramText = normalizeDiagramText(route.diagramText);
+      assert.ok(diagramText, 'Expected questionRoute.diagramText to exist');
+      for (const expected of test.diagramIncludes) {
+        assert.ok(
+          diagramText.includes(normalizeDiagramText(expected)),
+          `Expected diagramText to include "${expected}" but got:\n${route.diagramText}`
+        );
+      }
+    }
+
     if (test.formulaWork) {
       assert.ok(route.formulaWork, 'Expected questionRoute.formulaWork to exist');
       assert.equal(route.formulaWork.formulaId, test.formulaWork.formulaId);
@@ -1362,6 +1375,10 @@ for (const test of tests) {
     console.error(error.message);
     process.exitCode = 1;
   }
+}
+
+function normalizeDiagramText(text) {
+  return String(text || '').replace(/\s+/g, ' ').trim();
 }
 
 runPendingClarificationTests();
