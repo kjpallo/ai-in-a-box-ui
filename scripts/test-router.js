@@ -39,6 +39,83 @@ const massFact = factById('mass-definition');
 
 const tests = [
   {
+    name: 'phase 7a vocab net force',
+    question: 'what is net force',
+    type: 'definition',
+    includes: ['Net force is the overall force', 'combined'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 7a vocab balanced force',
+    question: 'define balanced force',
+    type: 'definition',
+    includes: ['Balanced forces are equal forces in opposite directions', 'net force is 0 N'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 7a vocab friction',
+    question: 'what is friction',
+    type: 'definition',
+    includes: ['Friction is a force that resists motion'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 7a vocab coefficient of friction',
+    question: 'what is coefficient of friction',
+    type: 'definition',
+    includes: ['coefficient of friction tells how strongly two surfaces grip each other'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 7a vocab normal force',
+    question: 'what is normal force',
+    type: 'definition',
+    includes: ['Normal force is the support force', 'perpendicular'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 7a vocab displacement',
+    question: 'what is displacement',
+    type: 'definition',
+    includes: ['Displacement is how far and in what direction', 'where it started'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 7a vocab distance displacement difference',
+    question: 'what is the difference between distance and displacement',
+    type: 'definition',
+    includes: ['Distance is the total path traveled', 'Displacement is the straight-line change'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 7a vocab free-body diagram',
+    question: 'what is a free-body diagram',
+    type: 'definition',
+    includes: ['A free-body diagram is a simple drawing', 'forces acting on it with arrows'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 7a guard friction formula still routes',
+    question: 'What is the frictional force if μ = 0.3 and normal force is 100 N?',
+    type: 'science_formula',
+    includes: ['Use the friction formula: Ff = μ × Fn.', 'Ff = 0.3 × 100 N', 'Ff = 30 N'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 7a guard 2D displacement formula still routes',
+    question: 'A person walks 3 m east and 4 m north. What is the displacement?',
+    type: 'science_formula',
+    includes: ['x = 3 m east', 'y = 4 m north', 'd = √(3² + 4²)', 'd = 5 m'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 7a guard net force formula still routes',
+    question: 'A student pushes a box with 10 N east and 4 N west. What is the net force?',
+    type: 'science_formula',
+    includes: ['10 N east - 4 N west = 6 N east', 'The net force is 6 N east.'],
+    aiAllowed: false
+  },
+  {
     name: 'displacement from initial and final position',
     question: 'An object starts at 2 m and ends at 10 m. What is its displacement?',
     type: 'science_formula',
