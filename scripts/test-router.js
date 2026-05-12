@@ -799,6 +799,27 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'three-step coefficient friction acceleration crate',
+    question: 'A 20 kg crate is pushed with 100 N. The coefficient of friction is 0.25 and the normal force is 200 N. What is the acceleration?',
+    type: 'science_formula',
+    includes: ['First calculate friction force.', 'Ff = μ × Fn', 'Ff = 0.25 × 200 N', 'Ff = 50 N', 'Then calculate net force.', 'Fnet = 100 N - 50 N = 50 N', 'Solve for acceleration: a = Fnet / m.', 'a = 50 N / 20 kg', 'a = 2.5 m/s²', 'The acceleration is 2.5 m/s².'],
+    aiAllowed: false
+  },
+  {
+    name: 'three-step coefficient friction acceleration sled symbols',
+    question: 'A 10 kg sled is pulled with 60 N. μ = 0.2 and Fn = 100 N. What is the acceleration?',
+    type: 'science_formula',
+    includes: ['Ff = 0.2 × 100 N', 'Ff = 20 N', 'Fnet = 60 N - 20 N = 40 N', 'a = 40 N / 10 kg', 'The acceleration is 4 m/s².'],
+    aiAllowed: false
+  },
+  {
+    name: 'three-step coefficient friction acceleration balanced',
+    question: 'A 5 kg object is pushed with 25 N. The coefficient of friction is 0.5 and the normal force is 50 N. What is the acceleration?',
+    type: 'science_formula',
+    includes: ['Ff = 0.5 × 50 N', 'Ff = 25 N', 'Fnet = 25 N - 25 N = 0 N', 'The forces are balanced.', 'a = 0 N / 5 kg', 'The acceleration is 0 m/s².'],
+    aiAllowed: false
+  },
+  {
     name: 'two-step balanced forces acceleration zero',
     question: 'A 20 kg object has balanced forces acting on it. What is its acceleration?',
     type: 'science_formula',
