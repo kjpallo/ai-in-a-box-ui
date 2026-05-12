@@ -74,6 +74,40 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: '2D displacement east north pythagorean',
+    question: 'A person walks 3 m east and 4 m north. What is the displacement?',
+    type: 'science_formula',
+    includes: ['x = 3 m east', 'y = 4 m north', 'd = √(x² + y²)', 'd = √(3² + 4²)', 'd = 5 m', 'The displacement is 5 m from the starting point.'],
+    formulaWork: {
+      formulaId: 'two_dimensional_displacement',
+      finalAnswerValue: 5,
+      finalAnswerDisplay: '5 m',
+      minStepCount: 5
+    },
+    aiAllowed: false
+  },
+  {
+    name: '2D displacement right up pythagorean',
+    question: 'A robot moves 6 m right and 8 m up. What is its displacement?',
+    type: 'science_formula',
+    includes: ['x = 6 m right', 'y = 8 m up', 'd = √(6² + 8²)', 'd = 10 m'],
+    aiAllowed: false
+  },
+  {
+    name: '2D displacement west south pythagorean',
+    question: 'A student walks 5 m west and 12 m south. What is the displacement?',
+    type: 'science_formula',
+    includes: ['x = 5 m west', 'y = 12 m south', 'd = √(5² + 12²)', 'd = 13 m'],
+    aiAllowed: false
+  },
+  {
+    name: '2D displacement how far from started wording',
+    question: 'A drone travels 9 m east then 12 m north. How far is it from where it started?',
+    type: 'science_formula',
+    includes: ['x = 9 m east', 'y = 12 m north', 'd = √(9² + 12²)', 'd = 15 m'],
+    aiAllowed: false
+  },
+  {
     name: 'Newton second law mass from failed student wording',
     question: 'what is the mass of an object has an acceleration of 3m/sec/sec and a force of 2n',
     matchedKnowledge: [massFact],
