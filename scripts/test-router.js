@@ -1785,7 +1785,282 @@ const tests = [
     type: 'formula_only',
     includes: ['a = (vf - vi) / t', 'a = F / m'],
     aiAllowed: false
+  },
+
+  // Phase 8B worksheet smoke tests: net force
+  {
+    name: 'phase 8b net force Cole Blayne same direction left',
+    question: 'Cole applies 20 N to the left and Blayne applies 15 N to the left. What is the net force?',
+    type: 'science_formula',
+    includes: ['20 N left + 15 N left = 35 N left', 'The net force is 35 N left.'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 8b net force boys girls right wins',
+    question: 'The boys pull with 30 N to the left and the girls pull with 50 N to the right. What is the net force?',
+    type: 'science_formula',
+    includes: ['50 N right - 30 N left = 20 N right', 'The net force is 20 N right.'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 8b net force same direction east car',
+    question: 'A car has 200 N east and 150 N east acting on it. What is the net force?',
+    type: 'science_formula',
+    includes: ['200 N east + 150 N east = 350 N east', 'The net force is 350 N east.'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 8b net force opposite sides uses relative direction',
+    question: 'Two players kick a ball from opposite sides. Red kicks with 50 N and Blue kicks with 63 N. What is the net force?',
+    type: 'science_formula',
+    includes: ['63 N opposite direction - 50 N toward the first force = 13 N opposite direction', 'The net force is 13 N opposite direction.'],
+    aiAllowed: false
+  },
+
+  // TODO Phase 8C: support "does not move" / balanced-with-single-mentioned-force net force questions.
+  // "Five people apply a total force of 95 N to the right and Alex does not move. What is the net force?" -> 0 N, balanced.
+
+  // Phase 8B worksheet smoke tests: weight / gravity force
+  {
+    name: 'phase 8b weight 40 kg on Earth',
+    question: 'What is the weight of a 40 kg object on Earth?',
+    type: 'science_formula',
+    includes: ['Fg = m × g', 'For Earth, use g = 9.8 m/s².', 'Fg = 392 N'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 8b weight formula from teacher fact',
+    question: 'How do we calculate the weight of an object?',
+    matchedKnowledge: [weightFact],
+    type: 'class_fact',
+    includes: ['Weight is the force of gravity', 'Fg = m × g'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 8b weight changes with location',
+    question: 'What changes depending on location in the universe, mass or weight?',
+    type: 'definition',
+    includes: ['Weight changes depending on location', 'gravity changes', 'Mass stays the same'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 8b weight vector direction',
+    question: 'In what direction is the weight vector always drawn?',
+    type: 'definition',
+    includes: ['weight vector', 'downward', 'toward gravity'],
+    aiAllowed: false
+  },
+
+  // TODO Later phase: moon gravity calculation. "What would be the weight of a 40 kg object on the moon?" -> 64 N with g = 1.6 m/s².
+
+  // Phase 8B worksheet smoke tests: friction
+  {
+    name: 'phase 8b friction leaves direct normal force wording',
+    question: 'A wrapped pile of leaves has a normal force of 580 N. The coefficient of friction is 0.55. How much frictional force is required to start sliding it?',
+    type: 'science_formula',
+    includes: ['Ff = μ × Fn', 'Ff = 0.55 × 580 N', 'Ff = 319 N'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 8b friction sled direct normal force wording',
+    question: 'A sled and rider have a normal force of 490 N. The coefficient of friction is 0.15. How much frictional force is needed to slide it?',
+    type: 'science_formula',
+    includes: ['Ff = μ × Fn', 'Ff = 0.15 × 490 N', 'Ff = 73.5 N'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 8b friction coefficient car direct labels',
+    question: 'A car has friction of 804 N and normal force is 1340 N. What is the coefficient of friction?',
+    type: 'science_formula',
+    includes: ['μ = Ff / Fn', 'μ = 804 N / 1340 N', 'μ = 0.6'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 8b friction normal force boulder direct labels',
+    question: 'A boulder begins to slide with friction of 530 N. The coefficient of friction is 0.65. What normal force acts on the boulder?',
+    type: 'science_formula',
+    includes: ['Fn = Ff / μ', 'Fn = 530 N / 0.65', 'Fn = 815.3846 N'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 8b sliding friction coefficient leaves direct labels',
+    question: 'A pile of leaves has friction force of 93 N and normal force is 580 N. What is the coefficient of sliding friction?',
+    type: 'science_formula',
+    includes: ['μ = Ff / Fn', 'μ = 93 N / 580 N', 'μ = 0.1603'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 8b sliding friction coefficient symbols',
+    question: 'If Ff is 265 N and Fn is 815.4 N, what is the coefficient of sliding friction?',
+    type: 'science_formula',
+    includes: ['μ = Ff / Fn', 'μ = 265 N / 815.4 N', 'μ = 0.325'],
+    aiAllowed: false
+  },
+
+  // Phase 8B worksheet smoke tests: friction + net force + acceleration
+  {
+    name: 'phase 8b block pushed friction net force',
+    question: 'A 4.0 kg block is pushed with 10 N to the right. The frictional force is 7.84 N to the left. What is the net force?',
+    type: 'science_formula',
+    includes: ['10 N right - 7.84 N left = 2.16 N right', 'The net force is 2.16 N right.'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 8b block acceleration from net force',
+    question: 'A 4.0 kg block has a net force of 2.16 N to the right. What is the acceleration?',
+    type: 'science_formula',
+    includes: ['a = 2.16 N / 4 kg', 'a = 0.54 m/s²'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 8b racecar acceleration from braking force',
+    question: 'A 500 kg racecar has a braking force of 8820 N. What is its acceleration?',
+    type: 'science_formula',
+    includes: ['a = 8820 N / 500 kg', 'a = 17.64 m/s²'],
+    aiAllowed: false
+  },
+
+  // Phase 8B worksheet smoke tests: concept / vocab
+  {
+    name: 'phase 8b vocab contact vs field forces',
+    question: 'Compare and contrast contact vs field forces.',
+    type: 'definition',
+    includes: ['Contact forces require touching', 'Field forces act at a distance'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 8b vocab Newton first law',
+    question: 'What is Newton’s First Law?',
+    type: 'definition',
+    includes: ['object at rest stays at rest', 'object in motion stays in motion', 'unbalanced force'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 8b vocab inertia',
+    question: 'What is inertia?',
+    type: 'definition',
+    includes: ['resistance to a change in motion'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 8b vocab normal force',
+    question: 'What is the normal force?',
+    type: 'definition',
+    includes: ['support force', 'perpendicular'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 8b vocab normal force direction',
+    question: 'In what direction is the normal force drawn?',
+    type: 'definition',
+    includes: ['normal force', 'perpendicular to the surface'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 8b vocab equilibrium',
+    question: 'What does it mean for an object to be in equilibrium?',
+    type: 'definition',
+    includes: ['net force is zero', 'forces are balanced'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 8b vocab equilibrium motion',
+    question: 'What types of motion can an object in equilibrium have?',
+    type: 'definition',
+    includes: ['at rest', 'constant velocity'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 8b vocab unbalanced motion change',
+    question: 'How does motion change if forces are unbalanced?',
+    type: 'definition',
+    includes: ['accelerates', 'speed up', 'slow down', 'change direction'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 8b vocab Newton third law',
+    question: 'What is Newton’s Third Law?',
+    type: 'definition',
+    includes: ['equal and opposite', 'action-reaction pairs'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 8b vocab gravity field force',
+    question: 'Is gravity a contact or field force?',
+    type: 'definition',
+    includes: ['Gravity is a field force', 'act at a distance'],
+    aiAllowed: false
+  },
+
+  // TODO Later phase: conceptual free-body diagram guards, without drawing generation.
+  // "A car is stopped at a stop light. What forces act on it?" -> gravity down and normal up; balanced.
+  // "A skydiver is descending with constant velocity. What forces act on the skydiver?" -> gravity down and air resistance up; balanced.
+  // "A hot air balloon is accelerating upward. What does that tell us about the upward and downward forces?" -> upward force greater than weight/gravity.
+  // "A book moves across a desk at constant velocity with friction. What does constant velocity tell us about the forces?" -> net force is zero; applied force and friction balanced.
+
+  // TODO Later phase: unsupported advanced vector magnitude plus angle/bearing cases.
+  // airplane north with crosswind west resultant velocity
+  // plane east with crosswind south magnitude and direction
+  // hiker 25 km west and 35 km south with direction angle
+  // boat crossing river resultant velocity
+  // bearing relative to north
+  // symbolic package/pilot relative velocity problem
+
+  // Phase 8B worksheet smoke tests: more friction / normal force / weight
+  {
+    name: 'phase 8b weight 10 kg box',
+    question: 'A 10 kg box rests on the ground. What is the weight of the box?',
+    type: 'science_formula',
+    includes: ['Fg = m × g', 'Fg = 10 kg × 9.8 m/s²', 'Fg = 98 N'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 8b static friction coefficient direct labels',
+    question: 'A 10 kg box has a maximum static friction force of 40 N and a normal force of 98 N. What is the coefficient of static friction?',
+    type: 'science_formula',
+    includes: ['μ = Ff / Fn', 'μ = 40 N / 98 N', 'μ = 0.4082'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 8b kinetic friction coefficient sled direct labels',
+    question: 'A sled has a normal force of 200 N and the kinetic friction force is 40 N. What is the coefficient of kinetic friction?',
+    type: 'science_formula',
+    includes: ['μ = Ff / Fn', 'μ = 40 N / 200 N', 'μ = 0.2'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 8b racecar skidding braking force direct labels',
+    question: 'A racecar has a kinetic friction coefficient of 1.2 and a normal force of 4900 N. What is the braking force during skidding?',
+    type: 'science_formula',
+    includes: ['Ff = μ × Fn', 'Ff = 1.2 × 4900 N', 'Ff = 5880 N'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 8b sculpture friction direct normal force wording',
+    question: 'A 1470 N sculpture is pulled across the floor. The coefficient of friction is 0.57 and the normal force is 1470 N. What is the force of friction?',
+    type: 'science_formula',
+    includes: ['Ff = μ × Fn', 'Ff = 0.57 × 1470 N', 'Ff = 837.9 N'],
+    aiAllowed: false
   }
+
+  // TODO Phase 8C: derive normal force from weight/mass for level surfaces.
+  // "A 10 kg box rests on the ground. What is the normal force on the box?" -> 98 N upward.
+  // "A 500 kg racecar has a coefficient of static friction of 1.8. What is the maximum braking force?" -> 8820 N.
+  // "A 12 kg box is pushed at constant velocity with a horizontal force of 96 N. What is the normal force?" -> 117.6 N.
+  // "A 12 kg box is pushed at constant velocity with a horizontal force of 96 N. What is the weight of the box?" -> 117.6 N.
+  // "A 12 kg box is pushed at constant velocity with a horizontal force of 96 N. What is the coefficient of friction?" -> about 0.82.
+  // "A 1470 N sculpture is pulled across the floor with an acceleration of 0.5 m/s². The coefficient of sliding friction is 0.57. What is the mass?" -> 150 kg.
+  //
+  // TODO Phase 8C: support equilibrium/static/kinetic friction from motion wording.
+  // "A box is pushed left with 20 N but does not move. What is the static friction force?" -> 20 N opposite the push.
+  // "A box just begins to move when the pushing force is increased to 40 N. What is the maximum static friction force?" -> 40 N.
+  // "A sled is pulled across snow at constant velocity with a pulling force of 40 N. What is the kinetic friction force?" -> 40 N.
+  // "A 12 kg box is pushed at constant velocity with a horizontal force of 96 N. What is the frictional force?" -> 96 N.
+  //
+  // TODO Later phase: multi-step friction/normal/applied force chains.
+  // "A sled weighs 200 N. Then 30 kg of wood is placed in the sled. If μk = 0.2, what pulling force is needed to move it at constant velocity?" -> 98.8 N.
+  // "A 500 kg racecar has wings that increase the downward force by 4000 N. If μs = 1.8, what is the maximum braking force?" -> 16020 N.
+  // "A 1470 N sculpture is pulled across the floor with an acceleration of 0.5 m/s². The coefficient of sliding friction is 0.57. What applied force is needed?" -> 912.9 N.
 ];
 
 let passed = 0;
