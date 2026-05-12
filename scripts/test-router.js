@@ -778,6 +778,27 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'two-step direct friction acceleration right',
+    question: 'A 10 kg box is pushed with 50 N to the right. Friction is 20 N to the left. What is its acceleration?',
+    type: 'science_formula',
+    includes: ['First find the net force.', '50 N right - 20 N left = 30 N right', 'Net force = 30 N right.', 'Use Newton’s second law: Fnet = m × a.', 'Solve for acceleration: a = Fnet / m.', 'a = 30 N / 10 kg', 'a = 3 m/s²', 'The acceleration is 3 m/s² right.'],
+    aiAllowed: false
+  },
+  {
+    name: 'two-step direct friction acceleration forward',
+    question: 'A 5 kg object is pulled forward with 40 N. The friction force is 15 N backward. What is the acceleration?',
+    type: 'science_formula',
+    includes: ['First find the net force.', '40 N forward - 15 N backward = 25 N forward', 'Net force = 25 N forward.', 'a = 25 N / 5 kg', 'a = 5 m/s²', 'The acceleration is 5 m/s² forward.'],
+    aiAllowed: false
+  },
+  {
+    name: 'two-step direct friction acceleration balanced',
+    question: 'A 10 kg box is pushed with 30 N right and friction is 30 N left. What is the acceleration?',
+    type: 'science_formula',
+    includes: ['First find the net force.', '30 N right and 30 N left cancel out.', 'Net force = 0 N.', 'The forces are balanced.', 'a = 0 N / 10 kg', 'The acceleration is 0 m/s².'],
+    aiAllowed: false
+  },
+  {
     name: 'two-step balanced forces acceleration zero',
     question: 'A 20 kg object has balanced forces acting on it. What is its acceleration?',
     type: 'science_formula',
