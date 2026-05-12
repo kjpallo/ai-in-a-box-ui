@@ -39,6 +39,41 @@ const massFact = factById('mass-definition');
 
 const tests = [
   {
+    name: 'displacement from initial and final position',
+    question: 'An object starts at 2 m and ends at 10 m. What is its displacement?',
+    type: 'science_formula',
+    includes: ['displacement = final position - initial position', 'displacement = 10 m - 2 m', 'displacement = 8 m'],
+    aiAllowed: false
+  },
+  {
+    name: 'displacement same direction east',
+    question: 'A person walks 5 m east, then 3 m east. What is the displacement?',
+    type: 'science_formula',
+    includes: ['5 m east + 3 m east = 8 m east'],
+    aiAllowed: false
+  },
+  {
+    name: 'displacement opposite direction east west',
+    question: 'A person walks 10 m east, then 4 m west. What is the displacement?',
+    type: 'science_formula',
+    includes: ['10 m east - 4 m west = 6 m east'],
+    aiAllowed: false
+  },
+  {
+    name: 'displacement opposite direction left right',
+    question: 'A robot moves 7 m left and then 2 m right. What is its displacement?',
+    type: 'science_formula',
+    includes: ['7 m left - 2 m right = 5 m left'],
+    aiAllowed: false
+  },
+  {
+    name: 'displacement returns to start',
+    question: 'A student walks 6 m forward then 6 m backward. What is the displacement?',
+    type: 'science_formula',
+    includes: ['6 m forward - 6 m backward = 0 m', 'displacement = 0 m, starting point / no net displacement'],
+    aiAllowed: false
+  },
+  {
     name: 'Newton second law mass from failed student wording',
     question: 'what is the mass of an object has an acceleration of 3m/sec/sec and a force of 2n',
     matchedKnowledge: [massFact],
