@@ -1992,11 +1992,78 @@ const tests = [
     aiAllowed: false
   },
 
-  // TODO Later phase: conceptual free-body diagram guards, without drawing generation.
-  // "A car is stopped at a stop light. What forces act on it?" -> gravity down and normal up; balanced.
-  // "A skydiver is descending with constant velocity. What forces act on the skydiver?" -> gravity down and air resistance up; balanced.
-  // "A hot air balloon is accelerating upward. What does that tell us about the upward and downward forces?" -> upward force greater than weight/gravity.
-  // "A book moves across a desk at constant velocity with friction. What does constant velocity tell us about the forces?" -> net force is zero; applied force and friction balanced.
+  // Phase 9A free-body diagram concept inference, without drawing generation.
+  {
+    name: 'phase 9a fbd stopped car at light',
+    question: 'A car is stopped at a stop light. What forces act on it?',
+    type: 'science_concept',
+    includes: ['Gravity/weight acts downward', 'normal force from the road acts upward', 'balanced because the car is not accelerating'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 9a fbd skydiver constant velocity',
+    question: 'A skydiver is descending with constant velocity. What forces act on the skydiver?',
+    type: 'science_concept',
+    includes: ['Gravity acts downward', 'Air resistance/drag acts upward', 'balanced because constant velocity means no acceleration'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 9a fbd balloon accelerating upward',
+    question: 'A hot air balloon is accelerating upward. What does that tell us about the upward and downward forces?',
+    type: 'science_concept',
+    includes: ['upward force is greater than weight/gravity', 'net force is upward', 'forces are unbalanced'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 9a fbd book constant velocity with friction',
+    question: 'A book moves across a desk at constant velocity with friction. What does constant velocity tell us about the forces?',
+    type: 'science_concept',
+    includes: ['Net force is 0 N', 'applied force and friction are balanced horizontally', 'normal force and gravity are balanced vertically'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 9a fbd book accelerates right with friction',
+    question: 'A rightward force is applied to a book and it accelerates right. Friction acts on the book. What forces act on it?',
+    type: 'science_concept',
+    includes: ['applied force acts right', 'Friction acts left', 'Gravity acts down', 'normal force acts up', 'applied force is greater than friction'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 9a fbd car coasting right slowing down',
+    question: 'A car is coasting to the right and slowing down. What forces act on it?',
+    type: 'science_concept',
+    includes: ['Friction/drag acts left', 'Gravity acts down', 'normal force acts up', 'net force is left'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 9a fbd car parked on slope',
+    question: 'A car is parked on a sloped street. What forces act on it?',
+    type: 'science_concept',
+    includes: ['Gravity acts downward', 'normal force acts perpendicular to the surface', 'Friction acts along the slope', 'do not calculate components'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 9a fbd constant velocity net force',
+    question: 'What does constant velocity mean about net force?',
+    type: 'science_concept',
+    includes: ['Net force is 0 N', 'forces are balanced', 'object is not accelerating'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 9a fbd accelerating upward meaning',
+    question: 'What does it mean if an object is accelerating upward?',
+    type: 'science_concept',
+    includes: ['net force is upward', 'upward force is greater than the downward force', 'forces are unbalanced'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 9a guard numeric friction formula still routes',
+    question: 'What is the frictional force if μ = 0.25 and normal force is 80 N?',
+    type: 'science_formula',
+    includes: ['Use the friction formula: Ff = μ × Fn.', 'Ff = 0.25 × 80 N', 'Ff = 20 N'],
+    excludes: ['free-body forces concept'],
+    aiAllowed: false
+  },
 
   // TODO Later phase: unsupported advanced vector magnitude plus angle/bearing cases.
   // airplane north with crosswind west resultant velocity
