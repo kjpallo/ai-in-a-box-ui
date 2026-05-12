@@ -669,7 +669,7 @@ const tests = [
     name: 'net force opposite directions right wins',
     question: 'Kenny pushes a box with 10 N to the left. Michael pushes with 15 N to the right. What is the net force? Is it balanced or unbalanced?',
     type: 'science_formula',
-    includes: ['15 N right - 10 N left = 5 N right', 'The net force is 5 N right.', 'unbalanced'],
+    includes: ['15 N right - 10 N left = 5 N right', 'The net force is 5 N right.', 'Diagram:', '[box]', 'Net force = 5 N right', 'Unbalanced'],
     diagramIncludes: ['[box]', '10 N left', '15 N right', 'Net force = 5 N right', 'Unbalanced'],
     aiAllowed: false
   },
@@ -725,6 +725,7 @@ const tests = [
       'F = 10 kg × 3 m/s²',
       'F = 30 N'
     ],
+    excludes: ['Diagram:', '[box]'],
     formulaWork: {
       formulaId: 'force_mass_acceleration',
       massValue: 10,
