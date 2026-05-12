@@ -95,6 +95,38 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'phase 8a vocab guard unbalanced force',
+    question: 'What is an unbalanced force?',
+    type: 'definition',
+    includes: ['Unbalanced forces do not cancel out', 'change an object\'s speed or direction'],
+    excludes: ['Use Newton’s second law', 'Recognized net force problem'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 8a vocab guard scalar',
+    question: 'What is a scalar?',
+    type: 'definition',
+    includes: ['A scalar is a quantity with size only and no direction'],
+    excludes: ['Use Newton’s second law', 'Recognized net force problem'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 8a vocab guard free-body diagram',
+    question: 'What is a free-body diagram?',
+    type: 'definition',
+    includes: ['A free-body diagram is a simple drawing', 'forces acting on it with arrows'],
+    excludes: ['Use Newton’s second law', 'Recognized net force problem'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 8a vocab guard distance displacement difference',
+    question: 'What is the difference between distance and displacement?',
+    type: 'definition',
+    includes: ['Distance is the total path traveled', 'Displacement is the straight-line change'],
+    excludes: ['Recognized displacement problem', 'displacement = final position - initial position'],
+    aiAllowed: false
+  },
+  {
     name: 'phase 7a guard friction formula still routes',
     question: 'What is the frictional force if μ = 0.3 and normal force is 100 N?',
     type: 'science_formula',
@@ -120,6 +152,13 @@ const tests = [
     question: 'An object starts at 2 m and ends at 10 m. What is its displacement?',
     type: 'science_formula',
     includes: ['displacement = final position - initial position', 'displacement = 10 m - 2 m', 'displacement = 8 m'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 8a displacement worksheet initial final negative',
+    question: 'A student starts at 20 m and ends at 7 m. What is the displacement?',
+    type: 'science_formula',
+    includes: ['displacement = final position - initial position', 'displacement = 7 m - 20 m', 'displacement = -13 m'],
     aiAllowed: false
   },
   {
@@ -178,10 +217,31 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'phase 8a displacement worksheet robot east west',
+    question: 'A robot drives 14 m east and 6 m west. What is the net displacement?',
+    type: 'science_formula',
+    includes: ['14 m east - 6 m west = 8 m east', 'displacement = 8 m east'],
+    aiAllowed: false
+  },
+  {
     name: '2D displacement right up pythagorean',
     question: 'A robot moves 6 m right and 8 m up. What is its displacement?',
     type: 'science_formula',
     includes: ['x = 6 m right', 'y = 8 m up', 'd = √(6² + 8²)', 'd = 10 m'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 8a messy displacement typo right up',
+    question: 'a robot moves 6 m rght and 8 m up what is its displacement',
+    type: 'science_formula',
+    includes: ['x = 6 m right', 'y = 8 m up', 'd = √(6² + 8²)', 'd = 10 m'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 8a displacement worksheet north east',
+    question: 'A person walks 8 m north and 15 m east. What is the displacement?',
+    type: 'science_formula',
+    includes: ['x = 15 m east', 'y = 8 m north', 'd = √(15² + 8²)', 'd = 17 m'],
     aiAllowed: false
   },
   {
@@ -210,6 +270,13 @@ const tests = [
     question: 'A student walks 6 m forward then 6 m backward. What is the total displacement?',
     type: 'science_formula',
     includes: ['6 m forward - 6 m backward = 0 m', 'displacement = 0 m, starting point / no net displacement'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 8a displacement worksheet left right cancel',
+    question: 'A person walks 9 m left and 9 m right. What is the total displacement?',
+    type: 'science_formula',
+    includes: ['9 m left - 9 m right = 0 m', 'displacement = 0 m, starting point / no net displacement'],
     aiAllowed: false
   },
   {
@@ -875,6 +942,13 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'phase 8a friction worksheet force of friction',
+    question: 'Find the force of friction when mu is 0.4 and the normal force is 150 N.',
+    type: 'science_formula',
+    includes: ['Ff = μ × Fn', 'Ff = 0.4 × 150 N', 'Ff = 60 N'],
+    aiAllowed: false
+  },
+  {
     name: 'friction solves for coefficient',
     question: 'What is the coefficient of friction if friction is 20 N and normal force is 50 N?',
     type: 'science_formula',
@@ -885,6 +959,13 @@ const tests = [
       finalAnswerDisplay: '0.4',
       minStepCount: 5
     },
+    aiAllowed: false
+  },
+  {
+    name: 'phase 8a friction worksheet coefficient',
+    question: 'If the friction force is 24 N and the normal force is 80 N, what is the coefficient of friction?',
+    type: 'science_formula',
+    includes: ['μ = Ff / Fn', 'μ = 24 N / 80 N', 'μ = 0.3'],
     aiAllowed: false
   },
   {
@@ -901,8 +982,22 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'phase 8a friction worksheet normal force symbols',
+    question: 'If Ff is 45 N and μ is 0.5, what is Fn?',
+    type: 'science_formula',
+    includes: ['Fn = Ff / μ', 'Fn = 45 N / 0.5', 'Fn = 90 N'],
+    aiAllowed: false
+  },
+  {
     name: 'friction messy force of friction with mu',
     question: 'find force of friction when mu is .25 and normal force is 80 N',
+    type: 'science_formula',
+    includes: ['Ff = μ × Fn', 'Ff = 0.25 × 80 N', 'Ff = 20 N'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 8a messy friction force with lowercase units',
+    question: 'find friction force when mu is .25 and normal force is 80 n',
     type: 'science_formula',
     includes: ['Ff = μ × Fn', 'Ff = 0.25 × 80 N', 'Ff = 20 N'],
     aiAllowed: false
@@ -912,6 +1007,13 @@ const tests = [
     question: 'if Ff is 12 N and Fn is 40 N what is mu?',
     type: 'science_formula',
     includes: ['μ = Ff / Fn', 'μ = 12 N / 40 N', 'μ = 0.3'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 8a messy friction coefficient typo',
+    question: 'what is the coefficent of friction if friction is 10 N and normal force is 50 N',
+    type: 'science_formula',
+    includes: ['μ = Ff / Fn', 'μ = 10 N / 50 N', 'μ = 0.2'],
     aiAllowed: false
   },
   {
@@ -939,6 +1041,13 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'phase 8a net force worksheet tug of war balanced',
+    question: 'A tug of war has 25 N left and 25 N right. What is the net force?',
+    type: 'science_formula',
+    includes: ['25 N left and 25 N right cancel out.', 'Net force = 0 N.', 'balanced'],
+    aiAllowed: false
+  },
+  {
     name: 'net force opposite directions left wins',
     question: 'Abby applies 150 N left while Thomas applies 100 N right.',
     type: 'science_formula',
@@ -946,10 +1055,31 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'phase 8a net force worksheet right wins',
+    question: 'A box has 70 N pushing right and 30 N pushing left. What is the net force?',
+    type: 'science_formula',
+    includes: ['70 N right - 30 N left = 40 N right', 'The net force is 40 N right.', 'unbalanced'],
+    aiAllowed: false
+  },
+  {
     name: 'net force same direction adds',
     question: 'A boy pulls a wagon with 6 N east and another boy pushes it with 4 N east.',
     type: 'science_formula',
     includes: ['6 N east + 4 N east = 10 N east', 'The net force is 10 N east.', 'unbalanced'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 8a net force worksheet same direction east',
+    question: 'Two students push a desk with 12 N east and 8 N east. What is the net force?',
+    type: 'science_formula',
+    includes: ['12 N east + 8 N east = 20 N east', 'The net force is 20 N east.'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 8a messy net force typo right',
+    question: 'whats the net force if 10 n push rite and 5 n push left',
+    type: 'science_formula',
+    includes: ['10 N right - 5 N left = 5 N right', 'The net force is 5 N right.'],
     aiAllowed: false
   },
   {
@@ -967,6 +1097,20 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'phase 8a net force acceleration worksheet cart',
+    question: 'A 4 kg cart has 18 N right and 6 N left acting on it. What is its acceleration?',
+    type: 'science_formula',
+    includes: ['First find the net force.', '18 N right - 6 N left = 12 N right', 'Net force = 12 N right.', 'a = 12 N / 4 kg', 'a = 3 m/s²', 'The acceleration is 3 m/s² right.'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 8a net force acceleration worksheet forward',
+    question: 'A 12 kg object has 50 N forward and 14 N backward. What is its acceleration?',
+    type: 'science_formula',
+    includes: ['First find the net force.', '50 N forward - 14 N backward = 36 N forward', 'Net force = 36 N forward.', 'a = 36 N / 12 kg', 'a = 3 m/s²', 'The acceleration is 3 m/s² forward.'],
+    aiAllowed: false
+  },
+  {
     name: 'two-step net force acceleration east',
     question: 'A cart has 40 N east and 10 N west acting on it. The mass is 10 kg. What is the acceleration?',
     type: 'science_formula',
@@ -978,6 +1122,13 @@ const tests = [
     question: 'A 10 kg box is pushed with 50 N to the right. Friction is 20 N to the left. What is its acceleration?',
     type: 'science_formula',
     includes: ['First find the net force.', '50 N right - 20 N left = 30 N right', 'Net force = 30 N right.', 'Use Newton’s second law: Fnet = m × a.', 'Solve for acceleration: a = Fnet / m.', 'a = 30 N / 10 kg', 'a = 3 m/s²', 'The acceleration is 3 m/s² right.'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 8a friction acceleration worksheet direct friction',
+    question: 'A 6 kg box is pushed with 42 N right. Friction is 12 N left. What is its acceleration?',
+    type: 'science_formula',
+    includes: ['First find the net force.', '42 N right - 12 N left = 30 N right', 'Net force = 30 N right.', 'a = 30 N / 6 kg', 'a = 5 m/s²', 'The acceleration is 5 m/s² right.'],
     aiAllowed: false
   },
   {
@@ -1006,6 +1157,13 @@ const tests = [
     question: 'A 10 kg sled is pulled with 60 N. μ = 0.2 and Fn = 100 N. What is the acceleration?',
     type: 'science_formula',
     includes: ['Ff = 0.2 × 100 N', 'Ff = 20 N', 'Fnet = 60 N - 20 N = 40 N', 'a = 40 N / 10 kg', 'The acceleration is 4 m/s².'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 8a friction acceleration worksheet coefficient',
+    question: 'A 10 kg crate is pushed with 80 N. μ = 0.3 and Fn = 100 N. What is the acceleration?',
+    type: 'science_formula',
+    includes: ['Ff = 0.3 × 100 N', 'Ff = 30 N', 'Fnet = 80 N - 30 N = 50 N', 'a = 50 N / 10 kg', 'The acceleration is 5 m/s².'],
     aiAllowed: false
   },
   {
