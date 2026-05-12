@@ -2108,22 +2108,87 @@ const tests = [
     type: 'science_formula',
     includes: ['Ff = μ × Fn', 'Ff = 0.57 × 1470 N', 'Ff = 837.9 N'],
     aiAllowed: false
+  },
+
+  // Phase 9B simple numeric free-body inference.
+  {
+    name: 'phase 9b weight from mass at rest',
+    question: 'A 10 kg box rests on the ground. What is the weight of the box?',
+    type: 'science_formula',
+    includes: ['Fg = m × g', 'Fg = 10 kg × 9.8 m/s²', 'Fg = 98 N'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 9b normal force equals weight on level ground',
+    question: 'A 10 kg box rests on the ground. What is the normal force on the box?',
+    type: 'science_formula',
+    includes: ['Weight = 98 N', 'Normal force = 98 N upward, assuming level ground.'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 9b static friction balances push',
+    question: 'A box is pushed left with 20 N but does not move. What is the static friction force?',
+    type: 'science_formula',
+    includes: ['Static friction balances the push.', 'Friction force = 20 N right / opposite the push.'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 9b maximum static friction from threshold push',
+    question: 'A box just begins to move when the pushing force is increased to 40 N. What is the maximum static friction force?',
+    type: 'science_formula',
+    includes: ['Maximum static friction = 40 N.'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 9b coefficient of static friction from maximum static friction',
+    question: 'A 10 kg box has a maximum static friction force of 40 N and a normal force of 98 N. What is the coefficient of static friction?',
+    type: 'science_formula',
+    includes: ['μs = Ff,max / Fn', 'μs = 40 N / 98 N', 'μs ≈ 0.41'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 9b kinetic friction balances pull at constant velocity',
+    question: 'A sled is pulled across snow at constant velocity with a pulling force of 40 N. What is the kinetic friction force?',
+    type: 'science_formula',
+    includes: ['Constant velocity means balanced forces.', 'Kinetic friction = 40 N opposite the pull.'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 9b constant velocity weight from mass',
+    question: 'A 12 kg box is pushed at constant velocity with a horizontal force of 96 N. What is the weight of the box?',
+    type: 'science_formula',
+    includes: ['Fg = m × g', 'Fg = 12 kg × 9.8 m/s²', 'Fg = 117.6 N'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 9b constant velocity normal force from mass',
+    question: 'A 12 kg box is pushed at constant velocity with a horizontal force of 96 N. What is the normal force?',
+    type: 'science_formula',
+    includes: ['Normal force = 117.6 N upward, assuming level ground.'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 9b constant velocity friction balances push',
+    question: 'A 12 kg box is pushed at constant velocity with a horizontal force of 96 N. What is the frictional force?',
+    type: 'science_formula',
+    includes: ['Constant velocity means balanced horizontal forces.', 'Friction force = 96 N opposite the push.'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 9b constant velocity coefficient from inferred normal',
+    question: 'A 12 kg box is pushed at constant velocity with a horizontal force of 96 N. What is the coefficient of friction?',
+    type: 'science_formula',
+    includes: ['Fn = 117.6 N', 'μ = 96 N / 117.6 N', 'μ ≈ 0.82'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 9b kinetic friction from coefficient and normal force',
+    question: 'A racecar has a kinetic friction coefficient of 1.2 and a normal force of 4900 N. What is the braking force during skidding?',
+    type: 'science_formula',
+    includes: ['Ff = μk × Fn', 'Ff = 1.2 × 4900 N', 'Ff = 5880 N'],
+    aiAllowed: false
   }
 
-  // TODO Phase 8C: derive normal force from weight/mass for level surfaces.
-  // "A 10 kg box rests on the ground. What is the normal force on the box?" -> 98 N upward.
-  // "A 500 kg racecar has a coefficient of static friction of 1.8. What is the maximum braking force?" -> 8820 N.
-  // "A 12 kg box is pushed at constant velocity with a horizontal force of 96 N. What is the normal force?" -> 117.6 N.
-  // "A 12 kg box is pushed at constant velocity with a horizontal force of 96 N. What is the weight of the box?" -> 117.6 N.
-  // "A 12 kg box is pushed at constant velocity with a horizontal force of 96 N. What is the coefficient of friction?" -> about 0.82.
-  // "A 1470 N sculpture is pulled across the floor with an acceleration of 0.5 m/s². The coefficient of sliding friction is 0.57. What is the mass?" -> 150 kg.
-  //
-  // TODO Phase 8C: support equilibrium/static/kinetic friction from motion wording.
-  // "A box is pushed left with 20 N but does not move. What is the static friction force?" -> 20 N opposite the push.
-  // "A box just begins to move when the pushing force is increased to 40 N. What is the maximum static friction force?" -> 40 N.
-  // "A sled is pulled across snow at constant velocity with a pulling force of 40 N. What is the kinetic friction force?" -> 40 N.
-  // "A 12 kg box is pushed at constant velocity with a horizontal force of 96 N. What is the frictional force?" -> 96 N.
-  //
   // TODO Later phase: multi-step friction/normal/applied force chains.
   // "A sled weighs 200 N. Then 30 kg of wood is placed in the sled. If μk = 0.2, what pulling force is needed to move it at constant velocity?" -> 98.8 N.
   // "A 500 kg racecar has wings that increase the downward force by 4000 N. If μs = 1.8, what is the maximum braking force?" -> 16020 N.
