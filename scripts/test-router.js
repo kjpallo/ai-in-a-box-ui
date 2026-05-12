@@ -87,6 +87,20 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: '2D displacement resultant wording',
+    question: 'A person walks 3 m east and 4 m north. What is the resultant displacement?',
+    type: 'science_formula',
+    includes: ['x = 3 m east', 'y = 4 m north', 'd = √(3² + 4²)', 'd = 5 m'],
+    aiAllowed: false
+  },
+  {
+    name: 'displacement net wording',
+    question: 'A robot moves 10 m east and 4 m west. What is the net displacement?',
+    type: 'science_formula',
+    includes: ['10 m east - 4 m west = 6 m east', 'displacement = 6 m east'],
+    aiAllowed: false
+  },
+  {
     name: '2D displacement right up pythagorean',
     question: 'A robot moves 6 m right and 8 m up. What is its displacement?',
     type: 'science_formula',
@@ -105,6 +119,42 @@ const tests = [
     question: 'A drone travels 9 m east then 12 m north. How far is it from where it started?',
     type: 'science_formula',
     includes: ['x = 9 m east', 'y = 12 m north', 'd = √(9² + 12²)', 'd = 15 m'],
+    aiAllowed: false
+  },
+  {
+    name: '2D displacement straight-line distance from start wording',
+    question: 'A drone travels 9 m east then 12 m north. What is the straight-line distance from the start?',
+    type: 'science_formula',
+    includes: ['x = 9 m east', 'y = 12 m north', 'd = √(9² + 12²)', 'd = 15 m'],
+    aiAllowed: false
+  },
+  {
+    name: 'displacement total wording returns to start',
+    question: 'A student walks 6 m forward then 6 m backward. What is the total displacement?',
+    type: 'science_formula',
+    includes: ['6 m forward - 6 m backward = 0 m', 'displacement = 0 m, starting point / no net displacement'],
+    aiAllowed: false
+  },
+  {
+    name: 'displacement final wording from initial and final position',
+    question: 'A person starts at 12 m and ends at 5 m. What is the final displacement?',
+    type: 'science_formula',
+    includes: ['displacement = final position - initial position', 'displacement = 5 m - 12 m', 'displacement = -7 m'],
+    aiAllowed: false
+  },
+  {
+    name: '2D displacement how far away from where it started wording',
+    question: 'A person walks 3 m east and 4 m north. How far away from where it started?',
+    type: 'science_formula',
+    includes: ['x = 3 m east', 'y = 4 m north', 'd = √(3² + 4²)', 'd = 5 m'],
+    aiAllowed: false
+  },
+  {
+    name: 'motion distance remains speed distance time',
+    question: 'A runner moves at 4 m/s for 6 seconds. What distance does the runner travel?',
+    type: 'science_formula',
+    includes: ['distance = speed × time', 'distance = 4 m/s × 6 s', 'distance = 24 m'],
+    excludes: ['Recognized displacement'],
     aiAllowed: false
   },
   {
