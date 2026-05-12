@@ -703,6 +703,34 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'two-step net force acceleration right',
+    question: 'A box has 15 N pushing right and 10 N pushing left. If the box has a mass of 5 kg, what is its acceleration?',
+    type: 'science_formula',
+    includes: ['First find the net force.', '15 N right - 10 N left = 5 N right', 'Net force = 5 N right.', 'Solve for acceleration: a = Fnet / m.', 'a = 5 N / 5 kg', 'a = 1 m/s²', 'The acceleration is 1 m/s² right.'],
+    aiAllowed: false
+  },
+  {
+    name: 'two-step net force acceleration east',
+    question: 'A cart has 40 N east and 10 N west acting on it. The mass is 10 kg. What is the acceleration?',
+    type: 'science_formula',
+    includes: ['First find the net force.', '40 N east - 10 N west = 30 N east', 'Net force = 30 N east.', 'a = 30 N / 10 kg', 'The acceleration is 3 m/s² east.'],
+    aiAllowed: false
+  },
+  {
+    name: 'two-step balanced forces acceleration zero',
+    question: 'A 20 kg object has balanced forces acting on it. What is its acceleration?',
+    type: 'science_formula',
+    includes: ['First find the net force.', 'Net force = 0 N.', 'a = 0 N / 20 kg', 'The acceleration is 0 m/s².'],
+    aiAllowed: false
+  },
+  {
+    name: 'two-step net force mass',
+    question: 'A sled has 50 N pulling forward and 20 N pulling backward. It accelerates at 3 m/s². What is its mass?',
+    type: 'science_formula',
+    includes: ['First find the net force.', '50 N forward - 20 N backward = 30 N forward', 'Net force = 30 N forward.', 'Solve for mass: m = Fnet / a.', 'm = 30 N / 3 m/s²', 'The mass is 10 kg.'],
+    aiAllowed: false
+  },
+  {
     name: 'force from work and distance',
     question: 'What is the force if work is 100 J and distance is 5 m?',
     type: 'science_formula',
