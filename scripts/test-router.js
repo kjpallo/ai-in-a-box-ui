@@ -591,6 +591,22 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'hydrogen definition prefers element over gas formula',
+    question: 'What is hydrogen?',
+    type: 'periodic_table',
+    includes: ['Hydrogen is an element with symbol H and atomic number 1', 'hydrogen gas is usually H2'],
+    excludes: ['H2 is hydrogen gas'],
+    aiAllowed: false
+  },
+  {
+    name: 'element symbol H routes to hydrogen',
+    question: 'What is H?',
+    type: 'periodic_table',
+    includes: ['Hydrogen is an element with symbol H and atomic number 1'],
+    excludes: ['can mean more than one thing', 'trusted local fact'],
+    aiAllowed: false
+  },
+  {
     name: 'chemistry formula',
     question: 'What is NaCl?',
     type: 'chemistry_formula',
@@ -613,6 +629,22 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'conceptual force energy motion relation',
+    question: 'How are force and energy related to motion?',
+    type: 'science_concept',
+    includes: ['Force can change an object’s motion', 'moving objects have kinetic energy', 'forces can transfer energy'],
+    excludes: ['trusted local science fact'],
+    aiAllowed: false
+  },
+  {
+    name: 'conceptual work energy relation',
+    question: 'How are work and energy related?',
+    type: 'science_concept',
+    includes: ['Work is energy transferred when a force moves an object over a distance'],
+    excludes: ['trusted local science fact'],
+    aiAllowed: false
+  },
+  {
     name: 'motion distance from speed and time',
     question: 'If I travel for five hours at a speed of 20 mph what is my distance?',
     type: 'science_formula',
@@ -631,6 +663,55 @@ const tests = [
     question: 'What is force if mass is 10 kg and acceleration is 4 m/s^2?',
     type: 'science_formula',
     includes: ['F = m × a.', '40 N'],
+    aiAllowed: false
+  },
+  {
+    name: 'net force opposite directions right wins',
+    question: 'Kenny pushes a box with 10 N to the left. Michael pushes with 15 N to the right. What is the net force? Is it balanced or unbalanced?',
+    type: 'science_formula',
+    includes: ['15 N right - 10 N left = 5 N right', 'The net force is 5 N right.', 'unbalanced'],
+    aiAllowed: false
+  },
+  {
+    name: 'net force opposite directions balanced',
+    question: 'Abby applies 100 N to the left while Thomas applies 100 N to the right. What is the net force?',
+    type: 'science_formula',
+    includes: ['100 N left and 100 N right cancel out.', 'Net force = 0 N.', 'balanced'],
+    aiAllowed: false
+  },
+  {
+    name: 'net force opposite directions left wins',
+    question: 'Abby applies 150 N left while Thomas applies 100 N right.',
+    type: 'science_formula',
+    includes: ['150 N left - 100 N right = 50 N left', 'The net force is 50 N left.', 'unbalanced'],
+    aiAllowed: false
+  },
+  {
+    name: 'net force same direction adds',
+    question: 'A boy pulls a wagon with 6 N east and another boy pushes it with 4 N east.',
+    type: 'science_formula',
+    includes: ['6 N east + 4 N east = 10 N east', 'The net force is 10 N east.', 'unbalanced'],
+    aiAllowed: false
+  },
+  {
+    name: 'net force opposite direction with first class label',
+    question: 'Mrs. Larson’s class pulls with 50 N. Ms. Mitko’s class pulls with 45 N in the opposite direction.',
+    type: 'science_formula',
+    includes: ['50 N toward Mrs. Larson’s class - 45 N opposite direction = 5 N toward Mrs. Larson’s class', 'The net force is 5 N toward Mrs. Larson’s class.', 'unbalanced'],
+    aiAllowed: false
+  },
+  {
+    name: 'force from work and distance',
+    question: 'What is the force if work is 100 J and distance is 5 m?',
+    type: 'science_formula',
+    includes: ['Use the work formula: W = F × d.', 'Rearrange to solve for force: F = W / d.', 'F = 100 J / 5 m', 'F = 20 N'],
+    aiAllowed: false
+  },
+  {
+    name: 'work formula rearranges for force without numbers',
+    question: 'Can you solve W = Fd for force?',
+    type: 'science_formula',
+    includes: ['Start with the work formula: W = F × d.', 'F = W / d.'],
     aiAllowed: false
   },
   {
@@ -1039,6 +1120,182 @@ const tests = [
     type: 'science_formula',
     includes: ['W = 60 N × 6 m', 'W = 360 J', 'P = 360 J / 12 s', 'P = 30 W'],
     excludes: ['speed = 6 m / 12 s', 'speed = 0.5 m/s'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 1b work from push force and distance',
+    question: 'If I push with 10 N for 5 m, how much work is done?',
+    type: 'science_formula',
+    includes: ['W = force × distance', 'W = 10 N × 5 m', 'W = 50 J'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 1b power from work and time',
+    question: 'A student does 200 J of work in 10 seconds. What is the power?',
+    type: 'science_formula',
+    includes: ['P = W / t', 'P = 200 J / 10 s', 'P = 20 W'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 1b time from work and power',
+    question: 'How much time if power is 50 W and work is 200 J?',
+    type: 'science_formula',
+    includes: ['t = W / P', 't = 200 J / 50 W', 't = 4 s'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 1b distance from work and force',
+    question: 'What distance if work is 120 J and force is 30 N?',
+    type: 'science_formula',
+    includes: ['distance = work / force', 'distance = 120 J / 30 N', 'distance = 4 m'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 1b distance from mph and hours',
+    question: 'If I travel 20 mph for 5 hours how far did I go?',
+    type: 'science_formula',
+    includes: ['distance = speed × time', 'distance = 20 mile/hr × 5 hr', 'distance = 100 miles'],
+    excludes: ['speed ='],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 1b acceleration from velocity change',
+    question: 'A car goes from 10 m/s to 30 m/s in 5 seconds. What is acceleration?',
+    type: 'science_formula',
+    includes: ['a = (30 m/s - 10 m/s) / 5 s', 'a = 4 m/s²'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 1b speed from distance and time',
+    question: 'What is the speed if distance is 100 m and time is 20 s?',
+    type: 'science_formula',
+    includes: ['speed = distance / time', 'speed = 100 m / 20 s', 'speed = 5 m/s'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 1b time from distance and speed',
+    question: 'How long does it take to go 100 meters at 5 m/s?',
+    type: 'science_formula',
+    includes: ['time = distance / speed', 'time = 100 m / 5 m/s', 'time = 20 s'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 1b density units',
+    question: 'What are the units for density?',
+    type: 'units_only',
+    includes: ['Density is measured in g/mL, g/cm³, or kg/m³.'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 1b density from mass and volume',
+    question: 'What is density if mass is 20 g and volume is 4 mL?',
+    type: 'science_formula',
+    includes: ['D = m / V', 'D = 20 g / 4 mL', 'D = 5 g/mL'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 1b mass from density and volume',
+    question: 'What is the mass if density is 5 g/mL and volume is 4 mL?',
+    type: 'science_formula',
+    includes: ['mass = density × volume', 'm = 5 g/mL × 4 mL', 'm = 20 g'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 1b volume from mass and density',
+    question: 'What is the volume if mass is 20 g and density is 5 g/mL?',
+    type: 'science_formula',
+    includes: ['volume = mass / density', 'V = 20 g / 5 g/mL', 'V = 4 mL'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 1b gravity on Earth',
+    question: 'What is gravity on Earth?',
+    type: 'science_formula',
+    includes: ['gravity is about 9.8 m/s²', 'g = 9.8 m/s²'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 1b force of gravity on mass',
+    question: 'What is the force of gravity on a 10 kg object?',
+    type: 'science_formula',
+    includes: ['Fg = m × g', 'Fg = 10 kg × 9.8 m/s²', 'Fg = 98 N'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 1b weight on Earth',
+    question: 'What is the weight of a 10 kg object on Earth?',
+    type: 'science_formula',
+    includes: ['Fg = m × g', 'For Earth, use g = 9.8 m/s².', 'Fg = 98 N'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 1b formula for volts',
+    question: 'How do you solve for volts?',
+    type: 'science_formula',
+    includes: ['Voltage = current × resistance', 'V = I × R'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 1b voltage from current and resistance',
+    question: 'What is voltage if current is 2 A and resistance is 5 ohms?',
+    type: 'science_formula',
+    includes: ['V = I × R', 'V = 2 A × 5 Ω', 'V = 10 V'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 1b resistance from voltage and current',
+    question: 'What is resistance if voltage is 12 V and current is 3 A?',
+    type: 'science_formula',
+    includes: ['R = V / I', 'R = 12 V / 3 A', 'R = 4 Ω'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 1b oxygen element identity',
+    question: 'What is oxygen?',
+    type: 'periodic_table',
+    includes: ['Oxygen is an element with symbol O and atomic number 8'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 1b carbon protons',
+    question: 'How many protons does carbon have?',
+    type: 'periodic_table',
+    includes: ['Carbon (C) has 6 protons', 'Number of protons = atomic number = 6'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 1b conceptual mass and acceleration',
+    question: 'Why does more mass make it harder to accelerate?',
+    type: 'science_concept',
+    includes: ['more inertia', 'more force is needed', 'change its motion'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 1b conceptual ohms law relationship',
+    question: 'How are voltage current and resistance related?',
+    type: 'science_concept',
+    includes: ['Ohm’s Law', 'voltage pushes current', 'resistance opposes current', 'V = I × R'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 1b conceptual wave relationship',
+    question: 'How are wavelength frequency and wave speed related?',
+    type: 'science_concept',
+    includes: ['v = f × λ', 'higher frequency means shorter wavelength'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 1b misspelled density units',
+    question: 'what are the units for dinsity',
+    type: 'units_only',
+    includes: ['Density is measured in g/mL, g/cm³, or kg/m³.'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 1b misspelled acceleration formula',
+    question: 'how do I find acceration',
+    type: 'formula_only',
+    includes: ['a = (vf - vi) / t', 'a = F / m'],
     aiAllowed: false
   }
 ];
