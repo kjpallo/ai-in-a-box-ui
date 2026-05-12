@@ -666,6 +666,67 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'friction solves for frictional force',
+    question: 'What is the frictional force if the coefficient of friction is 0.3 and the normal force is 100 N?',
+    type: 'science_formula',
+    includes: ['Ff = μ × Fn', 'Ff = 0.3 × 100 N', 'Ff = 30 N'],
+    formulaWork: {
+      formulaId: 'friction_coefficient_normal_force',
+      finalAnswerValue: 30,
+      finalAnswerDisplay: '30 N',
+      minStepCount: 5
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'friction solves for coefficient',
+    question: 'What is the coefficient of friction if friction is 20 N and normal force is 50 N?',
+    type: 'science_formula',
+    includes: ['μ = Ff / Fn', 'μ = 20 N / 50 N', 'μ = 0.4'],
+    formulaWork: {
+      formulaId: 'friction_coefficient_normal_force',
+      finalAnswerValue: 0.4,
+      finalAnswerDisplay: '0.4',
+      minStepCount: 5
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'friction solves for normal force',
+    question: 'What normal force is needed if friction is 45 N and the coefficient of friction is 0.5?',
+    type: 'science_formula',
+    includes: ['Fn = Ff / μ', 'Fn = 45 N / 0.5', 'Fn = 90 N'],
+    formulaWork: {
+      formulaId: 'friction_coefficient_normal_force',
+      finalAnswerValue: 90,
+      finalAnswerDisplay: '90 N',
+      minStepCount: 5
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'friction messy force of friction with mu',
+    question: 'find force of friction when mu is .25 and normal force is 80 N',
+    type: 'science_formula',
+    includes: ['Ff = μ × Fn', 'Ff = 0.25 × 80 N', 'Ff = 20 N'],
+    aiAllowed: false
+  },
+  {
+    name: 'friction messy symbols solve mu',
+    question: 'if Ff is 12 N and Fn is 40 N what is mu?',
+    type: 'science_formula',
+    includes: ['μ = Ff / Fn', 'μ = 12 N / 40 N', 'μ = 0.3'],
+    aiAllowed: false
+  },
+  {
+    name: 'friction missing values asks safely',
+    question: 'What is the frictional force if the coefficient of friction is 0.3?',
+    type: 'science_formula',
+    includes: ['Use the friction formula: Ff = μ × Fn.', 'I need the normal force, Fn'],
+    excludes: ['Ff = 0.3 ×'],
+    aiAllowed: false
+  },
+  {
     name: 'net force opposite directions right wins',
     question: 'Kenny pushes a box with 10 N to the left. Michael pushes with 15 N to the right. What is the net force? Is it balanced or unbalanced?',
     type: 'science_formula',
