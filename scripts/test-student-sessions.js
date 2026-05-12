@@ -302,6 +302,7 @@ async function main() {
   await testPhase6FormulaTutorCoverage();
   await testFormulaTutorAnswerParsing();
   await testExpandedFormulaTutorFlows();
+  await testGuidedNetForceTutorFlows();
   await testExpandedFormulaTutorIsolation();
 
   console.log('✅ student sessions: anonymous hubs, same-hub context, and formula tutoring are isolated');
@@ -532,6 +533,117 @@ async function testExpandedFormulaTutorFlows() {
   });
 
   await testExpandedFormulaTutorEnergyBypass();
+}
+
+async function testGuidedNetForceTutorFlows() {
+  await runGuidedNetForceFlow({
+    name: 'net-force-right-wins',
+    question: 'Kenny pushes a box with 10 N to the left. Michael pushes with 15 N to the right. What is the net force? Is it balanced or unbalanced?',
+    finalAnswer: '5 N right',
+    balance: 'unbalanced',
+    steps: [
+      { message: '10 N left and 15 N right', match: /What direction is each force\?/i },
+      { message: '10 N left and 15 N right', match: /same direction or opposite directions/i },
+      { message: 'opposite directions', match: /Should we add or subtract\?/i },
+      { message: 'subtract', match: /What is the net force\?/i },
+      { message: '5 N', match: /balanced or unbalanced/i },
+      { message: 'unbalanced', match: /Diagram:\n10 N left.*\[box\].*15 N right/is }
+    ],
+    finalMatch: /The net force is 5 N right\./i
+  });
+
+  await runGuidedNetForceFlow({
+    name: 'net-force-balanced',
+    question: 'Abby applies 100 N to the left while Thomas applies 100 N to the right. What is the net force?',
+    finalAnswer: '0 N',
+    balance: 'balanced',
+    steps: [
+      { message: '100 N left and 100 N right', match: /What direction is each force\?/i },
+      { message: '100 N left and 100 N right', match: /same direction or opposite directions/i },
+      { message: 'opposite directions', match: /Should we add or subtract\?/i },
+      { message: 'subtract', match: /What is the net force\?/i },
+      { message: '0 N', match: /balanced or unbalanced/i },
+      { message: 'balanced', match: /Net force = 0 N/i }
+    ],
+    finalMatch: /The forces are balanced\./i
+  });
+
+  await runGuidedNetForceFlow({
+    name: 'net-force-same-direction',
+    question: 'A boy pulls a wagon with 6 N east and another boy pushes the wagon with 4 N east. What is the net force?',
+    finalAnswer: '10 N east',
+    balance: 'unbalanced',
+    steps: [
+      { message: '6 N east and 4 N east', match: /What direction is each force\?/i },
+      { message: '6 N east and 4 N east', match: /same direction or opposite directions/i },
+      { message: 'same direction', match: /Should we add or subtract\?/i },
+      { message: 'add', match: /What is the net force\?/i },
+      { message: '10 N', match: /balanced or unbalanced/i },
+      { message: 'unbalanced', match: /Diagram:\n\[box\].*6 N east.*4 N east/is }
+    ],
+    finalMatch: /The net force is 10 N east\./i
+  });
+
+  const disabled = createRouteHarness({ studentGuidedFormulaTutoringEnabled: false });
+  const disabledCreate = await disabled.request('POST', '/api/profile/create-student-session');
+  assert.equal(disabledCreate.statusCode, 201);
+  const direct = await disabled.request('POST', '/api/student/message', {
+    sessionId: disabledCreate.body.sessionId,
+    studentHubId: 'net-force-disabled',
+    message: 'Kenny pushes a box with 10 N to the left. Michael pushes with 15 N to the right. What is the net force?'
+  });
+  assert.equal(direct.statusCode, 200);
+  assert.notEqual(direct.body.routeType, 'formula_tutor');
+  assert.match(direct.body.response, /15 N right - 10 N left = 5 N right/i);
+  assert.match(direct.body.response, /Diagram:/i);
+}
+
+async function runGuidedNetForceFlow({ name, question, finalAnswer, balance, steps, finalMatch }) {
+  const { request, questionAnswer, studentSessions } = createRouteHarness();
+
+  const create = await request('POST', '/api/profile/create-student-session');
+  assert.equal(create.statusCode, 201);
+  const classSessionId = create.body.sessionId;
+
+  const teacherDirect = await questionAnswer.answerStudentMessage(question);
+  assert.match(teacherDirect.response, new RegExp(escapeRegExp(finalAnswer), 'i'));
+
+  const start = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: `${name}-student`,
+    message: question
+  });
+  assert.equal(start.statusCode, 200);
+  assert.equal(start.body.routeType, 'formula_tutor');
+  assert.equal(start.body.tutor.formulaId, 'net_force');
+  assert.equal(start.body.tutor.solveFor, 'net force');
+  assert.equal(start.body.tutor.active, true);
+  assert.match(start.body.response, /What forces are given\?/i);
+  assert.doesNotMatch(start.body.response, new RegExp(escapeRegExp(finalAnswer), 'i'));
+
+  let response = start;
+  for (const [index, step] of steps.entries()) {
+    response = await request('POST', '/api/student/message', {
+      sessionId: classSessionId,
+      studentHubId: `${name}-student`,
+      message: step.message
+    });
+
+    assert.equal(response.statusCode, 200);
+    assert.match(response.body.response, step.match);
+
+    if (index < steps.length - 1) {
+      assert.equal(response.body.tutor.active, true);
+    }
+  }
+
+  assert.equal(response.body.tutor.active, false);
+  assert.equal(response.body.tutor.completed, true);
+  assert.equal(response.body.tutor.finalAnswerDisplay, finalAnswer);
+  assert.match(response.body.response, finalMatch);
+  assert.match(response.body.response, /Diagram:/i);
+  assert.match(response.body.response, new RegExp(balance, 'i'));
+  assert.equal(studentSessions[classSessionId].anonymousHubs[`${name}-student`].currentTutorProblem, null);
 }
 
 async function testGuidedFormulaTutorRequiredFormulaPaths() {
