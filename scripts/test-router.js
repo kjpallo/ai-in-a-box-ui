@@ -43,6 +43,7 @@ const tests = [
     question: 'what is net force',
     type: 'definition',
     includes: ['Net force is the overall force', 'combined'],
+    excludes: ['I need', 'Recognized net force problem'],
     aiAllowed: false
   },
   {
@@ -57,6 +58,7 @@ const tests = [
     question: 'what is friction',
     type: 'definition',
     includes: ['Friction is a force that resists motion'],
+    excludes: ['I need', 'Use the friction formula'],
     aiAllowed: false
   },
   {
@@ -78,6 +80,7 @@ const tests = [
     question: 'what is displacement',
     type: 'definition',
     includes: ['Displacement is how far and in what direction', 'where it started'],
+    excludes: ['Recognized displacement problem', 'displacement = final position - initial position'],
     aiAllowed: false
   },
   {
@@ -1033,6 +1036,14 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'phase 9c net force diagram box right wins',
+    question: 'A box has 15 N pushing right and 10 N pushing left. What is the net force?',
+    type: 'science_formula',
+    includes: ['15 N right - 10 N left = 5 N right', '[box]', 'Net force = 5 N right', 'Unbalanced'],
+    diagramIncludes: ['[box]', '15 N right', '10 N left', 'Net force = 5 N right', 'Unbalanced'],
+    aiAllowed: false
+  },
+  {
     name: 'net force opposite directions balanced',
     question: 'Abby applies 100 N to the left while Thomas applies 100 N to the right. What is the net force?',
     type: 'science_formula',
@@ -1044,7 +1055,8 @@ const tests = [
     name: 'phase 8a net force worksheet tug of war balanced',
     question: 'A tug of war has 25 N left and 25 N right. What is the net force?',
     type: 'science_formula',
-    includes: ['25 N left and 25 N right cancel out.', 'Net force = 0 N.', 'balanced'],
+    includes: ['25 N left and 25 N right cancel out.', '[box]', 'Net force = 0 N', 'Balanced'],
+    diagramIncludes: ['[box]', '25 N left', '25 N right', 'Net force = 0 N', 'Balanced'],
     aiAllowed: false
   },
   {
@@ -1080,6 +1092,14 @@ const tests = [
     question: 'whats the net force if 10 n push rite and 5 n push left',
     type: 'science_formula',
     includes: ['10 N right - 5 N left = 5 N right', 'The net force is 5 N right.'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 9c vocab guard net force formula still routes',
+    question: 'A box has 15 N right and 10 N left. What is the net force?',
+    type: 'science_formula',
+    includes: ['15 N right - 10 N left = 5 N right', 'The net force is 5 N right.'],
+    excludes: ['Net force is the overall force'],
     aiAllowed: false
   },
   {
@@ -1915,6 +1935,13 @@ const tests = [
   {
     name: 'phase 8b racecar acceleration from braking force',
     question: 'A 500 kg racecar has a braking force of 8820 N. What is its acceleration?',
+    type: 'science_formula',
+    includes: ['a = 8820 N / 500 kg', 'a = 17.64 m/s²'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 9c racecar acceleration during braking route guard',
+    question: 'A 500 kg racecar has a braking force of 8820 N. What is the acceleration during braking?',
     type: 'science_formula',
     includes: ['a = 8820 N / 500 kg', 'a = 17.64 m/s²'],
     aiAllowed: false

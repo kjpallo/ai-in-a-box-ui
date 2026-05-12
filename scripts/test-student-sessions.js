@@ -303,6 +303,7 @@ async function main() {
   await testFormulaTutorAnswerParsing();
   await testExpandedFormulaTutorFlows();
   await testGuidedNetForceTutorFlows();
+  await testPhase9CNetForceTutorRegression();
   await testExpandedFormulaTutorIsolation();
 
   console.log('✅ student sessions: anonymous hubs, same-hub context, and formula tutoring are isolated');
@@ -596,6 +597,66 @@ async function testGuidedNetForceTutorFlows() {
   assert.notEqual(direct.body.routeType, 'formula_tutor');
   assert.match(direct.body.response, /15 N right - 10 N left = 5 N right/i);
   assert.match(direct.body.response, /Diagram:/i);
+}
+
+async function testPhase9CNetForceTutorRegression() {
+  const question = 'A box has 15 N pushing right and 10 N pushing left. What is the net force?';
+  const enabled = createRouteHarness({ studentGuidedFormulaTutoringEnabled: true });
+  const enabledCreate = await enabled.request('POST', '/api/profile/create-student-session');
+  assert.equal(enabledCreate.statusCode, 201);
+
+  const start = await enabled.request('POST', '/api/student/message', {
+    sessionId: enabledCreate.body.sessionId,
+    studentHubId: 'phase-9c-net-force',
+    message: question
+  });
+  assert.equal(start.statusCode, 200);
+  assert.equal(start.body.routeType, 'formula_tutor');
+  assert.equal(start.body.tutor.formulaId, 'net_force');
+  assert.equal(start.body.tutor.active, true);
+  assert.match(start.body.response, /What forces are given\?/i);
+  assert.doesNotMatch(start.body.response, /The net force is 5 N right\./i);
+  assert.doesNotMatch(start.body.response, /Diagram:\n/i);
+
+  const steps = [
+    { message: '15 N right and 10 N left', match: /What direction is each force\?/i },
+    { message: '15 N right and 10 N left', match: /same direction or opposite directions/i },
+    { message: 'opposite directions', match: /Should we add or subtract\?/i },
+    { message: 'subtract', match: /What is the net force\?/i },
+    { message: '5 N right', match: /balanced or unbalanced/i },
+    { message: 'unbalanced', match: /Diagram:\n10 N left.*\[box\].*15 N right/is }
+  ];
+
+  let response = start;
+  for (const step of steps) {
+    response = await enabled.request('POST', '/api/student/message', {
+      sessionId: enabledCreate.body.sessionId,
+      studentHubId: 'phase-9c-net-force',
+      message: step.message
+    });
+    assert.equal(response.statusCode, 200);
+    assert.match(response.body.response, step.match);
+  }
+
+  assert.equal(response.body.tutor.active, false);
+  assert.equal(response.body.tutor.completed, true);
+  assert.match(response.body.response, /The net force is 5 N right\./i);
+  assert.match(response.body.response, /Net force = 5 N right/i);
+  assert.match(response.body.response, /Unbalanced/i);
+
+  const disabled = createRouteHarness({ studentGuidedFormulaTutoringEnabled: false });
+  const disabledCreate = await disabled.request('POST', '/api/profile/create-student-session');
+  assert.equal(disabledCreate.statusCode, 201);
+  const direct = await disabled.request('POST', '/api/student/message', {
+    sessionId: disabledCreate.body.sessionId,
+    studentHubId: 'phase-9c-net-force-disabled',
+    message: question
+  });
+  assert.equal(direct.statusCode, 200);
+  assert.notEqual(direct.body.routeType, 'formula_tutor');
+  assert.match(direct.body.response, /5 N right/i);
+  assert.match(direct.body.response, /Diagram:\n/i);
+  assert.match(direct.body.response, /Unbalanced/i);
 }
 
 async function runGuidedNetForceFlow({ name, question, finalAnswer, balance, steps, finalMatch }) {
