@@ -591,6 +591,20 @@ async function testExpandedFormulaTutorFlows() {
   });
 
   await runGuidedFormulaFlow({
+    name: 'parallel-total-resistance-100-50-25',
+    question: 'Find total resistance in a parallel circuit with 100 ohms, 50 ohms, and 25 ohms.',
+    finalAnswer: '14.29 ohms',
+    formulaId: 'parallel_total_resistance',
+    startMatch: /what kind of circuit/i,
+    steps: [
+      { message: 'parallel', match: /formula.*total resistance.*parallel/i },
+      { message: '1/Rt = 1/R1 + 1/R2 + 1/R3', match: /substitute/i },
+      { message: '1/100 + 1/50 + 1/25', match: /total resistance/i },
+      { message: '14.29 ohms', match: /14.29 ohms/i }
+    ]
+  });
+
+  await runGuidedFormulaFlow({
     name: 'series-resistance-current-three-20',
     question: 'Three 20 ohm resistors are connected in series across a 120 V generator. Find the total resistance and current.',
     finalAnswer: '2 amps',

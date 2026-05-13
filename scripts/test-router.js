@@ -1642,7 +1642,7 @@ const tests = [
     aiAllowed: false
   },
   {
-    name: 'electricity/magnetism smoke exact simple parallel total resistance tutor work',
+    name: 'electricity/magnetism smoke simple parallel total resistance tutor work three 20',
     question: 'Three 20 ohm resistors are connected in parallel. Find the total resistance.',
     type: 'science_formula',
     includes: ['1/Rt', '1/20 + 1/20 + 1/20', 'Rt = 6.67 ohms'],
@@ -1655,7 +1655,7 @@ const tests = [
     }
   },
   {
-    name: 'electricity/magnetism smoke exact unequal parallel total resistance tutor work',
+    name: 'electricity/magnetism smoke simple parallel total resistance tutor work 5 10 20',
     question: 'Find total resistance in a parallel circuit with 5 ohms, 10 ohms, and 20 ohms.',
     type: 'science_formula',
     includes: ['1/Rt', '1/5 + 1/10 + 1/20', 'Rt = 2.86 ohms'],
@@ -1668,12 +1668,60 @@ const tests = [
     }
   },
   {
-    name: 'electricity/magnetism smoke parallel total resistance',
-    question: 'Find total resistance in a parallel circuit with a 100 ohm resistor, a 50 ohm resistor, and a 25 ohm resistor.',
+    name: 'electricity/magnetism smoke simple parallel total resistance tutor work 100 50 25',
+    question: 'Find total resistance in a parallel circuit with 100 ohms, 50 ohms, and 25 ohms.',
     type: 'science_formula',
-    includes: ['Rt = 14.29 ohms'],
+    includes: ['1/Rt', '1/100 + 1/50 + 1/25', 'Rt = 14.29 ohms'],
+    aiAllowed: false,
+    formulaWork: {
+      formulaId: 'parallel_total_resistance',
+      finalAnswerValue: 14.285714285714285,
+      finalAnswerDisplay: '14.29 ohms',
+      minStepCount: 4
+    }
+  },
+  {
+    name: 'electricity/magnetism smoke simple parallel total resistance tutor work 2 6',
+    question: 'Find total resistance in a parallel circuit with 2 ohms and 6 ohms.',
+    type: 'science_formula',
+    includes: ['1/Rt', '1/2 + 1/6', 'Rt = 1.5 ohms'],
+    aiAllowed: false,
+    formulaWork: {
+      formulaId: 'parallel_total_resistance',
+      finalAnswerValue: 1.5,
+      finalAnswerDisplay: '1.5 ohms',
+      minStepCount: 4
+    }
+  },
+  {
+    name: 'electricity/magnetism guard parallel total resistance and current does not use total-resistance tutor',
+    question: 'Find total resistance and current in a parallel circuit with 2 ohms and 6 ohms across 12 V.',
+    type: 'science_formula',
+    includes: ['Rt = 1.5 ohms', 'I = 8 amps'],
     noFormulaWork: true,
     aiAllowed: false
+  },
+  {
+    name: 'electricity/magnetism guard parallel voltage-only does not use total-resistance tutor',
+    question: 'Find the voltage in a parallel circuit with 2 ohms and 6 ohms.',
+    type: 'science_formula',
+    includes: ['I need the current', 'should not guess the voltage'],
+    excludes: ['V =', 'volts'],
+    noFormulaWork: true,
+    aiAllowed: false
+  },
+  {
+    name: 'electricity/magnetism guard series does not use parallel total-resistance tutor',
+    question: 'Find total resistance in a series circuit with 2 ohms and 6 ohms.',
+    type: 'science_formula',
+    includes: ['Rt = 8 ohms'],
+    aiAllowed: false,
+    formulaWork: {
+      formulaId: 'series_total_resistance',
+      finalAnswerValue: 8,
+      finalAnswerDisplay: '8 ohms',
+      minStepCount: 4
+    }
   },
   {
     name: 'electricity/magnetism smoke identical parallel total resistance',
