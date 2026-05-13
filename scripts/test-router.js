@@ -1511,7 +1511,7 @@ const tests = [
     name: 'electricity/magnetism smoke series resistance then current',
     question: 'Three 20 ohm resistors are connected in series across a 120 V generator. Find the total resistance and current.',
     type: 'science_formula',
-    includes: ['Rt = 60 ohms', 'I = 2 amps'],
+    includes: ['Rt = R1 + R2', 'Rt = 20 + 20 + 20', 'Rt = 60 ohms', 'I = 2 amps'],
     aiAllowed: false
   },
   {
@@ -1525,7 +1525,7 @@ const tests = [
     name: 'electricity/magnetism smoke parallel resistance then current',
     question: 'Three 20 ohm resistors are connected in parallel across a 120 V generator. Find the total resistance and current.',
     type: 'science_formula',
-    includes: ['Rt = 6.67 ohms', 'I = 18 amps'],
+    includes: ['1/Rt', '1/20 + 1/20 + 1/20', 'Rt = 6.67 ohms', 'I = 18 amps'],
     aiAllowed: false
   },
   {
@@ -1539,7 +1539,7 @@ const tests = [
     name: 'electricity/magnetism smoke identical parallel total resistance',
     question: 'A parallel circuit has 5 resistors, each with a resistance of 40,000 ohms. Find the total resistance.',
     type: 'science_formula',
-    includes: ['Rt = 8000 ohms'],
+    includes: ['For equal resistors in parallel', 'Rt = 40000 / 5', 'Rt = 8000 ohms'],
     aiAllowed: false
   },
   {
@@ -1560,7 +1560,7 @@ const tests = [
     name: 'electricity/magnetism smoke series total then voltage',
     question: 'A series circuit has a current of 2 amps, a 2 ohm resistor, and a light bulb with resistance of 1 ohm. What is the battery voltage?',
     type: 'science_formula',
-    includes: ['Rt = 3 ohms', 'V = 6 volts'],
+    includes: ['Rt = 2 + 1', 'Rt = 3 ohms', 'V = I', 'V = 2 × 3', 'V = 6 volts'],
     aiAllowed: false
   },
   {
