@@ -1512,7 +1512,12 @@ const tests = [
     question: 'Three 20 ohm resistors are connected in series across a 120 V generator. Find the total resistance and current.',
     type: 'science_formula',
     includes: ['Rt = R1 + R2', 'Rt = 20 + 20 + 20', 'Rt = 60 ohms', 'I = 2 amps'],
-    noFormulaWork: true,
+    formulaWork: {
+      formulaId: 'series_resistance_current',
+      finalAnswerValue: 2,
+      finalAnswerDisplay: '2 amps',
+      minStepCount: 7
+    },
     aiAllowed: false
   },
   {
@@ -1611,7 +1616,12 @@ const tests = [
     question: 'Three 20 ohm resistors are connected in parallel across a 120 V generator. Find the total resistance and current.',
     type: 'science_formula',
     includes: ['1/Rt', '1/20 + 1/20 + 1/20', 'Rt = 6.67 ohms', 'I = 18 amps'],
-    noFormulaWork: true,
+    formulaWork: {
+      formulaId: 'parallel_resistance_current',
+      finalAnswerValue: 18,
+      finalAnswerDisplay: '18 amps',
+      minStepCount: 7
+    },
     aiAllowed: false
   },
   {

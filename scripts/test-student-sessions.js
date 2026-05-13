@@ -590,6 +590,40 @@ async function testExpandedFormulaTutorFlows() {
     ]
   });
 
+  await runGuidedFormulaFlow({
+    name: 'series-resistance-current-three-20',
+    question: 'Three 20 ohm resistors are connected in series across a 120 V generator. Find the total resistance and current.',
+    finalAnswer: '2 amps',
+    formulaId: 'series_resistance_current',
+    startMatch: /what kind of circuit/i,
+    steps: [
+      { message: 'series', match: /what operation.*total resistance.*series/i },
+      { message: 'add', match: /substitute/i },
+      { message: '20 + 20 + 20', match: /total resistance/i },
+      { message: '60 ohms', match: /Ohm.*Law.*current/i },
+      { message: 'I = V / R', match: /Substitute.*voltage.*total resistance/i },
+      { message: '120 / 60', match: /current/i },
+      { message: '2 amps', match: /2 amps/i }
+    ]
+  });
+
+  await runGuidedFormulaFlow({
+    name: 'parallel-resistance-current-three-20',
+    question: 'Three 20 ohm resistors are connected in parallel across a 120 V generator. Find the total resistance and current.',
+    finalAnswer: '18 amps',
+    formulaId: 'parallel_resistance_current',
+    startMatch: /what kind of circuit/i,
+    steps: [
+      { message: 'parallel', match: /formula.*total resistance.*parallel/i },
+      { message: '1/Rt = 1/R1 + 1/R2 + 1/R3', match: /substitute/i },
+      { message: '1/20 + 1/20 + 1/20', match: /total resistance/i },
+      { message: '6.67 ohms', match: /Ohm.*Law.*current/i },
+      { message: 'I = V / R', match: /Substitute.*voltage.*total resistance/i },
+      { message: '120 / 6.67', match: /current/i },
+      { message: '18 amps', match: /18 amps/i }
+    ]
+  });
+
   await testParallelResistanceTutorGuards();
   await testExactParallelTutorDisabledDirectAnswer();
   await testExpandedFormulaTutorEnergyBypass();
@@ -601,11 +635,6 @@ async function testParallelResistanceTutorGuards() {
   assert.equal(enabledCreate.statusCode, 201);
 
   const cases = [
-    {
-      name: 'parallel-current-three-20',
-      message: 'Three 20 ohm resistors are connected in parallel across a 120 V generator. Find the total resistance and current.',
-      match: /I = 18 amps/i
-    },
     {
       name: 'parallel-current-unequal-5-10-20',
       message: 'Find total resistance and current in a parallel circuit with 5 ohms, 10 ohms, and 20 ohms across 50 V.',
@@ -627,6 +656,8 @@ async function testParallelResistanceTutorGuards() {
     assert.equal(response.statusCode, 200, `${testCase.name} status`);
     assert.notEqual(response.body.routeType, 'formula_tutor', `${testCase.name} should not start Guided Formula Tutor`);
     assert.notEqual(response.body.tutor?.formulaId, 'parallel_total_resistance', `${testCase.name} should not use parallel_total_resistance tutor`);
+    assert.notEqual(response.body.tutor?.formulaId, 'series_resistance_current', `${testCase.name} should not use series_resistance_current tutor`);
+    assert.notEqual(response.body.tutor?.formulaId, 'parallel_resistance_current', `${testCase.name} should not use parallel_resistance_current tutor`);
     assert.match(response.body.response, testCase.match, `${testCase.name} direct or missing-info response`);
     assert.equal(
       enabled.studentSessions[enabledCreate.body.sessionId].anonymousHubs[testCase.name].currentTutorProblem,
@@ -664,6 +695,34 @@ async function testExactParallelTutorDisabledDirectAnswer() {
   assert.match(unequalDirect.body.response, /Rt = 2\.86 ohms/i);
   assert.equal(
     disabled.studentSessions[disabledCreate.body.sessionId].anonymousHubs['parallel-total-resistance-unequal-direct'].currentTutorProblem,
+    null
+  );
+
+  const seriesCurrentDirect = await disabled.request('POST', '/api/student/message', {
+    sessionId: disabledCreate.body.sessionId,
+    studentHubId: 'series-resistance-current-direct',
+    message: 'Three 20 ohm resistors are connected in series across a 120 V generator. Find the total resistance and current.'
+  });
+  assert.equal(seriesCurrentDirect.statusCode, 200);
+  assert.notEqual(seriesCurrentDirect.body.routeType, 'formula_tutor');
+  assert.match(seriesCurrentDirect.body.response, /Rt = 60 ohms/i);
+  assert.match(seriesCurrentDirect.body.response, /I = 2 amps/i);
+  assert.equal(
+    disabled.studentSessions[disabledCreate.body.sessionId].anonymousHubs['series-resistance-current-direct'].currentTutorProblem,
+    null
+  );
+
+  const parallelCurrentDirect = await disabled.request('POST', '/api/student/message', {
+    sessionId: disabledCreate.body.sessionId,
+    studentHubId: 'parallel-resistance-current-direct',
+    message: 'Three 20 ohm resistors are connected in parallel across a 120 V generator. Find the total resistance and current.'
+  });
+  assert.equal(parallelCurrentDirect.statusCode, 200);
+  assert.notEqual(parallelCurrentDirect.body.routeType, 'formula_tutor');
+  assert.match(parallelCurrentDirect.body.response, /Rt = 6\.67 ohms/i);
+  assert.match(parallelCurrentDirect.body.response, /I = 18 amps/i);
+  assert.equal(
+    disabled.studentSessions[disabledCreate.body.sessionId].anonymousHubs['parallel-resistance-current-direct'].currentTutorProblem,
     null
   );
 }
