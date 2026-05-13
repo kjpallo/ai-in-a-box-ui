@@ -4493,9 +4493,9 @@ const routerTestBank = [
     "category": "should_reject",
     "name": "reject unsupported or unsafe 22",
     "question": "What is a cell?",
-    "type": "no_match",
+    "type": "ambiguous_vocab",
     "includes": [
-      "I do not have a trusted local"
+      "Cell can mean more than one thing"
     ],
     "aiAllowed": false
   },
@@ -4570,12 +4570,12 @@ const routerTestBank = [
     "aiAllowed": false
   },
   {
-    "category": "should_reject",
-    "name": "reject unsupported or unsafe 30",
+    "category": "definitions",
+    "name": "matter definition local vocab",
     "question": "What is matter?",
-    "type": "no_match",
+    "type": "definition",
     "includes": [
-      "I do not have a trusted local"
+      "Matter is anything that has mass and takes up space"
     ],
     "aiAllowed": false
   },
@@ -4655,7 +4655,7 @@ const routerTestBank = [
     "question": "What is power if I only know time?",
     "type": "no_match",
     "includes": [
-      "I do not have a trusted local"
+      "I do not have enough values to find power from only time"
     ],
     "aiAllowed": false
   },
@@ -4675,7 +4675,7 @@ const routerTestBank = [
     "question": "A car moves fast. What is acceleration?",
     "type": "no_match",
     "includes": [
-      "I do not have a trusted local"
+      "I do not have enough values to find acceleration"
     ],
     "aiAllowed": false
   },
