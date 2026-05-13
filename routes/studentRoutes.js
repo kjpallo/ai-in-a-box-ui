@@ -7,6 +7,14 @@ const {
   isLikelyNewFormulaQuestionDuringTutor,
   startFormulaTutor
 } = require('../lib/tutor/formulaTutor');
+const {
+  buildMotionForceKnowledgeTutorMetadata,
+  buildMotionForceKnowledgeTutorPrompt,
+  canStartMotionForceKnowledgeTutor,
+  continueMotionForceKnowledgeTutor,
+  isMotionForceKnowledgeTutorProblem,
+  startMotionForceKnowledgeTutor
+} = require('../lib/tutor/motionForceKnowledgeTutor');
 
 function registerStudentRoutes(app, {
   answerStudentMessage,
@@ -114,20 +122,27 @@ function registerStudentRoutes(app, {
       const lastAnsweredContext = findLastAnsweredContext(contextMessages);
 
       if (hub.currentTutorProblem && !controls.studentGuidedFormulaTutoringEnabled) {
+        const stoppedTutorType = isMotionForceKnowledgeTutorProblem(hub.currentTutorProblem)
+          ? 'motion_force_knowledge_tutor'
+          : 'formula_tutor';
         hub.currentTutorProblem = null;
-        const response = 'Guided formula tutoring is turned off right now. Ask your formula question again for a normal answer.';
+        const response = stoppedTutorType === 'motion_force_knowledge_tutor'
+          ? 'Guided Motion/Force tutoring is turned off right now. Ask your question again for a normal answer.'
+          : 'Guided formula tutoring is turned off right now. Ask your formula question again for a normal answer.';
         const entry = appendStudentHubEntry({
           session,
           hub,
           message,
           response,
-          routeType: 'formula_tutor',
+          routeType: stoppedTutorType,
           confidence: 'strong'
         });
 
         logCompletedInteraction({
           message,
-          questionRoute: makeFormulaTutorRoute(null, entry),
+          questionRoute: stoppedTutorType === 'motion_force_knowledge_tutor'
+            ? makeMotionForceKnowledgeTutorRoute(null, entry)
+            : makeFormulaTutorRoute(null, entry),
           answerGiven: response,
           source: 'student',
           sessionId,
@@ -144,7 +159,7 @@ function registerStudentRoutes(app, {
 
         return res.json({
           response,
-          routeType: 'formula_tutor',
+          routeType: stoppedTutorType,
           confidence: 'strong',
           rateLimit: rateLimitInfo,
           tutor: null
@@ -154,6 +169,7 @@ function registerStudentRoutes(app, {
       // Guided tutor messages are already inside a teacher-safe scaffold, so they do not spend question energy.
       if (hub.currentTutorProblem) {
         const previousTutorProblem = hub.currentTutorProblem;
+        const previousTutorIsMotionForceKnowledge = isMotionForceKnowledgeTutorProblem(previousTutorProblem);
         if (isLikelyNewFormulaQuestionDuringTutor(message)) {
           const result = await answerStudentMessage(message, {
             intent,
@@ -214,6 +230,56 @@ function registerStudentRoutes(app, {
             });
           }
 
+          if (controls.studentGuidedFormulaTutoringEnabled && canStartMotionForceKnowledgeTutor(result.questionRoute)) {
+            hub.currentTutorProblem = startMotionForceKnowledgeTutor({
+              questionRoute: result.questionRoute,
+              originalQuestion: message
+            });
+            const response = [
+              'It looks like you are starting a new problem. I’ll start a new Guided Motion/Force Tutor question.',
+              '',
+              buildMotionForceKnowledgeTutorPrompt(hub.currentTutorProblem)
+            ].join('\n');
+            const tutorMetadata = buildMotionForceKnowledgeTutorMetadata(hub.currentTutorProblem);
+            const entry = appendStudentHubEntry({
+              session,
+              hub,
+              message,
+              response,
+              routeType: 'motion_force_knowledge_tutor',
+              confidence: result.confidence,
+              standardId: result.standardId || result.questionRoute?.standardId || result.questionRoute?.public?.standardId || '',
+              isStandardsFollowUp: Boolean(result.isStandardsFollowUp)
+            });
+
+            hub.pendingClarification = null;
+
+            logCompletedInteraction({
+              message,
+              questionRoute: makeMotionForceKnowledgeTutorRoute(hub.currentTutorProblem, entry),
+              answerGiven: response,
+              source: 'student',
+              sessionId,
+              debug: {
+                className: session.className || '',
+                studentHubId,
+                motionForceKnowledgeTutor: {
+                  active: true,
+                  restartedWithNewQuestion: true,
+                  previousQuestion: previousTutorProblem.originalQuestion || ''
+                }
+              }
+            });
+
+            return res.json({
+              response,
+              routeType: 'motion_force_knowledge_tutor',
+              confidence: result.confidence,
+              rateLimit: rateLimitInfo,
+              tutor: tutorMetadata
+            });
+          }
+
           hub.currentTutorProblem = null;
           hub.pendingClarification = result.pendingClarification || null;
           const entry = appendStudentHubEntry({
@@ -240,7 +306,8 @@ function registerStudentRoutes(app, {
                 active: false,
                 stoppedForNewQuestion: true,
                 previousQuestion: previousTutorProblem.originalQuestion || ''
-              }
+              },
+              previousTutorType: previousTutorIsMotionForceKnowledge ? 'motion_force_knowledge' : 'formula'
             }
           });
 
@@ -250,6 +317,56 @@ function registerStudentRoutes(app, {
             confidence: result.confidence,
             rateLimit: rateLimitInfo,
             tutor: null
+          });
+        }
+
+        if (previousTutorIsMotionForceKnowledge) {
+          const tutorResult = continueMotionForceKnowledgeTutor(previousTutorProblem, message);
+          hub.currentTutorProblem = tutorResult.currentTutorProblem;
+          const tutorMetadata = buildMotionForceKnowledgeTutorMetadata(
+            hub.currentTutorProblem || previousTutorProblem,
+            { completed: tutorResult.completed, stopped: tutorResult.stopped }
+          );
+
+          const entry = appendStudentHubEntry({
+            session,
+            hub,
+            message,
+            response: tutorResult.response,
+            routeType: 'motion_force_knowledge_tutor',
+            confidence: 'strong',
+            contextPrompt: previousTutorProblem.originalQuestion || '',
+            isTutorStep: true,
+            reportableForStandards: false,
+            tutorOriginalQuestion: previousTutorProblem.originalQuestion || ''
+          });
+
+          logCompletedInteraction({
+            message,
+            questionRoute: makeMotionForceKnowledgeTutorRoute(hub.currentTutorProblem || previousTutorProblem, entry),
+            answerGiven: tutorResult.response,
+            source: 'student',
+            sessionId,
+            isTutorStep: true,
+            reportableForStandards: false,
+            tutorOriginalQuestion: previousTutorProblem.originalQuestion || '',
+            debug: {
+              className: session.className || '',
+              studentHubId,
+              motionForceKnowledgeTutor: {
+                active: Boolean(hub.currentTutorProblem),
+                completed: Boolean(tutorResult.completed),
+                stopped: Boolean(tutorResult.stopped)
+              }
+            }
+          });
+
+          return res.json({
+            response: tutorResult.response,
+            routeType: 'motion_force_knowledge_tutor',
+            confidence: 'strong',
+            rateLimit: rateLimitInfo,
+            tutor: tutorMetadata
           });
         }
 
@@ -267,7 +384,10 @@ function registerStudentRoutes(app, {
           response: tutorResult.response,
           routeType: 'formula_tutor',
           confidence: 'strong',
-          contextPrompt: previousTutorProblem.originalQuestion || ''
+          contextPrompt: previousTutorProblem.originalQuestion || '',
+          isTutorStep: true,
+          reportableForStandards: false,
+          tutorOriginalQuestion: previousTutorProblem.originalQuestion || ''
         });
 
         logCompletedInteraction({
@@ -276,6 +396,9 @@ function registerStudentRoutes(app, {
           answerGiven: tutorResult.response,
           source: 'student',
           sessionId,
+          isTutorStep: true,
+          reportableForStandards: false,
+          tutorOriginalQuestion: previousTutorProblem.originalQuestion || '',
           debug: {
             className: session.className || '',
             studentHubId,
@@ -341,6 +464,48 @@ function registerStudentRoutes(app, {
         return res.json({
           response,
           routeType: 'formula_tutor',
+          confidence: result.confidence,
+          rateLimit: rateLimitInfo,
+          tutor: tutorMetadata
+        });
+      }
+
+      if (controls.studentGuidedFormulaTutoringEnabled && canStartMotionForceKnowledgeTutor(result.questionRoute)) {
+        hub.currentTutorProblem = startMotionForceKnowledgeTutor({
+          questionRoute: result.questionRoute,
+          originalQuestion: message
+        });
+        const response = buildMotionForceKnowledgeTutorPrompt(hub.currentTutorProblem);
+        const tutorMetadata = buildMotionForceKnowledgeTutorMetadata(hub.currentTutorProblem);
+        const entry = appendStudentHubEntry({
+          session,
+          hub,
+          message,
+          response,
+          routeType: 'motion_force_knowledge_tutor',
+          confidence: result.confidence,
+          standardId: result.standardId || result.questionRoute?.standardId || result.questionRoute?.public?.standardId || '',
+          isStandardsFollowUp: Boolean(result.isStandardsFollowUp)
+        });
+
+        hub.pendingClarification = null;
+
+        logCompletedInteraction({
+          message,
+          questionRoute: makeMotionForceKnowledgeTutorRoute(hub.currentTutorProblem, entry),
+          answerGiven: response,
+          source: 'student',
+          sessionId,
+          debug: {
+            className: session.className || '',
+            studentHubId,
+            originalRouteType: result.routeType
+          }
+        });
+
+        return res.json({
+          response,
+          routeType: 'motion_force_knowledge_tutor',
           confidence: result.confidence,
           rateLimit: rateLimitInfo,
           tutor: tutorMetadata
@@ -666,7 +831,10 @@ function appendStudentHubEntry({
   confidence,
   standardId = '',
   isStandardsFollowUp = false,
-  contextPrompt = ''
+  contextPrompt = '',
+  isTutorStep = false,
+  reportableForStandards = true,
+  tutorOriginalQuestion = ''
 }) {
   const entry = {
     message,
@@ -676,6 +844,9 @@ function appendStudentHubEntry({
     standardId,
     isStandardsFollowUp,
     contextPrompt,
+    isTutorStep,
+    reportableForStandards,
+    tutorOriginalQuestion,
     createdAt: new Date().toISOString()
   };
 
@@ -714,6 +885,36 @@ function makeFormulaTutorRoute(currentTutorProblem) {
         solveFor: problem.solveFor || '',
         formula: problem.formula || '',
         hasGuidedSteps: Array.isArray(problem.steps) && problem.steps.length > 0
+      }
+    }
+  };
+}
+
+function makeMotionForceKnowledgeTutorRoute(currentTutorProblem) {
+  const problem = currentTutorProblem || {};
+  return {
+    type: 'motion_force_knowledge_tutor',
+    confidence: 'strong',
+    toolsUsed: ['motion_force_knowledge_tutor'],
+    notes: 'Guided Motion/Force knowledge tutor step.',
+    aiAllowed: false,
+    motionForceTutor: {
+      id: problem.id || '',
+      topic: problem.topic || '',
+      category: problem.category || '',
+      guidingQuestions: Array.isArray(problem.guidingQuestions) ? problem.guidingQuestions : []
+    },
+    public: {
+      type: 'motion_force_knowledge_tutor',
+      confidence: 'strong',
+      toolsUsed: ['motion_force_knowledge_tutor'],
+      notes: 'Guided Motion/Force knowledge tutor step.',
+      aiAllowed: false,
+      motionForceTutor: {
+        id: problem.id || '',
+        topic: problem.topic || '',
+        category: problem.category || '',
+        hasGuidedSteps: Array.isArray(problem.guidingQuestions) && problem.guidingQuestions.length > 0
       }
     }
   };

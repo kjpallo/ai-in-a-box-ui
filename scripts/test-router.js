@@ -2214,6 +2214,90 @@ const tests = [
     type: 'science_formula',
     includes: ['Ff = μk × Fn', 'Ff = 1.2 × 4900 N', 'Ff = 5880 N'],
     aiAllowed: false
+  },
+  {
+    name: 'phase 10b motion force distance-time graph flat line',
+    question: 'what does a flat line on a distance time graph mean',
+    type: 'graph_concept',
+    includes: ['flat line means the distance is not changing', 'object is stopped'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 10b motion force velocity-time graph slope',
+    question: 'what does slope mean on a velocity time graph',
+    type: 'graph_concept',
+    includes: ['velocity-time graph', 'slope means acceleration'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 10b motion force speed velocity concept',
+    question: 'what is the difference between speed and velocity',
+    type: 'science_concept',
+    includes: ['Speed tells how fast', 'Velocity tells speed plus direction'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 10b motion force newton third law swimmer',
+    question: 'swimmer pushes water back and moves forward what law',
+    type: 'law_identification',
+    includes: ['Newton\'s third law', 'water pushes the swimmer forward'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 10b motion force air resistance paper',
+    question: 'why does a flat paper fall slower than crumpled paper',
+    type: 'science_concept',
+    includes: ['more surface area', 'air resistance'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 10b motion force terminal velocity',
+    question: 'what is terminal velocity',
+    type: 'science_concept',
+    includes: ['constant falling speed', 'air resistance balances gravity'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 10b motion force rank inertia',
+    question: 'rank feather baseball bicycle car by inertia',
+    type: 'science_concept',
+    includes: ['Rank inertia by mass', 'feather, baseball, bicycle, car'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 10b formula guard speed still routes',
+    question: 'what is speed if I go 36 meters in 6 seconds',
+    type: 'science_formula',
+    includes: ['speed = distance / time', 'speed = 36 m / 6 s', 'speed = 6 m/s'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 10b formula guard force still routes',
+    question: 'force for 12 kg accelerating at 4 m/s2',
+    type: 'science_formula',
+    includes: ['F = m × a', 'F = 12 kg × 4 m/s²', 'F = 48 N'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 10b formula guard net force still routes',
+    question: '12 N right and 5 N left net force',
+    type: 'science_formula',
+    includes: ['12 N right - 5 N left = 7 N right', 'The net force is 7 N right.'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 10b formula guard momentum still routes',
+    question: 'momentum of 60 kg skateboarder going 5 m/s',
+    type: 'science_formula',
+    includes: ['p = m × v', 'p = 60 kg × 5 m/s', 'p = 300 kg·m/s'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 10b formula guard weight still routes',
+    question: 'how much does 25 kg weigh on earth',
+    type: 'science_formula',
+    includes: ['Fg = m × g', 'Fg = 25 kg × 9.8 m/s²', 'Fg = 245 N'],
+    aiAllowed: false
   }
 
   // TODO Later phase: multi-step friction/normal/applied force chains.

@@ -293,6 +293,7 @@ async function main() {
 
   await testFormulaTutorBypassesQuestionEnergy();
   await testGuidedFormulaTutorDisabled();
+  await testGuidedMotionForceKnowledgeTutor();
   await testAccelerationFormulaTutorEnabledAndDisabled();
   await testElectricityVoltageCurrentClarification();
   await testPointFollowUpAfterDirectFormulaAnswer();
@@ -1231,6 +1232,234 @@ async function testGuidedFormulaTutorDisabled() {
   });
   assert.equal(normalQuestion.statusCode, 200);
   assert.equal(normalQuestion.body.rateLimit.remainingWhole, 0);
+}
+
+async function testGuidedMotionForceKnowledgeTutor() {
+  const guidedCases = [
+    {
+      name: 'graph-distance-flat',
+      question: 'what does a flat line on a distance time graph mean',
+      guide: /what does the distance value do/i,
+      direct: /flat line means the distance is not changing/i,
+      directMustInclude: [/object is stopped/i]
+    },
+    {
+      name: 'graph-velocity-slope',
+      question: 'what does slope mean on a velocity time graph',
+      guide: /which quantity is changing as time passes/i,
+      direct: /slope means acceleration/i
+    },
+    {
+      name: 'newton-third-law',
+      question: 'swimmer pushes water back and moves forward what law',
+      guide: /two objects pushing on each other/i,
+      direct: /Newton's third law/i,
+      directMustInclude: [/water pushes the swimmer forward/i]
+    },
+    {
+      name: 'newton-first-law',
+      question: 'a backpack stays on the floor until someone picks it up what law',
+      guide: /resisting a change in motion/i,
+      direct: /Newton's first law/i
+    },
+    {
+      name: 'terminal-velocity',
+      question: 'what is terminal velocity',
+      guide: /which force pulls down/i,
+      direct: /constant falling speed/i
+    },
+    {
+      name: 'air-resistance-paper',
+      question: 'why does a flat paper fall slower than crumpled paper',
+      guide: /which paper shape has more surface area/i,
+      direct: /flat paper falls slower/i,
+      directMustInclude: [/air resistance/i]
+    },
+    {
+      name: 'speed-velocity',
+      question: 'what is the difference between speed and velocity',
+      guide: /does speed need a direction/i,
+      direct: /Velocity tells speed plus direction/i
+    },
+    {
+      name: 'rank-inertia',
+      question: 'rank feather baseball bicycle car by inertia',
+      guide: /depends mostly on what property/i,
+      direct: /feather, baseball, bicycle, car/i
+    }
+  ];
+
+  const enabled = createRouteHarness({ studentGuidedFormulaTutoringEnabled: true });
+  let create = await enabled.request('POST', '/api/profile/create-student-session');
+  assert.equal(create.statusCode, 201);
+  let classSessionId = create.body.sessionId;
+
+  for (const testCase of guidedCases) {
+    const start = await enabled.request('POST', '/api/student/message', {
+      sessionId: classSessionId,
+      studentHubId: `motion-${testCase.name}`,
+      message: testCase.question
+    });
+    assert.equal(start.statusCode, 200);
+    assert.equal(start.body.routeType, 'motion_force_knowledge_tutor', `${testCase.name} should start guided Motion/Force tutor`);
+    assert.equal(start.body.tutor.tutorType, 'motion_force_knowledge');
+    assert.equal(start.body.tutor.active, true);
+    assert.match(start.body.response, testCase.guide);
+    assert.doesNotMatch(start.body.response, testCase.direct, `${testCase.name} should not reveal only the final answer`);
+    assert.doesNotMatch(start.body.response, /^(That is|On a|Terminal velocity is|A flat paper falls|Speed tells|Rank inertia)/i);
+    assert.equal(
+      enabled.studentSessions[classSessionId].anonymousHubs[`motion-${testCase.name}`].currentTutorProblem.tutorType,
+      'motion_force_knowledge'
+    );
+  }
+
+  const guidedStep = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'motion-graph-distance-flat',
+    message: 'it stays the same'
+  });
+  assert.equal(guidedStep.statusCode, 200);
+  assert.equal(guidedStep.body.routeType, 'motion_force_knowledge_tutor');
+  assert.equal(guidedStep.body.tutor.currentStepIndex, 1);
+  assert.match(guidedStep.body.response, /moving or stopped/i);
+
+  const guidedComplete = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'motion-graph-distance-flat',
+    message: 'stopped'
+  });
+  assert.equal(guidedComplete.statusCode, 200);
+  assert.equal(guidedComplete.body.routeType, 'motion_force_knowledge_tutor');
+  assert.equal(guidedComplete.body.tutor.completed, true);
+  assert.match(guidedComplete.body.response, /object is stopped/i);
+  assert.equal(enabled.studentSessions[classSessionId].anonymousHubs['motion-graph-distance-flat'].currentTutorProblem, null);
+
+  const thirdLawStep = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'motion-newton-third-law',
+    message: 'third law'
+  });
+  assert.equal(thirdLawStep.statusCode, 200);
+  assert.equal(thirdLawStep.body.routeType, 'motion_force_knowledge_tutor');
+  assert.equal(thirdLawStep.body.tutor.currentStepIndex, 1);
+  assert.match(thirdLawStep.body.response, /equal and opposite pairs/i);
+
+  const thirdLawComplete = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'motion-newton-third-law',
+    message: 'forces come in pairs'
+  });
+  assert.equal(thirdLawComplete.statusCode, 200);
+  assert.equal(thirdLawComplete.body.routeType, 'motion_force_knowledge_tutor');
+  assert.equal(thirdLawComplete.body.tutor.completed, true);
+  assert.match(thirdLawComplete.body.response, /swimmer pushes water backward/i);
+  assert.equal(enabled.studentSessions[classSessionId].anonymousHubs['motion-newton-third-law'].currentTutorProblem, null);
+
+  const disabled = createRouteHarness({
+    studentGuidedFormulaTutoringEnabled: false,
+    studentQuestionRateLimitEnabled: true,
+    studentQuestionsPerMinute: 10
+  });
+  create = await disabled.request('POST', '/api/profile/create-student-session');
+  assert.equal(create.statusCode, 201);
+  classSessionId = create.body.sessionId;
+
+  for (const testCase of guidedCases) {
+    const direct = await disabled.request('POST', '/api/student/message', {
+      sessionId: classSessionId,
+      studentHubId: `direct-${testCase.name}`,
+      message: testCase.question
+    });
+    assert.equal(direct.statusCode, 200);
+    assert.notEqual(direct.body.routeType, 'motion_force_knowledge_tutor', `${testCase.name} should answer directly when disabled`);
+    assert.match(direct.body.response, testCase.direct);
+    for (const expected of testCase.directMustInclude || []) {
+      assert.match(direct.body.response, expected, `${testCase.name} should include direct local detail`);
+    }
+    assert.equal(direct.body.tutor, undefined);
+    assert.ok(direct.body.routeType, `${testCase.name} should still report a direct local route type`);
+    assert.equal(disabled.studentSessions[classSessionId].anonymousHubs[`direct-${testCase.name}`].currentTutorProblem, null);
+  }
+
+  const enabledFormula = createRouteHarness({ studentGuidedFormulaTutoringEnabled: true });
+  create = await enabledFormula.request('POST', '/api/profile/create-student-session');
+  assert.equal(create.statusCode, 201);
+  classSessionId = create.body.sessionId;
+
+  const formulaQuestion = 'what is speed if I go 36 meters in 6 seconds';
+  const formulaStart = await enabledFormula.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'formula-still-guided',
+    message: formulaQuestion
+  });
+  assert.equal(formulaStart.statusCode, 200);
+  assert.equal(formulaStart.body.routeType, 'formula_tutor');
+  assert.equal(formulaStart.body.tutor.formulaId, 'speed_distance_time');
+  assert.doesNotMatch(formulaStart.body.response, /speed = 6 m\/s/i);
+  assert.equal(
+    enabledFormula.studentSessions[classSessionId].anonymousHubs['formula-still-guided'].currentTutorProblem.tutorType,
+    undefined
+  );
+
+  const disabledFormula = createRouteHarness({ studentGuidedFormulaTutoringEnabled: false });
+  create = await disabledFormula.request('POST', '/api/profile/create-student-session');
+  assert.equal(create.statusCode, 201);
+  classSessionId = create.body.sessionId;
+
+  const directFormula = await disabledFormula.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'formula-direct',
+    message: formulaQuestion
+  });
+  assert.equal(directFormula.statusCode, 200);
+  assert.notEqual(directFormula.body.routeType, 'formula_tutor');
+  assert.match(directFormula.body.response, /speed = 6 m\/s/i);
+  assert.equal(disabledFormula.studentSessions[classSessionId].anonymousHubs['formula-direct'].currentTutorProblem, null);
+
+  const numericGuards = [
+    {
+      question: 'what is speed if I go 36 meters in 6 seconds',
+      formulaId: 'speed_distance_time'
+    },
+    {
+      question: 'force for 12 kg accelerating at 4 m/s2',
+      formulaId: 'force_mass_acceleration'
+    },
+    {
+      question: '12 N right and 5 N left net force',
+      formulaId: 'net_force'
+    },
+    {
+      question: 'momentum of 60 kg skateboarder going 5 m/s',
+      formulaId: 'momentum_mass_velocity'
+    },
+    {
+      question: 'how much does 25 kg weigh on earth',
+      formulaId: 'weight_mass_gravity'
+    }
+  ];
+
+  const enabledNumeric = createRouteHarness({ studentGuidedFormulaTutoringEnabled: true });
+  create = await enabledNumeric.request('POST', '/api/profile/create-student-session');
+  assert.equal(create.statusCode, 201);
+  classSessionId = create.body.sessionId;
+
+  for (const [index, testCase] of numericGuards.entries()) {
+    const response = await enabledNumeric.request('POST', '/api/student/message', {
+      sessionId: classSessionId,
+      studentHubId: `numeric-guard-${index}`,
+      message: testCase.question
+    });
+    assert.equal(response.statusCode, 200);
+    assert.notEqual(response.body.routeType, 'motion_force_knowledge_tutor', `${testCase.question} should not start concept tutor`);
+    assert.equal(response.body.routeType, 'formula_tutor', `${testCase.question} should keep formula tutor behavior when enabled`);
+    assert.equal(response.body.tutor.formulaId, testCase.formulaId);
+    assert.equal(
+      enabledNumeric.studentSessions[classSessionId].anonymousHubs[`numeric-guard-${index}`].currentTutorProblem.tutorType,
+      undefined
+    );
+  }
+
 }
 
 async function testAccelerationFormulaTutorEnabledAndDisabled() {
