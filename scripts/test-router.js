@@ -1508,6 +1508,62 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'electricity/magnetism smoke series resistance then current',
+    question: 'Three 20 ohm resistors are connected in series across a 120 V generator. Find the total resistance and current.',
+    type: 'science_formula',
+    includes: ['Rt = 60 ohms', 'I = 2 amps'],
+    aiAllowed: false
+  },
+  {
+    name: 'electricity/magnetism smoke series total resistance',
+    question: 'Find total resistance in a series circuit with 5 ohms, 10 ohms, and 20 ohms.',
+    type: 'science_formula',
+    includes: ['Rt = 35 ohms'],
+    aiAllowed: false
+  },
+  {
+    name: 'electricity/magnetism smoke parallel resistance then current',
+    question: 'Three 20 ohm resistors are connected in parallel across a 120 V generator. Find the total resistance and current.',
+    type: 'science_formula',
+    includes: ['Rt = 6.67 ohms', 'I = 18 amps'],
+    aiAllowed: false
+  },
+  {
+    name: 'electricity/magnetism smoke parallel total resistance',
+    question: 'Find total resistance in a parallel circuit with a 100 ohm resistor, a 50 ohm resistor, and a 25 ohm resistor.',
+    type: 'science_formula',
+    includes: ['Rt = 14.29 ohms'],
+    aiAllowed: false
+  },
+  {
+    name: 'electricity/magnetism smoke identical parallel total resistance',
+    question: 'A parallel circuit has 5 resistors, each with a resistance of 40,000 ohms. Find the total resistance.',
+    type: 'science_formula',
+    includes: ['Rt = 8000 ohms'],
+    aiAllowed: false
+  },
+  {
+    name: 'electricity/magnetism smoke current from total resistance',
+    question: 'A circuit has a total resistance of 340 ohms and a voltage of 120 V. What is the current?',
+    type: 'science_formula',
+    includes: ['Current is about 0.35 amps'],
+    aiAllowed: false
+  },
+  {
+    name: 'electricity/magnetism smoke parallel current after resistance',
+    question: 'A parallel circuit has 5 ohm, 8 ohm, and 10 ohm resistors across a 50 V battery. What is the total current?',
+    type: 'science_formula',
+    includes: ['Rt = 2.35 ohms', 'Current is about 21.3 amps'],
+    aiAllowed: false
+  },
+  {
+    name: 'electricity/magnetism smoke series total then voltage',
+    question: 'A series circuit has a current of 2 amps, a 2 ohm resistor, and a light bulb with resistance of 1 ohm. What is the battery voltage?',
+    type: 'science_formula',
+    includes: ['Rt = 3 ohms', 'V = 6 volts'],
+    aiAllowed: false
+  },
+  {
     name: 'electricity/magnetism smoke vocab resistance',
     question: 'What is resistance?',
     type: 'definition',
