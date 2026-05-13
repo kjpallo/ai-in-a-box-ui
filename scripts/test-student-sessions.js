@@ -548,6 +548,20 @@ async function testExpandedFormulaTutorFlows() {
     ]
   });
 
+  await runGuidedFormulaFlow({
+    name: 'series-total-resistance-three-identical-20',
+    question: 'Find total resistance in a series circuit with three identical 20 ohm resistors.',
+    finalAnswer: '60 ohms',
+    formulaId: 'series_total_resistance',
+    startMatch: /what kind of circuit/i,
+    steps: [
+      { message: 'series', match: /what operation.*total resistance.*series/i },
+      { message: 'add', match: /substitute/i },
+      { message: '20 + 20 + 20', match: /total resistance/i },
+      { message: '60 ohms', match: /60 ohms/i }
+    ]
+  });
+
   await testExpandedFormulaTutorEnergyBypass();
 }
 

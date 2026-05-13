@@ -1555,8 +1555,47 @@ const tests = [
     }
   },
   {
-    name: 'electricity/magnetism smoke series total resistance three 20 ohm resistors',
-    question: 'Find total resistance in a series circuit with three 20 ohm resistors.',
+    name: 'electricity/magnetism smoke series total resistance three identical 20 ohm resistors',
+    question: 'Find total resistance in a series circuit with three identical 20 ohm resistors.',
+    type: 'science_formula',
+    includes: ['Rt = 60 ohms'],
+    aiAllowed: false,
+    formulaWork: {
+      formulaId: 'series_total_resistance',
+      finalAnswerValue: 60,
+      finalAnswerDisplay: '60 ohms',
+      minStepCount: 4
+    }
+  },
+  {
+    name: 'electricity/magnetism smoke series total resistance two 15 ohm resistors',
+    question: 'Find total resistance in a series circuit with two 15 ohm resistors.',
+    type: 'science_formula',
+    includes: ['Rt = 30 ohms'],
+    aiAllowed: false,
+    formulaWork: {
+      formulaId: 'series_total_resistance',
+      finalAnswerValue: 30,
+      finalAnswerDisplay: '30 ohms',
+      minStepCount: 4
+    }
+  },
+  {
+    name: 'electricity/magnetism smoke series total resistance labeled R values',
+    question: 'Find total resistance in a series circuit with R1 = 5 ohms, R2 = 10 ohms, and R3 = 20 ohms.',
+    type: 'science_formula',
+    includes: ['Rt = 35 ohms'],
+    aiAllowed: false,
+    formulaWork: {
+      formulaId: 'series_total_resistance',
+      finalAnswerValue: 35,
+      finalAnswerDisplay: '35 ohms',
+      minStepCount: 4
+    }
+  },
+  {
+    name: 'electricity/magnetism smoke series total resistance each resistor count after value',
+    question: 'Find total resistance in a series circuit where each resistor is 20 ohms and there are 3 resistors.',
     type: 'science_formula',
     includes: ['Rt = 60 ohms'],
     aiAllowed: false,
