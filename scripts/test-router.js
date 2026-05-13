@@ -1521,6 +1521,32 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'electricity/magnetism smoke series resistance then current 5 10 20',
+    question: 'A series circuit has 5 ohm, 10 ohm, and 20 ohm resistors across a 70 V battery. Find total resistance and current.',
+    type: 'science_formula',
+    includes: ['Rt = R1 + R2 + R3', 'Rt = 5 + 10 + 20', 'Rt = 35 ohms', 'I = 2 amps'],
+    formulaWork: {
+      formulaId: 'series_resistance_current',
+      finalAnswerValue: 2,
+      finalAnswerDisplay: '2 amps',
+      minStepCount: 7
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'electricity/magnetism smoke series resistance then current two 15',
+    question: 'A series circuit has two 15 ohm resistors across a 90 V battery. Find total resistance and current.',
+    type: 'science_formula',
+    includes: ['Rt = R1 + R2', 'Rt = 15 + 15', 'Rt = 30 ohms', 'I = 3 amps'],
+    formulaWork: {
+      formulaId: 'series_resistance_current',
+      finalAnswerValue: 3,
+      finalAnswerDisplay: '3 amps',
+      minStepCount: 7
+    },
+    aiAllowed: false
+  },
+  {
     name: 'electricity/magnetism smoke series total resistance',
     question: 'Find total resistance in a series circuit with 5 ohms, 10 ohms, and 20 ohms.',
     type: 'science_formula',
@@ -1625,11 +1651,29 @@ const tests = [
     aiAllowed: false
   },
   {
-    name: 'electricity/magnetism guard unequal parallel resistance then current',
-    question: 'Find total resistance and current in a parallel circuit with 5 ohms, 10 ohms, and 20 ohms across 50 V.',
+    name: 'electricity/magnetism smoke parallel resistance then current 5 10 20',
+    question: 'A parallel circuit has 5 ohm, 10 ohm, and 20 ohm resistors across a 50 V battery. Find total resistance and current.',
     type: 'science_formula',
     includes: ['1/Rt', '1/5 + 1/10 + 1/20', 'Rt = 2.86 ohms', 'I = 17.5 amps'],
-    noFormulaWork: true,
+    formulaWork: {
+      formulaId: 'parallel_resistance_current',
+      finalAnswerValue: 17.500000000000004,
+      finalAnswerDisplay: '17.5 amps',
+      minStepCount: 7
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'electricity/magnetism smoke parallel resistance then current 100 50 25',
+    question: 'A parallel circuit has 100 ohm, 50 ohm, and 25 ohm resistors across a 100 V battery. Find total resistance and current.',
+    type: 'science_formula',
+    includes: ['1/Rt', '1/100 + 1/50 + 1/25', 'Rt = 14.29 ohms', 'I = 7 amps'],
+    formulaWork: {
+      formulaId: 'parallel_resistance_current',
+      finalAnswerValue: 7.000000000000001,
+      finalAnswerDisplay: '7 amps',
+      minStepCount: 7
+    },
     aiAllowed: false
   },
   {
@@ -1694,10 +1738,23 @@ const tests = [
     }
   },
   {
-    name: 'electricity/magnetism guard parallel total resistance and current does not use total-resistance tutor',
+    name: 'electricity/magnetism smoke parallel total resistance and current two resistors uses current tutor',
     question: 'Find total resistance and current in a parallel circuit with 2 ohms and 6 ohms across 12 V.',
     type: 'science_formula',
     includes: ['Rt = 1.5 ohms', 'I = 8 amps'],
+    formulaWork: {
+      formulaId: 'parallel_resistance_current',
+      finalAnswerValue: 8,
+      finalAnswerDisplay: '8 amps',
+      minStepCount: 7
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'electricity/magnetism guard mixed series parallel wording does not use current tutor',
+    question: 'A mixed series-parallel circuit has 5 ohm, 10 ohm, and 20 ohm resistors across a 50 V battery. Find total resistance and current.',
+    type: 'science_formula',
+    includes: ['Rt =', 'I ='],
     noFormulaWork: true,
     aiAllowed: false
   },

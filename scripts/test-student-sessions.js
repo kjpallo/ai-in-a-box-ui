@@ -622,6 +622,23 @@ async function testExpandedFormulaTutorFlows() {
   });
 
   await runGuidedFormulaFlow({
+    name: 'series-resistance-current-dynamic-5-10-20',
+    question: 'A series circuit has 5 ohm, 10 ohm, and 20 ohm resistors across a 70 V battery. Find total resistance and current.',
+    finalAnswer: '2 amps',
+    formulaId: 'series_resistance_current',
+    startMatch: /what kind of circuit/i,
+    steps: [
+      { message: 'series', match: /what operation.*total resistance.*series/i },
+      { message: 'add', match: /substitute/i },
+      { message: '5 + 10 + 20', match: /total resistance/i },
+      { message: '35 ohms', match: /Ohm.*Law.*current/i },
+      { message: 'I = V / R', match: /Substitute.*voltage.*total resistance/i },
+      { message: '70 / 35', match: /current/i },
+      { message: '2 amps', match: /2 amps/i }
+    ]
+  });
+
+  await runGuidedFormulaFlow({
     name: 'parallel-resistance-current-three-20',
     question: 'Three 20 ohm resistors are connected in parallel across a 120 V generator. Find the total resistance and current.',
     finalAnswer: '18 amps',
@@ -638,6 +655,23 @@ async function testExpandedFormulaTutorFlows() {
     ]
   });
 
+  await runGuidedFormulaFlow({
+    name: 'parallel-resistance-current-dynamic-5-10-20',
+    question: 'A parallel circuit has 5 ohm, 10 ohm, and 20 ohm resistors across a 50 V battery. Find total resistance and current.',
+    finalAnswer: '17.5 amps',
+    formulaId: 'parallel_resistance_current',
+    startMatch: /what kind of circuit/i,
+    steps: [
+      { message: 'parallel', match: /formula.*total resistance.*parallel/i },
+      { message: '1/Rt = 1/R1 + 1/R2 + 1/R3', match: /substitute/i },
+      { message: '1/5 + 1/10 + 1/20', match: /total resistance/i },
+      { message: '2.86 ohms', match: /Ohm.*Law.*current/i },
+      { message: 'I = V / R', match: /Substitute.*voltage.*total resistance/i },
+      { message: '50 / 2.86', match: /current/i },
+      { message: '17.5 amps', match: /17\.5 amps/i }
+    ]
+  });
+
   await testParallelResistanceTutorGuards();
   await testExactParallelTutorDisabledDirectAnswer();
   await testExpandedFormulaTutorEnergyBypass();
@@ -650,14 +684,24 @@ async function testParallelResistanceTutorGuards() {
 
   const cases = [
     {
-      name: 'parallel-current-unequal-5-10-20',
-      message: 'Find total resistance and current in a parallel circuit with 5 ohms, 10 ohms, and 20 ohms across 50 V.',
-      match: /I = 17\.5 amps/i
+      name: 'series-current-voltage-missing',
+      message: 'A series circuit has 5 ohm, 10 ohm, and 20 ohm resistors. Find total resistance and current.',
+      match: /Rt = 35 ohms/i
     },
     {
       name: 'parallel-voltage-missing-current',
       message: 'Find the voltage in a parallel circuit with 5 ohms, 10 ohms, and 20 ohms.',
       match: /I need the current/i
+    },
+    {
+      name: 'parallel-voltage-only-with-source',
+      message: 'A parallel circuit has 5 ohm, 10 ohm, and 20 ohm resistors across a 50 V battery. Find the voltage.',
+      match: /I need the current/i
+    },
+    {
+      name: 'mixed-series-parallel-current',
+      message: 'A mixed series-parallel circuit has 5 ohm, 10 ohm, and 20 ohm resistors across a 50 V battery. Find total resistance and current.',
+      match: /I =/i
     }
   ];
 
@@ -669,9 +713,9 @@ async function testParallelResistanceTutorGuards() {
     });
     assert.equal(response.statusCode, 200, `${testCase.name} status`);
     assert.notEqual(response.body.routeType, 'formula_tutor', `${testCase.name} should not start Guided Formula Tutor`);
-    assert.notEqual(response.body.tutor?.formulaId, 'parallel_total_resistance', `${testCase.name} should not use parallel_total_resistance tutor`);
-    assert.notEqual(response.body.tutor?.formulaId, 'series_resistance_current', `${testCase.name} should not use series_resistance_current tutor`);
-    assert.notEqual(response.body.tutor?.formulaId, 'parallel_resistance_current', `${testCase.name} should not use parallel_resistance_current tutor`);
+    for (const formulaId of testCase.disallowedFormulaIds || ['parallel_total_resistance', 'series_resistance_current', 'parallel_resistance_current']) {
+      assert.notEqual(response.body.tutor?.formulaId, formulaId, `${testCase.name} should not use ${formulaId} tutor`);
+    }
     assert.match(response.body.response, testCase.match, `${testCase.name} direct or missing-info response`);
     assert.equal(
       enabled.studentSessions[enabledCreate.body.sessionId].anonymousHubs[testCase.name].currentTutorProblem,
@@ -737,6 +781,34 @@ async function testExactParallelTutorDisabledDirectAnswer() {
   assert.match(parallelCurrentDirect.body.response, /I = 18 amps/i);
   assert.equal(
     disabled.studentSessions[disabledCreate.body.sessionId].anonymousHubs['parallel-resistance-current-direct'].currentTutorProblem,
+    null
+  );
+
+  const dynamicSeriesCurrentDirect = await disabled.request('POST', '/api/student/message', {
+    sessionId: disabledCreate.body.sessionId,
+    studentHubId: 'series-resistance-current-dynamic-direct',
+    message: 'A series circuit has 5 ohm, 10 ohm, and 20 ohm resistors across a 70 V battery. Find total resistance and current.'
+  });
+  assert.equal(dynamicSeriesCurrentDirect.statusCode, 200);
+  assert.notEqual(dynamicSeriesCurrentDirect.body.routeType, 'formula_tutor');
+  assert.match(dynamicSeriesCurrentDirect.body.response, /Rt = 35 ohms/i);
+  assert.match(dynamicSeriesCurrentDirect.body.response, /I = 2 amps/i);
+  assert.equal(
+    disabled.studentSessions[disabledCreate.body.sessionId].anonymousHubs['series-resistance-current-dynamic-direct'].currentTutorProblem,
+    null
+  );
+
+  const dynamicParallelCurrentDirect = await disabled.request('POST', '/api/student/message', {
+    sessionId: disabledCreate.body.sessionId,
+    studentHubId: 'parallel-resistance-current-dynamic-direct',
+    message: 'A parallel circuit has 5 ohm, 10 ohm, and 20 ohm resistors across a 50 V battery. Find total resistance and current.'
+  });
+  assert.equal(dynamicParallelCurrentDirect.statusCode, 200);
+  assert.notEqual(dynamicParallelCurrentDirect.body.routeType, 'formula_tutor');
+  assert.match(dynamicParallelCurrentDirect.body.response, /Rt = 2\.86 ohms/i);
+  assert.match(dynamicParallelCurrentDirect.body.response, /I = 17\.5 amps/i);
+  assert.equal(
+    disabled.studentSessions[disabledCreate.body.sessionId].anonymousHubs['parallel-resistance-current-dynamic-direct'].currentTutorProblem,
     null
   );
 }
