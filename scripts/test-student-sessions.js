@@ -590,8 +590,50 @@ async function testExpandedFormulaTutorFlows() {
     ]
   });
 
+  await testParallelResistanceTutorGuards();
   await testExactParallelTutorDisabledDirectAnswer();
   await testExpandedFormulaTutorEnergyBypass();
+}
+
+async function testParallelResistanceTutorGuards() {
+  const enabled = createRouteHarness({ studentGuidedFormulaTutoringEnabled: true });
+  const enabledCreate = await enabled.request('POST', '/api/profile/create-student-session');
+  assert.equal(enabledCreate.statusCode, 201);
+
+  const cases = [
+    {
+      name: 'parallel-current-three-20',
+      message: 'Three 20 ohm resistors are connected in parallel across a 120 V generator. Find the total resistance and current.',
+      match: /I = 18 amps/i
+    },
+    {
+      name: 'parallel-current-unequal-5-10-20',
+      message: 'Find total resistance and current in a parallel circuit with 5 ohms, 10 ohms, and 20 ohms across 50 V.',
+      match: /I = 17\.5 amps/i
+    },
+    {
+      name: 'parallel-voltage-missing-current',
+      message: 'Find the voltage in a parallel circuit with 5 ohms, 10 ohms, and 20 ohms.',
+      match: /I need the current/i
+    }
+  ];
+
+  for (const testCase of cases) {
+    const response = await enabled.request('POST', '/api/student/message', {
+      sessionId: enabledCreate.body.sessionId,
+      studentHubId: testCase.name,
+      message: testCase.message
+    });
+    assert.equal(response.statusCode, 200, `${testCase.name} status`);
+    assert.notEqual(response.body.routeType, 'formula_tutor', `${testCase.name} should not start Guided Formula Tutor`);
+    assert.notEqual(response.body.tutor?.formulaId, 'parallel_total_resistance', `${testCase.name} should not use parallel_total_resistance tutor`);
+    assert.match(response.body.response, testCase.match, `${testCase.name} direct or missing-info response`);
+    assert.equal(
+      enabled.studentSessions[enabledCreate.body.sessionId].anonymousHubs[testCase.name].currentTutorProblem,
+      null,
+      `${testCase.name} should not leave an active tutor`
+    );
+  }
 }
 
 async function testExactParallelTutorDisabledDirectAnswer() {

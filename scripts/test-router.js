@@ -1615,6 +1615,23 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'electricity/magnetism guard unequal parallel resistance then current',
+    question: 'Find total resistance and current in a parallel circuit with 5 ohms, 10 ohms, and 20 ohms across 50 V.',
+    type: 'science_formula',
+    includes: ['1/Rt', '1/5 + 1/10 + 1/20', 'Rt = 2.86 ohms', 'I = 17.5 amps'],
+    noFormulaWork: true,
+    aiAllowed: false
+  },
+  {
+    name: 'electricity/magnetism guard parallel voltage missing current',
+    question: 'Find the voltage in a parallel circuit with 5 ohms, 10 ohms, and 20 ohms.',
+    type: 'science_formula',
+    includes: ['I need the current', 'should not guess the voltage'],
+    excludes: ['V =', 'volts'],
+    noFormulaWork: true,
+    aiAllowed: false
+  },
+  {
     name: 'electricity/magnetism smoke exact simple parallel total resistance tutor work',
     question: 'Three 20 ohm resistors are connected in parallel. Find the total resistance.',
     type: 'science_formula',
