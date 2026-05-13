@@ -1592,6 +1592,48 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'electricity/magnetism smoke circuit diagram series multi-component closed switch',
+    question: 'Draw a series circuit with two batteries, a light bulb, an ammeter, and a closed switch.',
+    type: 'circuit_diagram',
+    includes: ['series circuit', 'one path', 'Battery 1', 'Battery 2', 'Ammeter', 'Closed Switch', 'Light Bulb'],
+    aiAllowed: false
+  },
+  {
+    name: 'electricity/magnetism smoke circuit diagram series three bulbs ammeter resistor',
+    question: 'Draw a series circuit with three light bulbs, an ammeter, a resistor, a switch, and two batteries.',
+    type: 'circuit_diagram',
+    includes: ['series circuit', 'one path', 'Light Bulb 1', 'Light Bulb 2', 'Light Bulb 3', 'Ammeter', 'Resistor'],
+    aiAllowed: false
+  },
+  {
+    name: 'electricity/magnetism smoke circuit diagram parallel batteries bulbs resistor switches',
+    question: 'Draw a parallel circuit with two batteries, three light bulbs, one resistor, and three switches.',
+    type: 'circuit_diagram',
+    includes: ['parallel circuit', 'branch', 'Battery 1', 'Battery 2', 'Light Bulb 1', 'Light Bulb 2', 'Light Bulb 3', 'Switch 1', 'Switch 2', 'Switch 3', 'Resistor'],
+    aiAllowed: false
+  },
+  {
+    name: 'electricity/magnetism smoke circuit diagram voltmeter motor placement',
+    question: 'Add a voltmeter to measure the voltage of the motor.',
+    type: 'circuit_diagram',
+    includes: ['Voltmeter', 'Motor', 'across'],
+    aiAllowed: false
+  },
+  {
+    name: 'electricity/magnetism smoke circuit diagram series open switch',
+    question: 'Draw a series circuit with an open switch.',
+    type: 'circuit_diagram',
+    includes: ['open switch', 'break', 'current cannot flow'],
+    aiAllowed: false
+  },
+  {
+    name: 'electricity/magnetism smoke circuit diagram series closed switch',
+    question: 'Draw a series circuit with a closed switch.',
+    type: 'circuit_diagram',
+    includes: ['closed switch', 'current can flow'],
+    aiAllowed: false
+  },
+  {
     name: 'electricity/magnetism smoke magnetism electromagnet',
     question: 'What is an electromagnet?',
     type: 'definition',
