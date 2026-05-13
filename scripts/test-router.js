@@ -1534,6 +1534,33 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'electricity/magnetism smoke series current uses total resistance',
+    question: 'In a series circuit with 5, 10, and 20 ohm resistors connected to 70 volts, find current.',
+    type: 'science_formula',
+    includes: ['Rt = 5 + 10 + 20', 'Rt = 35 ohms', 'I = 70 / 35', 'I = 2 amps'],
+    excludes: ['20 Ω', '20 ohms. What number should go in for resistance'],
+    formulaWork: {
+      formulaId: 'series_resistance_current',
+      finalAnswerValue: 2,
+      finalAnswerDisplay: '2 amps',
+      minStepCount: 7
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'electricity/magnetism smoke parallel current uses equivalent resistance',
+    question: 'In a parallel circuit with 5, 10, and 20 ohm resistors connected to 50 volts, find current.',
+    type: 'science_formula',
+    includes: ['1/Rt = 1/5 + 1/10 + 1/20', '1/Rt = 0.35', 'Rt = 2.86 ohms', 'I = 50 / 2.86', 'I = 17.5 amps'],
+    formulaWork: {
+      formulaId: 'parallel_resistance_current',
+      finalAnswerValue: 17.500000000000004,
+      finalAnswerDisplay: '17.5 amps',
+      minStepCount: 7
+    },
+    aiAllowed: false
+  },
+  {
     name: 'electricity/magnetism smoke series resistance then current two 15',
     question: 'A series circuit has two 15 ohm resistors across a 90 V battery. Find total resistance and current.',
     type: 'science_formula',

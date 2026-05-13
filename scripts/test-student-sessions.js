@@ -302,6 +302,9 @@ async function main() {
   await testGuidedFormulaTutorRequiredFormulaPaths();
   await testPhase6FormulaTutorCoverage();
   await testFormulaTutorAnswerParsing();
+  await testSeriesResistanceFinalTotalAtSubstitutionStep();
+  await testCircuitDiagramYesNoFollowUp();
+  await testAmbiguousVocabNumberedContinuation();
   await testExpandedFormulaTutorFlows();
   await testGuidedNetForceTutorFlows();
   await testPhase9CNetForceTutorRegression();
@@ -1142,6 +1145,248 @@ async function testFormulaTutorAnswerParsing() {
   assert.equal(correct.statusCode, 200);
   assert.match(correct.body.response, /What is 120 \/ 30\?/i);
   assert.equal(correct.body.tutor.currentStepIndex, 4);
+
+  const electricityCases = [
+    {
+      name: 'leading-decimal-0-2',
+      question: 'A circuit has a voltage of 1 V and a current of 5 A. What is the resistance?',
+      answer: '.2',
+      match: /0\.2 Ω/i
+    },
+    {
+      name: 'leading-decimal-0-48',
+      question: 'A circuit has a voltage of 12 V and a current of 25 A. What is the resistance?',
+      answer: '.48',
+      match: /0\.48 Ω/i
+    },
+    {
+      name: 'leading-decimal-0-001-current',
+      question: 'A circuit has a voltage of 1 V and a resistance of 1000 ohms. What is the current?',
+      answer: '.001',
+      match: /0\.001 A/i
+    },
+    {
+      name: 'scientific-0-001',
+      question: 'A circuit has a voltage of 1 V and a current of 1000 A. What is the resistance?',
+      answer: '1 x 10^-3',
+      match: /0\.001 Ω/i
+    },
+    {
+      name: 'scientific-0-001-ohms',
+      question: 'A circuit has a voltage of 1 V and a current of 1000 A. What is the resistance?',
+      answer: '1 x 10^-3 ohms',
+      match: /0\.001 Ω/i
+    },
+    {
+      name: 'scientific-0-0002-ohms',
+      question: 'A circuit has a voltage of 1 V and a current of 5000 A. What is the resistance?',
+      answer: '2 x 10^-4 ohms',
+      match: /0\.0002 Ω/i
+    },
+    {
+      name: 'scientific-0-0002-times-ohm',
+      question: 'A circuit has a voltage of 1 V and a current of 5000 A. What is the resistance?',
+      answer: '2 × 10^-4 ohm',
+      match: /0\.0002 Ω/i
+    },
+    {
+      name: 'e-notation-0-0002',
+      question: 'A circuit has a voltage of 1 V and a current of 5000 A. What is the resistance?',
+      answer: '2e-4',
+      match: /0\.0002 Ω/i
+    },
+    {
+      name: 'scientific-0-000198-ohms',
+      question: 'A circuit has a voltage of 0.0198 V and a current of 100 A. What is the resistance?',
+      answer: '1.98 x 10^-4 ohms',
+      match: /0\.000198 Ω/i
+    }
+  ];
+
+  for (const testCase of electricityCases) {
+    const response = await answerOhmsLawCalculationStep(testCase);
+    assert.equal(response.statusCode, 200, `${testCase.name} status`);
+    assert.match(response.body.response, testCase.match, `${testCase.name} accepted`);
+    assert.equal(response.body.tutor.completed, true, `${testCase.name} completed`);
+  }
+}
+
+async function testSeriesResistanceFinalTotalAtSubstitutionStep() {
+  const cases = [
+    {
+      name: 'series-final-35',
+      question: 'Find total resistance in a series circuit with 5 ohms, 10 ohms, and 20 ohms.',
+      answer: '35',
+      match: /Correct\. Rt = 35 ohms\./i,
+      completed: true
+    },
+    {
+      name: 'series-final-35-ohms',
+      question: 'Find total resistance in a series circuit with 5 ohms, 10 ohms, and 20 ohms.',
+      answer: '35 ohms',
+      match: /Correct\. Rt = 35 ohms\./i,
+      completed: true
+    },
+    {
+      name: 'series-final-two-15',
+      question: 'Find total resistance in a series circuit with two 15 ohm resistors.',
+      answer: '30',
+      match: /Correct\. Rt = 30 ohms\./i,
+      completed: true
+    },
+    {
+      name: 'series-final-three-20',
+      question: 'Find total resistance in a series circuit with three identical 20 ohm resistors.',
+      answer: '60',
+      match: /Correct\. Rt = 60 ohms\./i,
+      completed: true
+    },
+    {
+      name: 'series-current-final-total-skip',
+      question: 'A series circuit has 5 ohm, 10 ohm, and 20 ohm resistors across a 70 V battery. Find total resistance and current.',
+      answer: '35',
+      match: /Correct\. Rt = 35 ohms\.[\s\S]*What Ohm’s Law formula finds current\?/i,
+      completed: false
+    }
+  ];
+
+  for (const testCase of cases) {
+    const { request } = createRouteHarness();
+    const create = await request('POST', '/api/profile/create-student-session');
+    assert.equal(create.statusCode, 201);
+    const classSessionId = create.body.sessionId;
+    const studentHubId = testCase.name;
+
+    await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: testCase.question });
+    await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: 'series' });
+    await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: 'add' });
+    const response = await request('POST', '/api/student/message', {
+      sessionId: classSessionId,
+      studentHubId,
+      message: testCase.answer
+    });
+
+    assert.equal(response.statusCode, 200, `${testCase.name} status`);
+    assert.match(response.body.response, testCase.match, `${testCase.name} response`);
+    assert.equal(response.body.tutor.completed, testCase.completed, `${testCase.name} completed`);
+  }
+}
+
+async function testCircuitDiagramYesNoFollowUp() {
+  const { request } = createRouteHarness();
+  const create = await request('POST', '/api/profile/create-student-session');
+  assert.equal(create.statusCode, 201);
+  const classSessionId = create.body.sessionId;
+
+  const series = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'diagram-series',
+    message: 'Draw a series circuit with a battery, switch, and light bulb.'
+  });
+  assert.equal(series.statusCode, 200);
+  assert.equal(series.body.routeType, 'circuit_diagram');
+  assert.match(series.body.response, /Check: Does current have only one complete path\?/i);
+
+  const seriesYes = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'diagram-series',
+    message: 'yes'
+  });
+  assert.equal(seriesYes.statusCode, 200);
+  assert.equal(seriesYes.body.routeType, 'circuit_diagram_followup');
+  assert.match(seriesYes.body.response, /Good check\. Yes/i);
+  assert.doesNotMatch(seriesYes.body.response, /trusted local fact/i);
+
+  const parallel = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'diagram-parallel',
+    message: 'Draw a parallel circuit with a battery, switch, and two light bulbs.'
+  });
+  assert.equal(parallel.statusCode, 200);
+  assert.equal(parallel.body.routeType, 'circuit_diagram');
+  assert.match(parallel.body.response, /Check: Does each bulb have its own branch\/path\?/i);
+
+  const parallelNo = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'diagram-parallel',
+    message: 'no'
+  });
+  assert.equal(parallelNo.statusCode, 200);
+  assert.equal(parallelNo.body.routeType, 'circuit_diagram_followup');
+  assert.match(parallelNo.body.response, /parallel circuit, each bulb should have its own branch/i);
+  assert.doesNotMatch(parallelNo.body.response, /trusted local fact/i);
+}
+
+async function testAmbiguousVocabNumberedContinuation() {
+  const { request } = createRouteHarness();
+  const create = await request('POST', '/api/profile/create-student-session');
+  assert.equal(create.statusCode, 201);
+  const classSessionId = create.body.sessionId;
+
+  const friction = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'friction-choice',
+    message: 'What is friction?'
+  });
+  assert.equal(friction.statusCode, 200);
+  assert.equal(friction.body.routeType, 'ambiguous_vocab');
+  assert.match(friction.body.response, /1\. Friction as a force/i);
+  assert.match(friction.body.response, /2\. Friction as a way to transfer electric charge/i);
+
+  const frictionChoice = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'friction-choice',
+    message: '2'
+  });
+  assert.equal(frictionChoice.statusCode, 200);
+  assert.equal(frictionChoice.body.routeType, 'definition');
+  assert.match(frictionChoice.body.response, /Friction transfers electric charge/i);
+  assert.doesNotMatch(frictionChoice.body.response, /trusted local fact/i);
+
+  const cell = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'cell-choice',
+    message: 'What is a cell?'
+  });
+  assert.equal(cell.statusCode, 200);
+  assert.equal(cell.body.routeType, 'ambiguous_vocab');
+  assert.match(cell.body.response, /1\. Battery cell/i);
+  assert.match(cell.body.response, /2\. Living cell/i);
+  assert.match(cell.body.response, /3\. Spreadsheet cell/i);
+
+  const cellChoice = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'cell-choice',
+    message: '1'
+  });
+  assert.equal(cellChoice.statusCode, 200);
+  assert.equal(cellChoice.body.routeType, 'definition');
+  assert.match(cellChoice.body.response, /battery cell is a power source/i);
+}
+
+async function answerOhmsLawCalculationStep({ question, answer, name }) {
+  const { request } = createRouteHarness();
+  const create = await request('POST', '/api/profile/create-student-session');
+  assert.equal(create.statusCode, 201);
+  const classSessionId = create.body.sessionId;
+  const studentHubId = name;
+
+  await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: question });
+  if (/What is the current/i.test(question)) {
+    await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: 'current' });
+    await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: 'I = V / R' });
+    await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: '1 V' });
+    await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: '1000 ohms' });
+  } else {
+    await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: 'resistance' });
+    await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: 'R = V / I' });
+    const voltage = question.match(/voltage of ([\d.]+) V/i)?.[1] || '1';
+    const current = question.match(/current of ([\d.]+) A/i)?.[1] || '5';
+    await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: `${voltage} V` });
+    await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: `${current} A` });
+  }
+
+  return request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: answer });
 }
 
 async function answerSpeedTutorTimeStep(answer) {
