@@ -576,6 +576,20 @@ async function testExpandedFormulaTutorFlows() {
     ]
   });
 
+  await runGuidedFormulaFlow({
+    name: 'parallel-total-resistance-exact-unequal-5-10-20',
+    question: 'Find total resistance in a parallel circuit with 5 ohms, 10 ohms, and 20 ohms.',
+    finalAnswer: '2.86 ohms',
+    formulaId: 'parallel_total_resistance',
+    startMatch: /what kind of circuit/i,
+    steps: [
+      { message: 'parallel', match: /formula.*total resistance.*parallel/i },
+      { message: '1/Rt = 1/R1 + 1/R2 + 1/R3', match: /substitute/i },
+      { message: '1/5 + 1/10 + 1/20', match: /total resistance/i },
+      { message: '2.86 ohms', match: /2.86 ohms/i }
+    ]
+  });
+
   await testExactParallelTutorDisabledDirectAnswer();
   await testExpandedFormulaTutorEnergyBypass();
 }
@@ -595,6 +609,19 @@ async function testExactParallelTutorDisabledDirectAnswer() {
   assert.match(direct.body.response, /Rt = 6\.67 ohms/i);
   assert.equal(
     disabled.studentSessions[disabledCreate.body.sessionId].anonymousHubs['parallel-total-resistance-direct'].currentTutorProblem,
+    null
+  );
+
+  const unequalDirect = await disabled.request('POST', '/api/student/message', {
+    sessionId: disabledCreate.body.sessionId,
+    studentHubId: 'parallel-total-resistance-unequal-direct',
+    message: 'Find total resistance in a parallel circuit with 5 ohms, 10 ohms, and 20 ohms.'
+  });
+  assert.equal(unequalDirect.statusCode, 200);
+  assert.notEqual(unequalDirect.body.routeType, 'formula_tutor');
+  assert.match(unequalDirect.body.response, /Rt = 2\.86 ohms/i);
+  assert.equal(
+    disabled.studentSessions[disabledCreate.body.sessionId].anonymousHubs['parallel-total-resistance-unequal-direct'].currentTutorProblem,
     null
   );
 }

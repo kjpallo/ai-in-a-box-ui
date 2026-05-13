@@ -1628,6 +1628,19 @@ const tests = [
     }
   },
   {
+    name: 'electricity/magnetism smoke exact unequal parallel total resistance tutor work',
+    question: 'Find total resistance in a parallel circuit with 5 ohms, 10 ohms, and 20 ohms.',
+    type: 'science_formula',
+    includes: ['1/Rt', '1/5 + 1/10 + 1/20', 'Rt = 2.86 ohms'],
+    aiAllowed: false,
+    formulaWork: {
+      formulaId: 'parallel_total_resistance',
+      finalAnswerValue: 2.8571428571428568,
+      finalAnswerDisplay: '2.86 ohms',
+      minStepCount: 4
+    }
+  },
+  {
     name: 'electricity/magnetism smoke parallel total resistance',
     question: 'Find total resistance in a parallel circuit with a 100 ohm resistor, a 50 ohm resistor, and a 25 ohm resistor.',
     type: 'science_formula',
