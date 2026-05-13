@@ -1,0 +1,101 @@
+{
+  "pack_id": "charlemagne_electricity_magnetism_v1",
+  "version": "1.0.0",
+  "created_for": "Charlemagne / AI in a Box local classroom tutor",
+  "notes": [
+    "CSV-first knowledge pack; JS file mirrors the CSV data for projects that prefer direct import.",
+    "Definitions and questions are paraphrased/originalized from teacher-provided worksheet images and uploaded Electricity and Magnetism packet.",
+    "ai_allowed should remain false for trusted local answers.",
+    "Use formula rows for deterministic parsing before AI fallback."
+  ],
+  "files": {
+    "electricity_magnetism_vocab.csv": [
+      "id",
+      "term",
+      "aliases",
+      "category",
+      "grade_band",
+      "answer_short",
+      "answer_extra",
+      "related_terms",
+      "unit",
+      "symbol",
+      "source_ref",
+      "tags",
+      "router_priority",
+      "ai_allowed"
+    ],
+    "electricity_magnetism_concepts.csv": [
+      "id",
+      "intent",
+      "question_patterns",
+      "answer_short",
+      "answer_steps",
+      "misconceptions",
+      "category",
+      "source_ref",
+      "tags",
+      "ai_allowed"
+    ],
+    "electricity_magnetism_formulas.csv": [
+      "id",
+      "name",
+      "solve_for",
+      "formula",
+      "variables",
+      "units",
+      "required_values",
+      "example_question",
+      "example_answer",
+      "parser_hints",
+      "source_ref",
+      "tags",
+      "ai_allowed"
+    ],
+    "electricity_magnetism_problem_bank.csv": [
+      "id",
+      "question",
+      "answer",
+      "work",
+      "skill",
+      "variables",
+      "circuit_type",
+      "difficulty",
+      "source_style",
+      "source_ref",
+      "tags"
+    ],
+    "electricity_magnetism_circuit_diagrams.csv": [
+      "id",
+      "circuit_type",
+      "components",
+      "prompt_patterns",
+      "diagram_goal",
+      "ascii_template",
+      "svg_hint",
+      "tutor_questions",
+      "checklist",
+      "source_ref",
+      "tags"
+    ],
+    "electricity_magnetism_smoke_tests.csv": [
+      "id",
+      "question",
+      "expected_contains",
+      "expected_numeric",
+      "expected_unit",
+      "route_expected",
+      "skill",
+      "notes"
+    ],
+    "electricityMagnetismKnowledgePack.js": "CommonJS module exporting the same data arrays."
+  },
+  "recommended_router_order": [
+    "exact formula/math parser for numeric Ohm\u2019s Law and circuit calculations",
+    "exact/alias vocab lookup",
+    "concept intent lookup",
+    "circuit diagram intent lookup",
+    "guided tutor mode",
+    "AI fallback only if teacher enables it"
+  ]
+}

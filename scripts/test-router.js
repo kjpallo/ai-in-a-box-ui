@@ -56,9 +56,49 @@ const tests = [
   {
     name: 'phase 7a vocab friction',
     question: 'what is friction',
+    type: 'ambiguous_vocab',
+    includes: ['Friction can mean', '1.', '2.', 'force', 'electric charge'],
+    excludes: ['I need', 'Use the friction formula'],
+    aiAllowed: false
+  },
+  {
+    name: 'ambiguous vocab friction force context answers force',
+    question: 'What is friction as a force?',
     type: 'definition',
     includes: ['Friction is a force that resists motion'],
-    excludes: ['I need', 'Use the friction formula'],
+    excludes: ['Friction can mean'],
+    aiAllowed: false
+  },
+  {
+    name: 'ambiguous vocab friction force phrase answers force',
+    question: 'What is friction force?',
+    type: 'definition',
+    includes: ['Friction is a force that resists motion'],
+    excludes: ['Friction can mean'],
+    aiAllowed: false
+  },
+  {
+    name: 'ambiguous vocab friction electricity context answers charge transfer',
+    question: 'What is friction in electricity?',
+    type: 'definition',
+    includes: ['Friction transfers electric charge', 'Electrons move'],
+    excludes: ['Friction can mean'],
+    aiAllowed: false
+  },
+  {
+    name: 'ambiguous vocab charging by friction answers charge transfer',
+    question: 'What is charging by friction?',
+    type: 'definition',
+    includes: ['Friction transfers electric charge', 'Electrons move'],
+    excludes: ['Friction can mean'],
+    aiAllowed: false
+  },
+  {
+    name: 'ambiguous vocab friction transfer charge answers charge transfer',
+    question: 'How does friction transfer charge?',
+    type: 'definition',
+    includes: ['Friction transfers electric charge', 'Electrons move'],
+    excludes: ['Friction can mean'],
     aiAllowed: false
   },
   {
@@ -458,6 +498,27 @@ const tests = [
     type: 'definition',
     includes: ['Volume is the amount of space an object or substance takes up.', 'mL, L, cm³, or m³', 'density = mass / volume'],
     excludes: ['Density tells how much mass is packed'],
+    aiAllowed: false
+  },
+  {
+    name: 'V symbol density context answers volume',
+    question: 'What is V in density?',
+    type: 'symbol_only',
+    includes: ['In density, V means volume.'],
+    aiAllowed: false
+  },
+  {
+    name: 'V symbol electricity context answers voltage',
+    question: 'What is V in electricity?',
+    type: 'symbol_only',
+    includes: ['In electricity, V means voltage.'],
+    aiAllowed: false
+  },
+  {
+    name: 'voltage definition stays electricity-specific',
+    question: 'What is voltage?',
+    type: 'definition',
+    includes: ['Voltage difference is the push', 'electric charges', 'volts'],
     aiAllowed: false
   },
   {
@@ -1386,6 +1447,169 @@ const tests = [
     type: 'science_formula',
     includes: ['voltage = 10 V + 8 V', 'voltage = 18 V', 'I = 18 V / 6 Ω', 'I = 3 A'],
     excludes: ['I = 10 V / 6 Ω', 'I = 1.6667 A'],
+    aiAllowed: false
+  },
+  // Electricity/magnetism knowledge pack smoke tests.
+  // Diagnostic-only: these expected routes describe the desired local behavior from the pack.
+  {
+    name: 'electricity/magnetism smoke ohms law current 240 volts 0.2 ohms',
+    question: 'What current is produced by 240 volts through 0.2 ohms?',
+    type: 'science_formula',
+    includes: ['I = 240 V / 0.2 Ω', 'I = 1200 A'],
+    aiAllowed: false
+  },
+  {
+    name: 'electricity/magnetism smoke ohms law resistance 2000 volts 200 amperes',
+    question: 'What resistance would produce a current of 200 amperes with a potential difference of 2,000 volts?',
+    type: 'science_formula',
+    includes: ['R = 2000 V / 200 A', 'R = 10 Ω'],
+    aiAllowed: false
+  },
+  {
+    name: 'electricity/magnetism smoke ohms law voltage 50 amps 20 ohms',
+    question: 'What voltage produces a current of 50 amps with a resistance of 20 ohms?',
+    type: 'science_formula',
+    includes: ['V = 50 A × 20 Ω', 'V = 1000 V'],
+    aiAllowed: false
+  },
+  {
+    name: 'electricity/magnetism smoke ohms law voltage scientific notation',
+    question: 'What voltage is necessary to produce a current of 200 amperes through a resistance of 1 x 10^-3 ohms?',
+    type: 'science_formula',
+    includes: ['V = 200 A × 0.001 Ω', 'V = 0.2 V'],
+    aiAllowed: false
+  },
+  {
+    name: 'electricity/magnetism smoke ohms law current scientific notation',
+    question: 'What current is produced by a 9-volt battery flowing through a resistance of 2 x 10^-4 ohms?',
+    type: 'science_formula',
+    includes: ['I = 9 V / 0.0002 Ω', 'I = 45000 A'],
+    aiAllowed: false
+  },
+  {
+    name: 'electricity/magnetism smoke ohms law resistance 6 volt battery 120 amps',
+    question: 'What resistance would produce 120 amps from a 6-volt battery?',
+    type: 'science_formula',
+    includes: ['R = 6 V / 120 A', 'R = 0.05 Ω'],
+    aiAllowed: false
+  },
+  {
+    name: 'electricity/magnetism smoke ohms law resistance 12 volt battery 25 amperes',
+    question: 'A 12-volt battery produces a current of 25 amperes. What is the resistance?',
+    type: 'science_formula',
+    includes: ['R = 12 V / 25 A', 'R = 0.48 Ω'],
+    aiAllowed: false
+  },
+  {
+    name: 'electricity/magnetism smoke ohms law voltage silver scientific notation',
+    question: 'Silver has a resistance of 1.98 x 10^-4 ohms. What voltage would produce a current of 100 amps?',
+    type: 'science_formula',
+    includes: ['V = 100 A × 0.000198 Ω', 'V = 0.0198 V'],
+    aiAllowed: false
+  },
+  {
+    name: 'electricity/magnetism smoke vocab resistance',
+    question: 'What is resistance?',
+    type: 'definition',
+    includes: ['Resistance is the opposition', 'current', 'ohms'],
+    aiAllowed: false
+  },
+  {
+    name: 'electricity/magnetism smoke vocab electric current',
+    question: 'What is electric current?',
+    type: 'definition',
+    includes: ['Electric current is the flow', 'charge', 'amps'],
+    aiAllowed: false
+  },
+  {
+    name: 'electricity/magnetism smoke vocab conductor',
+    question: 'What is a conductor?',
+    type: 'definition',
+    includes: ['A conductor is a material', 'allows electric charge', 'move'],
+    aiAllowed: false
+  },
+  {
+    name: 'electricity/magnetism smoke vocab insulator',
+    question: 'What is an insulator?',
+    type: 'definition',
+    includes: ['An insulator is a material', 'does not allow electric charge', 'easily'],
+    aiAllowed: false
+  },
+  {
+    name: 'electricity/magnetism smoke vocab static electricity',
+    question: 'What is static electricity?',
+    type: 'definition',
+    includes: ['Static electricity is a buildup', 'electric charge'],
+    aiAllowed: false
+  },
+  {
+    name: 'electricity/magnetism smoke concept series circuit',
+    question: 'What is a series circuit?',
+    type: 'definition',
+    includes: ['A series circuit', 'one path', 'current'],
+    aiAllowed: false
+  },
+  {
+    name: 'electricity/magnetism smoke concept parallel circuit',
+    question: 'What is a parallel circuit?',
+    type: 'definition',
+    includes: ['A parallel circuit', 'more than one path', 'current'],
+    aiAllowed: false
+  },
+  {
+    name: 'electricity/magnetism smoke concept ammeter placement',
+    question: 'Where should an ammeter go?',
+    type: 'science_concept',
+    includes: ['ammeter', 'series'],
+    aiAllowed: false
+  },
+  {
+    name: 'electricity/magnetism smoke concept voltmeter placement',
+    question: 'Where should a voltmeter go?',
+    type: 'science_concept',
+    includes: ['voltmeter', 'across', 'parallel'],
+    aiAllowed: false
+  },
+  {
+    name: 'electricity/magnetism smoke concept series bulb burns out',
+    question: 'What happens if one bulb burns out in a series circuit?',
+    type: 'science_concept',
+    includes: ['series circuit', 'one path', 'stop'],
+    aiAllowed: false
+  },
+  {
+    name: 'electricity/magnetism smoke circuit diagram series intent',
+    question: 'Draw a series circuit with a battery, switch, and light bulb.',
+    type: 'circuit_diagram',
+    includes: ['Series circuit', 'one path', 'Battery', 'Switch', 'Light Bulb', 'Check: Does current have only one complete path?'],
+    aiAllowed: false
+  },
+  {
+    name: 'electricity/magnetism smoke circuit diagram parallel intent',
+    question: 'Draw a parallel circuit with a battery, switch, and two light bulbs.',
+    type: 'circuit_diagram',
+    includes: ['Parallel circuit', 'more than one path', 'Battery', 'Switch', 'Light Bulb 1', 'Light Bulb 2', 'Check: Does each bulb have its own branch/path?'],
+    aiAllowed: false
+  },
+  {
+    name: 'electricity/magnetism smoke magnetism electromagnet',
+    question: 'What is an electromagnet?',
+    type: 'definition',
+    includes: ['An electromagnet', 'current', 'magnetic field'],
+    aiAllowed: false
+  },
+  {
+    name: 'electricity/magnetism smoke magnetism increase electromagnet strength',
+    question: 'How can you increase the strength of an electromagnet?',
+    type: 'science_concept',
+    includes: ['more loops', 'more current'],
+    aiAllowed: false
+  },
+  {
+    name: 'electricity/magnetism smoke magnetism magnetic field',
+    question: 'What is a magnetic field?',
+    type: 'definition',
+    includes: ['A magnetic field', 'magnetic force'],
     aiAllowed: false
   },
   {
