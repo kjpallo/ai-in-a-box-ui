@@ -28,5 +28,278 @@
       "toolsUsed": [],
       "matchedKnowledge": []
     }
+  },
+  {
+    "id": "problem_20260513020159013_3iqnyw",
+    "createdAt": "2026-05-13T02:01:59.012Z",
+    "updatedAt": "2026-05-13T02:01:59.012Z",
+    "lastSeenAt": "2026-05-13T02:01:59.012Z",
+    "count": 1,
+    "status": "open",
+    "category": "no_trusted_answer",
+    "studentQuestion": "what is moment",
+    "answerGiven": "I do not have a trusted local fact for that yet. Please reword the question or ask your teacher.",
+    "routerType": "no_match",
+    "formulaChosen": "",
+    "confidence": "none",
+    "expectedBehavior": "",
+    "teacherNotes": "",
+    "source": "auto",
+    "reason": "no_trusted_answer",
+    "debug": {
+      "route": {
+        "type": "no_match",
+        "confidence": "none",
+        "toolsUsed": [],
+        "notes": "No trusted local match found.",
+        "aiAllowed": false
+      },
+      "notes": "No trusted local match found.",
+      "toolsUsed": [],
+      "matchedKnowledge": []
+    }
+  },
+  {
+    "id": "problem_20260513184557786_d82y1k",
+    "createdAt": "2026-05-13T18:45:57.785Z",
+    "updatedAt": "2026-05-13T18:45:57.785Z",
+    "lastSeenAt": "2026-05-13T18:45:57.785Z",
+    "count": 1,
+    "status": "open",
+    "category": "no_trusted_answer",
+    "studentQuestion": "What is power if I only know time?",
+    "answerGiven": "I do not have enough values to find power from only time. For work/time power, I need work or energy and time.",
+    "routerType": "no_match",
+    "formulaChosen": "",
+    "confidence": "none",
+    "expectedBehavior": "",
+    "teacherNotes": "",
+    "source": "auto",
+    "reason": "no_trusted_answer",
+    "debug": {
+      "route": {
+        "type": "no_match",
+        "confidence": "none",
+        "toolsUsed": [
+          "router_clarification_guard"
+        ],
+        "notes": "Rejected power calculation with only time given.",
+        "aiAllowed": false
+      },
+      "notes": "Rejected power calculation with only time given.",
+      "toolsUsed": [
+        "router_clarification_guard"
+      ],
+      "matchedKnowledge": [
+        {
+          "id": "power",
+          "title": "Power",
+          "category": "formula",
+          "score": 51
+        },
+        {
+          "id": "speed",
+          "title": "Speed",
+          "category": "formula",
+          "score": 4
+        },
+        {
+          "id": "wave-period",
+          "title": "Period",
+          "category": "waves",
+          "score": 4
+        }
+      ]
+    }
+  },
+  {
+    "id": "problem_20260513184608002_vn0p2i",
+    "createdAt": "2026-05-13T18:46:08.002Z",
+    "updatedAt": "2026-05-13T18:46:08.002Z",
+    "lastSeenAt": "2026-05-13T18:46:08.002Z",
+    "count": 1,
+    "status": "open",
+    "category": "no_trusted_answer",
+    "studentQuestion": "A car moves fast. What is acceleration?",
+    "answerGiven": "I do not have enough values to find acceleration from \"moves fast.\" I need the change in velocity and the time, or force and mass.",
+    "routerType": "no_match",
+    "formulaChosen": "",
+    "confidence": "none",
+    "expectedBehavior": "",
+    "teacherNotes": "",
+    "source": "auto",
+    "reason": "no_trusted_answer",
+    "debug": {
+      "route": {
+        "type": "no_match",
+        "confidence": "none",
+        "toolsUsed": [
+          "router_clarification_guard"
+        ],
+        "notes": "Rejected acceleration calculation with only vague speed wording.",
+        "aiAllowed": false
+      },
+      "notes": "Rejected acceleration calculation with only vague speed wording.",
+      "toolsUsed": [
+        "router_clarification_guard"
+      ],
+      "matchedKnowledge": [
+        {
+          "id": "acceleration",
+          "title": "Acceleration",
+          "category": "formula",
+          "score": 47
+        },
+        {
+          "id": "gravity-earth-acceleration",
+          "title": "Gravity near Earth",
+          "category": "constant",
+          "score": 4
+        },
+        {
+          "id": "newtons-second-law",
+          "title": "Newton's Second Law",
+          "category": "formula",
+          "score": 4
+        }
+      ]
+    }
+  },
+  {
+    "id": "problem_20260513184711751_mshljn",
+    "createdAt": "2026-05-13T18:47:11.750Z",
+    "updatedAt": "2026-05-13T18:49:02.459Z",
+    "lastSeenAt": "2026-05-13T18:49:02.459Z",
+    "count": 4,
+    "status": "open",
+    "category": "no_trusted_answer",
+    "studentQuestion": "yes",
+    "answerGiven": "I do not have a trusted local fact for that yet. Please reword the question or ask your teacher.",
+    "routerType": "no_match",
+    "formulaChosen": "",
+    "confidence": "none",
+    "expectedBehavior": "",
+    "teacherNotes": "",
+    "source": "auto",
+    "reason": "no_trusted_answer",
+    "debug": {
+      "route": {
+        "type": "no_match",
+        "confidence": "none",
+        "toolsUsed": [],
+        "notes": "No trusted local match found.",
+        "aiAllowed": false
+      },
+      "notes": "No trusted local match found.",
+      "toolsUsed": [],
+      "matchedKnowledge": []
+    }
+  },
+  {
+    "id": "problem_20260513184750178_vbpm5x",
+    "createdAt": "2026-05-13T18:47:50.178Z",
+    "updatedAt": "2026-05-13T18:47:50.178Z",
+    "lastSeenAt": "2026-05-13T18:47:50.178Z",
+    "count": 1,
+    "status": "open",
+    "category": "no_trusted_answer",
+    "studentQuestion": "no",
+    "answerGiven": "I do not have a trusted local fact for that yet. Please reword the question or ask your teacher.",
+    "routerType": "no_match",
+    "formulaChosen": "",
+    "confidence": "none",
+    "expectedBehavior": "",
+    "teacherNotes": "",
+    "source": "auto",
+    "reason": "no_trusted_answer",
+    "debug": {
+      "route": {
+        "type": "no_match",
+        "confidence": "none",
+        "toolsUsed": [],
+        "notes": "No trusted local match found.",
+        "aiAllowed": false
+      },
+      "notes": "No trusted local match found.",
+      "toolsUsed": [],
+      "matchedKnowledge": []
+    }
+  },
+  {
+    "id": "problem_20260513185125315_1f330n",
+    "createdAt": "2026-05-13T18:51:25.314Z",
+    "updatedAt": "2026-05-13T18:51:25.314Z",
+    "lastSeenAt": "2026-05-13T18:51:25.314Z",
+    "count": 1,
+    "status": "open",
+    "category": "no_trusted_answer",
+    "studentQuestion": "2",
+    "answerGiven": "I do not have a trusted local fact for that yet. Please reword the question or ask your teacher.",
+    "routerType": "no_match",
+    "formulaChosen": "",
+    "confidence": "none",
+    "expectedBehavior": "",
+    "teacherNotes": "",
+    "source": "auto",
+    "reason": "no_trusted_answer",
+    "debug": {
+      "route": {
+        "type": "no_match",
+        "confidence": "none",
+        "toolsUsed": [],
+        "notes": "No trusted local match found.",
+        "aiAllowed": false
+      },
+      "notes": "No trusted local match found.",
+      "toolsUsed": [],
+      "matchedKnowledge": []
+    }
+  },
+  {
+    "id": "problem_20260513185302000_4dssrc",
+    "createdAt": "2026-05-13T18:53:02.000Z",
+    "updatedAt": "2026-05-13T18:53:02.000Z",
+    "lastSeenAt": "2026-05-13T18:53:02.000Z",
+    "count": 1,
+    "status": "open",
+    "category": "needs_review",
+    "studentQuestion": "we should have numbers to s=choose from",
+    "answerGiven": "I found something related. In 9th-grade science, Common element symbols and atomic numbers: Hydrogen H=1, Helium He=2, Carbon C=6, Nitrogen N=7, Oxygen O=8, Sodium Na=11, Chlorine Cl=17, Iron Fe=26, Copper Cu=29, Silver Ag=47, Gold Au=79, Lead Pb=82.",
+    "routerType": "class_fact",
+    "formulaChosen": "",
+    "confidence": "weak",
+    "expectedBehavior": "",
+    "teacherNotes": "",
+    "source": "auto",
+    "reason": "low_confidence",
+    "debug": {
+      "route": {
+        "type": "class_fact",
+        "confidence": "weak",
+        "toolsUsed": [
+          "teacher_facts"
+        ],
+        "notes": "Found related local match: Common Element Quick Reference. Answering directly from teacher facts.",
+        "aiAllowed": false
+      },
+      "notes": "Found related local match: Common Element Quick Reference. Answering directly from teacher facts.",
+      "toolsUsed": [
+        "teacher_facts"
+      ],
+      "matchedKnowledge": [
+        {
+          "id": "common-elements",
+          "title": "Common Element Quick Reference",
+          "category": "periodic table",
+          "score": 4
+        },
+        {
+          "id": "common-ion-charges",
+          "title": "Common Ion Charges by Group",
+          "category": "bonding",
+          "score": 4
+        }
+      ]
+    }
   }
 ]

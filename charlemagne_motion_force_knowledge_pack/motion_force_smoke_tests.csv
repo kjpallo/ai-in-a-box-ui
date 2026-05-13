@@ -1,0 +1,16 @@
+test_query,expected_route,expected_tool,expected_core_answer,notes
+what is speed if I go 36 meters in 6 seconds,formula,speed,6 m/s,Basic speed formula.
+find volocity 18 km north in .5 hours,formula,velocity,36 km/hr north,Misspelled velocity; direction should be preserved.
+distance vs displacement if I walk 40m east then 15m west,concept_or_formula,distance_displacement,distance 55 m; displacement 25 m east,Needs distance/displacement distinction.
+a car goes from 12 m/s to 0 in 4 seconds what is acceleration,formula,acceleration,-3 m/s²,Comes to a stop -> final velocity 0.
+from rest to 9 m/s in 3 seconds acceleration,formula,acceleration,3 m/s²,'From rest' means initial velocity = 0.
+what does a flat line on a distance time graph mean,graph_concept,distance_time_graphs,object is stopped/not moving; speed 0,Graph vocabulary.
+what does slope mean on a velocity vs time graph,graph_concept,velocity_time_graphs,acceleration,Graph concept.
+12 N right and 5 N left net force,formula,net_force,7 N right,Opposite direction force diagram text.
+force for 12 kg accelerating at 4 m/s2,formula,newtons_second_law,48 N,F=ma.
+40 N force on 10 kg cart acceleration,formula,newtons_second_law,4 m/s²,a=F/m.
+how much does 25 kg weigh on earth,formula,weight,245 N,Use g=9.8 m/s².
+momentum of 60 kg skateboarder going 5 m/s,formula,momentum,300 kg*m/s,p=mv.
+swimmer pushes water back and moves forward what law,law_identification,newtons_third_law,Newton's 3rd Law,Scenario classification.
+why does a flat paper fall slower than crumpled paper,concept,air_resistance,flat paper has more air resistance,Air resistance concept.
+rank feather baseball bicycle car by inertia,concept,inertia,"feather, baseball, bicycle, car",Inertia depends on mass.

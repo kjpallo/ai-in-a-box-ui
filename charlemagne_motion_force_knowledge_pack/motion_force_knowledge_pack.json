@@ -1,0 +1,1271 @@
+{
+  "source": "Packet KEY Motion and Forces CP.pdf",
+  "unit": "Motion and Force",
+  "concepts": [
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 1: Describing Motion",
+      "learning_target": "Describe and measure motion using distance, displacement, speed, velocity, and reference points.",
+      "student_friendly_rule": "Motion means position changes compared with a reference point.",
+      "needs_router_support": "Classify distance vs displacement; speed/velocity math; graph interpretation; direction words.",
+      "source_pages": "1-10,18-19"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 1: Distance vs Displacement",
+      "learning_target": "Find total path distance and straight-line displacement.",
+      "student_friendly_rule": "Distance adds the path; displacement compares start to finish and needs direction.",
+      "needs_router_support": "Catch round-trip problems as displacement 0; use Pythagorean theorem for perpendicular paths; return compass direction when possible.",
+      "source_pages": "2,6,18"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 1: Distance-Time Graphs",
+      "learning_target": "Analyze distance vs time graphs.",
+      "student_friendly_rule": "On a distance-time graph, slope means speed.",
+      "needs_router_support": "Horizontal line = stopped; straight upward line = constant speed; curve getting steeper = speeding up; curve flattening = slowing down.",
+      "source_pages": "5,8-10,18-19"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 2: Acceleration",
+      "learning_target": "Calculate and explain acceleration as change in velocity over time.",
+      "student_friendly_rule": "Acceleration happens when speed or direction changes.",
+      "needs_router_support": "Handle 'comes to a stop', 'from rest', 'final speed', negative acceleration, and unit consistency.",
+      "source_pages": "11-14,18-19"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 2: Velocity-Time Graphs",
+      "learning_target": "Analyze velocity vs time graphs.",
+      "student_friendly_rule": "On a velocity-time graph, slope means acceleration.",
+      "needs_router_support": "Horizontal nonzero line = constant velocity/zero acceleration; upward line = positive acceleration; downward line = negative acceleration; line at zero = not moving.",
+      "source_pages": "12,14,18-19"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Balanced and Unbalanced Forces",
+      "learning_target": "Determine net force and explain how balanced/unbalanced forces affect motion.",
+      "student_friendly_rule": "Balanced forces make 0 N net force; unbalanced forces change motion.",
+      "needs_router_support": "Handle force diagrams and words like right/left/up/down; add same-direction forces; subtract opposite-direction forces.",
+      "source_pages": "20,24,28,37"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's 1st Law",
+      "learning_target": "Identify inertia examples and explain objects resisting changes in motion.",
+      "student_friendly_rule": "Objects keep doing what they are doing unless an unbalanced force acts.",
+      "needs_router_support": "Scenario classification for seatbelts, objects at rest, objects continuing forward, friction stopping motion.",
+      "source_pages": "20,24-25,28,31,36"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Friction and Air Resistance",
+      "learning_target": "Explain friction types and air resistance effects.",
+      "student_friendly_rule": "Friction opposes motion; air resistance depends a lot on shape and surface area.",
+      "needs_router_support": "Classify static/sliding/rolling friction; compare falling flat vs crumpled objects; explain terminal velocity.",
+      "source_pages": "21,25,31"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Gravity and Weight",
+      "learning_target": "Use gravity to explain falling objects and calculate weight.",
+      "student_friendly_rule": "Weight is the force of gravity on mass; near Earth use 9.8 m/s\u00b2.",
+      "needs_router_support": "Do not overexplain mass vs weight unless asked; calculate W=mg and m=W/g; answer gravity-near-Earth as 9.8 m/s\u00b2 when asked.",
+      "source_pages": "22-23,27,31,37"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's 2nd Law",
+      "learning_target": "Use F=ma to solve for force, mass, or acceleration.",
+      "student_friendly_rule": "More force gives more acceleration; more mass gives less acceleration if force stays the same.",
+      "needs_router_support": "Formula router needs forward and rearranged versions of F=ma; net force can come from diagram first, then acceleration = Fnet/m.",
+      "source_pages": "22,27-28,31,34-37"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's 3rd Law",
+      "learning_target": "Identify equal and opposite action-reaction force pairs.",
+      "student_friendly_rule": "Forces come in pairs on different objects.",
+      "needs_router_support": "Scenario classification for trampoline, swimming, balloon rockets, hoses, collisions; warn that paired forces act on different objects.",
+      "source_pages": "23,26,28,31,34-36"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Momentum",
+      "learning_target": "Calculate momentum and apply simple conservation of momentum.",
+      "student_friendly_rule": "Momentum equals mass times velocity, and it can transfer in collisions.",
+      "needs_router_support": "Formula router for p=mv; scenario classification for collisions and pool balls; simple transfer all momentum problems.",
+      "source_pages": "23,31-32,37"
+    }
+  ],
+  "vocabulary": [
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 1: Describing Motion",
+      "term": "motion",
+      "student_definition": "A change in an object's position compared with a reference point.",
+      "synonyms_or_aliases": "movement; change in position",
+      "common_misconceptions": "Thinking an object is moving without saying what it is moving compared to.",
+      "example_cue": "The car changed position compared with the school.",
+      "source_pages": "1-2,18"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 1: Describing Motion",
+      "term": "reference point",
+      "student_definition": "The place or object used to tell whether something has changed position.",
+      "synonyms_or_aliases": "starting point; comparison point",
+      "common_misconceptions": "Forgetting that motion depends on what you compare it to.",
+      "example_cue": "The locker room can be the reference point for a runner.",
+      "source_pages": "1-2,18"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 1: Describing Motion",
+      "term": "distance",
+      "student_definition": "The total length of the path traveled, no matter what direction the object moved.",
+      "synonyms_or_aliases": "total path; total ground covered",
+      "common_misconceptions": "Using the straight-line change instead of adding the whole path.",
+      "example_cue": "Walk 20 m north and 20 m south: distance is 40 m.",
+      "source_pages": "1-2,6,18"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 1: Describing Motion",
+      "term": "displacement",
+      "student_definition": "How far and in what direction an object ends from where it started.",
+      "synonyms_or_aliases": "change in position; straight-line change",
+      "common_misconceptions": "Treating displacement like total distance; leaving off direction.",
+      "example_cue": "Walk 20 m north and 20 m south: displacement is 0 m.",
+      "source_pages": "1-2,6,18"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 1: Describing Motion",
+      "term": "speed",
+      "student_definition": "How fast something moves; distance divided by time.",
+      "synonyms_or_aliases": "rate of motion",
+      "common_misconceptions": "Adding direction to speed; confusing speed with velocity.",
+      "example_cue": "A runner travels 100 m in 20 s, so speed is 5 m/s.",
+      "source_pages": "1,3-4,7,18"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 1: Describing Motion",
+      "term": "average speed",
+      "student_definition": "The total distance traveled divided by the total time for the whole trip.",
+      "synonyms_or_aliases": "overall speed",
+      "common_misconceptions": "Using only one short part of a trip instead of the whole trip.",
+      "example_cue": "Average speed over a trip = total distance \u00f7 total time.",
+      "source_pages": "1,3,7,10"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 1: Describing Motion",
+      "term": "instantaneous speed",
+      "student_definition": "The speed of an object at one specific moment.",
+      "synonyms_or_aliases": "speed right now",
+      "common_misconceptions": "Thinking it must match the average speed for the whole trip.",
+      "example_cue": "A speedometer shows instantaneous speed.",
+      "source_pages": "1,3"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 1: Describing Motion",
+      "term": "velocity",
+      "student_definition": "Speed in a specific direction.",
+      "synonyms_or_aliases": "speed with direction",
+      "common_misconceptions": "Leaving off direction; treating velocity as only speed.",
+      "example_cue": "20 m/s north is a velocity.",
+      "source_pages": "1,3,7,18"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 2: Acceleration",
+      "term": "acceleration",
+      "student_definition": "The rate that velocity changes over time. It can happen by speeding up, slowing down, or changing direction.",
+      "synonyms_or_aliases": "change in velocity over time",
+      "common_misconceptions": "Thinking acceleration only means speeding up.",
+      "example_cue": "A car going from 10 m/s to 30 m/s in 5 s accelerates.",
+      "source_pages": "1,11-14,18-19"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 2: Acceleration",
+      "term": "positive acceleration",
+      "student_definition": "Acceleration in the positive direction, often shown as speeding up in classroom examples.",
+      "synonyms_or_aliases": "speeding up; increasing velocity",
+      "common_misconceptions": "Thinking positive always means good or upward instead of direction/sign.",
+      "example_cue": "Velocity increases from 2 m/s to 8 m/s.",
+      "source_pages": "11-14,18-19"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 2: Acceleration",
+      "term": "negative acceleration",
+      "student_definition": "Acceleration in the negative direction; in basic examples this often means slowing down.",
+      "synonyms_or_aliases": "deceleration; slowing down",
+      "common_misconceptions": "Forgetting negative values are expected when an object slows down.",
+      "example_cue": "Velocity decreases from 20 m/s to 0 m/s.",
+      "source_pages": "11-14,18-19"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "term": "force",
+      "student_definition": "A push or pull that can change an object's motion.",
+      "synonyms_or_aliases": "push; pull",
+      "common_misconceptions": "Thinking a force is needed to keep motion going when no friction exists.",
+      "example_cue": "Pushing a box applies a force.",
+      "source_pages": "1,20-24,28"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "term": "net force",
+      "student_definition": "The overall force after all forces on an object are combined.",
+      "synonyms_or_aliases": "total force; combined force",
+      "common_misconceptions": "Adding opposite forces instead of subtracting them; ignoring direction.",
+      "example_cue": "7 N right and 3 N left gives 4 N right.",
+      "source_pages": "1,20,24,27,37"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "term": "balanced forces",
+      "student_definition": "Forces that cancel out so the net force is 0 N and motion does not change.",
+      "synonyms_or_aliases": "zero net force",
+      "common_misconceptions": "Thinking no forces are acting just because the object is not accelerating.",
+      "example_cue": "A book resting on a table has balanced forces.",
+      "source_pages": "20,24,28"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "term": "unbalanced forces",
+      "student_definition": "Forces that do not cancel out, causing a change in motion.",
+      "synonyms_or_aliases": "nonzero net force",
+      "common_misconceptions": "Forgetting that direction matters when finding net force.",
+      "example_cue": "A stronger push to the right than left makes the object accelerate right.",
+      "source_pages": "20,24,28"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "term": "inertia",
+      "student_definition": "An object's tendency to resist a change in motion.",
+      "synonyms_or_aliases": "resistance to motion change",
+      "common_misconceptions": "Thinking faster objects always have more inertia; inertia mainly depends on mass.",
+      "example_cue": "A heavy truck is harder to start or stop than a bicycle.",
+      "source_pages": "1,20,24-25,28,31,37"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "term": "friction",
+      "student_definition": "A force that opposes motion between surfaces that touch.",
+      "synonyms_or_aliases": "opposing force; surface resistance",
+      "common_misconceptions": "Thinking friction always stops motion instantly or only happens when an object is moving.",
+      "example_cue": "Grass slows down a kicked soccer ball.",
+      "source_pages": "1,21,24-26,31,36"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "term": "static friction",
+      "student_definition": "Friction that keeps an object from starting to move.",
+      "synonyms_or_aliases": "no-motion friction",
+      "common_misconceptions": "Forgetting that friction can act before an object slides.",
+      "example_cue": "A box does not move when a small push is applied.",
+      "source_pages": "21,25"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "term": "sliding friction",
+      "student_definition": "Friction between surfaces that are sliding past each other.",
+      "synonyms_or_aliases": "kinetic friction in sliding examples",
+      "common_misconceptions": "Confusing sliding friction with rolling friction.",
+      "example_cue": "A book sliding across a desk slows down.",
+      "source_pages": "21,25"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "term": "rolling friction",
+      "student_definition": "Friction on an object that rolls over a surface.",
+      "synonyms_or_aliases": "wheel friction",
+      "common_misconceptions": "Thinking rolling friction is usually stronger than sliding friction in basic examples.",
+      "example_cue": "A ball rolling across the floor slows down.",
+      "source_pages": "21,25"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "term": "air resistance",
+      "student_definition": "A friction-like force from air that opposes an object's motion through the air.",
+      "synonyms_or_aliases": "drag",
+      "common_misconceptions": "Ignoring shape and surface area when comparing falling objects.",
+      "example_cue": "A flat sheet of paper falls slower than a crumpled paper ball.",
+      "source_pages": "1,21,25,31"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "term": "gravity",
+      "student_definition": "An attractive force between objects with mass.",
+      "synonyms_or_aliases": "gravitational force",
+      "common_misconceptions": "Thinking heavier objects fall faster when air resistance is ignored.",
+      "example_cue": "Earth pulls objects downward.",
+      "source_pages": "22,25,31"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "term": "Law of Universal Gravitation",
+      "student_definition": "All objects with mass attract each other; the strength depends on mass and distance.",
+      "synonyms_or_aliases": "universal gravity law",
+      "common_misconceptions": "Thinking gravity only exists on Earth.",
+      "example_cue": "A satellite stays in orbit because of Earth's gravity.",
+      "source_pages": "1,22-23,31"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "term": "terminal velocity",
+      "student_definition": "The constant speed reached when air resistance balances the force of gravity on a falling object.",
+      "synonyms_or_aliases": "maximum falling speed in air",
+      "common_misconceptions": "Thinking the object stops falling when forces balance; it keeps moving at constant speed.",
+      "example_cue": "A skydiver eventually falls at constant speed before opening the parachute.",
+      "source_pages": "1,22"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "term": "weight",
+      "student_definition": "The force of gravity on an object's mass.",
+      "synonyms_or_aliases": "gravitational force on mass",
+      "common_misconceptions": "Confusing weight with mass; weight is measured in newtons.",
+      "example_cue": "A 10 kg object weighs about 98 N on Earth.",
+      "source_pages": "1,23,27,37"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "term": "mass",
+      "student_definition": "The amount of matter in an object; in this unit it affects inertia, acceleration, weight, and momentum.",
+      "synonyms_or_aliases": "amount of matter",
+      "common_misconceptions": "Treating mass and weight as the same measurement.",
+      "example_cue": "Mass is measured in kilograms.",
+      "source_pages": "23-24,27,28,32,37"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "term": "momentum",
+      "student_definition": "A measure of how hard it is to stop a moving object, found by multiplying mass by velocity.",
+      "synonyms_or_aliases": "mass times velocity",
+      "common_misconceptions": "Thinking only speed matters; mass matters too.",
+      "example_cue": "A heavy truck moving fast has a lot of momentum.",
+      "source_pages": "1,23,31-32,37"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "term": "Law of Conservation of Momentum",
+      "student_definition": "In a collision, momentum can transfer between objects, but total momentum stays the same if no outside force acts.",
+      "synonyms_or_aliases": "momentum conservation",
+      "common_misconceptions": "Thinking momentum disappears in a collision instead of transferring or changing forms with outside effects.",
+      "example_cue": "A cue ball transfers momentum to an 8 ball.",
+      "source_pages": "1,23,31-32"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "term": "Newton's 1st Law",
+      "student_definition": "An object at rest stays at rest and an object in motion stays in motion unless acted on by an unbalanced force.",
+      "synonyms_or_aliases": "law of inertia",
+      "common_misconceptions": "Thinking moving objects need a continued force even without friction.",
+      "example_cue": "A passenger keeps moving forward when a bike stops suddenly.",
+      "source_pages": "20,24-25,28,31,36"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "term": "Newton's 2nd Law",
+      "student_definition": "Acceleration depends on net force and mass; force equals mass times acceleration.",
+      "synonyms_or_aliases": "F=ma",
+      "common_misconceptions": "Forgetting that more mass means less acceleration if force stays the same.",
+      "example_cue": "A lighter object accelerates more than a heavier object with the same force.",
+      "source_pages": "22,27-28,31,34-37"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "term": "Newton's 3rd Law",
+      "student_definition": "For every action force, there is an equal and opposite reaction force.",
+      "synonyms_or_aliases": "action-reaction law",
+      "common_misconceptions": "Thinking action and reaction forces act on the same object; they act on different objects.",
+      "example_cue": "Air moves backward from a balloon, and the balloon moves forward.",
+      "source_pages": "23,26,28,31,34-36"
+    }
+  ],
+  "formulas": [
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 1: Describing Motion",
+      "formula_name": "speed",
+      "equation": "s = d / t",
+      "solve_for": "speed",
+      "variables": "s speed, d distance, t time",
+      "units": "m/s, km/hr, mi/hr, etc.",
+      "rearrangements": "d = s*t; t = d/s",
+      "trigger_phrases": "speed; how fast; distance in time; how long; how far",
+      "student_steps": "Identify distance and time; divide distance by time; include units.",
+      "source_pages": "3-4,7,18"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 1: Describing Motion",
+      "formula_name": "distance from speed and time",
+      "equation": "d = s*t",
+      "solve_for": "distance",
+      "variables": "d distance, s speed, t time",
+      "units": "m, km, mi",
+      "rearrangements": "s = d/t; t = d/s",
+      "trigger_phrases": "how far; travels at speed for time; cover ground",
+      "student_steps": "Multiply speed by time; keep time units consistent with speed units.",
+      "source_pages": "7,18"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 1: Describing Motion",
+      "formula_name": "time from distance and speed",
+      "equation": "t = d / s",
+      "solve_for": "time",
+      "variables": "t time, d distance, s speed",
+      "units": "seconds, hours, minutes",
+      "rearrangements": "s = d/t; d = s*t",
+      "trigger_phrases": "how long; time it takes; travel distance at speed",
+      "student_steps": "Divide distance by speed; include time units.",
+      "source_pages": "3,7"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 1: Describing Motion",
+      "formula_name": "velocity",
+      "equation": "v = d / t plus direction",
+      "solve_for": "velocity",
+      "variables": "v velocity, d displacement/distance in a direction, t time",
+      "units": "m/s north, km/hr east, etc.",
+      "rearrangements": "d = v*t; t = d/v",
+      "trigger_phrases": "velocity; speed with direction; north/south/east/west",
+      "student_steps": "Find speed, then attach the correct direction.",
+      "source_pages": "3,7,18"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 1: Describing Motion",
+      "formula_name": "straight-line displacement by Pythagorean theorem",
+      "equation": "c = sqrt(a^2 + b^2)",
+      "solve_for": "displacement magnitude",
+      "variables": "a one direction leg, b perpendicular leg, c straight-line displacement",
+      "units": "same as distance unit",
+      "rearrangements": "a = sqrt(c^2-b^2); b = sqrt(c^2-a^2)",
+      "trigger_phrases": "east then north; west then south; straight-line displacement; resultant",
+      "student_steps": "Add path for distance; use Pythagorean theorem for displacement; include compass direction.",
+      "source_pages": "2,6,18"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 2: Acceleration",
+      "formula_name": "acceleration",
+      "equation": "a = (v_f - v_i) / t",
+      "solve_for": "acceleration",
+      "variables": "a acceleration, vf final velocity, vi initial velocity, t time",
+      "units": "m/s^2, km/hr^2, mi/hr^2",
+      "rearrangements": "vf = vi + a*t; vi = vf - a*t; t = (vf-vi)/a",
+      "trigger_phrases": "accelerates from; speeds up from; slows down from; comes to a stop; acceleration",
+      "student_steps": "Subtract initial velocity from final velocity; divide by time; negative means slowing or opposite direction.",
+      "source_pages": "11-14,18-19"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 2: Acceleration",
+      "formula_name": "final velocity",
+      "equation": "v_f = v_i + a*t",
+      "solve_for": "final velocity",
+      "variables": "vf final velocity, vi initial velocity, a acceleration, t time",
+      "units": "m/s, km/hr, mi/hr",
+      "rearrangements": "a = (vf-vi)/t; t = (vf-vi)/a; vi = vf-a*t",
+      "trigger_phrases": "final speed; reaches what speed; starting from rest; accelerates for",
+      "student_steps": "Multiply acceleration by time; add initial velocity.",
+      "source_pages": "11,13,18-19"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "formula_name": "Newton's 2nd Law force",
+      "equation": "F = m*a",
+      "solve_for": "force",
+      "variables": "F net force, m mass, a acceleration",
+      "units": "N = kg*m/s^2",
+      "rearrangements": "m = F/a; a = F/m",
+      "trigger_phrases": "force; net force; mass and acceleration; Newton's second law",
+      "student_steps": "Multiply mass by acceleration; answer in newtons.",
+      "source_pages": "22,27,37"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "formula_name": "Newton's 2nd Law mass",
+      "equation": "m = F / a",
+      "solve_for": "mass",
+      "variables": "m mass, F force, a acceleration",
+      "units": "kg",
+      "rearrangements": "F = m*a; a = F/m",
+      "trigger_phrases": "what mass; force and acceleration; object experiencing net force",
+      "student_steps": "Divide force by acceleration; answer in kilograms.",
+      "source_pages": "27,37"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "formula_name": "Newton's 2nd Law acceleration",
+      "equation": "a = F / m",
+      "solve_for": "acceleration",
+      "variables": "a acceleration, F net force, m mass",
+      "units": "m/s^2",
+      "rearrangements": "F = m*a; m = F/a",
+      "trigger_phrases": "what acceleration; horizontal force applied; mass and force",
+      "student_steps": "Divide net force by mass; answer in m/s^2.",
+      "source_pages": "22,27,37"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "formula_name": "weight near Earth",
+      "equation": "W = m*g",
+      "solve_for": "weight",
+      "variables": "W weight, m mass, g gravitational field strength near Earth",
+      "units": "N",
+      "rearrangements": "m = W/g; g = W/m",
+      "trigger_phrases": "weigh; weight; falling object; force of gravity; mass from weight",
+      "student_steps": "Use g = 9.8 m/s^2 near Earth unless the problem gives another value; multiply mass by 9.8.",
+      "source_pages": "23,27,37"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "formula_name": "momentum",
+      "equation": "p = m*v",
+      "solve_for": "momentum",
+      "variables": "p momentum, m mass, v velocity",
+      "units": "kg*m/s",
+      "rearrangements": "m = p/v; v = p/m",
+      "trigger_phrases": "momentum; mass and velocity; moving object; collision",
+      "student_steps": "Multiply mass by velocity; include kg*m/s.",
+      "source_pages": "23,32,37"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "formula_name": "momentum mass",
+      "equation": "m = p / v",
+      "solve_for": "mass",
+      "variables": "m mass, p momentum, v velocity",
+      "units": "kg",
+      "rearrangements": "p = m*v; v = p/m",
+      "trigger_phrases": "mass from momentum; has momentum when thrown with velocity",
+      "student_steps": "Divide momentum by velocity.",
+      "source_pages": "32,37"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "formula_name": "momentum velocity",
+      "equation": "v = p / m",
+      "solve_for": "velocity",
+      "variables": "v velocity, p momentum, m mass",
+      "units": "m/s",
+      "rearrangements": "p = m*v; m = p/v",
+      "trigger_phrases": "speed from momentum; how fast; momentum and mass",
+      "student_steps": "Divide momentum by mass.",
+      "source_pages": "32,37"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "formula_name": "simple momentum transfer",
+      "equation": "m1*v1 = m2*v2",
+      "solve_for": "post-collision velocity in simple transfer problems",
+      "variables": "m1 first mass, v1 first velocity, m2 second mass, v2 second velocity",
+      "units": "kg and m/s",
+      "rearrangements": "v2 = (m1*v1)/m2",
+      "trigger_phrases": "transfers all momentum; collision; stationary object; conservation of momentum",
+      "student_steps": "Find initial momentum; set it equal to final momentum of second object; solve for final velocity.",
+      "source_pages": "31-32"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "formula_name": "net force from opposite directions",
+      "equation": "F_net = F_right - F_left",
+      "solve_for": "net force with direction",
+      "variables": "forces in opposite directions",
+      "units": "N",
+      "rearrangements": "Use signed values or subtract smaller from larger and keep direction of larger force.",
+      "trigger_phrases": "net force; forces acting left and right; balanced; unbalanced; diagram",
+      "student_steps": "Add forces in the same direction; subtract opposite directions; direction points toward the greater force.",
+      "source_pages": "24,27,37"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "formula_name": "average velocity in runner lab",
+      "equation": "v_avg = distance / average_time",
+      "solve_for": "average velocity at a marker",
+      "variables": "distance marker, average time from trials",
+      "units": "yd/s or m/s",
+      "rearrangements": "average time = distance / v_avg",
+      "trigger_phrases": "runner lab; average times; distance marker; velocity calculation",
+      "student_steps": "Average trial times first; divide distance by average time for each marker.",
+      "source_pages": "15-17"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "formula_name": "balloon rocket force",
+      "equation": "F = m*a",
+      "solve_for": "force of balloon rocket",
+      "variables": "F force, m rocket mass, a acceleration",
+      "units": "N",
+      "rearrangements": "a = F/m; m = F/a",
+      "trigger_phrases": "balloon rocket; mass affects acceleration and force; lab calculations",
+      "student_steps": "Calculate speed and acceleration from data, then multiply mass by acceleration.",
+      "source_pages": "34-36"
+    }
+  ],
+  "graphPatterns": [
+    {
+      "unit": "Motion and Force",
+      "graph_type": "distance_time",
+      "visual_pattern": "horizontal line",
+      "meaning": "object is not moving",
+      "slope_means": "speed",
+      "ai_response_rule": "Say speed is 0 because distance does not change as time passes.",
+      "source_pages": "5,8-10,18-19"
+    },
+    {
+      "unit": "Motion and Force",
+      "graph_type": "distance_time",
+      "visual_pattern": "straight line sloping upward",
+      "meaning": "object moves at constant speed away from the reference point",
+      "slope_means": "speed",
+      "ai_response_rule": "Steeper slope means greater speed.",
+      "source_pages": "5,8-10,18-19"
+    },
+    {
+      "unit": "Motion and Force",
+      "graph_type": "distance_time",
+      "visual_pattern": "curve getting steeper",
+      "meaning": "object is speeding up",
+      "slope_means": "speed increasing",
+      "ai_response_rule": "The slope increases, so the speed increases.",
+      "source_pages": "5,8-10,18-19"
+    },
+    {
+      "unit": "Motion and Force",
+      "graph_type": "distance_time",
+      "visual_pattern": "curve flattening",
+      "meaning": "object is slowing down",
+      "slope_means": "speed decreasing",
+      "ai_response_rule": "The slope decreases, so the speed decreases.",
+      "source_pages": "5,8-10,18-19"
+    },
+    {
+      "unit": "Motion and Force",
+      "graph_type": "distance_time",
+      "visual_pattern": "line slopes downward toward zero distance",
+      "meaning": "object returns toward the reference point",
+      "slope_means": "speed toward reference point",
+      "ai_response_rule": "Distance from the start is decreasing, so the object is heading back.",
+      "source_pages": "10"
+    },
+    {
+      "unit": "Motion and Force",
+      "graph_type": "velocity_time",
+      "visual_pattern": "horizontal line at zero",
+      "meaning": "object is not moving",
+      "slope_means": "acceleration",
+      "ai_response_rule": "Velocity is 0 the whole time, so acceleration is also 0.",
+      "source_pages": "12,14,18-19"
+    },
+    {
+      "unit": "Motion and Force",
+      "graph_type": "velocity_time",
+      "visual_pattern": "horizontal line above zero",
+      "meaning": "object moves at constant velocity",
+      "slope_means": "zero acceleration",
+      "ai_response_rule": "Velocity stays the same, so acceleration is 0.",
+      "source_pages": "12,14,18-19"
+    },
+    {
+      "unit": "Motion and Force",
+      "graph_type": "velocity_time",
+      "visual_pattern": "straight line sloping upward",
+      "meaning": "positive acceleration / speeding up in basic examples",
+      "slope_means": "acceleration",
+      "ai_response_rule": "Velocity increases over time, so acceleration is positive.",
+      "source_pages": "12,14,18-19"
+    },
+    {
+      "unit": "Motion and Force",
+      "graph_type": "velocity_time",
+      "visual_pattern": "straight line sloping downward",
+      "meaning": "negative acceleration / slowing down in basic examples",
+      "slope_means": "acceleration",
+      "ai_response_rule": "Velocity decreases over time, so acceleration is negative.",
+      "source_pages": "12,14,18-19"
+    }
+  ],
+  "problemBank": [
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 1: Describing Motion",
+      "skill": "distance_vs_displacement",
+      "question": "A student walks 40 m east, then 15 m west. Find the distance and displacement.",
+      "expected_answer": "distance = 55 m; displacement = 25 m east",
+      "worked_steps": "Distance adds the path: 40 + 15 = 55 m. Displacement compares start to finish: 40 east - 15 west = 25 m east.",
+      "answer_type": "numeric_with_direction",
+      "tags": "distance,displacement,opposite directions",
+      "source_pages": "2,6"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 1: Describing Motion",
+      "skill": "distance_vs_displacement",
+      "question": "A runner completes one full lap around a 400 m track and ends where she started. Find distance and displacement.",
+      "expected_answer": "distance = 400 m; displacement = 0 m",
+      "worked_steps": "Distance is the full path traveled. Since start and finish are the same point, displacement is 0 m.",
+      "answer_type": "numeric",
+      "tags": "round trip,displacement zero",
+      "source_pages": "6"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 1: Describing Motion",
+      "skill": "distance_vs_displacement",
+      "question": "A robot drives 6 m north and then 8 m east. Find distance and straight-line displacement.",
+      "expected_answer": "distance = 14 m; displacement = 10 m northeast",
+      "worked_steps": "Distance = 6 + 8 = 14 m. Displacement = sqrt(6^2 + 8^2) = 10 m toward northeast.",
+      "answer_type": "numeric_with_direction",
+      "tags": "pythagorean,perpendicular paths",
+      "source_pages": "2,6,18"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 1: Describing Motion",
+      "skill": "speed",
+      "question": "A cart travels 36 m in 6 s. What is its speed?",
+      "expected_answer": "6 m/s",
+      "worked_steps": "s = d/t = 36 m / 6 s = 6 m/s.",
+      "answer_type": "numeric",
+      "tags": "speed,distance,time",
+      "source_pages": "3-4,7"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 1: Describing Motion",
+      "skill": "velocity",
+      "question": "A bike travels 18 km north in 0.5 hr. What is its velocity?",
+      "expected_answer": "36 km/hr north",
+      "worked_steps": "v = d/t = 18 km / 0.5 hr = 36 km/hr, then include north.",
+      "answer_type": "numeric_with_direction",
+      "tags": "velocity,direction",
+      "source_pages": "3,7"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 1: Describing Motion",
+      "skill": "distance_from_speed",
+      "question": "A car moves at 55 mi/hr for 2 hours. How far does it travel?",
+      "expected_answer": "110 mi",
+      "worked_steps": "d = s*t = 55 mi/hr * 2 hr = 110 mi.",
+      "answer_type": "numeric",
+      "tags": "distance,speed,time",
+      "source_pages": "7,18"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 1: Describing Motion",
+      "skill": "time_from_speed",
+      "question": "Sound travels about 343 m/s. About how long does it take sound to travel 686 m?",
+      "expected_answer": "2 s",
+      "worked_steps": "t = d/s = 686 m / 343 m/s = 2 s.",
+      "answer_type": "numeric",
+      "tags": "time,distance,speed,sound",
+      "source_pages": "3,7"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 1: Describing Motion",
+      "skill": "average_speed_graph",
+      "question": "On a distance-time graph, an object moves from 0 m at 0 s to 20 m at 5 s in a straight line. What is its speed?",
+      "expected_answer": "4 m/s",
+      "worked_steps": "Speed is slope on a distance-time graph: rise/run = 20 m / 5 s = 4 m/s.",
+      "answer_type": "numeric",
+      "tags": "graph,slope,distance-time",
+      "source_pages": "8-10,18-19"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 1: Describing Motion",
+      "skill": "graph_interpretation",
+      "question": "A distance-time graph has a horizontal line. What does that show?",
+      "expected_answer": "The object is stopped/not moving; speed is 0.",
+      "worked_steps": "Distance does not change while time passes, so the object is not moving.",
+      "answer_type": "conceptual",
+      "tags": "graph,horizontal line,stopped",
+      "source_pages": "5,8-10"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 1: Describing Motion",
+      "skill": "graph_interpretation",
+      "question": "A distance-time graph curves upward and gets steeper over time. What does that show?",
+      "expected_answer": "The object is speeding up.",
+      "worked_steps": "On a distance-time graph, slope means speed. If the slope gets steeper, speed increases.",
+      "answer_type": "conceptual",
+      "tags": "graph,speeding up,distance-time",
+      "source_pages": "5,8-10,18-19"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 2: Acceleration",
+      "skill": "acceleration",
+      "question": "A scooter speeds up from 4 m/s to 16 m/s in 3 s. What is its acceleration?",
+      "expected_answer": "4 m/s^2",
+      "worked_steps": "a = (vf - vi)/t = (16 - 4)/3 = 4 m/s^2.",
+      "answer_type": "numeric",
+      "tags": "acceleration,speeding up",
+      "source_pages": "11,13,18-19"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 2: Acceleration",
+      "skill": "negative_acceleration",
+      "question": "A skateboarder slows from 12 m/s to 0 m/s in 4 s. What is the acceleration?",
+      "expected_answer": "-3 m/s^2",
+      "worked_steps": "a = (0 - 12)/4 = -3 m/s^2. Negative shows the velocity decreased.",
+      "answer_type": "numeric",
+      "tags": "acceleration,slowing down,stop",
+      "source_pages": "11,13,18-19"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 2: Acceleration",
+      "skill": "final_velocity",
+      "question": "A cart starts at 3 m/s and accelerates at 2 m/s^2 for 5 s. What final velocity does it reach?",
+      "expected_answer": "13 m/s",
+      "worked_steps": "vf = vi + a*t = 3 + 2*5 = 13 m/s.",
+      "answer_type": "numeric",
+      "tags": "final velocity,acceleration",
+      "source_pages": "11,13,18-19"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 2: Acceleration",
+      "skill": "from_rest",
+      "question": "A toy car starts from rest and reaches 9 m/s in 3 s. What is its acceleration?",
+      "expected_answer": "3 m/s^2",
+      "worked_steps": "From rest means vi = 0. a = (9 - 0)/3 = 3 m/s^2.",
+      "answer_type": "numeric",
+      "tags": "from rest,acceleration",
+      "source_pages": "11,13"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 2: Acceleration",
+      "skill": "velocity_time_graph",
+      "question": "On a velocity-time graph, velocity increases from 0 m/s to 30 m/s in 10 s. What is the acceleration?",
+      "expected_answer": "3 m/s^2",
+      "worked_steps": "Acceleration is slope on a velocity-time graph: (30 - 0)/10 = 3 m/s^2.",
+      "answer_type": "numeric",
+      "tags": "graph,velocity-time,slope",
+      "source_pages": "12,14,18-19"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 2: Acceleration",
+      "skill": "velocity_time_graph",
+      "question": "A velocity-time graph is a flat horizontal line at 6 m/s. What is the acceleration?",
+      "expected_answer": "0 m/s^2",
+      "worked_steps": "Velocity is constant, so the slope is 0. Acceleration is 0 m/s^2.",
+      "answer_type": "conceptual_numeric",
+      "tags": "graph,constant velocity,zero acceleration",
+      "source_pages": "12,14,18-19"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 2: Acceleration",
+      "skill": "ways_to_accelerate",
+      "question": "List three ways an object can accelerate.",
+      "expected_answer": "It can speed up, slow down, or change direction.",
+      "worked_steps": "Acceleration is any change in velocity. Velocity includes speed and direction.",
+      "answer_type": "conceptual",
+      "tags": "acceleration,velocity,direction",
+      "source_pages": "1,11,18"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "skill": "net_force_opposite",
+      "question": "Two forces act on a box: 12 N right and 5 N left. What is the net force?",
+      "expected_answer": "7 N right",
+      "worked_steps": "Opposite directions subtract: 12 - 5 = 7 N. Direction is right because 12 N is larger.",
+      "answer_type": "numeric_with_direction",
+      "tags": "net force,force diagram",
+      "source_pages": "24,37"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "skill": "net_force_same_opposite",
+      "question": "Two students push a cart to the right with 20 N each. Another student pushes left with 15 N. What is the net force?",
+      "expected_answer": "25 N right",
+      "worked_steps": "Add same direction first: 20 + 20 = 40 N right. Subtract the opposite force: 40 - 15 = 25 N right.",
+      "answer_type": "numeric_with_direction",
+      "tags": "net force,same direction,opposite direction",
+      "source_pages": "24"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "skill": "balanced_forces",
+      "question": "A box has 10 N pushing right and 10 N pushing left. Are the forces balanced or unbalanced? What is the net force?",
+      "expected_answer": "Balanced; net force = 0 N.",
+      "worked_steps": "Equal opposite forces cancel out, so the net force is 0 N and motion does not change.",
+      "answer_type": "conceptual_numeric",
+      "tags": "balanced forces,net force",
+      "source_pages": "20,24"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "skill": "newton_1st_law",
+      "question": "A backpack left on the floor stays there until someone picks it up. Which law does this show?",
+      "expected_answer": "Newton's 1st Law / law of inertia.",
+      "worked_steps": "An object at rest stays at rest unless an unbalanced force acts on it.",
+      "answer_type": "law_identification",
+      "tags": "Newton 1,inertia,rest",
+      "source_pages": "24-25,28,31"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "skill": "inertia_ranking",
+      "question": "Rank these from least inertia to most inertia: feather, baseball, bicycle, car.",
+      "expected_answer": "feather, baseball, bicycle, car",
+      "worked_steps": "Inertia depends mainly on mass. Rank from smallest mass to largest mass.",
+      "answer_type": "ranking",
+      "tags": "inertia,mass",
+      "source_pages": "24,37"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "skill": "friction_types",
+      "question": "A book is sliding across a table and slows down. What type of friction is acting?",
+      "expected_answer": "Sliding friction.",
+      "worked_steps": "The surfaces are moving/sliding past each other, so it is sliding friction.",
+      "answer_type": "conceptual",
+      "tags": "friction,sliding friction",
+      "source_pages": "21,25"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "skill": "air_resistance",
+      "question": "A flat paper and a crumpled paper with the same mass are dropped. Which usually lands first and why?",
+      "expected_answer": "The crumpled paper usually lands first because it has less air resistance.",
+      "worked_steps": "Shape changes how much air pushes against the paper. Less air resistance means it falls more like other objects near Earth.",
+      "answer_type": "conceptual",
+      "tags": "air resistance,falling objects",
+      "source_pages": "21,25"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "skill": "newton_2nd_force",
+      "question": "A 12 kg object accelerates at 4 m/s^2. What net force acts on it?",
+      "expected_answer": "48 N",
+      "worked_steps": "F = m*a = 12 kg * 4 m/s^2 = 48 N.",
+      "answer_type": "numeric",
+      "tags": "F=ma,force",
+      "source_pages": "22,27,37"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "skill": "newton_2nd_acceleration",
+      "question": "A 40 N net force acts on a 10 kg cart. What is the acceleration?",
+      "expected_answer": "4 m/s^2",
+      "worked_steps": "a = F/m = 40 N / 10 kg = 4 m/s^2.",
+      "answer_type": "numeric",
+      "tags": "F=ma,acceleration",
+      "source_pages": "22,27,37"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "skill": "newton_2nd_mass",
+      "question": "An object experiences a 90 N net force and accelerates at 3 m/s^2. What is its mass?",
+      "expected_answer": "30 kg",
+      "worked_steps": "m = F/a = 90 N / 3 m/s^2 = 30 kg.",
+      "answer_type": "numeric",
+      "tags": "F=ma,mass",
+      "source_pages": "27,37"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "skill": "two_step_force",
+      "question": "A 5 kg drone speeds up from 2 m/s to 14 m/s in 4 s. What net force caused the change?",
+      "expected_answer": "15 N",
+      "worked_steps": "First find acceleration: a = (14 - 2)/4 = 3 m/s^2. Then F = m*a = 5*3 = 15 N.",
+      "answer_type": "numeric",
+      "tags": "two-step,acceleration,F=ma",
+      "source_pages": "27,37"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "skill": "weight",
+      "question": "What is the weight of a 25 kg object on Earth?",
+      "expected_answer": "245 N",
+      "worked_steps": "W = m*g = 25 kg * 9.8 m/s^2 = 245 N.",
+      "answer_type": "numeric",
+      "tags": "weight,gravity,9.8",
+      "source_pages": "23,27,37"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "skill": "mass_from_weight",
+      "question": "A falling object has a weight of 196 N near Earth. What is its mass?",
+      "expected_answer": "20 kg",
+      "worked_steps": "m = W/g = 196 N / 9.8 m/s^2 = 20 kg.",
+      "answer_type": "numeric",
+      "tags": "weight,mass,gravity",
+      "source_pages": "27,37"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "skill": "newton_3rd_law",
+      "question": "A swimmer pushes water backward and moves forward. Which law does this show?",
+      "expected_answer": "Newton's 3rd Law.",
+      "worked_steps": "The swimmer pushes water backward; the water pushes the swimmer forward with an equal and opposite force.",
+      "answer_type": "law_identification",
+      "tags": "Newton 3,action reaction",
+      "source_pages": "23,26,28,31,36"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "skill": "newton_3rd_law",
+      "question": "In a balloon rocket, air rushes backward out of the balloon and the balloon moves forward. Which force is the reaction force?",
+      "expected_answer": "The balloon moving forward is the reaction to the air being pushed backward.",
+      "worked_steps": "Action: balloon pushes air backward. Reaction: air pushes balloon forward.",
+      "answer_type": "conceptual",
+      "tags": "Newton 3,balloon rocket",
+      "source_pages": "26,34-36"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "skill": "momentum",
+      "question": "Find the momentum of a 60 kg skateboarder moving at 5 m/s.",
+      "expected_answer": "300 kg*m/s",
+      "worked_steps": "p = m*v = 60 kg * 5 m/s = 300 kg*m/s.",
+      "answer_type": "numeric",
+      "tags": "momentum,p=mv",
+      "source_pages": "23,32,37"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "skill": "velocity_from_momentum",
+      "question": "An 8 kg object has 40 kg*m/s of momentum. How fast is it moving?",
+      "expected_answer": "5 m/s",
+      "worked_steps": "v = p/m = 40 / 8 = 5 m/s.",
+      "answer_type": "numeric",
+      "tags": "momentum,velocity",
+      "source_pages": "32,37"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "skill": "mass_from_momentum",
+      "question": "A ball has 18 kg*m/s of momentum and moves at 6 m/s. What is its mass?",
+      "expected_answer": "3 kg",
+      "worked_steps": "m = p/v = 18 / 6 = 3 kg.",
+      "answer_type": "numeric",
+      "tags": "momentum,mass",
+      "source_pages": "32,37"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "skill": "momentum_transfer",
+      "question": "A 10 kg cart moving at 2 m/s transfers all its momentum to a 5 kg cart. What is the 5 kg cart's speed after?",
+      "expected_answer": "4 m/s",
+      "worked_steps": "Initial momentum = 10*2 = 20 kg*m/s. Set 20 = 5*v, so v = 4 m/s.",
+      "answer_type": "numeric",
+      "tags": "conservation of momentum,collision",
+      "source_pages": "31-32"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "skill": "law_identification",
+      "question": "A motorcycle accelerates faster than a loaded truck when the same size force is applied. Which law best explains this?",
+      "expected_answer": "Newton's 2nd Law.",
+      "worked_steps": "With the same force, the lower-mass object has greater acceleration.",
+      "answer_type": "law_identification",
+      "tags": "Newton 2,mass,acceleration",
+      "source_pages": "28,31,34-36"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "skill": "law_identification",
+      "question": "A soccer ball rolls across grass and eventually stops. Which law and force are involved?",
+      "expected_answer": "Newton's 1st Law with friction acting as the unbalanced force.",
+      "worked_steps": "The ball would keep moving, but friction from the grass changes its motion and slows it down.",
+      "answer_type": "law_identification",
+      "tags": "Newton 1,friction",
+      "source_pages": "24-25,28,31,36"
+    },
+    {
+      "unit": "Motion and Force",
+      "concept": "Concept 3: Newton's Laws and Force",
+      "skill": "gravity",
+      "question": "Ignoring air resistance, what acceleration should a dropped apple and tennis ball have near Earth?",
+      "expected_answer": "Both accelerate at about 9.8 m/s^2 downward.",
+      "worked_steps": "Near Earth, falling objects have the same acceleration due to gravity if air resistance is ignored.",
+      "answer_type": "conceptual_numeric",
+      "tags": "gravity,9.8,falling objects",
+      "source_pages": "25,31"
+    }
+  ],
+  "smokeTests": [
+    {
+      "test_query": "what is speed if I go 36 meters in 6 seconds",
+      "expected_route": "formula",
+      "expected_tool": "speed",
+      "expected_core_answer": "6 m/s",
+      "notes": "Basic speed formula."
+    },
+    {
+      "test_query": "find volocity 18 km north in .5 hours",
+      "expected_route": "formula",
+      "expected_tool": "velocity",
+      "expected_core_answer": "36 km/hr north",
+      "notes": "Misspelled velocity; direction should be preserved."
+    },
+    {
+      "test_query": "distance vs displacement if I walk 40m east then 15m west",
+      "expected_route": "concept_or_formula",
+      "expected_tool": "distance_displacement",
+      "expected_core_answer": "distance 55 m; displacement 25 m east",
+      "notes": "Needs distance/displacement distinction."
+    },
+    {
+      "test_query": "a car goes from 12 m/s to 0 in 4 seconds what is acceleration",
+      "expected_route": "formula",
+      "expected_tool": "acceleration",
+      "expected_core_answer": "-3 m/s\u00b2",
+      "notes": "Comes to a stop -> final velocity 0."
+    },
+    {
+      "test_query": "from rest to 9 m/s in 3 seconds acceleration",
+      "expected_route": "formula",
+      "expected_tool": "acceleration",
+      "expected_core_answer": "3 m/s\u00b2",
+      "notes": "'From rest' means initial velocity = 0."
+    },
+    {
+      "test_query": "what does a flat line on a distance time graph mean",
+      "expected_route": "graph_concept",
+      "expected_tool": "distance_time_graphs",
+      "expected_core_answer": "object is stopped/not moving; speed 0",
+      "notes": "Graph vocabulary."
+    },
+    {
+      "test_query": "what does slope mean on a velocity vs time graph",
+      "expected_route": "graph_concept",
+      "expected_tool": "velocity_time_graphs",
+      "expected_core_answer": "acceleration",
+      "notes": "Graph concept."
+    },
+    {
+      "test_query": "12 N right and 5 N left net force",
+      "expected_route": "formula",
+      "expected_tool": "net_force",
+      "expected_core_answer": "7 N right",
+      "notes": "Opposite direction force diagram text."
+    },
+    {
+      "test_query": "force for 12 kg accelerating at 4 m/s2",
+      "expected_route": "formula",
+      "expected_tool": "newtons_second_law",
+      "expected_core_answer": "48 N",
+      "notes": "F=ma."
+    },
+    {
+      "test_query": "40 N force on 10 kg cart acceleration",
+      "expected_route": "formula",
+      "expected_tool": "newtons_second_law",
+      "expected_core_answer": "4 m/s\u00b2",
+      "notes": "a=F/m."
+    },
+    {
+      "test_query": "how much does 25 kg weigh on earth",
+      "expected_route": "formula",
+      "expected_tool": "weight",
+      "expected_core_answer": "245 N",
+      "notes": "Use g=9.8 m/s\u00b2."
+    },
+    {
+      "test_query": "momentum of 60 kg skateboarder going 5 m/s",
+      "expected_route": "formula",
+      "expected_tool": "momentum",
+      "expected_core_answer": "300 kg*m/s",
+      "notes": "p=mv."
+    },
+    {
+      "test_query": "swimmer pushes water back and moves forward what law",
+      "expected_route": "law_identification",
+      "expected_tool": "newtons_third_law",
+      "expected_core_answer": "Newton's 3rd Law",
+      "notes": "Scenario classification."
+    },
+    {
+      "test_query": "why does a flat paper fall slower than crumpled paper",
+      "expected_route": "concept",
+      "expected_tool": "air_resistance",
+      "expected_core_answer": "flat paper has more air resistance",
+      "notes": "Air resistance concept."
+    },
+    {
+      "test_query": "rank feather baseball bicycle car by inertia",
+      "expected_route": "concept",
+      "expected_tool": "inertia",
+      "expected_core_answer": "feather, baseball, bicycle, car",
+      "notes": "Inertia depends on mass."
+    }
+  ]
+}

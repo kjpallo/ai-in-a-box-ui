@@ -239,4 +239,47 @@ const emptyDateSummary = buildStandardsSummaryReport(entries, {
 assert.equal(emptyDateSummary.totalQuestions, 0, 'date filter should exclude other days');
 assert.equal(emptyDateSummary.taggedQuestions, 0, 'empty filtered day should have no tagged questions');
 
+const guidedFormulaTutorSummary = buildStandardsSummaryReport([
+  {
+    timestamp: '2026-05-01T11:00:00.000Z',
+    studentQuestion: 'A wave has a frequency of 6 Hz and a wavelength of 3 meters. What is its wave speed?',
+    routeType: 'formula_tutor',
+    matchedConcepts: [
+      { id: 'wave-speed-formula', title: 'Wave Speed', type: 'formula', unit: 'Waves', score: 14 }
+    ],
+    primaryStandards: [],
+    standards: [],
+    possibleStandards: [
+      { standardId: '9-12.PS4.A.1', unit: 'Waves', label: 'Use mathematical representations to support a claim about waves.' }
+    ],
+    units: ['Waves'],
+    conceptConfidence: 'medium',
+    standardsConfidence: 'none',
+    possibleStandardsConfidence: 'medium',
+    reportableForStandards: true
+  },
+  ...['1', '1', '6', '3', '18'].map((studentQuestion, index) => ({
+    timestamp: `2026-05-01T11:0${index + 1}:00.000Z`,
+    studentQuestion,
+    routeType: 'formula_tutor',
+    isTutorStep: true,
+    reportableForStandards: false,
+    tutorOriginalQuestion: 'A wave has a frequency of 6 Hz and a wavelength of 3 meters. What is its wave speed?'
+  }))
+], {
+  now: new Date('2026-05-04T12:00:00.000Z')
+});
+
+assert.equal(
+  guidedFormulaTutorSummary.totalQuestions,
+  1,
+  'guided formula tutor step replies should not count as standards-report questions'
+);
+assert.equal(
+  guidedFormulaTutorSummary.taggedQuestions,
+  1,
+  'the original formula problem should still count once as the reportable instructional question'
+);
+assert.equal(guidedFormulaTutorSummary.untaggedQuestions, 0, 'non-reportable tutor steps should not create untagged questions');
+
 console.log('Standards summary report checks passed');
