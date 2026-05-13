@@ -1250,6 +1250,12 @@ async function testGuidedMotionForceKnowledgeTutor() {
       direct: /slope means acceleration/i
     },
     {
+      name: 'graph-distance-slope-typo',
+      question: 'what is on the slop of a distance vers time graph show',
+      guide: /which two quantities are being compared/i,
+      direct: /slope means speed/i
+    },
+    {
       name: 'newton-third-law',
       question: 'swimmer pushes water back and moves forward what law',
       guide: /two objects pushing on each other/i,
@@ -1286,6 +1292,12 @@ async function testGuidedMotionForceKnowledgeTutor() {
       question: 'rank feather baseball bicycle car by inertia',
       guide: /depends mostly on what property/i,
       direct: /feather, baseball, bicycle, car/i
+    },
+    {
+      name: 'inertia-vocab',
+      question: 'what is inertia',
+      guide: /changing motion easily or resisting a change/i,
+      direct: /resistance to a change in motion/i
     }
   ];
 
@@ -1331,6 +1343,9 @@ async function testGuidedMotionForceKnowledgeTutor() {
   assert.equal(guidedComplete.statusCode, 200);
   assert.equal(guidedComplete.body.routeType, 'motion_force_knowledge_tutor');
   assert.equal(guidedComplete.body.tutor.completed, true);
+  assert.equal(guidedComplete.body.tutor.tutorCategory, 'general');
+  assert.equal(guidedComplete.body.tutor.tutorLabel, 'General Tutor');
+  assert.equal(guidedComplete.body.tutor.originalQuestion, 'what does a flat line on a distance time graph mean');
   assert.match(guidedComplete.body.response, /object is stopped/i);
   assert.equal(enabled.studentSessions[classSessionId].anonymousHubs['motion-graph-distance-flat'].currentTutorProblem, null);
 
@@ -1354,6 +1369,399 @@ async function testGuidedMotionForceKnowledgeTutor() {
   assert.equal(thirdLawComplete.body.tutor.completed, true);
   assert.match(thirdLawComplete.body.response, /swimmer pushes water backward/i);
   assert.equal(enabled.studentSessions[classSessionId].anonymousHubs['motion-newton-third-law'].currentTutorProblem, null);
+
+  const slopeStart = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'wrong-distance-slope',
+    message: 'what does slope mean on a distance versus time graph'
+  });
+  assert.equal(slopeStart.statusCode, 200);
+  assert.equal(slopeStart.body.routeType, 'motion_force_knowledge_tutor');
+
+  const wrongSlopeFirstStep = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'wrong-distance-slope',
+    message: 'speed'
+  });
+  assert.equal(wrongSlopeFirstStep.statusCode, 200);
+  assert.equal(wrongSlopeFirstStep.body.routeType, 'motion_force_knowledge_tutor');
+  assert.equal(wrongSlopeFirstStep.body.tutor.currentStepIndex, 0);
+  assert.match(wrongSlopeFirstStep.body.response, /distance and time/i);
+  assert.doesNotMatch(wrongSlopeFirstStep.body.response, /^Good\b/i);
+
+  const slopeStep = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'wrong-distance-slope',
+    message: 'distance and time'
+  });
+  assert.equal(slopeStep.statusCode, 200);
+  assert.equal(slopeStep.body.tutor.currentStepIndex, 1);
+
+  const wrongSlope = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'wrong-distance-slope',
+    message: 'acceleration'
+  });
+  assert.equal(wrongSlope.statusCode, 200);
+  assert.equal(wrongSlope.body.routeType, 'motion_force_knowledge_tutor');
+  assert.equal(wrongSlope.body.tutor.currentStepIndex, 1);
+  assert.match(wrongSlope.body.response, /Not quite/i);
+  assert.doesNotMatch(wrongSlope.body.response, /^Yes\b|^Correct\b/i);
+
+  const distanceTimeShorthand = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-time-shorthand-dt',
+    message: 'what does slope mean on a distance versus time graph'
+  });
+  assert.equal(distanceTimeShorthand.statusCode, 200);
+  const acceptedDt = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-time-shorthand-dt',
+    message: 'd t'
+  });
+  assert.equal(acceptedDt.statusCode, 200);
+  assert.equal(acceptedDt.body.tutor.currentStepIndex, 1);
+
+  const distanceTimeReversedShorthand = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-time-shorthand-td',
+    message: 'what does slope mean on a distance versus time graph'
+  });
+  assert.equal(distanceTimeReversedShorthand.statusCode, 200);
+  const acceptedTd = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-time-shorthand-td',
+    message: 't and d'
+  });
+  assert.equal(acceptedTd.statusCode, 200);
+  assert.equal(acceptedTd.body.tutor.currentStepIndex, 1);
+
+  const shorthandNotGlobalStart = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-time-shorthand-not-global',
+    message: 'what does slope mean on a distance versus time graph'
+  });
+  assert.equal(shorthandNotGlobalStart.statusCode, 200);
+  const shorthandNotGlobalStep = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-time-shorthand-not-global',
+    message: 'distance and time'
+  });
+  assert.equal(shorthandNotGlobalStep.statusCode, 200);
+  assert.equal(shorthandNotGlobalStep.body.tutor.currentStepIndex, 1);
+  const rejectedDtOutsideCompareStep = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-time-shorthand-not-global',
+    message: 'd t'
+  });
+  assert.equal(rejectedDtOutsideCompareStep.statusCode, 200);
+  assert.equal(rejectedDtOutsideCompareStep.body.tutor.currentStepIndex, 1);
+  assert.match(rejectedDtOutsideCompareStep.body.response, /Not quite/i);
+
+  const distanceTimeChoiceStart = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-time-choice-first-step',
+    message: 'what does slope mean on a distance versus time graph'
+  });
+  assert.equal(distanceTimeChoiceStart.statusCode, 200);
+  for (const message of ['speed', 'force', 'mass']) {
+    const response = await enabled.request('POST', '/api/student/message', {
+      sessionId: classSessionId,
+      studentHubId: 'distance-time-choice-first-step',
+      message
+    });
+    assert.equal(response.statusCode, 200);
+  }
+  const distanceTimeChoices = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-time-choice-first-step',
+    message: 'hint'
+  });
+  assert.equal(distanceTimeChoices.statusCode, 200);
+  assert.match(distanceTimeChoices.body.response, /Choose one:\n1\. distance and time\n2\. mass and force\n3\. speed and acceleration/i);
+  assert.doesNotMatch(distanceTimeChoices.body.response, /Try this\. Try this:/i);
+  const rejectedWrongChoice = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-time-choice-first-step',
+    message: '2'
+  });
+  assert.equal(rejectedWrongChoice.statusCode, 200);
+  assert.equal(rejectedWrongChoice.body.tutor.currentStepIndex, 0);
+  assert.match(rejectedWrongChoice.body.response, /Choice 2 is mass and force/i);
+  const acceptedChoiceOne = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-time-choice-first-step',
+    message: '1'
+  });
+  assert.equal(acceptedChoiceOne.statusCode, 200);
+  assert.equal(acceptedChoiceOne.body.tutor.currentStepIndex, 1);
+
+  const distanceTimeSecondChoiceStart = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-time-choice-second-step',
+    message: 'what does slope mean on a distance versus time graph'
+  });
+  assert.equal(distanceTimeSecondChoiceStart.statusCode, 200);
+  const distanceTimeSecondChoiceStep = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-time-choice-second-step',
+    message: 'distance time'
+  });
+  assert.equal(distanceTimeSecondChoiceStep.statusCode, 200);
+  for (const message of ['force', 'mass', 'distance']) {
+    const response = await enabled.request('POST', '/api/student/message', {
+      sessionId: classSessionId,
+      studentHubId: 'distance-time-choice-second-step',
+      message
+    });
+    assert.equal(response.statusCode, 200);
+  }
+  const distanceTimeSecondChoices = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-time-choice-second-step',
+    message: 'hint'
+  });
+  assert.match(distanceTimeSecondChoices.body.response, /1\. acceleration\n2\. speed\n3\. force/i);
+  const acceptedChoiceTwo = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-time-choice-second-step',
+    message: 'choice 2'
+  });
+  assert.equal(acceptedChoiceTwo.statusCode, 200);
+  assert.equal(acceptedChoiceTwo.body.tutor.completed, true);
+
+  const steeperStart = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'wrong-steeper',
+    message: 'what does a steeper line on a distance time graph mean'
+  });
+  assert.equal(steeperStart.statusCode, 200);
+  assert.equal(steeperStart.body.routeType, 'motion_force_knowledge_tutor');
+
+  const positiveDirection = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'wrong-steeper',
+    message: 'its going in a positive direction'
+  });
+  assert.equal(positiveDirection.statusCode, 200);
+  assert.equal(positiveDirection.body.routeType, 'motion_force_knowledge_tutor');
+  assert.equal(positiveDirection.body.tutor.currentStepIndex, 0);
+  assert.match(positiveDirection.body.response, /greater speed/i);
+  assert.doesNotMatch(positiveDirection.body.response, /^Good\b/i);
+
+  const steeperStep = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'wrong-steeper',
+    message: 'speed increases'
+  });
+  assert.equal(steeperStep.statusCode, 200);
+  assert.equal(steeperStep.body.tutor.currentStepIndex, 1);
+
+  const wrongSteeper = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'wrong-steeper',
+    message: 'decresing'
+  });
+  assert.equal(wrongSteeper.statusCode, 200);
+  assert.equal(wrongSteeper.body.routeType, 'motion_force_knowledge_tutor');
+  assert.equal(wrongSteeper.body.tutor.currentStepIndex, 1);
+  assert.match(wrongSteeper.body.response, /Not quite/i);
+  assert.doesNotMatch(wrongSteeper.body.response, /^Yes\b|^Correct\b/i);
+
+  for (const [index, message] of ['incresing', 'speeding up', 'moving faster'].entries()) {
+    const start = await enabled.request('POST', '/api/student/message', {
+      sessionId: classSessionId,
+      studentHubId: `steeper-accepts-${index}`,
+      message: 'what does a steeper line on a distance time graph mean'
+    });
+    assert.equal(start.statusCode, 200);
+    const step = await enabled.request('POST', '/api/student/message', {
+      sessionId: classSessionId,
+      studentHubId: `steeper-accepts-${index}`,
+      message: 'speed increases'
+    });
+    assert.equal(step.statusCode, 200);
+    const accepted = await enabled.request('POST', '/api/student/message', {
+      sessionId: classSessionId,
+      studentHubId: `steeper-accepts-${index}`,
+      message
+    });
+    assert.equal(accepted.statusCode, 200);
+    assert.equal(accepted.body.tutor.completed, true);
+  }
+
+  for (const [index, message] of ['decreasing', 'slower', 'slowing down'].entries()) {
+    const start = await enabled.request('POST', '/api/student/message', {
+      sessionId: classSessionId,
+      studentHubId: `steeper-rejects-${index}`,
+      message: 'what does a steeper line on a distance time graph mean'
+    });
+    assert.equal(start.statusCode, 200);
+    const step = await enabled.request('POST', '/api/student/message', {
+      sessionId: classSessionId,
+      studentHubId: `steeper-rejects-${index}`,
+      message: 'speed increases'
+    });
+    assert.equal(step.statusCode, 200);
+    const rejected = await enabled.request('POST', '/api/student/message', {
+      sessionId: classSessionId,
+      studentHubId: `steeper-rejects-${index}`,
+      message
+    });
+    assert.equal(rejected.statusCode, 200);
+    assert.equal(rejected.body.tutor.currentStepIndex, 1);
+    assert.doesNotMatch(rejected.body.response, /^Yes\b|^Correct\b/i);
+  }
+
+  const steeperChoiceStart = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'steeper-choice',
+    message: 'what does a steeper line on a distance time graph mean'
+  });
+  assert.equal(steeperChoiceStart.statusCode, 200);
+  const steeperChoiceStep = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'steeper-choice',
+    message: 'speed increases'
+  });
+  assert.equal(steeperChoiceStep.statusCode, 200);
+  for (const message of ['decreasing', 'slower', 'same']) {
+    const response = await enabled.request('POST', '/api/student/message', {
+      sessionId: classSessionId,
+      studentHubId: 'steeper-choice',
+      message
+    });
+    assert.equal(response.statusCode, 200);
+  }
+  const steeperChoices = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'steeper-choice',
+    message: 'hint'
+  });
+  assert.match(steeperChoices.body.response, /1\. increasing\n2\. decreasing\n3\. staying the same/i);
+  const steeperChoiceCorrect = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'steeper-choice',
+    message: '1'
+  });
+  assert.equal(steeperChoiceCorrect.statusCode, 200);
+  assert.equal(steeperChoiceCorrect.body.tutor.completed, true);
+
+  const newInertiaQuestion = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'wrong-steeper',
+    message: 'What is inertia?'
+  });
+  assert.equal(newInertiaQuestion.statusCode, 200);
+  assert.equal(newInertiaQuestion.body.routeType, 'motion_force_knowledge_tutor');
+  assert.equal(newInertiaQuestion.body.tutor.currentStepIndex, 0);
+  assert.equal(newInertiaQuestion.body.tutor.originalQuestion, 'What is inertia?');
+  assert.match(newInertiaQuestion.body.response, /starting a new problem/i);
+  assert.match(newInertiaQuestion.body.response, /resisting a change/i);
+
+  const inertiaStart = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'inertia-accepts-resisting',
+    message: 'What is inertia?'
+  });
+  assert.equal(inertiaStart.statusCode, 200);
+  assert.equal(inertiaStart.body.routeType, 'motion_force_knowledge_tutor');
+
+  const resistingOnly = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'inertia-accepts-resisting',
+    message: 'resisting'
+  });
+  assert.equal(resistingOnly.statusCode, 200);
+  assert.equal(resistingOnly.body.tutor.currentStepIndex, 1);
+  assert.match(resistingOnly.body.response, /Good/i);
+  assert.match(resistingOnly.body.response, /more inertia/i);
+
+  const inertiaStartSecond = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'inertia-accepts-resisting-change',
+    message: 'What is inertia?'
+  });
+  assert.equal(inertiaStartSecond.statusCode, 200);
+
+  const resistingChange = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'inertia-accepts-resisting-change',
+    message: 'resisting a change?'
+  });
+  assert.equal(resistingChange.statusCode, 200);
+  assert.equal(resistingChange.body.tutor.currentStepIndex, 1);
+  assert.match(resistingChange.body.response, /Good/i);
+
+  const inertiaHintStart = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'inertia-hints',
+    message: 'What is inertia?'
+  });
+  assert.equal(inertiaHintStart.statusCode, 200);
+
+  const inertiaWrongOne = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'inertia-hints',
+    message: 'both'
+  });
+  assert.match(inertiaWrongOne.body.response, /resisting a change in motion/i);
+
+  const inertiaWrongTwo = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'inertia-hints',
+    message: 'changing motion easily'
+  });
+  assert.match(inertiaWrongTwo.body.response, /harder to start, stop, or turn/i);
+
+  const inertiaWrongThree = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'inertia-hints',
+    message: 'speed and madd'
+  });
+  assert.match(inertiaWrongThree.body.response, /Choose one:\n1\. changing motion easily\n2\. resisting a change in motion\n3\. making speed disappear/i);
+
+  const inertiaChoiceCorrect = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'inertia-hints',
+    message: '2'
+  });
+  assert.equal(inertiaChoiceCorrect.statusCode, 200);
+  assert.equal(inertiaChoiceCorrect.body.tutor.currentStepIndex, 1);
+
+  const inertiaMassChoiceStart = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'inertia-mass-choice',
+    message: 'What is inertia?'
+  });
+  assert.equal(inertiaMassChoiceStart.statusCode, 200);
+  const inertiaMassStep = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'inertia-mass-choice',
+    message: 'resisting a change in motion'
+  });
+  assert.equal(inertiaMassStep.statusCode, 200);
+  for (const message of ['color', 'speed', 'temperature']) {
+    const response = await enabled.request('POST', '/api/student/message', {
+      sessionId: classSessionId,
+      studentHubId: 'inertia-mass-choice',
+      message
+    });
+    assert.equal(response.statusCode, 200);
+  }
+  const inertiaMassChoices = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'inertia-mass-choice',
+    message: 'hint'
+  });
+  assert.match(inertiaMassChoices.body.response, /1\. color\n2\. mass\n3\. temperature/i);
+  const inertiaMassChoiceCorrect = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'inertia-mass-choice',
+    message: '2'
+  });
+  assert.equal(inertiaMassChoiceCorrect.statusCode, 200);
+  assert.equal(inertiaMassChoiceCorrect.body.tutor.completed, true);
 
   const disabled = createRouteHarness({
     studentGuidedFormulaTutoringEnabled: false,
@@ -1395,6 +1803,9 @@ async function testGuidedMotionForceKnowledgeTutor() {
   assert.equal(formulaStart.statusCode, 200);
   assert.equal(formulaStart.body.routeType, 'formula_tutor');
   assert.equal(formulaStart.body.tutor.formulaId, 'speed_distance_time');
+  assert.equal(formulaStart.body.tutor.tutorCategory, 'formula');
+  assert.equal(formulaStart.body.tutor.tutorLabel, 'Formula Tutor');
+  assert.equal(formulaStart.body.tutor.originalQuestion, formulaQuestion);
   assert.doesNotMatch(formulaStart.body.response, /speed = 6 m\/s/i);
   assert.equal(
     enabledFormula.studentSessions[classSessionId].anonymousHubs['formula-still-guided'].currentTutorProblem.tutorType,

@@ -127,7 +127,7 @@ function registerStudentRoutes(app, {
           : 'formula_tutor';
         hub.currentTutorProblem = null;
         const response = stoppedTutorType === 'motion_force_knowledge_tutor'
-          ? 'Guided Motion/Force tutoring is turned off right now. Ask your question again for a normal answer.'
+          ? 'Guided General tutoring is turned off right now. Ask your question again for a normal answer.'
           : 'Guided formula tutoring is turned off right now. Ask your formula question again for a normal answer.';
         const entry = appendStudentHubEntry({
           session,
@@ -170,7 +170,7 @@ function registerStudentRoutes(app, {
       if (hub.currentTutorProblem) {
         const previousTutorProblem = hub.currentTutorProblem;
         const previousTutorIsMotionForceKnowledge = isMotionForceKnowledgeTutorProblem(previousTutorProblem);
-        if (isLikelyNewFormulaQuestionDuringTutor(message)) {
+        if (isLikelyNewQuestionDuringTutor(message)) {
           const result = await answerStudentMessage(message, {
             intent,
             lastAnsweredPrompt: lastAnsweredContext.prompt,
@@ -236,7 +236,7 @@ function registerStudentRoutes(app, {
               originalQuestion: message
             });
             const response = [
-              'It looks like you are starting a new problem. I’ll start a new Guided Motion/Force Tutor question.',
+              'It looks like you are starting a new problem. I’ll start a new Guided General Tutor question.',
               '',
               buildMotionForceKnowledgeTutorPrompt(hub.currentTutorProblem)
             ].join('\n');
@@ -588,6 +588,32 @@ function normalizeStudentControls(value = {}) {
   };
 }
 
+function isLikelyNewQuestionDuringTutor(message) {
+  if (isLikelyNewFormulaQuestionDuringTutor(message)) return true;
+
+  const raw = String(message || '').trim();
+  const text = raw
+    .toLowerCase()
+    .replace(/[’']/g, '')
+    .replace(/[?.!,;:]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (text.length < 12) return false;
+  if (/^(hint|help|stop|cancel|exit|quit|restart|start over|reset)$/.test(text)) return false;
+  if (/^(speed|mass|resisting|increasing|decreasing|faster|slower|stopped|friction|inertia)$/.test(text)) return false;
+
+  const asksQuestion = /\?/.test(raw) || /^(what|why|which|how|when|where|does|do|is|are|can)\b/.test(text);
+  if (!asksQuestion) return false;
+
+  if (/^(?:what|which)\s+law\s+is\s+this$/.test(text)) return true;
+  if (/\b(?:what|why|which|how)\b/.test(text) && /\b(?:inertia|friction|slope|graph|distance\s+time|distance\s+versus\s+time|flat\s+line|law|paper|crumpled|air\s+resistance|force|motion|velocity|acceleration)\b/.test(text)) {
+    return true;
+  }
+
+  return false;
+}
+
 function createStudentQuestionRateLimiter({ now = () => Date.now() } = {}) {
   const buckets = new Map();
 
@@ -866,6 +892,11 @@ function makeFormulaTutorRoute(currentTutorProblem) {
     toolsUsed: ['formula_tutor'],
     notes: 'Guided formula tutor step.',
     aiAllowed: false,
+    tutorCategory: 'formula',
+    tutorLabel: 'Formula Tutor',
+    originalQuestion: problem.originalQuestion || '',
+    finalAnswer: problem.finalAnswer || null,
+    finalExplanation: problem.finalExplanation || '',
     formulaWork: {
       formulaId: problem.formulaId || '',
       family: problem.family || '',
@@ -879,6 +910,11 @@ function makeFormulaTutorRoute(currentTutorProblem) {
       toolsUsed: ['formula_tutor'],
       notes: 'Guided formula tutor step.',
       aiAllowed: false,
+      tutorCategory: 'formula',
+      tutorLabel: 'Formula Tutor',
+      originalQuestion: problem.originalQuestion || '',
+      finalAnswer: problem.finalAnswer || null,
+      finalExplanation: problem.finalExplanation || '',
       formulaWork: {
         formulaId: problem.formulaId || '',
         family: problem.family || '',
@@ -896,8 +932,15 @@ function makeMotionForceKnowledgeTutorRoute(currentTutorProblem) {
     type: 'motion_force_knowledge_tutor',
     confidence: 'strong',
     toolsUsed: ['motion_force_knowledge_tutor'],
-    notes: 'Guided Motion/Force knowledge tutor step.',
+    notes: 'Guided general tutor step.',
     aiAllowed: false,
+    tutorCategory: 'general',
+    tutorLabel: 'General Tutor',
+    originalQuestion: problem.originalQuestion || '',
+    topic: problem.topic || '',
+    title: problem.topic || '',
+    finalAnswer: problem.finalAnswer || '',
+    finalExplanation: problem.finalAnswer || '',
     motionForceTutor: {
       id: problem.id || '',
       topic: problem.topic || '',
@@ -908,8 +951,15 @@ function makeMotionForceKnowledgeTutorRoute(currentTutorProblem) {
       type: 'motion_force_knowledge_tutor',
       confidence: 'strong',
       toolsUsed: ['motion_force_knowledge_tutor'],
-      notes: 'Guided Motion/Force knowledge tutor step.',
+      notes: 'Guided general tutor step.',
       aiAllowed: false,
+      tutorCategory: 'general',
+      tutorLabel: 'General Tutor',
+      originalQuestion: problem.originalQuestion || '',
+      topic: problem.topic || '',
+      title: problem.topic || '',
+      finalAnswer: problem.finalAnswer || '',
+      finalExplanation: problem.finalAnswer || '',
       motionForceTutor: {
         id: problem.id || '',
         topic: problem.topic || '',

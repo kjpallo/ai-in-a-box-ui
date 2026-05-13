@@ -2223,6 +2223,13 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'phase 10b motion force distance-time graph typo slope',
+    question: 'what is on the slop of a distance vers time graph show?',
+    type: 'graph_concept',
+    includes: ['distance-time graph', 'slope means speed'],
+    aiAllowed: false
+  },
+  {
     name: 'phase 10b motion force velocity-time graph slope',
     question: 'what does slope mean on a velocity time graph',
     type: 'graph_concept',
