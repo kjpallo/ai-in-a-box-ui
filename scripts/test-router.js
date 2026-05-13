@@ -1519,7 +1519,13 @@ const tests = [
     question: 'Find total resistance in a series circuit with 5 ohms, 10 ohms, and 20 ohms.',
     type: 'science_formula',
     includes: ['Rt = 35 ohms'],
-    aiAllowed: false
+    aiAllowed: false,
+    formulaWork: {
+      formulaId: 'series_total_resistance',
+      finalAnswerValue: 35,
+      finalAnswerDisplay: '35 ohms',
+      minStepCount: 4
+    }
   },
   {
     name: 'electricity/magnetism smoke parallel resistance then current',

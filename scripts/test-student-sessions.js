@@ -534,6 +534,20 @@ async function testExpandedFormulaTutorFlows() {
     ]
   });
 
+  await runGuidedFormulaFlow({
+    name: 'series-total-resistance',
+    question: 'Find total resistance in a series circuit with 5 ohms, 10 ohms, and 20 ohms.',
+    finalAnswer: '35 ohms',
+    formulaId: 'series_total_resistance',
+    startMatch: /what kind of circuit/i,
+    steps: [
+      { message: 'series', match: /what operation.*total resistance.*series/i },
+      { message: 'add', match: /substitute/i },
+      { message: '5 + 10 + 20', match: /total resistance/i },
+      { message: '35 ohms', match: /35 ohms/i }
+    ]
+  });
+
   await testExpandedFormulaTutorEnergyBypass();
 }
 
@@ -669,6 +683,19 @@ async function runGuidedNetForceFlow({ name, question, finalAnswer, balance, ste
 
   const teacherDirect = await questionAnswer.answerStudentMessage(question);
   assert.match(teacherDirect.response, new RegExp(escapeRegExp(finalAnswer), 'i'));
+
+  const disabled = createRouteHarness({ studentGuidedFormulaTutoringEnabled: false });
+  const disabledCreate = await disabled.request('POST', '/api/profile/create-student-session');
+  assert.equal(disabledCreate.statusCode, 201);
+  const disabledDirect = await disabled.request('POST', '/api/student/message', {
+    sessionId: disabledCreate.body.sessionId,
+    studentHubId: `${name}-direct`,
+    message: question
+  });
+  assert.equal(disabledDirect.statusCode, 200);
+  assert.notEqual(disabledDirect.body.routeType, 'formula_tutor');
+  assert.match(disabledDirect.body.response, new RegExp(escapeRegExp(finalAnswer), 'i'));
+  assert.equal(disabled.studentSessions[disabledCreate.body.sessionId].anonymousHubs[`${name}-direct`].currentTutorProblem, null);
 
   const start = await request('POST', '/api/student/message', {
     sessionId: classSessionId,
@@ -931,7 +958,7 @@ async function setupDensityTutorAtVolumeStep(studentHubId = 'written-volume') {
   return { request, classSessionId };
 }
 
-async function runGuidedFormulaFlow({ name, question, finalAnswer, formulaId, steps }) {
+async function runGuidedFormulaFlow({ name, question, finalAnswer, formulaId, steps, startMatch = /What variable are we solving for\?/i }) {
   const { request, questionAnswer, studentSessions } = createRouteHarness();
 
   const create = await request('POST', '/api/profile/create-student-session');
@@ -951,7 +978,7 @@ async function runGuidedFormulaFlow({ name, question, finalAnswer, formulaId, st
   assert.equal(start.body.tutor.formulaId, formulaId);
   assert.equal(start.body.tutor.active, true);
   assert.doesNotMatch(start.body.response, new RegExp(escapeRegExp(finalAnswer), 'i'));
-  assert.match(start.body.response, /What variable are we solving for\?/i);
+  assert.match(start.body.response, startMatch);
   assert.ok(!start.body.tutor.finalAnswerDisplay);
 
   let response = start;
