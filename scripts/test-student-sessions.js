@@ -562,7 +562,41 @@ async function testExpandedFormulaTutorFlows() {
     ]
   });
 
+  await runGuidedFormulaFlow({
+    name: 'parallel-total-resistance-exact-three-20',
+    question: 'Three 20 ohm resistors are connected in parallel. Find the total resistance.',
+    finalAnswer: '6.67 ohms',
+    formulaId: 'parallel_total_resistance',
+    startMatch: /what kind of circuit/i,
+    steps: [
+      { message: 'parallel', match: /formula.*total resistance.*parallel/i },
+      { message: '1/Rt = 1/R1 + 1/R2 + 1/R3', match: /substitute/i },
+      { message: '1/20 + 1/20 + 1/20', match: /total resistance/i },
+      { message: '6.67 ohms', match: /6.67 ohms/i }
+    ]
+  });
+
+  await testExactParallelTutorDisabledDirectAnswer();
   await testExpandedFormulaTutorEnergyBypass();
+}
+
+async function testExactParallelTutorDisabledDirectAnswer() {
+  const disabled = createRouteHarness({ studentGuidedFormulaTutoringEnabled: false });
+  const disabledCreate = await disabled.request('POST', '/api/profile/create-student-session');
+  assert.equal(disabledCreate.statusCode, 201);
+
+  const direct = await disabled.request('POST', '/api/student/message', {
+    sessionId: disabledCreate.body.sessionId,
+    studentHubId: 'parallel-total-resistance-direct',
+    message: 'Three 20 ohm resistors are connected in parallel. Find the total resistance.'
+  });
+  assert.equal(direct.statusCode, 200);
+  assert.notEqual(direct.body.routeType, 'formula_tutor');
+  assert.match(direct.body.response, /Rt = 6\.67 ohms/i);
+  assert.equal(
+    disabled.studentSessions[disabledCreate.body.sessionId].anonymousHubs['parallel-total-resistance-direct'].currentTutorProblem,
+    null
+  );
 }
 
 async function testGuidedNetForceTutorFlows() {

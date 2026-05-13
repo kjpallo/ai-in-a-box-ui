@@ -1611,7 +1611,21 @@ const tests = [
     question: 'Three 20 ohm resistors are connected in parallel across a 120 V generator. Find the total resistance and current.',
     type: 'science_formula',
     includes: ['1/Rt', '1/20 + 1/20 + 1/20', 'Rt = 6.67 ohms', 'I = 18 amps'],
+    noFormulaWork: true,
     aiAllowed: false
+  },
+  {
+    name: 'electricity/magnetism smoke exact simple parallel total resistance tutor work',
+    question: 'Three 20 ohm resistors are connected in parallel. Find the total resistance.',
+    type: 'science_formula',
+    includes: ['1/Rt', '1/20 + 1/20 + 1/20', 'Rt = 6.67 ohms'],
+    aiAllowed: false,
+    formulaWork: {
+      formulaId: 'parallel_total_resistance',
+      finalAnswerValue: 6.666666666666666,
+      finalAnswerDisplay: '6.67 ohms',
+      minStepCount: 4
+    }
   },
   {
     name: 'electricity/magnetism smoke parallel total resistance',
