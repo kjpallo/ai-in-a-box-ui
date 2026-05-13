@@ -535,16 +535,16 @@ async function testExpandedFormulaTutorFlows() {
   });
 
   await runGuidedFormulaFlow({
-    name: 'series-total-resistance',
-    question: 'Find total resistance in a series circuit with 5 ohms, 10 ohms, and 20 ohms.',
-    finalAnswer: '35 ohms',
+    name: 'series-total-resistance-2-4-6',
+    question: 'Find total resistance in a series circuit with 2 ohms, 4 ohms, and 6 ohms.',
+    finalAnswer: '12 ohms',
     formulaId: 'series_total_resistance',
     startMatch: /what kind of circuit/i,
     steps: [
       { message: 'series', match: /what operation.*total resistance.*series/i },
       { message: 'add', match: /substitute/i },
-      { message: '5 + 10 + 20', match: /total resistance/i },
-      { message: '35 ohms', match: /35 ohms/i }
+      { message: '2 + 4 + 6', match: /total resistance/i },
+      { message: '12 ohms', match: /12 ohms/i }
     ]
   });
 

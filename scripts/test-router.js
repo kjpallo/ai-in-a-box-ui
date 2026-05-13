@@ -1512,6 +1512,7 @@ const tests = [
     question: 'Three 20 ohm resistors are connected in series across a 120 V generator. Find the total resistance and current.',
     type: 'science_formula',
     includes: ['Rt = R1 + R2', 'Rt = 20 + 20 + 20', 'Rt = 60 ohms', 'I = 2 amps'],
+    noFormulaWork: true,
     aiAllowed: false
   },
   {
@@ -1528,6 +1529,45 @@ const tests = [
     }
   },
   {
+    name: 'electricity/magnetism smoke series total resistance 2 4 6',
+    question: 'Find total resistance in a series circuit with 2 ohms, 4 ohms, and 6 ohms.',
+    type: 'science_formula',
+    includes: ['Rt = 12 ohms'],
+    aiAllowed: false,
+    formulaWork: {
+      formulaId: 'series_total_resistance',
+      finalAnswerValue: 12,
+      finalAnswerDisplay: '12 ohms',
+      minStepCount: 4
+    }
+  },
+  {
+    name: 'electricity/magnetism smoke series total resistance 10 15',
+    question: 'Find total resistance in a series circuit with 10 ohms and 15 ohms.',
+    type: 'science_formula',
+    includes: ['Rt = 25 ohms'],
+    aiAllowed: false,
+    formulaWork: {
+      formulaId: 'series_total_resistance',
+      finalAnswerValue: 25,
+      finalAnswerDisplay: '25 ohms',
+      minStepCount: 4
+    }
+  },
+  {
+    name: 'electricity/magnetism smoke series total resistance three 20 ohm resistors',
+    question: 'Find total resistance in a series circuit with three 20 ohm resistors.',
+    type: 'science_formula',
+    includes: ['Rt = 60 ohms'],
+    aiAllowed: false,
+    formulaWork: {
+      formulaId: 'series_total_resistance',
+      finalAnswerValue: 60,
+      finalAnswerDisplay: '60 ohms',
+      minStepCount: 4
+    }
+  },
+  {
     name: 'electricity/magnetism smoke parallel resistance then current',
     question: 'Three 20 ohm resistors are connected in parallel across a 120 V generator. Find the total resistance and current.',
     type: 'science_formula',
@@ -1539,6 +1579,7 @@ const tests = [
     question: 'Find total resistance in a parallel circuit with a 100 ohm resistor, a 50 ohm resistor, and a 25 ohm resistor.',
     type: 'science_formula',
     includes: ['Rt = 14.29 ohms'],
+    noFormulaWork: true,
     aiAllowed: false
   },
   {
@@ -1567,6 +1608,7 @@ const tests = [
     question: 'A series circuit has a current of 2 amps, a 2 ohm resistor, and a light bulb with resistance of 1 ohm. What is the battery voltage?',
     type: 'science_formula',
     includes: ['Rt = 2 + 1', 'Rt = 3 ohms', 'V = I', 'V = 2 × 3', 'V = 6 volts'],
+    noFormulaWork: true,
     aiAllowed: false
   },
   {
@@ -2702,6 +2744,9 @@ for (const test of tests) {
         formula: route.formulaWork.formula,
         hasGuidedSteps: true
       });
+    }
+    if (test.noFormulaWork) {
+      assert.ok(!route.formulaWork, 'Expected questionRoute.formulaWork to be absent');
     }
 
     passed += 1;
