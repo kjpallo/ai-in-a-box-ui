@@ -20,6 +20,7 @@
     "test:knowledge-pack": "node scripts/test-knowledge-pack-validation.js && node scripts/validate-knowledge-pack.js",
     "test:approved-packs": "node scripts/test-approved-knowledge-pack-loader.js",
     "test:draft-packs": "node scripts/test-draft-knowledge-pack-workspace.js",
+    "test:promote-draft-pack": "node scripts/test-promote-draft-knowledge-pack.js",
     "inspect:approved-packs": "node scripts/inspect-approved-knowledge-packs.js",
     "inspect:draft-packs": "node scripts/inspect-draft-knowledge-packs.js",
     "audit:motion-force-overlap": "node scripts/audit-motion-force-overlap.js",
