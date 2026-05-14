@@ -23,6 +23,7 @@
     "test:promote-draft-pack": "node scripts/test-promote-draft-knowledge-pack.js",
     "test:review-draft-pack": "node scripts/test-review-draft-knowledge-pack.js",
     "test:import-pipeline-dry-run": "node scripts/test-import-pipeline-dry-run.js",
+    "test:import-pipeline-report": "node scripts/test-import-pipeline-report.js",
     "test:upload-extraction": "node scripts/test-upload-text-extraction.js",
     "test:generate-draft-pack": "node scripts/test-generate-draft-knowledge-pack.js",
     "extract:upload-text": "node scripts/extract-upload-text.js",
