@@ -1,0 +1,59 @@
+{
+  "standardsBankId": "sample_physical_science_standards",
+  "title": "Sample Physical Science Standards Bank",
+  "version": "0.1.0",
+  "subject": "Physical Science",
+  "gradeLevel": "8",
+  "jurisdiction": "Local Sample",
+  "sourceFiles": [
+    {
+      "fileName": "sample_standards_source.pdf",
+      "fileType": "pdf",
+      "notes": "Fake sample source for standards bank validation only."
+    }
+  ],
+  "standards": [
+    {
+      "standardId": "SAMPLE.PS.FORCES.1",
+      "code": "PS.FORCES.1",
+      "title": "Balanced and Unbalanced Forces",
+      "officialText": "Describe how balanced and unbalanced forces affect motion.",
+      "studentFriendlyText": "I can explain how balanced and unbalanced forces change motion.",
+      "strand": "Physical Science",
+      "topic": "Forces and Motion",
+      "keywords": ["balanced forces", "unbalanced forces", "net force"],
+      "questionTriggers": ["balanced forces", "unbalanced forces", "net force"],
+      "prerequisiteStandards": [],
+      "relatedStandards": ["SAMPLE.PS.MOTION.1"],
+      "reviewStatus": "approved",
+      "confidence": "high",
+      "sourceFile": "sample_standards_source.pdf",
+      "sourceLocation": "p. 1",
+      "sourceTextSnippet": "Describe how balanced and unbalanced forces affect motion."
+    },
+    {
+      "standardId": "SAMPLE.PS.MOTION.1",
+      "code": "PS.MOTION.1",
+      "title": "Representing Motion",
+      "officialText": "Interpret simple representations of object motion.",
+      "studentFriendlyText": "I can use graphs and descriptions to explain an object's motion.",
+      "strand": "Physical Science",
+      "topic": "Motion",
+      "keywords": ["motion graph", "velocity", "speed"],
+      "questionTriggers": ["position-time graph", "speed graph", "velocity"],
+      "prerequisiteStandards": [],
+      "relatedStandards": ["SAMPLE.PS.FORCES.1"],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "sample_standards_source.pdf",
+      "sourceLocation": "p. 2",
+      "sourceTextSnippet": "Interpret simple representations of object motion."
+    }
+  ],
+  "metadata": {
+    "createdBy": "local-sample",
+    "createdAt": "2026-05-13T00:00:00.000Z",
+    "updatedAt": "2026-05-13T00:00:00.000Z",
+    "notes": "Safe fake sample standards bank for Phase 2 validation only. Not loaded by the live router."
+  }
+}

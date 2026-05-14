@@ -21,3 +21,4 @@ server.js.bak-*
 
 logs/
 backups/
+tmp/model-responses/
