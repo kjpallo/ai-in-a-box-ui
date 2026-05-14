@@ -17,6 +17,7 @@
     "test:standards-log-examples": "node scripts/test-standards-log-metadata-examples.js",
     "test:standards-summary": "node scripts/test-standards-summary-report.js",
     "test:motion-force-knowledge": "node scripts/test-motion-force-knowledge.js",
+    "test:knowledge-pack": "node scripts/test-knowledge-pack-validation.js && node scripts/validate-knowledge-pack.js",
     "audit:motion-force-overlap": "node scripts/audit-motion-force-overlap.js",
     "audit:standards-metadata": "node scripts/audit-standards-metadata.js",
     "test:all": "npm test && npm run test:bank",

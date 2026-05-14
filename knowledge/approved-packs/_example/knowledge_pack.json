@@ -1,0 +1,178 @@
+{
+  "packId": "sample-physical-science",
+  "title": "Sample Physical Science Pack",
+  "version": "0.1.0",
+  "subject": "Physical Science",
+  "gradeLevel": "8",
+  "sourceFiles": [
+    {
+      "fileName": "sample_motion_notes.pdf",
+      "fileType": "pdf",
+      "reviewStatus": "approved",
+      "confidence": "high",
+      "notes": "Fake sample source for schema validation only."
+    }
+  ],
+  "vocabulary": [
+    {
+      "term": "velocity",
+      "aliases": ["speed with direction"],
+      "studentDefinition": "Velocity tells how fast something moves and which direction it moves.",
+      "teacherDefinition": "Velocity is a vector quantity describing displacement per unit time.",
+      "misconception": "Students may treat velocity as identical to speed and leave out direction.",
+      "exampleQuestion": "A cart moves east at 3 m/s. What is its velocity?",
+      "exampleAnswer": "Its velocity is 3 m/s east.",
+      "standards": ["SAMPLE.PS.MOTION.1"],
+      "reviewStatus": "approved",
+      "confidence": "high",
+      "sourceFile": "sample_motion_notes.pdf",
+      "sourceLocation": "p. 2",
+      "sourceTextSnippet": "Velocity includes speed and direction."
+    },
+    {
+      "term": "net force",
+      "aliases": ["overall force", "total force"],
+      "studentDefinition": "Net force is the overall force after forces are combined.",
+      "teacherDefinition": "Net force is the vector sum of all forces acting on an object.",
+      "misconception": "Students may add opposite-direction forces without subtracting.",
+      "exampleQuestion": "A box has 8 N right and 3 N left. What is the net force?",
+      "exampleAnswer": "The net force is 5 N right.",
+      "standards": ["SAMPLE.PS.FORCES.1"],
+      "reviewStatus": "approved",
+      "confidence": "high",
+      "sourceFile": "sample_forces_notes.docx",
+      "sourceLocation": "section 1",
+      "sourceTextSnippet": "Net force is the combination of all forces on an object."
+    }
+  ],
+  "concepts": [
+    {
+      "conceptId": "balanced-vs-unbalanced-forces",
+      "title": "Balanced and Unbalanced Forces",
+      "aliases": ["force balance"],
+      "studentExplanation": "Balanced forces cancel out. Unbalanced forces do not cancel out and can change motion.",
+      "keyIdeas": [
+        "Balanced forces have a net force of 0 N.",
+        "Unbalanced forces can speed up, slow down, or turn an object."
+      ],
+      "examples": ["Two equal pushes in opposite directions are balanced."],
+      "nonExamples": ["A 10 N push right and a 4 N push left are not balanced."],
+      "commonMisconceptions": ["An object must be still for forces to be balanced."],
+      "standards": ["SAMPLE.PS.FORCES.1"],
+      "reviewStatus": "approved",
+      "confidence": "high",
+      "sourceFile": "sample_forces_notes.docx",
+      "sourceLocation": "section 2",
+      "sourceTextSnippet": "Balanced forces produce no change in motion."
+    },
+    {
+      "conceptId": "motion-graphs",
+      "title": "Reading Simple Motion Graphs",
+      "aliases": ["position time graph", "speed graph"],
+      "studentExplanation": "A motion graph shows how an object's motion changes over time.",
+      "keyIdeas": [
+        "A steeper line can mean faster motion.",
+        "A flat position-time line means position is not changing."
+      ],
+      "examples": ["A rising position-time line shows movement away from the start."],
+      "nonExamples": ["A graph title alone does not tell the full motion story."],
+      "commonMisconceptions": ["Students may think every upward line means going uphill."],
+      "standards": ["SAMPLE.PS.MOTION.1"],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "sample_motion_graphs.pptx",
+      "sourceLocation": "slide 4",
+      "sourceTextSnippet": "Slope on a position-time graph describes speed."
+    }
+  ],
+  "referenceFormulas": [
+    {
+      "formulaId": "average-speed-reference",
+      "title": "Average Speed",
+      "equation": "average speed = total distance / total time",
+      "variables": [
+        {
+          "symbol": "average speed",
+          "meaning": "how fast something moves on average"
+        },
+        {
+          "symbol": "total distance",
+          "meaning": "the full path length traveled"
+        },
+        {
+          "symbol": "total time",
+          "meaning": "the elapsed time"
+        }
+      ],
+      "studentExplanation": "Average speed compares the total distance traveled with the total time.",
+      "solverStatus": "reference_only",
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "sample_motion_notes.pdf",
+      "sourceLocation": "p. 3",
+      "sourceTextSnippet": "Average speed is total distance divided by total time."
+    }
+  ],
+  "problemBank": [
+    {
+      "problemId": "sample-force-1",
+      "question": "A box is pushed with 6 N right and 6 N left. Are the forces balanced?",
+      "expectedAnswer": "Yes. The forces are balanced because the net force is 0 N.",
+      "standards": ["SAMPLE.PS.FORCES.1"],
+      "reviewStatus": "approved",
+      "confidence": "high",
+      "sourceFile": "sample_forces_notes.docx",
+      "sourceLocation": "practice question 1",
+      "sourceTextSnippet": "Equal opposite forces are balanced."
+    },
+    {
+      "problemId": "sample-motion-1",
+      "question": "On a position-time graph, what can a steeper line mean?",
+      "expectedAnswer": "A steeper line can mean the object is moving faster.",
+      "standards": ["SAMPLE.PS.MOTION.1"],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "sample_motion_graphs.pptx",
+      "sourceLocation": "slide 5",
+      "sourceTextSnippet": "Steeper slopes show faster motion."
+    }
+  ],
+  "standardsMap": [
+    {
+      "standardId": "SAMPLE.PS.FORCES.1",
+      "description": "Describe how balanced and unbalanced forces affect motion.",
+      "relatedVocabulary": ["net force"],
+      "relatedConcepts": ["balanced-vs-unbalanced-forces"],
+      "reviewStatus": "approved",
+      "confidence": "high"
+    },
+    {
+      "standardId": "SAMPLE.PS.MOTION.1",
+      "description": "Interpret simple representations of object motion.",
+      "relatedVocabulary": ["velocity"],
+      "relatedConcepts": ["motion-graphs"],
+      "reviewStatus": "approved",
+      "confidence": "medium"
+    }
+  ],
+  "smokeTests": [
+    {
+      "question": "What is net force?",
+      "expectedAnswer": "Net force is the overall force after forces are combined.",
+      "reviewStatus": "approved",
+      "confidence": "high"
+    },
+    {
+      "question": "Can this uploaded average speed formula solve problems automatically?",
+      "expectedRoute": "reference_only",
+      "reviewStatus": "approved",
+      "confidence": "high"
+    }
+  ],
+  "metadata": {
+    "createdBy": "local-sample",
+    "createdAt": "2026-05-13T00:00:00.000Z",
+    "updatedAt": "2026-05-13T00:00:00.000Z",
+    "notes": "Safe fake sample pack for Phase 1 validation only. Not loaded by the live router."
+  }
+}
