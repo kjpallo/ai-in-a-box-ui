@@ -1,11 +1,18 @@
 const assert = require('node:assert/strict');
+const { EventEmitter } = require('node:events');
 const fs = require('node:fs');
+const http = require('node:http');
 const os = require('node:os');
 const path = require('node:path');
 
 const { loadApprovedKnowledgePacks } = require('../lib/knowledge/loadApprovedKnowledgePacks');
 const { buildKnowledgePackPrompt } = require('../lib/uploads/buildKnowledgePackPrompt');
-const { generateDraftKnowledgePack } = require('../lib/uploads/generateDraftKnowledgePack');
+const {
+  DEFAULT_OLLAMA_KEEP_ALIVE,
+  DEFAULT_OLLAMA_TIMEOUT_MS,
+  callOllamaGenerate,
+  generateDraftKnowledgePack
+} = require('../lib/uploads/generateDraftKnowledgePack');
 
 const projectRoot = path.join(__dirname, '..');
 const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'generate-draft-pack-'));
@@ -30,6 +37,10 @@ async function main() {
   try {
     assertPromptIncludesControls();
     assertPromptIncludesStandardsList();
+    await assertDefaultTimeoutAndKeepAliveReachModelClient();
+    await assertCustomTimeoutAndKeepAliveReachModelClient();
+    await assertOllamaRequestIncludesKeepAliveAndUsesTimeout();
+    await assertOllamaTimeoutReturnsUsefulError();
     await assertValidMockCreatesDraft();
     await assertCodeFencedJsonCreatesDraft();
     await assertExtraTextAroundJsonCreatesDraftWhenUnambiguous();
@@ -84,6 +95,124 @@ function assertPromptIncludesStandardsList() {
   assert.ok(prompt.includes('Available standards bank:'));
   assert.ok(prompt.includes('SAMPLE.PS.FORCES.1'));
   assert.ok(prompt.includes('You may only use standardIds from the available standards bank above.'));
+}
+
+async function assertDefaultTimeoutAndKeepAliveReachModelClient() {
+  const calls = [];
+  const result = await generateDraftKnowledgePack({
+    extractionJsonPath: extractionPath,
+    outputDraftDir: path.join(tempRoot, 'default-client-options-drafts'),
+    modelClient: async (options) => {
+      calls.push(options);
+      return JSON.stringify(makeGeneratedPack({ packId: 'generated-default-client-options-draft' }));
+    }
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].timeoutMs, DEFAULT_OLLAMA_TIMEOUT_MS);
+  assert.equal(calls[0].keepAlive, DEFAULT_OLLAMA_KEEP_ALIVE);
+}
+
+async function assertCustomTimeoutAndKeepAliveReachModelClient() {
+  const calls = [];
+  const result = await generateDraftKnowledgePack({
+    extractionJsonPath: extractionPath,
+    outputDraftDir: path.join(tempRoot, 'custom-client-options-drafts'),
+    timeoutMs: 12345,
+    keepAlive: '2m',
+    retryInvalidJson: true,
+    modelClient: async (options) => {
+      calls.push(options);
+      return calls.length === 1
+        ? '{"packId":"broken",'
+        : JSON.stringify(makeGeneratedPack({ packId: 'generated-custom-client-options-draft' }));
+    }
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls.map((call) => call.timeoutMs), [12345, 12345]);
+  assert.deepEqual(calls.map((call) => call.keepAlive), ['2m', '2m']);
+}
+
+async function assertOllamaRequestIncludesKeepAliveAndUsesTimeout() {
+  const requests = [];
+  const restoreHttpRequest = mockHttpRequest((options, callback) => {
+    const request = new EventEmitter();
+    let body = '';
+    request.write = (chunk) => {
+      body += chunk;
+    };
+    request.end = () => {
+      requests.push({
+        timeout: options.timeout,
+        body: JSON.parse(body)
+      });
+
+      const response = new EventEmitter();
+      response.statusCode = 200;
+      response.setEncoding = () => {};
+      callback(response);
+      response.emit('data', JSON.stringify({ response: JSON.stringify(makeGeneratedPack()) }));
+      response.emit('end');
+    };
+    request.destroy = (error) => {
+      request.emit('error', error);
+    };
+    return request;
+  });
+
+  try {
+    const response = await callOllamaGenerate({
+      model: 'gemma4:e2b',
+      prompt: 'Build a draft',
+      timeoutMs: 24680,
+      keepAlive: '7m'
+    });
+
+    assert.equal(response, JSON.stringify(makeGeneratedPack()));
+    assert.equal(requests.length, 1);
+    assert.equal(requests[0].timeout, 24680);
+    assert.equal(requests[0].body.keep_alive, '7m');
+    assert.equal(requests[0].body.stream, false);
+    assert.equal(requests[0].body.format, 'json');
+  } finally {
+    restoreHttpRequest();
+  }
+}
+
+async function assertOllamaTimeoutReturnsUsefulError() {
+  const restoreHttpRequest = mockHttpRequest(() => {
+    const request = new EventEmitter();
+    request.write = () => {};
+    request.end = () => {
+      request.emit('timeout');
+    };
+    request.destroy = (error) => {
+      request.emit('error', error);
+    };
+    return request;
+  });
+
+  try {
+    await assert.rejects(
+      callOllamaGenerate({
+        model: 'gemma4:e2b',
+        prompt: 'Build a draft',
+        timeoutMs: 10
+      }),
+      (error) => {
+        assert.ok(error.message.includes('Ollama request timed out.'));
+        assert.ok(error.message.includes('cold-loading'));
+        assert.ok(error.message.includes('ollama run gemma4:e2b'));
+        assert.ok(error.message.includes('--timeout-ms'));
+        return true;
+      }
+    );
+  } finally {
+    restoreHttpRequest();
+  }
 }
 
 async function assertValidMockCreatesDraft() {
@@ -396,6 +525,14 @@ function walkFiles(rootDir) {
     }
   });
   return results.sort();
+}
+
+function mockHttpRequest(handler) {
+  const originalRequest = http.request;
+  http.request = handler;
+  return () => {
+    http.request = originalRequest;
+  };
 }
 
 function makeExtraction() {
