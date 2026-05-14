@@ -1,0 +1,185 @@
+{
+  "packId": "draft-sample-physical-science",
+  "title": "Draft Sample Physical Science Pack",
+  "version": "0.1.0-draft",
+  "subject": "Physical Science",
+  "gradeLevel": "8",
+  "sourceFiles": [
+    {
+      "fileName": "draft_motion_notes_ocr.pdf",
+      "fileType": "pdf",
+      "reviewStatus": "pending",
+      "confidence": "medium",
+      "notes": "Fake draft source representing future OCR/Gemma extraction output."
+    },
+    {
+      "fileName": "draft_forces_worksheet_image.png",
+      "fileType": "image",
+      "reviewStatus": "pending",
+      "confidence": "low",
+      "notes": "Fake draft worksheet image source for traceability tests."
+    }
+  ],
+  "vocabulary": [
+    {
+      "term": "acceleration",
+      "aliases": ["change in velocity"],
+      "studentDefinition": "Acceleration describes how velocity changes over time.",
+      "teacherDefinition": "Acceleration is the rate of change of velocity.",
+      "misconception": "Students may think acceleration only means speeding up.",
+      "exampleQuestion": "A skateboarder speeds up each second. What is changing?",
+      "exampleAnswer": "The skateboarder's velocity is changing, so the skateboarder is accelerating.",
+      "standards": ["SAMPLE.PS.MOTION.1"],
+      "reviewStatus": "pending",
+      "confidence": "medium",
+      "sourceFile": "draft_motion_notes_ocr.pdf",
+      "sourceLocation": "p. 4, OCR block 2",
+      "sourceTextSnippet": "Acceleration is a change in velocity over time."
+    },
+    {
+      "term": "inertia",
+      "aliases": ["resistance to motion change"],
+      "studentDefinition": "Inertia is an object's tendency to keep doing what it is already doing.",
+      "teacherDefinition": "Inertia is resistance to a change in motion and depends on mass.",
+      "misconception": "Students may describe inertia as a force.",
+      "exampleQuestion": "Why does a book stay still until something pushes it?",
+      "exampleAnswer": "The book has inertia, so it stays at rest unless a force changes its motion.",
+      "standards": ["SAMPLE.PS.FORCES.1"],
+      "reviewStatus": "pending",
+      "confidence": "low",
+      "sourceFile": "draft_forces_worksheet_image.png",
+      "sourceLocation": "image region x=120 y=340 w=420 h=160",
+      "sourceTextSnippet": "Objects resist changes in motion."
+    }
+  ],
+  "concepts": [
+    {
+      "conceptId": "acceleration-as-velocity-change",
+      "title": "Acceleration as Velocity Change",
+      "aliases": ["changing velocity"],
+      "studentExplanation": "Acceleration happens when speed changes, direction changes, or both change.",
+      "keyIdeas": [
+        "Acceleration can mean speeding up.",
+        "Acceleration can mean slowing down or changing direction."
+      ],
+      "examples": ["A bike speeding up after a stoplight is accelerating."],
+      "nonExamples": ["A cart moving at a steady speed in a straight line is not accelerating."],
+      "commonMisconceptions": ["Only faster motion counts as acceleration."],
+      "standards": ["SAMPLE.PS.MOTION.1"],
+      "reviewStatus": "pending",
+      "confidence": "medium",
+      "sourceFile": "draft_motion_notes_ocr.pdf",
+      "sourceLocation": "p. 4, OCR block 3",
+      "sourceTextSnippet": "Acceleration can be any change in velocity."
+    },
+    {
+      "conceptId": "force-changes-motion",
+      "title": "Forces Can Change Motion",
+      "aliases": ["pushes and pulls change motion"],
+      "studentExplanation": "A force can start motion, stop motion, speed something up, slow something down, or turn it.",
+      "keyIdeas": [
+        "Forces are pushes or pulls.",
+        "Unbalanced forces change an object's motion."
+      ],
+      "examples": ["A kick can start a soccer ball moving."],
+      "nonExamples": ["Balanced forces do not change motion."],
+      "commonMisconceptions": ["Every force always changes motion immediately."],
+      "standards": ["SAMPLE.PS.FORCES.1"],
+      "reviewStatus": "pending",
+      "confidence": "low",
+      "sourceFile": "draft_forces_worksheet_image.png",
+      "sourceLocation": "image region x=80 y=210 w=520 h=210",
+      "sourceTextSnippet": "Forces can change how an object moves."
+    }
+  ],
+  "referenceFormulas": [
+    {
+      "formulaId": "acceleration-reference",
+      "title": "Acceleration",
+      "equation": "acceleration = change in velocity / time",
+      "variables": [
+        {
+          "symbol": "acceleration",
+          "meaning": "how quickly velocity changes"
+        },
+        {
+          "symbol": "change in velocity",
+          "meaning": "final velocity minus starting velocity"
+        },
+        {
+          "symbol": "time",
+          "meaning": "the time interval during the change"
+        }
+      ],
+      "studentExplanation": "Acceleration compares the change in velocity with the time it took.",
+      "solverStatus": "reference_only",
+      "reviewStatus": "pending",
+      "confidence": "medium",
+      "sourceFile": "draft_motion_notes_ocr.pdf",
+      "sourceLocation": "p. 5, formula table",
+      "sourceTextSnippet": "Acceleration equals change in velocity divided by time."
+    }
+  ],
+  "problemBank": [
+    {
+      "problemId": "draft-acceleration-1",
+      "question": "A cart changes from slow to fast over 4 seconds. What idea describes that change?",
+      "expectedAnswer": "The cart is accelerating because its velocity changes over time.",
+      "standards": ["SAMPLE.PS.MOTION.1"],
+      "reviewStatus": "pending",
+      "confidence": "medium",
+      "sourceFile": "draft_motion_notes_ocr.pdf",
+      "sourceLocation": "p. 6, practice item 1",
+      "sourceTextSnippet": "When velocity changes over time, acceleration is happening."
+    },
+    {
+      "problemId": "draft-force-motion-1",
+      "question": "A still ball starts rolling after a student pushes it. What changed the ball's motion?",
+      "expectedAnswer": "The push was a force that changed the ball's motion.",
+      "standards": ["SAMPLE.PS.FORCES.1"],
+      "reviewStatus": "pending",
+      "confidence": "low",
+      "sourceFile": "draft_forces_worksheet_image.png",
+      "sourceLocation": "image region x=100 y=520 w=500 h=180",
+      "sourceTextSnippet": "A push can start an object moving."
+    }
+  ],
+  "standardsMap": [
+    {
+      "standardId": "SAMPLE.PS.MOTION.1",
+      "description": "Interpret simple representations of object motion.",
+      "relatedVocabulary": ["acceleration"],
+      "relatedConcepts": ["acceleration-as-velocity-change"],
+      "reviewStatus": "pending",
+      "confidence": "medium"
+    },
+    {
+      "standardId": "SAMPLE.PS.FORCES.1",
+      "description": "Describe how balanced and unbalanced forces affect motion.",
+      "relatedVocabulary": ["inertia"],
+      "relatedConcepts": ["force-changes-motion"],
+      "reviewStatus": "pending",
+      "confidence": "low"
+    }
+  ],
+  "smokeTests": [
+    {
+      "question": "What does acceleration mean in this draft pack?",
+      "expectedAnswer": "Acceleration means velocity is changing over time.",
+      "reviewStatus": "pending",
+      "confidence": "medium"
+    },
+    {
+      "question": "Can the draft acceleration formula solve student problems automatically?",
+      "expectedRoute": "reference_only",
+      "reviewStatus": "pending",
+      "confidence": "medium"
+    }
+  ],
+  "metadata": {
+    "createdBy": "local-draft-sample",
+    "createdAt": "2026-05-13T00:00:00.000Z",
+    "updatedAt": "2026-05-13T00:00:00.000Z",
+    "notes": "Safe fake draft pack for Phase 4A. Draft packs are not loaded by the live router."
+  }
+}
