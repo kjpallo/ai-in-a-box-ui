@@ -21,6 +21,7 @@
     "test:approved-packs": "node scripts/test-approved-knowledge-pack-loader.js",
     "test:draft-packs": "node scripts/test-draft-knowledge-pack-workspace.js",
     "test:promote-draft-pack": "node scripts/test-promote-draft-knowledge-pack.js",
+    "test:review-draft-pack": "node scripts/test-review-draft-knowledge-pack.js",
     "test:upload-extraction": "node scripts/test-upload-text-extraction.js",
     "test:generate-draft-pack": "node scripts/test-generate-draft-knowledge-pack.js",
     "extract:upload-text": "node scripts/extract-upload-text.js",
