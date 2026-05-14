@@ -46,6 +46,7 @@ const { registerHealthRoutes } = require('./routes/healthRoutes');
 const { registerProfileRoutes } = require('./routes/profileRoutes');
 const { registerQuestionRoutes } = require('./routes/questionRoutes');
 const { registerStudentRoutes } = require('./routes/studentRoutes');
+const { createTeacherContentRoutes } = require('./routes/teacherContentRoutes');
 const { registerVoiceRoutes } = require('./routes/voiceRoutes');
 const { registerWhisperRoutes } = require('./routes/whisperRoutes');
 const {
@@ -192,6 +193,7 @@ registerClassroomControlsRoutes(app, {
   getClassroomControls,
   updateClassroomControls
 });
+app.use('/api/teacher-content', teacherAuthRequired, createTeacherContentRoutes());
 registerStudentRoutes(app, {
   answerStudentMessage: questionAnswer.answerStudentMessage,
   getClassroomControls,
