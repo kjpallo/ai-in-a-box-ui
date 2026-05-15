@@ -22,6 +22,8 @@ assertTeacherProfileEntry();
 assertOverlayMarkupAndSelectors();
 assertEndpointReferences();
 assertUploadExtractionUi();
+assertPrepareReviewHandoffUi();
+assertSelectedDraftAndProgressUi();
 assertReviewActions();
 assertPromotionAction();
 assertDisabledPlaceholders();
@@ -63,7 +65,7 @@ function assertOverlayMarkupAndSelectors() {
 }
 
 function assertEndpointReferences() {
-  [
+  const expectedEndpoints = [
     '/api/teacher-content/dashboard',
     '/api/teacher-content/uploads/extract',
     '/api/teacher-content/uploads/${encodeURIComponent(uploadId)}/prepare-review',
@@ -73,9 +75,30 @@ function assertEndpointReferences() {
     '/api/teacher-content/drafts/${encodeURIComponent(packId)}/items/${encodeURIComponent(section)}/${encodeURIComponent(index)}',
     '/api/teacher-content/drafts/${encodeURIComponent(packId)}/items/${encodeURIComponent(section)}/${encodeURIComponent(index)}/status',
     '/api/teacher-content/approved'
-  ].forEach((endpoint) => {
+  ];
+
+  expectedEndpoints.forEach((endpoint) => {
     assert.ok(ui.includes(endpoint), `Expected endpoint reference ${endpoint}.`);
   });
+
+  const endpointBlock = ui.match(/const ENDPOINTS = \{([\s\S]*?)\n  \};/);
+  assert.ok(endpointBlock, 'Expected ENDPOINTS block in Teacher Content UI.');
+  const endpointKeys = Array.from(endpointBlock[1].matchAll(/^\s+([a-zA-Z0-9_]+):/gm), (match) => match[1]);
+  assert.deepEqual(
+    endpointKeys.sort(),
+    [
+      'approved',
+      'dashboard',
+      'draftItem',
+      'draftItemStatus',
+      'draftReport',
+      'drafts',
+      'promoteDraft',
+      'uploadExtract',
+      'uploadPrepareReview'
+    ].sort(),
+    'Teacher Content UI should not add endpoint helpers beyond the existing dashboard, extract, prepare-review, drafts, report, review PATCH, promote, and approved helpers.'
+  );
 }
 
 function assertPromotionAction() {
@@ -92,6 +115,12 @@ function assertPromotionAction() {
   ].forEach((marker) => {
     assert.ok(ui.includes(marker), `Expected promotion marker ${marker}.`);
   });
+
+  assert.equal((ui.match(/data-promote-draft/g) || []).length, 2, 'Promote hook should remain limited to one event handler and one Import Report button.');
+  assert.ok(
+    ui.indexOf('function renderImportReportCard') < ui.lastIndexOf('data-promote-draft'),
+    'Promote button should remain in the Import Report card.'
+  );
 }
 
 function assertReviewActions() {
@@ -151,6 +180,43 @@ function assertUploadExtractionUi() {
     'Errors'
   ].forEach((marker) => {
     assert.ok(ui.includes(marker), `Expected upload extraction UI marker ${marker}.`);
+  });
+}
+
+function assertPrepareReviewHandoffUi() {
+  [
+    'data-prepare-review-handoff',
+    'Review draft prepared.',
+    'Next step: review pending items before this knowledge can go live.',
+    'Draft packs are not live until approved and promoted.',
+    'Review draft prepared, but the latest report could not be refreshed.',
+    'data-handoff-tab="review"',
+    'data-handoff-tab="importReport"',
+    'Go to Review',
+    'View Import Report'
+  ].forEach((marker) => {
+    assert.ok(ui.includes(marker), `Expected Prepare Review handoff marker ${marker}.`);
+  });
+}
+
+function assertSelectedDraftAndProgressUi() {
+  [
+    'data-selected-draft-summary',
+    'data-selected-draft-title',
+    'data-selected-draft-pack-id',
+    'data-selected-draft-pending',
+    'data-selected-draft-validation',
+    'data-review-progress-summary',
+    'Review progress',
+    'Pending Items',
+    'Approved Items',
+    'Rejected Items',
+    'Total Reviewable Items',
+    'No draft pack is selected yet. Prepare Review from an upload or choose a draft pack to see its review summary.',
+    'This draft has no pending items. Check the Import Report for approval and promotion readiness.',
+    'No draft pack is selected yet. Prepare Review or choose a draft pack to view its import report.'
+  ].forEach((marker) => {
+    assert.ok(ui.includes(marker), `Expected selected draft/progress marker ${marker}.`);
   });
 }
 

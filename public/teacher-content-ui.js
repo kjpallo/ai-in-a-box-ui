@@ -60,6 +60,7 @@
     uploadContentName: '',
     uploadPrepareReviewLoading: false,
     uploadPrepareReviewMessage: '',
+    uploadPrepareReviewHandoff: null,
     errors: []
   };
 
@@ -214,6 +215,13 @@
       if (prepareReview) {
         event.preventDefault();
         prepareReviewFromUpload();
+        return;
+      }
+
+      const handoffNav = event.target.closest('[data-handoff-tab]');
+      if (handoffNav) {
+        event.preventDefault();
+        setActiveTab(handoffNav.getAttribute('data-handoff-tab'));
       }
     });
 
@@ -233,6 +241,7 @@
       state.uploadExtractionResult = null;
       state.uploadContentName = state.selectedUploadFile ? makeContentNameFromFileName(state.selectedUploadFile.name) : '';
       state.uploadPrepareReviewMessage = '';
+      state.uploadPrepareReviewHandoff = null;
       render();
     });
 
@@ -498,6 +507,7 @@
           ? 'Charlemagne is preparing your review draft...'
           : state.uploadPrepareReviewMessage || 'Prepare Review becomes available after text extraction succeeds.')}
       </p>
+      ${renderPrepareReviewHandoff()}
       <div class="teacher-content-metric-grid">
         ${metric('Original File', result.originalFileName || state.selectedUploadFile?.name || 'Not selected')}
         ${metric('File Type', result.fileType || extraction.detectedType || 'Not selected')}
@@ -545,7 +555,7 @@
   function renderDraftPackCard() {
     const draft = state.report?.draftPack || getSelectedDraftSummary();
     if (!draft || !state.selectedDraftPackId) {
-      return cardWithEmptyState('Draft Pack', 'No draft packs are available yet.');
+      return cardWithEmptyState('Draft Pack', 'No draft pack is selected yet. Prepare Review from an upload or choose a draft pack to see its review summary.');
     }
 
     return `
@@ -558,6 +568,8 @@
           ${draft.validationPassed === false ? 'Validation failed' : 'Validation passed'}
         </span>
       </div>
+      ${renderSelectedDraftSummary(draft)}
+      ${state.uploadPrepareReviewHandoff?.packId === state.selectedDraftPackId ? renderPrepareReviewHandoff() : ''}
       <div class="teacher-content-detail-grid">
         ${metric('Pack ID', draft.packId || state.selectedDraftPackId)}
         ${metric('Subject', draft.subject || 'Not set')}
@@ -572,7 +584,7 @@
   function renderReviewCard() {
     const pending = state.report?.pendingReview;
     if (!state.selectedDraftPackId) {
-      return cardWithEmptyState('Review', 'No draft/report is selected yet.');
+      return cardWithEmptyState('Review', 'No draft pack is selected yet. Choose a draft pack before reviewing pending items.');
     }
 
     if (state.reviewActionLoading) {
@@ -590,7 +602,7 @@
 
     if (!pending || pending.totalPending === 0) {
       return `
-        ${cardWithEmptyState('Review', 'No pending review items for this draft pack.')}
+        ${cardWithEmptyState('Review', 'This draft has no pending items. Check the Import Report for approval and promotion readiness.')}
         ${state.selectedReviewItem ? renderReviewDetailPanel(state.selectedReviewItem) : ''}
       `;
     }
@@ -689,7 +701,7 @@
 
   function renderImportReportCard() {
     if (!state.selectedDraftPackId) {
-      return cardWithEmptyState('Import Report', 'No draft/report is selected yet.');
+      return cardWithEmptyState('Import Report', 'No draft pack is selected yet. Prepare Review or choose a draft pack to view its import report.');
     }
 
     const extraction = state.report?.sourceExtraction || {};
@@ -1054,17 +1066,27 @@
       });
       const data = unwrap(payload);
       state.uploadPrepareReviewMessage = data?.message || 'Review draft prepared.';
+      state.uploadPrepareReviewHandoff = {
+        packId: data?.packId || '',
+        reportRefreshFailed: false
+      };
       if (data?.dashboard) state.dashboard = data.dashboard;
       if (Array.isArray(data?.drafts)) state.drafts = data.drafts;
       if (data?.packId) state.selectedDraftPackId = data.packId;
       if (data?.draftReport) state.report = data.draftReport;
       state.selectedReviewItem = null;
+      const refreshErrorsBefore = state.errors.length;
       await refreshDraftLists();
       if (state.selectedDraftPackId) await loadSelectedDraftReport();
+      if (state.errors.length > refreshErrorsBefore) {
+        state.uploadPrepareReviewMessage = 'Review draft prepared, but the latest report could not be refreshed.';
+        state.uploadPrepareReviewHandoff.reportRefreshFailed = true;
+      }
       state.activeTab = 'draftPack';
       setStatus('Review draft prepared.');
     } catch (error) {
       state.uploadPrepareReviewMessage = 'Prepare Review failed.';
+      state.uploadPrepareReviewHandoff = null;
       state.errors.push(`Prepare Review failed: ${error.message || 'Route error'}`);
       setStatus('Prepare Review failed.');
     } finally {
@@ -1119,6 +1141,78 @@
         <strong>${escapeHtml(value === undefined || value === null || value === '' ? 'Not available' : value)}</strong>
       </div>
     `;
+  }
+
+  function renderPrepareReviewHandoff() {
+    if (!state.uploadPrepareReviewHandoff?.packId) return '';
+    const draft = state.report?.draftPack || getSelectedDraftSummary() || {};
+    const summary = getReviewProgressSummary(draft);
+    const refreshCopy = state.uploadPrepareReviewHandoff.reportRefreshFailed
+      ? 'Review draft prepared, but the latest report could not be refreshed. Open Import Report after refresh is available.'
+      : 'Draft packs are not live until approved and promoted.';
+
+    return `
+      <section class="teacher-content-handoff" data-prepare-review-handoff>
+        <div class="teacher-content-handoff-copy">
+          <span class="teacher-content-pill ready">Review draft prepared.</span>
+          <strong>Next step: review pending items before this knowledge can go live.</strong>
+          <p>${escapeHtml(refreshCopy)}</p>
+        </div>
+        ${renderReviewProgressSummary(summary)}
+        <div class="teacher-content-handoff-actions">
+          <button type="button" class="small-button" data-handoff-tab="review">Go to Review</button>
+          <button type="button" class="small-button secondary-small" data-handoff-tab="importReport">View Import Report</button>
+        </div>
+      </section>
+    `;
+  }
+
+  function renderSelectedDraftSummary(draft) {
+    const summary = getReviewProgressSummary(draft);
+    return `
+      <section class="teacher-content-selected-draft" data-selected-draft-summary>
+        <div>
+          <span>Selected draft pack</span>
+          <strong data-selected-draft-title>${escapeHtml(draft.title || 'Untitled draft pack')}</strong>
+          <small data-selected-draft-pack-id>${escapeHtml(draft.packId || state.selectedDraftPackId || 'No pack ID')}</small>
+        </div>
+        <div class="teacher-content-selected-draft-meta">
+          <span data-selected-draft-pending>Pending review: ${formatNumber(summary.pending)}</span>
+          <span data-selected-draft-validation>Validation: ${escapeHtml(passFail(draft.validationPassed))}</span>
+        </div>
+      </section>
+      ${renderReviewProgressSummary(summary)}
+    `;
+  }
+
+  function renderReviewProgressSummary(summary) {
+    const percent = summary.total > 0 ? Math.round((summary.approved / summary.total) * 100) : 0;
+    return `
+      <section class="teacher-content-review-progress" data-review-progress-summary>
+        <div class="teacher-content-progress-head">
+          <strong>Review progress</strong>
+          <span>${formatNumber(percent)}% approved</span>
+        </div>
+        <div class="teacher-content-progress-bar" aria-label="Review progress">
+          <span style="width: ${Math.max(0, Math.min(100, percent))}%"></span>
+        </div>
+        <div class="teacher-content-count-strip">
+          ${countPill('Pending Items', summary.pending)}
+          ${countPill('Approved Items', summary.approved)}
+          ${countPill('Rejected Items', summary.rejected)}
+          ${countPill('Total Reviewable Items', summary.total)}
+        </div>
+      </section>
+    `;
+  }
+
+  function getReviewProgressSummary(draft) {
+    const counts = draft?.reviewCounts || {};
+    const pending = Number(counts.pending || state.report?.pendingReview?.totalPending || 0);
+    const approved = Number(counts.approved || 0);
+    const rejected = Number(counts.rejected || 0);
+    const total = Number(counts.total || pending + approved + rejected);
+    return { pending, approved, rejected, total };
   }
 
   function renderCounts(title, counts) {
