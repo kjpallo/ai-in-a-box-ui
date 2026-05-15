@@ -2578,6 +2578,28 @@ button:disabled {
   font-weight: 900;
 }
 
+.teacher-content-review-empty,
+.teacher-content-edit-section {
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgba(102, 247, 209, 0.14);
+  border-radius: 10px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.teacher-content-review-empty h5,
+.teacher-content-edit-section h5 {
+  margin: 0;
+  color: #f4fffb;
+}
+
+.teacher-content-review-empty p,
+.teacher-content-edit-section p {
+  margin: 0;
+  color: #d8eee9;
+}
+
 .teacher-content-review-item {
   display: grid;
   grid-template-columns: minmax(0, 0.75fr) minmax(0, 1fr) auto;
@@ -2589,9 +2611,10 @@ button:disabled {
   background: rgba(0, 0, 0, 0.16);
 }
 
-.teacher-content-review-item div {
+.teacher-content-review-item-main,
+.teacher-content-review-item-evidence {
   display: grid;
-  gap: 4px;
+  gap: 6px;
 }
 
 .teacher-content-review-item strong,
@@ -2600,7 +2623,31 @@ button:disabled {
 }
 
 .teacher-content-review-item p {
+  margin: 0;
   color: #e5f6f2;
+}
+
+.teacher-content-confidence {
+  width: max-content;
+  border: 1px solid rgba(126, 233, 255, 0.26);
+  border-radius: 999px;
+  padding: 4px 8px;
+  color: #e6f7ff;
+  background: rgba(126, 233, 255, 0.1);
+  font-size: 0.7rem;
+  font-weight: 900;
+}
+
+.teacher-content-confidence.high {
+  color: #dffff3;
+  border-color: rgba(102, 247, 209, 0.34);
+  background: rgba(102, 247, 209, 0.12);
+}
+
+.teacher-content-confidence.low {
+  color: #dce8ec;
+  border-color: rgba(220, 232, 236, 0.28);
+  background: rgba(220, 232, 236, 0.08);
 }
 
 .teacher-content-review-actions,

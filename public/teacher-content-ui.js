@@ -222,6 +222,13 @@
       if (handoffNav) {
         event.preventDefault();
         setActiveTab(handoffNav.getAttribute('data-handoff-tab'));
+        return;
+      }
+
+      const reviewEmptyNav = event.target.closest('[data-review-empty-tab]');
+      if (reviewEmptyNav) {
+        event.preventDefault();
+        setActiveTab(reviewEmptyNav.getAttribute('data-review-empty-tab'));
       }
     });
 
@@ -591,7 +598,7 @@
       return `
         <div class="teacher-content-card-head">
           <div>
-            <h4>Review Draft</h4>
+            <h4>Review Draft Items</h4>
             <p>Saving draft-only review change...</p>
           </div>
           <span class="teacher-content-pill review">Saving</span>
@@ -602,20 +609,34 @@
 
     if (!pending || pending.totalPending === 0) {
       return `
-        ${cardWithEmptyState('Review', 'This draft has no pending items. Check the Import Report for approval and promotion readiness.')}
+        <div class="teacher-content-card-head">
+          <div>
+            <h4>Review Draft Items</h4>
+            <p>Check each pending item before this knowledge can go live.</p>
+          </div>
+          <span class="teacher-content-pill ready">Review complete</span>
+        </div>
+        ${renderReviewProgressSummary(getReviewProgressSummary(state.report?.draftPack || getSelectedDraftSummary()))}
+        <section class="teacher-content-review-empty" data-review-empty-state>
+          <h5>No pending review items.</h5>
+          <p>Check the Import Report to see if this draft is ready to promote.</p>
+          <button type="button" class="small-button secondary-small" data-review-empty-tab="importReport">View Import Report</button>
+        </section>
         ${state.selectedReviewItem ? renderReviewDetailPanel(state.selectedReviewItem) : ''}
       `;
     }
 
     const groups = pending.items || {};
+    const summary = getReviewProgressSummary(state.report?.draftPack || getSelectedDraftSummary());
     return `
       <div class="teacher-content-card-head">
         <div>
-          <h4>Pending Review</h4>
-          <p>${formatNumber(pending.totalPending)} item${Number(pending.totalPending) === 1 ? '' : 's'} waiting for teacher review.</p>
+          <h4>Review Draft Items</h4>
+          <p>Check each pending item before this knowledge can go live.</p>
         </div>
         <span class="teacher-content-pill review">Draft Only</span>
       </div>
+      ${renderReviewProgressSummary(summary)}
       ${state.errors.length ? renderIssueList('Review Messages', state.errors) : ''}
       <div class="teacher-content-review-groups">
         ${Object.keys(SECTION_LABELS).map((sectionName) => renderReviewGroup(sectionName, groups[sectionName] || [])).join('')}
@@ -626,26 +647,30 @@
 
   function renderReviewGroup(sectionName, items) {
     return `
-      <section class="teacher-content-review-group">
+      <section class="teacher-content-review-group" data-review-section="${escapeAttr(sectionName)}">
         <div class="teacher-content-review-group-head">
           <h5>${escapeHtml(SECTION_LABELS[sectionName])}</h5>
-          <span>${formatNumber(items.length)}</span>
+          <span data-review-section-pending="${escapeAttr(sectionName)}">${formatNumber(items.length)} pending</span>
         </div>
-        ${items.length ? items.map(renderPendingItem).join('') : '<p class="profile-empty-state">No pending items.</p>'}
+        ${items.length ? items.map(renderPendingItem).join('') : '<p class="profile-empty-state">No pending items in this section.</p>'}
       </section>
     `;
   }
 
   function renderPendingItem(item) {
+    const confidence = formatConfidence(item.confidence);
     return `
-      <div class="teacher-content-review-item">
-        <div>
-          <strong>${escapeHtml(item.label || 'Pending item')}</strong>
-          <span>Confidence: ${escapeHtml(item.confidence || 'Not set')}</span>
-          <span>${escapeHtml(item.sourceFile || 'No source file')} · ${escapeHtml(item.sourceLocation || 'No source location')}</span>
-          <span>Status: ${escapeHtml(item.reviewStatus || 'pending')}</span>
+      <div class="teacher-content-review-item" data-review-item-card>
+        <div class="teacher-content-review-item-main">
+          <strong data-review-item-label>${escapeHtml(item.label || 'Pending item')}</strong>
+          <span data-review-item-section>Section: ${escapeHtml(SECTION_LABELS[item.section] || item.section || 'Not set')}</span>
+          <span data-review-item-status>Status: ${escapeHtml(item.reviewStatus || 'pending')}</span>
+          <span data-review-item-source>Source: ${escapeHtml(item.sourceFile || 'No source file')} · ${escapeHtml(item.sourceLocation || 'No source location')}</span>
         </div>
-        <p>${escapeHtml(item.sourceTextSnippet || 'No source snippet available.')}</p>
+        <div class="teacher-content-review-item-evidence">
+          <span class="teacher-content-confidence ${escapeAttr(confidence.className)}" data-review-item-confidence>${escapeHtml(confidence.label)}</span>
+          <p data-review-item-snippet>${escapeHtml(item.sourceTextSnippet || 'No source snippet available.')}</p>
+        </div>
         <div class="teacher-content-review-actions">
           <button type="button" class="small-button secondary-small" data-review-edit data-section="${escapeAttr(item.section)}" data-index="${escapeAttr(item.index)}">View/Edit</button>
           <button type="button" class="small-button" data-review-status="approved" data-section="${escapeAttr(item.section)}" data-index="${escapeAttr(item.index)}">Approve</button>
@@ -673,16 +698,20 @@
           ${metric('Source', `${item.sourceFile || 'No source file'} · ${item.sourceLocation || 'No source location'}`)}
         </div>
         <section class="teacher-content-issues">
-          <h5>Source Snippet</h5>
+          <h5>Source evidence</h5>
           <p>${escapeHtml(item.sourceTextSnippet || 'No source snippet available.')}</p>
         </section>
+        <section class="teacher-content-edit-section">
+          <h5>Editable fields</h5>
+          <p>Only teacher-review fields for this section can be changed here.</p>
         <div class="teacher-content-edit-fields">
           ${editableFields.map((fieldName) => renderEditableField(fieldName, item.editableFields?.[fieldName])).join('')}
         </div>
+        </section>
         <div class="teacher-content-review-detail-actions">
-          <button type="button" class="small-button" data-review-save>Save</button>
-          <button type="button" class="small-button" data-review-status="approved" data-section="${escapeAttr(item.section)}" data-index="${escapeAttr(item.index)}">Approve</button>
-          <button type="button" class="small-button secondary-small" data-review-status="rejected" data-section="${escapeAttr(item.section)}" data-index="${escapeAttr(item.index)}">Reject</button>
+          <button type="button" class="small-button" data-review-save>Save changes</button>
+          <button type="button" class="small-button" data-review-status="approved" data-section="${escapeAttr(item.section)}" data-index="${escapeAttr(item.index)}">Approve item</button>
+          <button type="button" class="small-button secondary-small" data-review-status="rejected" data-section="${escapeAttr(item.section)}" data-index="${escapeAttr(item.index)}">Reject item</button>
           <button type="button" class="small-button secondary-small" data-review-close>Cancel</button>
         </div>
       </section>
@@ -1186,21 +1215,22 @@
   }
 
   function renderReviewProgressSummary(summary) {
-    const percent = summary.total > 0 ? Math.round((summary.approved / summary.total) * 100) : 0;
+    const reviewed = summary.approved + summary.rejected;
+    const percent = summary.total > 0 ? Math.round((reviewed / summary.total) * 100) : 0;
     return `
       <section class="teacher-content-review-progress" data-review-progress-summary>
         <div class="teacher-content-progress-head">
           <strong>Review progress</strong>
-          <span>${formatNumber(percent)}% approved</span>
+          <span data-review-progress-percent>${formatNumber(percent)}% reviewed</span>
         </div>
         <div class="teacher-content-progress-bar" aria-label="Review progress">
           <span style="width: ${Math.max(0, Math.min(100, percent))}%"></span>
         </div>
         <div class="teacher-content-count-strip">
-          ${countPill('Pending Items', summary.pending)}
-          ${countPill('Approved Items', summary.approved)}
-          ${countPill('Rejected Items', summary.rejected)}
-          ${countPill('Total Reviewable Items', summary.total)}
+          ${countPill('Pending Items', summary.pending, 'data-review-progress-pending')}
+          ${countPill('Approved Items', summary.approved, 'data-review-progress-approved')}
+          ${countPill('Rejected Items', summary.rejected, 'data-review-progress-rejected')}
+          ${countPill('Total Reviewable Items', summary.total, 'data-review-progress-total')}
         </div>
       </section>
     `;
@@ -1253,13 +1283,28 @@
     `;
   }
 
-  function countPill(label, value) {
+  function countPill(label, value, dataSelector) {
+    const dataAttr = dataSelector ? ` ${escapeAttr(dataSelector)}` : '';
     return `
-      <span class="teacher-content-count-pill">
+      <span class="teacher-content-count-pill"${dataAttr}>
         <small>${escapeHtml(label)}</small>
         <strong>${escapeHtml(formatNumber(value))}</strong>
       </span>
     `;
+  }
+
+  function formatConfidence(value) {
+    const normalized = String(value || '').trim().toLowerCase();
+    if (normalized === 'high' || normalized === 'high confidence') {
+      return { label: 'High confidence', className: 'high' };
+    }
+    if (normalized === 'low' || normalized === 'low confidence') {
+      return { label: 'Low confidence', className: 'low' };
+    }
+    if (normalized === 'medium' || normalized === 'medium confidence') {
+      return { label: 'Medium confidence', className: 'medium' };
+    }
+    return { label: 'Medium confidence', className: 'medium' };
   }
 
   function passFail(value) {

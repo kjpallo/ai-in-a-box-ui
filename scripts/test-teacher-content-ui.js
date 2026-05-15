@@ -24,6 +24,7 @@ assertEndpointReferences();
 assertUploadExtractionUi();
 assertPrepareReviewHandoffUi();
 assertSelectedDraftAndProgressUi();
+assertReviewCardPolishUi();
 assertReviewActions();
 assertPromotionAction();
 assertDisabledPlaceholders();
@@ -207,16 +208,57 @@ function assertSelectedDraftAndProgressUi() {
     'data-selected-draft-pending',
     'data-selected-draft-validation',
     'data-review-progress-summary',
+    'data-review-progress-pending',
+    'data-review-progress-approved',
+    'data-review-progress-rejected',
+    'data-review-progress-total',
+    'data-review-progress-percent',
     'Review progress',
     'Pending Items',
     'Approved Items',
     'Rejected Items',
     'Total Reviewable Items',
     'No draft pack is selected yet. Prepare Review from an upload or choose a draft pack to see its review summary.',
-    'This draft has no pending items. Check the Import Report for approval and promotion readiness.',
     'No draft pack is selected yet. Prepare Review or choose a draft pack to view its import report.'
   ].forEach((marker) => {
     assert.ok(ui.includes(marker), `Expected selected draft/progress marker ${marker}.`);
+  });
+}
+
+function assertReviewCardPolishUi() {
+  [
+    'Review Draft Items',
+    'Check each pending item before this knowledge can go live.',
+    'data-review-section=',
+    'vocabulary',
+    'concepts',
+    'referenceFormulas',
+    'problemBank',
+    'standardsMap',
+    'smokeTests',
+    'data-review-section-pending',
+    'No pending items in this section.',
+    'data-review-item-card',
+    'data-review-item-label',
+    'data-review-item-confidence',
+    'data-review-item-source',
+    'data-review-item-snippet',
+    'High confidence',
+    'Medium confidence',
+    'Low confidence',
+    'No pending review items.',
+    'Check the Import Report to see if this draft is ready to promote.',
+    'data-review-empty-state',
+    'data-review-empty-tab="importReport"',
+    'View Import Report',
+    'Source evidence',
+    'Editable fields',
+    'Save changes',
+    'Approve item',
+    'Reject item',
+    'Cancel'
+  ].forEach((marker) => {
+    assert.ok(ui.includes(marker), `Expected review polish marker ${marker}.`);
   });
 }
 
