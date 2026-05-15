@@ -26,6 +26,7 @@
     "test:import-pipeline-report": "node scripts/test-import-pipeline-report.js",
     "test:teacher-content-adapter": "node scripts/test-teacher-content-adapter.js",
     "test:teacher-content-routes": "node scripts/test-teacher-content-routes.js",
+    "test:teacher-content-ui": "node scripts/test-teacher-content-ui.js",
     "test:upload-extraction": "node scripts/test-upload-text-extraction.js",
     "test:generate-draft-pack": "node scripts/test-generate-draft-knowledge-pack.js",
     "extract:upload-text": "node scripts/extract-upload-text.js",
