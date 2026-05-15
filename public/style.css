@@ -2317,6 +2317,13 @@ button:disabled {
   overflow-wrap: anywhere;
 }
 
+.teacher-content-upload-note {
+  margin: 0;
+  color: #bad7d3;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
 .teacher-content-metric-grid,
 .teacher-content-detail-grid {
   display: grid;

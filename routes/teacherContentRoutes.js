@@ -1,4 +1,7 @@
 const express = require('express');
+const crypto = require('node:crypto');
+const fs = require('node:fs');
+const path = require('node:path');
 
 const {
   getDraftPackReport,
@@ -14,8 +17,11 @@ const {
   updateDraftItemReviewStatus
 } = require('../lib/knowledge/reviewDraftKnowledgePack');
 const { REVIEW_STATUSES } = require('../lib/knowledge/packSchema');
+const { detectUploadFileType, supportedExtensions } = require('../lib/uploads/detectUploadFileType');
+const { extractTextFromFile } = require('../lib/uploads/extractTextFromFile');
 
 const SAFE_PACK_ID_PATTERN = /^[a-z0-9_-]+$/;
+const DEFAULT_UPLOAD_LIMIT_BYTES = 15 * 1024 * 1024;
 
 function createTeacherContentRoutes(options = {}) {
   const router = express.Router();
@@ -30,6 +36,22 @@ function registerTeacherContentRoutes(app, options = {}) {
 
   app.get('/drafts', (_req, res) => {
     sendJson(res, () => listDraftPacksForReview(options));
+  });
+
+  app.post('/uploads/extract', async (req, res) => {
+    try {
+      const upload = await readSingleMultipartUpload(req, {
+        maxBytes: Number(options.maxUploadBytes || DEFAULT_UPLOAD_LIMIT_BYTES)
+      });
+      const result = await storeAndExtractUpload(upload, options);
+      const statusCode = result.success ? 200 : 400;
+      return res.status(statusCode).json(result);
+    } catch (error) {
+      return res.status(error.statusCode || 400).json({
+        success: false,
+        errors: [error instanceof Error ? error.message : String(error)]
+      });
+    }
   });
 
   app.get('/drafts/:packId/report', (req, res) => {
@@ -170,6 +192,224 @@ function registerTeacherContentRoutes(app, options = {}) {
   });
 }
 
+async function storeAndExtractUpload(upload, options = {}) {
+  const originalFileName = sanitizeOriginalFileName(upload.originalFileName);
+  if (!originalFileName) {
+    return {
+      success: false,
+      errors: ['Uploaded file must include a filename.']
+    };
+  }
+
+  const detection = detectUploadFileType(originalFileName);
+  if (!detection.supported) {
+    return {
+      success: false,
+      errors: detection.errors || [`Unsupported upload file type. Supported types: ${supportedExtensions().join(', ')}.`]
+    };
+  }
+
+  const uploadId = makeUploadId();
+  const incomingDir = getUploadIncomingDir(options);
+  const extractedDir = getUploadExtractedDir(options);
+  fs.mkdirSync(incomingDir, { recursive: true });
+  fs.mkdirSync(extractedDir, { recursive: true });
+
+  const storedFileName = `${uploadId}${detection.extension}`;
+  const extractionJsonFileName = `${uploadId}_extraction.json`;
+  const storedFilePath = path.join(incomingDir, storedFileName);
+  const extractionJsonPath = path.join(extractedDir, extractionJsonFileName);
+
+  fs.writeFileSync(storedFilePath, upload.buffer);
+
+  const extraction = await extractTextFromFile(storedFilePath);
+  const extractionWithUploadMetadata = {
+    ...extraction,
+    upload: {
+      uploadId,
+      originalFileName,
+      storedFileName,
+      extractionJsonFileName
+    }
+  };
+  fs.writeFileSync(extractionJsonPath, `${JSON.stringify(extractionWithUploadMetadata, null, 2)}\n`);
+
+  const response = {
+    success: extraction.success === true,
+    data: {
+      uploadId,
+      originalFileName,
+      storedFileName,
+      extractionJsonFileName,
+      fileType: detection.type,
+      characterCount: extraction.text.length,
+      sectionsCount: extraction.sections.length,
+      tablesCount: extraction.tables.length,
+      warnings: extraction.warnings || [],
+      errors: extraction.errors || [],
+      extraction: makeExtractionSummary(extraction)
+    },
+    warnings: extraction.warnings || [],
+    errors: extraction.errors || []
+  };
+
+  if (!response.success) {
+    return {
+      success: false,
+      errors: response.errors,
+      warnings: response.warnings,
+      data: response.data
+    };
+  }
+
+  return response;
+}
+
+function getUploadIncomingDir(options = {}) {
+  return options.uploadIncomingDir
+    || path.join(__dirname, '..', 'knowledge', 'uploads', 'incoming');
+}
+
+function getUploadExtractedDir(options = {}) {
+  return options.uploadExtractedDir
+    || path.join(__dirname, '..', 'knowledge', 'uploads', 'extracted');
+}
+
+function makeExtractionSummary(extraction) {
+  return {
+    success: extraction.success === true,
+    fileName: extraction.fileName || '',
+    extension: extraction.extension || '',
+    mimeGuess: extraction.mimeGuess || '',
+    detectedType: extraction.metadata?.detectedType || 'unsupported',
+    characterCount: extraction.text.length,
+    sectionsCount: extraction.sections.length,
+    tablesCount: extraction.tables.length,
+    warnings: extraction.warnings || [],
+    errors: extraction.errors || []
+  };
+}
+
+function makeUploadId() {
+  if (typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${crypto.randomBytes(12).toString('hex')}`;
+}
+
+function sanitizeOriginalFileName(fileName) {
+  return path.basename(String(fileName || ''))
+    .normalize('NFKC')
+    .replace(/[^\w.\- ]+/g, '_')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function readSingleMultipartUpload(req, options = {}) {
+  const maxBytes = Number(options.maxBytes || DEFAULT_UPLOAD_LIMIT_BYTES);
+  const contentType = String(req.headers && (req.headers['content-type'] || req.headers['Content-Type']) || '');
+  const boundaryMatch = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i);
+  if (!boundaryMatch) {
+    return Promise.reject(makeHttpError('Expected multipart/form-data upload with one source file.', 400));
+  }
+
+  const contentLength = Number(req.headers && (req.headers['content-length'] || req.headers['Content-Length']) || 0);
+  if (contentLength > maxBytes) {
+    return Promise.reject(makeHttpError(`Upload is too large. Maximum size is ${Math.floor(maxBytes / 1024 / 1024)} MB.`, 413));
+  }
+
+  return readRequestBuffer(req, maxBytes).then((body) => {
+    const files = parseMultipartFiles(body, boundaryMatch[1] || boundaryMatch[2]);
+    if (files.length !== 1) {
+      throw makeHttpError('Upload must include exactly one source file.', 400);
+    }
+    if (!files[0].buffer.length) {
+      throw makeHttpError('Uploaded source file is empty.', 400);
+    }
+    return files[0];
+  });
+}
+
+function readRequestBuffer(req, maxBytes) {
+  if (Buffer.isBuffer(req.rawBody)) {
+    if (req.rawBody.length > maxBytes) {
+      return Promise.reject(makeHttpError(`Upload is too large. Maximum size is ${Math.floor(maxBytes / 1024 / 1024)} MB.`, 413));
+    }
+    return Promise.resolve(req.rawBody);
+  }
+
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let total = 0;
+
+    req.on('data', (chunk) => {
+      total += chunk.length;
+      if (total > maxBytes) {
+        reject(makeHttpError(`Upload is too large. Maximum size is ${Math.floor(maxBytes / 1024 / 1024)} MB.`, 413));
+        req.destroy?.();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on('end', () => resolve(Buffer.concat(chunks)));
+    req.on('error', reject);
+  });
+}
+
+function parseMultipartFiles(body, boundary) {
+  const boundaryBuffer = Buffer.from(`--${boundary}`);
+  const files = [];
+  let cursor = body.indexOf(boundaryBuffer);
+
+  while (cursor >= 0) {
+    cursor += boundaryBuffer.length;
+    if (body.slice(cursor, cursor + 2).toString('latin1') === '--') break;
+    if (body.slice(cursor, cursor + 2).toString('latin1') === '\r\n') cursor += 2;
+
+    const nextBoundary = body.indexOf(boundaryBuffer, cursor);
+    if (nextBoundary < 0) break;
+
+    let part = body.slice(cursor, nextBoundary);
+    if (part.slice(-2).toString('latin1') === '\r\n') {
+      part = part.slice(0, -2);
+    }
+
+    const headerEnd = part.indexOf(Buffer.from('\r\n\r\n'));
+    if (headerEnd >= 0) {
+      const headers = parsePartHeaders(part.slice(0, headerEnd).toString('latin1'));
+      const disposition = headers['content-disposition'] || '';
+      const filenameMatch = disposition.match(/filename="([^"]*)"/i);
+      if (filenameMatch && filenameMatch[1]) {
+        files.push({
+          originalFileName: filenameMatch[1],
+          buffer: part.slice(headerEnd + 4),
+          contentType: headers['content-type'] || 'application/octet-stream'
+        });
+      }
+    }
+
+    cursor = nextBoundary;
+  }
+
+  return files;
+}
+
+function parsePartHeaders(headerText) {
+  return String(headerText || '').split('\r\n').reduce((headers, line) => {
+    const separator = line.indexOf(':');
+    if (separator > 0) {
+      headers[line.slice(0, separator).trim().toLowerCase()] = line.slice(separator + 1).trim();
+    }
+    return headers;
+  }, {});
+}
+
+function makeHttpError(message, statusCode) {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  return error;
+}
+
 function sendJson(res, getData) {
   try {
     return res.json({
@@ -253,5 +493,6 @@ function sendDraftMutationResponse(res, update, packId, options) {
 module.exports = {
   createTeacherContentRoutes,
   isSafePackId,
-  registerTeacherContentRoutes
+  registerTeacherContentRoutes,
+  storeAndExtractUpload
 };

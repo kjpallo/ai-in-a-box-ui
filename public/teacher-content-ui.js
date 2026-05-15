@@ -1,6 +1,7 @@
 (() => {
   const ENDPOINTS = {
     dashboard: '/api/teacher-content/dashboard',
+    uploadExtract: '/api/teacher-content/uploads/extract',
     drafts: '/api/teacher-content/drafts',
     draftReport: (packId) => `/api/teacher-content/drafts/${encodeURIComponent(packId)}/report`,
     promoteDraft: (packId) => `/api/teacher-content/drafts/${encodeURIComponent(packId)}/promote`,
@@ -52,6 +53,9 @@
     reviewActionLoading: false,
     promotionActionLoading: false,
     promotionMessage: '',
+    selectedUploadFile: null,
+    uploadExtractionLoading: false,
+    uploadExtractionResult: null,
     errors: []
   };
 
@@ -185,6 +189,20 @@
       if (promoteButton) {
         event.preventDefault();
         promoteSelectedDraft();
+        return;
+      }
+
+      const uploadBrowse = event.target.closest('[data-upload-browse]');
+      if (uploadBrowse) {
+        event.preventDefault();
+        byId('teacherContentUploadFile')?.click();
+        return;
+      }
+
+      const uploadExtract = event.target.closest('[data-upload-extract]');
+      if (uploadExtract) {
+        event.preventDefault();
+        extractSelectedUpload();
       }
     });
 
@@ -195,6 +213,13 @@
       state.selectedReviewItem = null;
       state.promotionMessage = '';
       await loadSelectedDraftReport();
+      render();
+    });
+
+    document.addEventListener('change', (event) => {
+      if (event.target?.id !== 'teacherContentUploadFile') return;
+      state.selectedUploadFile = event.target.files && event.target.files[0] ? event.target.files[0] : null;
+      state.uploadExtractionResult = null;
       render();
     });
 
@@ -389,31 +414,53 @@
   }
 
   function renderUploadCard() {
-    const extraction = state.report?.sourceExtraction || {};
+    const result = state.uploadExtractionResult || {};
+    const extraction = result.extraction || {};
+    const selectedName = state.selectedUploadFile?.name || result.originalFileName || 'No file selected';
+    const canExtract = Boolean(state.selectedUploadFile) && !state.uploadExtractionLoading;
+    const status = state.uploadExtractionLoading
+      ? 'Extracting'
+      : result.uploadId
+        ? (extraction.success === false || (result.errors || []).length ? 'Failed' : 'Extracted')
+        : 'Ready';
     return `
       <div class="teacher-content-card-head">
         <div>
           <h4>Create New Knowledge</h4>
-          <p>Upload processing is coming soon. This card only previews the future flow.</p>
+          <p>This only extracts text. Draft generation comes next.</p>
         </div>
-        <span class="teacher-content-pill muted">Coming Soon</span>
+        <span class="teacher-content-pill ${status === 'Failed' ? 'blocked' : status === 'Extracted' ? 'ready' : 'muted'}">${escapeHtml(status)}</span>
       </div>
       <div class="teacher-content-upload-row">
-        <button type="button" class="small-button" disabled data-coming-soon="upload-browse">Browse</button>
+        <input
+          id="teacherContentUploadFile"
+          class="sr-only"
+          type="file"
+          accept=".txt,.csv,.json,.docx,.xlsx,.pdf"
+          data-upload-file-input
+        >
+        <button type="button" class="small-button" data-upload-browse>Browse</button>
         <div class="teacher-content-file-placeholder" data-selected-file>
-          ${escapeHtml(extraction.fileName || 'No file selected')}
+          ${escapeHtml(selectedName)}
         </div>
-        <button type="button" class="small-button secondary-small" disabled data-coming-soon="upload-process">Process / Proceed</button>
+        <button
+          type="button"
+          class="small-button secondary-small"
+          data-upload-extract
+          ${canExtract ? '' : 'disabled'}
+        >${state.uploadExtractionLoading ? 'Extracting...' : 'Extract Text'}</button>
       </div>
+      <p class="teacher-content-upload-note">Supported file types: .txt, .csv, .json, .docx, .xlsx, .pdf. This only extracts text. Draft generation comes next.</p>
       <div class="teacher-content-metric-grid">
-        ${metric('File Type', extraction.fileType || 'Not selected')}
-        ${metric('Extraction Status', passFail(extraction.success))}
-        ${metric('Character Count', formatNumber(extraction.characterCount))}
-        ${metric('Sections Found', formatNumber(extraction.sectionsFound))}
-        ${metric('Tables Found', formatNumber(extraction.tablesFound))}
+        ${metric('Original File', result.originalFileName || state.selectedUploadFile?.name || 'Not selected')}
+        ${metric('File Type', result.fileType || extraction.detectedType || 'Not selected')}
+        ${metric('Extraction Status', state.uploadExtractionLoading ? 'In progress' : passFail(extraction.success))}
+        ${metric('Character Count', formatNumber(result.characterCount ?? extraction.characterCount))}
+        ${metric('Sections Found', formatNumber(result.sectionsCount ?? extraction.sectionsCount))}
+        ${metric('Tables Found', formatNumber(result.tablesCount ?? extraction.tablesCount))}
       </div>
-      ${renderIssueList('Warnings', extraction.warnings)}
-      ${renderIssueList('Errors', extraction.errors)}
+      ${renderIssueList('Warnings', result.warnings || extraction.warnings)}
+      ${renderIssueList('Errors', result.errors || extraction.errors)}
     `;
   }
 
@@ -896,6 +943,43 @@
       await loadSelectedDraftReport();
     } finally {
       state.promotionActionLoading = false;
+      render();
+    }
+  }
+
+  async function extractSelectedUpload() {
+    if (!state.selectedUploadFile || state.uploadExtractionLoading) return;
+
+    state.uploadExtractionLoading = true;
+    state.uploadExtractionResult = null;
+    state.errors = [];
+    setStatus('Uploading and extracting teacher source file...');
+    render();
+
+    try {
+      const formData = new FormData();
+      formData.append('sourceFile', state.selectedUploadFile);
+      const payload = await fetchJson(ENDPOINTS.uploadExtract, {
+        method: 'POST',
+        body: formData
+      });
+      const data = unwrap(payload);
+      state.uploadExtractionResult = data || null;
+      setStatus('Text extraction finished. Draft generation comes next.');
+    } catch (error) {
+      state.uploadExtractionResult = {
+        originalFileName: state.selectedUploadFile?.name || '',
+        errors: [error.message || 'Upload extraction failed.'],
+        warnings: [],
+        extraction: {
+          success: false,
+          errors: [error.message || 'Upload extraction failed.'],
+          warnings: []
+        }
+      };
+      setStatus('Upload extraction failed.');
+    } finally {
+      state.uploadExtractionLoading = false;
       render();
     }
   }

@@ -8,12 +8,16 @@ const projectRoot = path.join(__dirname, '..');
 const tempRoot = path.join(projectRoot, 'tmp', 'test-teacher-content-routes');
 const draftPacksDir = path.join(tempRoot, 'draft-packs');
 const approvedPacksDir = path.join(tempRoot, 'approved-packs');
+const uploadIncomingDir = path.join(tempRoot, 'uploads', 'incoming');
+const uploadExtractedDir = path.join(tempRoot, 'uploads', 'extracted');
 const realApprovedPacksDir = path.join(projectRoot, 'knowledge', 'approved-packs');
 const standardsBank = makeStandardsBank();
 
 cleanupTempRoot();
 fs.mkdirSync(draftPacksDir, { recursive: true });
 fs.mkdirSync(approvedPacksDir, { recursive: true });
+fs.mkdirSync(uploadIncomingDir, { recursive: true });
+fs.mkdirSync(uploadExtractedDir, { recursive: true });
 
 const approvedPacksBefore = snapshotFiles(realApprovedPacksDir);
 const routerStudentFilesBefore = snapshotRouterAndStudentFiles();
@@ -48,11 +52,16 @@ async function main() {
   registerTeacherContentRoutes(createApp(handlers), {
     draftPacksDir,
     approvedPacksDir,
+    uploadIncomingDir,
+    uploadExtractedDir,
     standardsBank
   });
 
   try {
     await assertDashboardEndpoint(handlers);
+    await assertSuccessfulTxtUploadExtraction(handlers);
+    await assertUnsupportedUploadExtensionFails(handlers);
+    await assertUnsafeUploadFilenameIsSanitized(handlers);
     await assertDraftsEndpoint(handlers);
     await assertDraftReportEndpoint(handlers);
     await assertPromoteDraftEndpointSucceeds(handlers);
@@ -121,6 +130,70 @@ async function assertDraftReportEndpoint(handlers) {
   assert.equal(response.body.data.pendingReview.totalPending, 1);
   assert.equal(response.body.data.promotionReadiness.ready, false);
   assert.ok(response.body.data.promotionReadiness.blockedReasons.includes('pending items remain'));
+}
+
+async function assertSuccessfulTxtUploadExtraction(handlers) {
+  const draftFilesBefore = snapshotFiles(draftPacksDir);
+  const approvedFilesBefore = snapshotFiles(realApprovedPacksDir);
+  const response = await requestMultipart(handlers, '/uploads/extract', {
+    fileName: 'teacher_force_notes.txt',
+    contentType: 'text/plain',
+    content: 'Balanced forces have a net force of zero.\nUnbalanced forces change motion.\n'
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.data.originalFileName, 'teacher_force_notes.txt');
+  assert.equal(response.body.data.fileType, 'txt');
+  assert.ok(response.body.data.characterCount > 20);
+  assert.equal(response.body.data.sectionsCount, 1);
+  assert.equal(response.body.data.tablesCount, 0);
+  assert.ok(response.body.data.storedFileName.endsWith('.txt'));
+  assert.ok(!response.body.data.storedFileName.includes('teacher_force_notes'));
+  assert.ok(response.body.data.extractionJsonFileName.endsWith('_extraction.json'));
+
+  const storedPath = path.join(uploadIncomingDir, response.body.data.storedFileName);
+  const extractionPath = path.join(uploadExtractedDir, response.body.data.extractionJsonFileName);
+  assert.equal(fs.existsSync(storedPath), true, 'Upload source should be stored safely.');
+  assert.equal(fs.readFileSync(storedPath, 'utf8').includes('Balanced forces'), true);
+  assert.equal(fs.existsSync(extractionPath), true, 'Extraction JSON should be created.');
+  const extractionJson = JSON.parse(fs.readFileSync(extractionPath, 'utf8'));
+  assert.equal(extractionJson.success, true);
+  assert.equal(extractionJson.upload.originalFileName, 'teacher_force_notes.txt');
+  assert.ok(extractionJson.text.includes('Unbalanced forces'));
+
+  assert.deepEqual(snapshotFiles(draftPacksDir), draftFilesBefore, 'upload extraction should not create or modify draft packs');
+  assert.deepEqual(snapshotFiles(realApprovedPacksDir), approvedFilesBefore, 'upload extraction should not modify real approved packs');
+}
+
+async function assertUnsupportedUploadExtensionFails(handlers) {
+  const incomingBefore = snapshotFiles(uploadIncomingDir);
+  const extractedBefore = snapshotFiles(uploadExtractedDir);
+  const response = await requestMultipart(handlers, '/uploads/extract', {
+    fileName: 'slides.pptx',
+    contentType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    content: 'PowerPoint is not supported in this phase.'
+  });
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.success, false);
+  assert.ok(response.body.errors.some((error) => error.includes('Unsupported upload file type')));
+  assert.deepEqual(snapshotFiles(uploadIncomingDir), incomingBefore, 'unsupported source should not be stored');
+  assert.deepEqual(snapshotFiles(uploadExtractedDir), extractedBefore, 'unsupported extraction JSON should not be created');
+}
+
+async function assertUnsafeUploadFilenameIsSanitized(handlers) {
+  const response = await requestMultipart(handlers, '/uploads/extract', {
+    fileName: '../unsafe/../../teacher path traversal.txt',
+    contentType: 'text/plain',
+    content: 'Path traversal names should be reduced to a harmless basename.\n'
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.data.originalFileName, 'teacher path traversal.txt');
+  assert.match(response.body.data.storedFileName, /^[a-f0-9-]+\.txt$/);
+  assert.equal(path.dirname(path.join(uploadIncomingDir, response.body.data.storedFileName)), uploadIncomingDir);
 }
 
 async function assertApprovedEndpoint(handlers) {
@@ -449,6 +522,37 @@ async function request(handlers, method, route, body = {}, params = {}) {
   const res = createResponse();
   await handler(req, res);
   return res;
+}
+
+async function requestMultipart(handlers, route, file) {
+  const handler = handlers.get(`POST ${route}`);
+  assert.ok(handler, `Missing handler: POST ${route}`);
+
+  const boundary = `test-boundary-${Date.now()}`;
+  const rawBody = makeMultipartBody(boundary, file);
+  const req = {
+    body: {},
+    params: {},
+    query: {},
+    headers: {
+      'content-type': `multipart/form-data; boundary=${boundary}`,
+      'content-length': String(rawBody.length)
+    },
+    rawBody
+  };
+  const res = createResponse();
+  await handler(req, res);
+  return res;
+}
+
+function makeMultipartBody(boundary, file) {
+  return Buffer.concat([
+    Buffer.from(`--${boundary}\r\n`),
+    Buffer.from(`Content-Disposition: form-data; name="sourceFile"; filename="${file.fileName}"\r\n`),
+    Buffer.from(`Content-Type: ${file.contentType || 'application/octet-stream'}\r\n\r\n`),
+    Buffer.isBuffer(file.content) ? file.content : Buffer.from(String(file.content || '')),
+    Buffer.from(`\r\n--${boundary}--\r\n`)
+  ]);
 }
 
 function createResponse() {

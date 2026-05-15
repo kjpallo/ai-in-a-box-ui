@@ -21,6 +21,7 @@ const pkg = JSON.parse(read(packagePath));
 assertTeacherProfileEntry();
 assertOverlayMarkupAndSelectors();
 assertEndpointReferences();
+assertUploadExtractionUi();
 assertReviewActions();
 assertPromotionAction();
 assertDisabledPlaceholders();
@@ -64,6 +65,7 @@ function assertOverlayMarkupAndSelectors() {
 function assertEndpointReferences() {
   [
     '/api/teacher-content/dashboard',
+    '/api/teacher-content/uploads/extract',
     '/api/teacher-content/drafts',
     '/api/teacher-content/drafts/${encodeURIComponent(packId)}/report',
     '/api/teacher-content/drafts/${encodeURIComponent(packId)}/promote',
@@ -110,22 +112,45 @@ function assertDisabledPlaceholders() {
   const disabledCount = (ui.match(/disabled/g) || []).length;
   assert.ok(disabledCount >= 5, 'Expected disabled placeholder controls.');
   [
-    'data-coming-soon="upload-browse"',
-    'data-coming-soon="upload-process"',
     'data-coming-soon="standards-select"',
     'data-coming-soon="standards-upload"',
     'data-coming-soon="pack-toggle"',
-    'Coming Soon',
     'Visual Only'
   ].forEach((marker) => {
     assert.ok(ui.includes(marker), `Expected placeholder marker ${marker}.`);
   });
 }
 
+function assertUploadExtractionUi() {
+  [
+    'teacherContentUploadFile',
+    'type="file"',
+    'accept=".txt,.csv,.json,.docx,.xlsx,.pdf"',
+    'data-upload-file-input',
+    'data-upload-browse',
+    'data-upload-extract',
+    'Extract Text',
+    'FormData',
+    "method: 'POST'",
+    'This only extracts text. Draft generation comes next.',
+    'Original File',
+    'File Type',
+    'Extraction Status',
+    'Character Count',
+    'Sections Found',
+    'Tables Found',
+    'Warnings',
+    'Errors'
+  ].forEach((marker) => {
+    assert.ok(ui.includes(marker), `Expected upload extraction UI marker ${marker}.`);
+  });
+}
+
 function assertNoForbiddenUiActions() {
   assert.doesNotMatch(ui, /Ollama|Gemma|ocr/i, 'Teacher Content UI should not expose forbidden generation/OCR actions.');
   assert.doesNotMatch(ui, /\/api\/student|\/api\/chat|\/api\/router-test/, 'Teacher Content UI should not reference student/router endpoints.');
-  assert.doesNotMatch(ui, /data-upload-action|data-pack-toggle-action/, 'Teacher Content UI should not implement upload/toggle actions.');
+  assert.doesNotMatch(ui, /\/api\/teacher-content\/drafts\/generate|\/api\/generate-draft|generateDraft/i, 'Teacher Content UI should not reference draft generation endpoints.');
+  assert.doesNotMatch(ui, /data-upload-action|data-pack-toggle-action/, 'Teacher Content UI should not implement old placeholder upload/toggle actions.');
 }
 
 function assertPackageScript() {
