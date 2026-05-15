@@ -730,21 +730,24 @@
 
   function renderImportReportCard() {
     if (!state.selectedDraftPackId) {
-      return cardWithEmptyState('Import Report', 'No draft pack is selected yet. Prepare Review or choose a draft pack to view its import report.');
+      return cardWithEmptyState('Import Report', 'No draft report selected. Prepare Review from an upload or choose a draft pack to see whether it is ready to promote.');
+    }
+
+    if (!state.report) {
+      return cardWithEmptyState('Import Report', 'Report failed to load or is still unavailable. Refresh the selected draft before promoting.');
     }
 
     const extraction = state.report?.sourceExtraction || {};
     const draft = state.report?.draftPack || {};
     const readiness = state.report?.promotionReadiness || {};
-    const status = readiness.ready ? 'Ready to promote' : readiness.blockedReasons?.length ? 'Blocked' : 'Needs teacher review';
-    const statusClass = readiness.ready ? 'ready' : status === 'Blocked' ? 'blocked' : 'review';
-    const reviewCounts = draft.reviewCounts || {};
-    const pendingCount = Number(reviewCounts.pending || 0);
-    const rejectedCount = Number(reviewCounts.rejected || 0);
+    const promoted = state.promotionMessage === 'Promoted successfully';
+    const status = promoted ? 'Promoted successfully' : readiness.ready ? 'Ready to promote' : readiness.blockedReasons?.length ? 'Blocked' : 'Needs teacher review';
+    const statusClass = promoted || readiness.ready ? 'ready' : status === 'Blocked' ? 'blocked' : 'review';
+    const reviewSummary = getReviewProgressSummary(draft);
     const blockedReasons = readiness.blockedReasons || [];
     const disabledReason = readiness.ready
       ? ''
-      : (blockedReasons.length ? blockedReasons.join('; ') : 'Teacher review is not complete.');
+      : (blockedReasons.length ? blockedReasons.join('; ') : 'Draft not ready. Finish teacher review before promoting.');
     const promoteDisabled = !readiness.ready || state.promotionActionLoading;
     const promoteLabel = state.promotionActionLoading ? 'Promoting...' : 'Promote';
 
@@ -752,21 +755,40 @@
       <div class="teacher-content-card-head">
         <div>
           <h4>Import Report</h4>
-          <p>Promote reviewed draft content only after validation and teacher review are complete.</p>
+          <p>This report checks whether the reviewed draft is ready to become an approved knowledge pack.</p>
         </div>
-        <span class="teacher-content-pill ${statusClass}">${escapeHtml(status)}</span>
+        <span class="teacher-content-pill ${statusClass}" data-import-report-readiness-status>${escapeHtml(status)}</span>
       </div>
-      <div class="teacher-content-metric-grid">
-        ${metric('Extraction', passFail(extraction.success))}
-        ${metric('Draft Validation', passFail(draft.validationPassed))}
-        ${metric('Promotion Readiness', status)}
-        ${metric('Pending Items', formatNumber(pendingCount))}
-        ${metric('Rejected Items', formatNumber(rejectedCount))}
-      </div>
+      <section class="teacher-content-readiness-card ${statusClass}" data-import-report-readiness-card>
+        <span>Readiness Status</span>
+        <strong>${escapeHtml(status)}</strong>
+        <p>${escapeHtml(getReadinessCopy(status, disabledReason))}</p>
+      </section>
+      <section class="teacher-content-counts" data-import-report-review-summary>
+        <h5>Review count summary</h5>
+        <div class="teacher-content-count-strip">
+          ${countPill('Pending', reviewSummary.pending, 'data-import-report-pending')}
+          ${countPill('Approved', reviewSummary.approved, 'data-import-report-approved')}
+          ${countPill('Rejected', reviewSummary.rejected, 'data-import-report-rejected')}
+          ${countPill('Total reviewable', reviewSummary.total, 'data-import-report-total-reviewable')}
+        </div>
+      </section>
+      <section class="teacher-content-counts" data-import-report-validation-summary>
+        <h5>Validation and extraction summary</h5>
+        <div class="teacher-content-count-strip">
+          ${countPill('Extraction', passFailUnknown(extraction.success), 'data-import-report-extraction')}
+          ${countPill('Draft validation', passFailUnknown(draft.validationPassed), 'data-import-report-validation')}
+          ${countPill('Warnings', countItems(state.report?.warnings), 'data-import-report-warnings')}
+          ${countPill('Errors', countItems(state.report?.errors), 'data-import-report-errors')}
+        </div>
+      </section>
+      ${renderBlockedReasons(blockedReasons)}
       <section class="teacher-content-promotion-panel">
         <div>
           <strong>${escapeHtml(state.promotionMessage || status)}</strong>
-          <span>${escapeHtml(readiness.ready ? 'Existing safety checks will run again before anything is copied.' : disabledReason)}</span>
+          <span>Promotion copies reviewed draft content into approved knowledge packs.</span>
+          <span>It will not change student answering yet.</span>
+          <small>${escapeHtml(readiness.ready ? 'Existing safety checks will run again before anything is copied.' : disabledReason)}</small>
         </div>
         <button
           type="button"
@@ -776,7 +798,6 @@
           title="${escapeAttr(promoteDisabled ? disabledReason : 'Promote reviewed draft content')}"
         >${escapeHtml(promoteLabel)}</button>
       </section>
-      ${renderIssueList('Blocked Reasons', readiness.blockedReasons)}
       ${renderIssueList('Warnings', state.report?.warnings)}
       ${renderIssueList('Errors', state.report?.errors)}
     `;
@@ -1259,6 +1280,18 @@
     `;
   }
 
+  function renderBlockedReasons(blockedReasons) {
+    const reasons = Array.isArray(blockedReasons) ? blockedReasons.filter(Boolean) : [];
+    return `
+      <section class="teacher-content-blocked-reasons" data-import-report-blocked-reasons>
+        <h5>Blocked reasons</h5>
+        ${reasons.length
+          ? reasons.map((reason) => `<p data-import-report-blocked-reason>${escapeHtml(reason)}</p>`).join('')
+          : '<p class="profile-empty-state">No blocked reasons reported.</p>'}
+      </section>
+    `;
+  }
+
   function renderIssueList(title, items) {
     const list = Array.isArray(items) ? items.filter(Boolean) : [];
     return `
@@ -1269,6 +1302,23 @@
           : '<p class="profile-empty-state">None.</p>'}
       </section>
     `;
+  }
+
+  function getReadinessCopy(status, disabledReason) {
+    if (status === 'Promoted successfully') return 'This draft was copied into approved knowledge packs.';
+    if (status === 'Ready to promote') return 'Teacher review and validation checks are complete.';
+    if (status === 'Blocked') return disabledReason || 'One or more required checks need attention.';
+    return 'Pending review items still need teacher approval or rejection.';
+  }
+
+  function passFailUnknown(value) {
+    if (value === true) return 'Passed';
+    if (value === false) return 'Failed';
+    return 'Unknown';
+  }
+
+  function countItems(value) {
+    return Array.isArray(value) ? value.length : 0;
   }
 
   function renderChipList(title, items) {

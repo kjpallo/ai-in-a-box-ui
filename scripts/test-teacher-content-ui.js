@@ -25,6 +25,7 @@ assertUploadExtractionUi();
 assertPrepareReviewHandoffUi();
 assertSelectedDraftAndProgressUi();
 assertReviewCardPolishUi();
+assertImportReportPolishUi();
 assertReviewActions();
 assertPromotionAction();
 assertDisabledPlaceholders();
@@ -112,7 +113,8 @@ function assertPromotionAction() {
     'Promoted successfully',
     '!state.report?.promotionReadiness?.ready',
     "method: 'POST'",
-    'This will copy reviewed draft content into approved knowledge packs. It will not change student answering yet.'
+    'Promotion copies reviewed draft content into approved knowledge packs.',
+    'It will not change student answering yet.'
   ].forEach((marker) => {
     assert.ok(ui.includes(marker), `Expected promotion marker ${marker}.`);
   });
@@ -219,7 +221,7 @@ function assertSelectedDraftAndProgressUi() {
     'Rejected Items',
     'Total Reviewable Items',
     'No draft pack is selected yet. Prepare Review from an upload or choose a draft pack to see its review summary.',
-    'No draft pack is selected yet. Prepare Review or choose a draft pack to view its import report.'
+    'No draft report selected. Prepare Review from an upload or choose a draft pack to see whether it is ready to promote.'
   ].forEach((marker) => {
     assert.ok(ui.includes(marker), `Expected selected draft/progress marker ${marker}.`);
   });
@@ -259,6 +261,50 @@ function assertReviewCardPolishUi() {
     'Cancel'
   ].forEach((marker) => {
     assert.ok(ui.includes(marker), `Expected review polish marker ${marker}.`);
+  });
+}
+
+function assertImportReportPolishUi() {
+  [
+    'Import Report',
+    'This report checks whether the reviewed draft is ready to become an approved knowledge pack.',
+    'data-import-report-readiness-status',
+    'data-import-report-readiness-card',
+    'Needs teacher review',
+    'Ready to promote',
+    'Blocked',
+    'Promoted successfully',
+    'Promotion copies reviewed draft content into approved knowledge packs.',
+    'It will not change student answering yet.',
+    'data-import-report-blocked-reasons',
+    'data-import-report-blocked-reason',
+    'Blocked reasons',
+    'data-import-report-review-summary',
+    'data-import-report-pending',
+    'data-import-report-approved',
+    'data-import-report-rejected',
+    'data-import-report-total-reviewable',
+    'Pending',
+    'Approved',
+    'Rejected',
+    'Total reviewable',
+    'data-import-report-validation-summary',
+    'data-import-report-extraction',
+    'data-import-report-validation',
+    'data-import-report-warnings',
+    'data-import-report-errors',
+    'Extraction',
+    'Draft validation',
+    'Warnings',
+    'Errors',
+    'Passed',
+    'Failed',
+    'Unknown',
+    'No draft report selected. Prepare Review from an upload or choose a draft pack to see whether it is ready to promote.',
+    'Report failed to load or is still unavailable. Refresh the selected draft before promoting.',
+    'Draft not ready. Finish teacher review before promoting.'
+  ].forEach((marker) => {
+    assert.ok(ui.includes(marker), `Expected Import Report polish marker ${marker}.`);
   });
 }
 

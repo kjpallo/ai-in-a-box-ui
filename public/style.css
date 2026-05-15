@@ -2365,6 +2365,8 @@ button:disabled {
 .teacher-content-issues,
 .teacher-content-chip-section,
 .teacher-content-promotion-panel,
+.teacher-content-readiness-card,
+.teacher-content-blocked-reasons,
 .teacher-content-handoff,
 .teacher-content-selected-draft,
 .teacher-content-review-progress,
@@ -2397,12 +2399,55 @@ button:disabled {
 .teacher-content-issues,
 .teacher-content-chip-section,
 .teacher-content-promotion-panel,
+.teacher-content-readiness-card,
+.teacher-content-blocked-reasons,
 .teacher-content-handoff,
 .teacher-content-review-progress,
 .teacher-content-review-groups,
 .teacher-content-approved-list {
   display: grid;
   gap: 10px;
+}
+
+.teacher-content-readiness-card {
+  border-color: rgba(102, 247, 209, 0.22);
+  background:
+    radial-gradient(circle at 0% 0%, rgba(102, 247, 209, 0.12), transparent 38%),
+    rgba(102, 247, 209, 0.055);
+}
+
+.teacher-content-readiness-card.blocked {
+  border-color: rgba(126, 233, 255, 0.26);
+  background:
+    radial-gradient(circle at 0% 0%, rgba(126, 233, 255, 0.14), transparent 38%),
+    rgba(126, 233, 255, 0.055);
+}
+
+.teacher-content-readiness-card span {
+  color: #cafff0;
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.teacher-content-readiness-card strong {
+  color: #f4fffb;
+  font-size: 1.15rem;
+}
+
+.teacher-content-readiness-card p,
+.teacher-content-blocked-reasons p {
+  margin: 0;
+  color: #c9dfdc;
+  line-height: 1.4;
+}
+
+.teacher-content-blocked-reasons p:not(.profile-empty-state) {
+  border: 1px solid rgba(126, 233, 255, 0.16);
+  border-radius: 10px;
+  padding: 9px 10px;
+  background: rgba(2, 9, 10, 0.42);
 }
 
 .teacher-content-promotion-panel {
@@ -2424,6 +2469,13 @@ button:disabled {
 .teacher-content-promotion-panel span {
   margin-top: 4px;
   color: #b7d1cf;
+  line-height: 1.35;
+}
+
+.teacher-content-promotion-panel small {
+  display: block;
+  margin-top: 7px;
+  color: #90aaa8;
   line-height: 1.35;
 }
 
