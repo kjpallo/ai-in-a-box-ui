@@ -530,32 +530,92 @@
 
   function renderStandardsCard() {
     const summary = state.report?.standardsSummary || null;
+    const standardIds = Array.isArray(summary?.standardIds) ? summary.standardIds : [];
+    const standards = Array.isArray(summary?.standards) ? summary.standards : standardIds.map((standardId) => ({ standardId }));
+    const unknown = Array.isArray(summary?.unknown) ? summary.unknown : [];
+    const missing = Array.isArray(summary?.missing) ? summary.missing : [];
     if (!state.selectedDraftPackId) {
-      return cardWithEmptyState('Standards', 'No draft/report is selected yet.');
+      return `
+        <div class="teacher-content-card-head">
+          <div>
+            <h4>Standards</h4>
+            <p>Connect this knowledge pack to the standards students are expected to learn.</p>
+          </div>
+          <span class="teacher-content-pill muted">Coming Soon</span>
+        </div>
+        <p class="profile-empty-state">No draft selected. Prepare Review from an upload or choose a draft pack to see its standards alignment.</p>
+        ${renderStandardsPlaceholders()}
+      `;
     }
 
     return `
       <div class="teacher-content-card-head">
         <div>
           <h4>Standards</h4>
-          <p>Standards controls are placeholders for the future import flow.</p>
+          <p>Connect this knowledge pack to the standards students are expected to learn.</p>
         </div>
         <span class="teacher-content-pill muted">Read Only</span>
       </div>
-      <div class="teacher-content-upload-row">
-        <select disabled data-coming-soon="standards-select">
-          <option>Select standards bank - coming soon</option>
-        </select>
-        <button type="button" class="small-button secondary-small" disabled data-coming-soon="standards-upload">Upload standards</button>
-      </div>
+      ${renderStandardsPlaceholders()}
+      ${summary?.standardsBankLoaded === false ? '<p class="profile-empty-state" data-standards-bank-empty>Standards bank not loaded. Existing draft IDs are shown without bank details.</p>' : ''}
       <div class="teacher-content-metric-grid">
-        ${metric('Standards Map Count', formatNumber(summary?.standardsMapCount))}
-        ${metric('Standard IDs Used', formatNumber(summary?.standardIds?.length))}
-        ${metric('Unknown Standards', formatNumber(summary?.unknown?.length))}
-        ${metric('Missing Standards', formatNumber(summary?.missing?.length))}
+        ${metric('Standards Map Count', formatNumber(summary?.standardsMapCount), 'data-standards-map-count')}
+        ${metric('Standard IDs Used', formatNumber(standardIds.length), 'data-standards-id-count')}
+        ${metric('Unknown Standards', formatNumber(unknown.length), 'data-standards-unknown-count')}
+        ${metric('Missing Standards', formatNumber(missing.length), 'data-standards-missing-count')}
       </div>
-      ${renderChipList('Standard IDs', summary?.standardIds)}
-      ${renderChipList('Unknown / Missing', [...(summary?.unknown || []), ...(summary?.missing || [])])}
+      ${standardIds.length ? renderChipList('Standard IDs', standardIds, 'data-standard-id-list') : '<p class="profile-empty-state" data-standards-empty>No standardsMap entries or standard IDs were found for this draft.</p>'}
+      ${unknown.length ? renderChipList('Unknown standards found', unknown, 'data-standards-unknown-list') : ''}
+      ${missing.length ? renderChipList('Standards used without standardsMap entries', missing, 'data-standards-missing-list') : ''}
+      ${standards.length ? `<div class="teacher-content-standards-list">${standards.map(renderStandardCard).join('')}</div>` : ''}
+    `;
+  }
+
+  function renderStandardsPlaceholders() {
+    return `
+      <section class="teacher-content-standards-tools" data-standards-placeholder-controls>
+        <label class="teacher-content-standards-select">
+          <span>Select existing standards</span>
+          <select disabled data-coming-soon="standards-select" aria-label="Select existing standards placeholder">
+            <option>Select existing standards - coming soon</option>
+          </select>
+        </label>
+        <button type="button" class="small-button secondary-small" disabled data-coming-soon="standards-upload">Upload standards file</button>
+        <label class="teacher-content-standards-select">
+          <span>Replace standard</span>
+          <select disabled data-coming-soon="standards-replace" aria-label="Replace standard placeholder">
+            <option>Replace standard - coming soon</option>
+          </select>
+        </label>
+        <button type="button" class="small-button secondary-small" disabled data-coming-soon="standards-edit">Edit standard</button>
+        <button type="button" class="small-button secondary-small" disabled data-coming-soon="standards-vocab">Vocab</button>
+        <button type="button" class="small-button secondary-small" disabled data-coming-soon="standards-content-concept">Content/Concept</button>
+        <button type="button" class="small-button secondary-small" disabled data-coming-soon="standards-source">Source</button>
+      </section>
+    `;
+  }
+
+  function renderStandardCard(standard) {
+    const vocabulary = Array.isArray(standard.relatedVocabulary) ? standard.relatedVocabulary : [];
+    const concepts = Array.isArray(standard.relatedConcepts) ? standard.relatedConcepts : [];
+    const confidence = standard.confidence ? formatConfidence(standard.confidence) : null;
+    return `
+      <section class="teacher-content-standard-card" data-standard-card>
+        <div class="teacher-content-standard-head">
+          <div>
+            <strong data-standard-id>${escapeHtml(standard.standardId || 'Standard ID not set')}</strong>
+            ${standard.title ? `<span data-standard-title>${escapeHtml(standard.title)}</span>` : '<span data-standard-title>No title loaded for this standard.</span>'}
+          </div>
+          ${confidence ? `<span class="teacher-content-confidence ${escapeAttr(confidence.className)}" data-standard-confidence>${escapeHtml(confidence.label)}</span>` : ''}
+        </div>
+        ${standard.description ? `<p data-standard-description>${escapeHtml(standard.description)}</p>` : '<p data-standard-description>Only the standard ID is available for this draft.</p>'}
+        <div class="teacher-content-standard-meta">
+          <span data-standard-review-status>Review status: ${escapeHtml(standard.reviewStatus || 'Not set')}</span>
+          <span data-standard-source>Source: ${escapeHtml([standard.sourceFile, standard.sourceLocation].filter(Boolean).join(' · ') || 'Not loaded')}</span>
+        </div>
+        ${renderInlineChipList('Related vocabulary', vocabulary, 'data-standard-vocabulary')}
+        ${renderInlineChipList('Related concepts', concepts, 'data-standard-concepts')}
+      </section>
     `;
   }
 
@@ -1184,9 +1244,10 @@
     return items.find((item) => Number(item.index) === Number(index)) || null;
   }
 
-  function metric(label, value) {
+  function metric(label, value, dataSelector) {
+    const dataAttr = dataSelector ? ` ${escapeAttr(dataSelector)}` : '';
     return `
-      <div class="teacher-content-metric">
+      <div class="teacher-content-metric"${dataAttr}>
         <span>${escapeHtml(label)}</span>
         <strong>${escapeHtml(value === undefined || value === null || value === '' ? 'Not available' : value)}</strong>
       </div>
@@ -1321,15 +1382,29 @@
     return Array.isArray(value) ? value.length : 0;
   }
 
-  function renderChipList(title, items) {
+  function renderChipList(title, items, dataSelector) {
     const list = Array.isArray(items) ? items.filter(Boolean) : [];
+    const dataAttr = dataSelector ? ` ${escapeAttr(dataSelector)}` : '';
     return `
-      <section class="teacher-content-chip-section">
+      <section class="teacher-content-chip-section"${dataAttr}>
         <h5>${escapeHtml(title)}</h5>
         ${list.length
           ? `<div class="teacher-content-chip-list">${list.map((item) => `<span>${escapeHtml(item)}</span>`).join('')}</div>`
           : '<p class="profile-empty-state">None available.</p>'}
       </section>
+    `;
+  }
+
+  function renderInlineChipList(title, items, dataSelector) {
+    const list = Array.isArray(items) ? items.filter(Boolean) : [];
+    const dataAttr = dataSelector ? ` ${escapeAttr(dataSelector)}` : '';
+    return `
+      <div class="teacher-content-standard-chips"${dataAttr}>
+        <span>${escapeHtml(title)}:</span>
+        ${list.length
+          ? list.map((item) => `<strong>${escapeHtml(item)}</strong>`).join('')
+          : '<em>None loaded</em>'}
+      </div>
     `;
   }
 

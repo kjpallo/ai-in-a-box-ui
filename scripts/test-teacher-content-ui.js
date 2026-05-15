@@ -24,6 +24,7 @@ assertEndpointReferences();
 assertUploadExtractionUi();
 assertPrepareReviewHandoffUi();
 assertSelectedDraftAndProgressUi();
+assertStandardsTabWorkflowUi();
 assertReviewCardPolishUi();
 assertImportReportPolishUi();
 assertReviewActions();
@@ -225,6 +226,61 @@ function assertSelectedDraftAndProgressUi() {
   ].forEach((marker) => {
     assert.ok(ui.includes(marker), `Expected selected draft/progress marker ${marker}.`);
   });
+}
+
+function assertStandardsTabWorkflowUi() {
+  [
+    'Standards',
+    'Connect this knowledge pack to the standards students are expected to learn.',
+    'data-standards-map-count',
+    'data-standards-id-count',
+    'data-standards-missing-count',
+    'data-standards-unknown-count',
+    'data-standard-id-list',
+    'data-standard-card',
+    'data-standard-id',
+    'data-standard-title',
+    'data-standard-description',
+    'data-standard-confidence',
+    'data-standard-vocabulary',
+    'data-standard-concepts',
+    'data-standard-review-status',
+    'No draft selected. Prepare Review from an upload or choose a draft pack to see its standards alignment.',
+    'No standardsMap entries or standard IDs were found for this draft.',
+    'Standards bank not loaded. Existing draft IDs are shown without bank details.',
+    'Unknown standards found',
+    'Select existing standards - coming soon',
+    'Upload standards file',
+    'Replace standard - coming soon',
+    'Edit standard',
+    'Vocab',
+    'Content/Concept',
+    'Source',
+    'data-standards-placeholder-controls',
+    'data-coming-soon="standards-select"',
+    'data-coming-soon="standards-upload"',
+    'data-coming-soon="standards-replace"',
+    'data-coming-soon="standards-edit"',
+    'data-coming-soon="standards-vocab"',
+    'data-coming-soon="standards-content-concept"',
+    'data-coming-soon="standards-source"'
+  ].forEach((marker) => {
+    assert.ok(ui.includes(marker), `Expected Standards tab workflow marker ${marker}.`);
+  });
+
+  [
+    /data-coming-soon="standards-select"[\s\S]*?disabled|disabled[\s\S]*?data-coming-soon="standards-select"/,
+    /data-coming-soon="standards-upload"[\s\S]*?disabled|disabled[\s\S]*?data-coming-soon="standards-upload"/,
+    /data-coming-soon="standards-replace"[\s\S]*?disabled|disabled[\s\S]*?data-coming-soon="standards-replace"/,
+    /data-coming-soon="standards-edit"[\s\S]*?disabled|disabled[\s\S]*?data-coming-soon="standards-edit"/,
+    /data-coming-soon="standards-vocab"[\s\S]*?disabled|disabled[\s\S]*?data-coming-soon="standards-vocab"/,
+    /data-coming-soon="standards-content-concept"[\s\S]*?disabled|disabled[\s\S]*?data-coming-soon="standards-content-concept"/,
+    /data-coming-soon="standards-source"[\s\S]*?disabled|disabled[\s\S]*?data-coming-soon="standards-source"/
+  ].forEach((pattern) => {
+    assert.match(ui, pattern, `Expected disabled placeholder control matching ${pattern}.`);
+  });
+
+  assert.doesNotMatch(ui, /\/api\/teacher-content\/standards|standardsUpload|uploadStandards|data-standards-upload-action/i, 'Standards placeholders should not call new standards endpoints.');
 }
 
 function assertReviewCardPolishUi() {

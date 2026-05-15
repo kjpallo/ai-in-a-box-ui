@@ -2125,7 +2125,8 @@ button:disabled {
 .teacher-content-footer,
 .teacher-content-card-head,
 .teacher-content-approved-head,
-.teacher-content-review-group-head {
+.teacher-content-review-group-head,
+.teacher-content-standard-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -2156,6 +2157,8 @@ button:disabled {
 .teacher-content-approved-head span,
 .teacher-content-review-item span,
 .teacher-content-review-item p,
+.teacher-content-standard-card p,
+.teacher-content-standard-card span,
 .teacher-content-status-row,
 .teacher-content-footer,
 .teacher-content-draft-picker span {
@@ -2364,6 +2367,8 @@ button:disabled {
 .teacher-content-counts,
 .teacher-content-issues,
 .teacher-content-chip-section,
+.teacher-content-standards-tools,
+.teacher-content-standard-card,
 .teacher-content-promotion-panel,
 .teacher-content-readiness-card,
 .teacher-content-blocked-reasons,
@@ -2398,6 +2403,9 @@ button:disabled {
 .teacher-content-counts,
 .teacher-content-issues,
 .teacher-content-chip-section,
+.teacher-content-standards-tools,
+.teacher-content-standard-card,
+.teacher-content-standards-list,
 .teacher-content-promotion-panel,
 .teacher-content-readiness-card,
 .teacher-content-blocked-reasons,
@@ -2608,6 +2616,87 @@ button:disabled {
   display: block;
   margin-top: 3px;
   color: #f4fffb;
+}
+
+.teacher-content-standards-tools {
+  grid-template-columns: minmax(170px, 1fr) auto minmax(170px, 1fr) repeat(4, auto);
+  align-items: end;
+  border-color: rgba(126, 233, 255, 0.16);
+  background: rgba(126, 233, 255, 0.045);
+}
+
+.teacher-content-standards-select {
+  display: grid;
+  gap: 6px;
+}
+
+.teacher-content-standards-select span,
+.teacher-content-standard-chips > span {
+  color: #cafff0;
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.teacher-content-standards-select select {
+  width: 100%;
+  min-height: 34px;
+  border: 1px solid rgba(102, 247, 209, 0.22);
+  border-radius: 10px;
+  padding: 0 10px;
+  color: #effff8;
+  background: rgba(2, 9, 10, 0.86);
+}
+
+.teacher-content-standards-list {
+  gap: 10px;
+}
+
+.teacher-content-standard-card {
+  gap: 10px;
+  border-color: rgba(102, 247, 209, 0.16);
+  background:
+    linear-gradient(180deg, rgba(102, 247, 209, 0.055), rgba(255, 255, 255, 0.035));
+}
+
+.teacher-content-standard-head {
+  align-items: start;
+}
+
+.teacher-content-standard-head div {
+  display: grid;
+  gap: 4px;
+}
+
+.teacher-content-standard-head strong {
+  color: #f4fffb;
+  overflow-wrap: anywhere;
+}
+
+.teacher-content-standard-card p {
+  margin: 0;
+  color: #e5f6f2;
+}
+
+.teacher-content-standard-meta,
+.teacher-content-standard-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.teacher-content-standard-meta span,
+.teacher-content-standard-chips strong,
+.teacher-content-standard-chips em {
+  border: 1px solid rgba(102, 247, 209, 0.14);
+  border-radius: 999px;
+  padding: 5px 8px;
+  background: rgba(2, 9, 10, 0.44);
+  color: #d8eee9;
+  font-size: 0.76rem;
+  font-style: normal;
+  font-weight: 800;
 }
 
 .teacher-content-issues ul {
@@ -3879,6 +3968,7 @@ button:disabled {
   .live-summary-grid,
   .live-attention-list,
   .reports-summary-grid,
+  .teacher-content-standards-tools,
   .teacher-content-tabs,
   .teacher-content-metric-grid,
   .teacher-content-detail-grid {
@@ -3921,6 +4011,7 @@ button:disabled {
   .teacher-content-upload-row,
   .teacher-content-metric-grid,
   .teacher-content-detail-grid,
+  .teacher-content-standards-tools,
   .teacher-content-selected-draft,
   .teacher-content-promotion-panel,
   .teacher-content-review-item,

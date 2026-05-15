@@ -86,6 +86,18 @@ function assertPendingReviewAndCounts() {
   assert.equal(report.standardsSummary.standardsMapCount, 1);
   assert.deepEqual(report.standardsSummary.standardIds, ['SAMPLE.PS.FORCES.1']);
   assert.deepEqual(report.standardsSummary.unknown, []);
+  assert.equal(report.standardsSummary.standardsBankLoaded, true);
+  assert.deepEqual(report.standardsSummary.standards[0], {
+    standardId: 'SAMPLE.PS.FORCES.1',
+    title: 'Balanced and Unbalanced Forces',
+    description: 'Describe how balanced and unbalanced forces affect motion.',
+    confidence: 'high',
+    relatedVocabulary: ['net-force'],
+    relatedConcepts: ['balanced-forces'],
+    reviewStatus: 'approved',
+    sourceFile: 'sample_standards_source.pdf',
+    sourceLocation: 'p. 1'
+  });
 }
 
 function assertReadyWhenAllReviewableItemsApproved() {
