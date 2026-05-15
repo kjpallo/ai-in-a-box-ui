@@ -19,8 +19,10 @@ const {
 const { REVIEW_STATUSES } = require('../lib/knowledge/packSchema');
 const { detectUploadFileType, supportedExtensions } = require('../lib/uploads/detectUploadFileType');
 const { extractTextFromFile } = require('../lib/uploads/extractTextFromFile');
+const { generateDraftKnowledgePack } = require('../lib/uploads/generateDraftKnowledgePack');
 
 const SAFE_PACK_ID_PATTERN = /^[a-z0-9_-]+$/;
+const SAFE_UPLOAD_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{0,127}$/;
 const DEFAULT_UPLOAD_LIMIT_BYTES = 15 * 1024 * 1024;
 
 function createTeacherContentRoutes(options = {}) {
@@ -51,6 +53,27 @@ function registerTeacherContentRoutes(app, options = {}) {
         success: false,
         errors: [error instanceof Error ? error.message : String(error)]
       });
+    }
+  });
+
+  app.post('/uploads/:uploadId/prepare-review', async (req, res) => {
+    const uploadId = String(req.params && req.params.uploadId || '').trim();
+    if (!isSafeUploadId(uploadId)) {
+      return res.status(400).json({
+        success: false,
+        errors: ['uploadId must contain only lowercase letters, numbers, underscores, and hyphens.'],
+        warnings: []
+      });
+    }
+
+    try {
+      const result = await prepareReviewDraftFromUpload(uploadId, req.body || {}, options);
+      if (!result.success) {
+        return res.status(result.statusCode || 400).json(stripStatusCode(result));
+      }
+      return res.json(result);
+    } catch (error) {
+      return sendRouteError(res, error);
     }
   });
 
@@ -275,6 +298,77 @@ function getUploadExtractedDir(options = {}) {
     || path.join(__dirname, '..', 'knowledge', 'uploads', 'extracted');
 }
 
+async function prepareReviewDraftFromUpload(uploadId, body = {}, options = {}) {
+  const extractionJsonPath = getExtractionJsonPathForUpload(uploadId, options);
+  if (!fs.existsSync(extractionJsonPath)) {
+    return {
+      success: false,
+      statusCode: 404,
+      errors: ['No extracted upload JSON was found for this uploadId. Extract text before preparing review.'],
+      warnings: []
+    };
+  }
+
+  const generation = await generateDraftKnowledgePack({
+    extractionJsonPath,
+    outputDraftDir: options.draftPacksDir,
+    draftPacksDir: options.draftPacksDir,
+    standardsBank: options.standardsBank,
+    standardsBankPath: sanitizeStandardsBankPath(body.standardsBankPath, options),
+    model: nonEmptyString(body.model) ? body.model.trim() : undefined,
+    timeoutMs: positiveNumberOrUndefined(body.timeoutMs),
+    keepAlive: nonEmptyString(body.keepAlive) ? body.keepAlive.trim() : undefined,
+    retryInvalidJson: body.retryInvalidJson === true,
+    packName: nonEmptyString(body.packName) ? body.packName.trim() : undefined,
+    modelClient: options.modelClient || options.draftModelClient,
+    rawModelResponsesDir: options.rawModelResponsesDir
+  });
+
+  if (!generation.success) {
+    return {
+      success: false,
+      errors: generation.errors || ['Review draft preparation failed.'],
+      warnings: generation.warnings || [],
+      rawModelResponsePath: generation.rawModelResponsePath
+    };
+  }
+
+  const draftReport = getDraftPackReport(generation.packId, options);
+  return {
+    success: true,
+    data: {
+      packId: generation.packId,
+      message: 'Review draft prepared.',
+      draftReport,
+      dashboard: getTeacherContentDashboard(options),
+      drafts: listDraftPacksForReview(options).draftPacks
+    },
+    errors: [],
+    warnings: generation.warnings || []
+  };
+}
+
+function getExtractionJsonPathForUpload(uploadId, options = {}) {
+  const extractedDir = path.resolve(getUploadExtractedDir(options));
+  const extractionJsonPath = path.resolve(extractedDir, `${uploadId}_extraction.json`);
+  if (path.dirname(extractionJsonPath) !== extractedDir) {
+    throw makeHttpError('uploadId resolved outside the extracted uploads directory.', 400);
+  }
+  return extractionJsonPath;
+}
+
+function sanitizeStandardsBankPath(standardsBankPath, options = {}) {
+  if (!nonEmptyString(standardsBankPath)) return undefined;
+  const resolved = path.resolve(standardsBankPath);
+  const allowedRoot = path.resolve(options.standardsBanksDir || path.join(__dirname, '..', 'knowledge', 'standards-banks'));
+  return isPathInside(resolved, allowedRoot) ? resolved : undefined;
+}
+
+function isPathInside(filePath, rootDir) {
+  const relativePath = path.relative(rootDir, filePath);
+  return relativePath === '' || Boolean(relativePath && !relativePath.startsWith('..') && !path.isAbsolute(relativePath));
+}
+
 function makeExtractionSummary(extraction) {
   return {
     success: extraction.success === true,
@@ -432,6 +526,24 @@ function isSafePackId(packId) {
   return SAFE_PACK_ID_PATTERN.test(packId);
 }
 
+function isSafeUploadId(uploadId) {
+  return SAFE_UPLOAD_ID_PATTERN.test(uploadId);
+}
+
+function nonEmptyString(value) {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
+function positiveNumberOrUndefined(value) {
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? number : undefined;
+}
+
+function stripStatusCode(result) {
+  const { statusCode, ...payload } = result;
+  return payload;
+}
+
 function validateDraftItemRouteParams(params = {}) {
   const packId = String(params.packId || '').trim();
   if (!isSafePackId(packId)) {
@@ -492,7 +604,10 @@ function sendDraftMutationResponse(res, update, packId, options) {
 
 module.exports = {
   createTeacherContentRoutes,
+  getExtractionJsonPathForUpload,
   isSafePackId,
+  isSafeUploadId,
+  prepareReviewDraftFromUpload,
   registerTeacherContentRoutes,
   storeAndExtractUpload
 };

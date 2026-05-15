@@ -10,8 +10,10 @@ const draftPacksDir = path.join(tempRoot, 'draft-packs');
 const approvedPacksDir = path.join(tempRoot, 'approved-packs');
 const uploadIncomingDir = path.join(tempRoot, 'uploads', 'incoming');
 const uploadExtractedDir = path.join(tempRoot, 'uploads', 'extracted');
+const rawModelResponsesDir = path.join(tempRoot, 'model-responses');
 const realApprovedPacksDir = path.join(projectRoot, 'knowledge', 'approved-packs');
 const standardsBank = makeStandardsBank();
+let mockDraftModelClient = async () => JSON.stringify(makeGeneratedPack());
 
 cleanupTempRoot();
 fs.mkdirSync(draftPacksDir, { recursive: true });
@@ -54,6 +56,8 @@ async function main() {
     approvedPacksDir,
     uploadIncomingDir,
     uploadExtractedDir,
+    rawModelResponsesDir,
+    modelClient: async (request) => mockDraftModelClient(request),
     standardsBank
   });
 
@@ -64,6 +68,10 @@ async function main() {
     await assertUnsafeUploadFilenameIsSanitized(handlers);
     await assertDraftsEndpoint(handlers);
     await assertDraftReportEndpoint(handlers);
+    await assertPrepareReviewEndpointSucceeds(handlers);
+    await assertInvalidPrepareReviewUploadIdRejected(handlers);
+    await assertMissingPrepareReviewExtractionFails(handlers);
+    await assertPrepareReviewModelFailureDoesNotWriteDraft(handlers);
     await assertPromoteDraftEndpointSucceeds(handlers);
     await assertPromoteBlocksPendingItems(handlers);
     await assertPromoteBlocksRejectedItems(handlers);
@@ -130,6 +138,107 @@ async function assertDraftReportEndpoint(handlers) {
   assert.equal(response.body.data.pendingReview.totalPending, 1);
   assert.equal(response.body.data.promotionReadiness.ready, false);
   assert.ok(response.body.data.promotionReadiness.blockedReasons.includes('pending items remain'));
+}
+
+async function assertPrepareReviewEndpointSucceeds(handlers) {
+  const uploadId = 'prepare-review-upload';
+  const extractionPath = path.join(uploadExtractedDir, `${uploadId}_extraction.json`);
+  fs.writeFileSync(extractionPath, `${JSON.stringify(makeExtraction({
+    uploadId,
+    originalFileName: 'teacher_prepare_review_notes.txt'
+  }), null, 2)}\n`);
+
+  const draftFilesBefore = snapshotFiles(draftPacksDir);
+  const approvedFilesBefore = snapshotFiles(realApprovedPacksDir);
+  const calls = [];
+  mockDraftModelClient = async (request) => {
+    calls.push(request);
+    return JSON.stringify(makeGeneratedPack({
+      packId: 'prepared-review-draft',
+      title: 'Model Title That Teacher Name Replaces'
+    }));
+  };
+
+  const response = await request(handlers, 'POST', '/uploads/:uploadId/prepare-review', {
+    packName: 'Teacher Prepared Forces',
+    model: 'mock-local-model',
+    timeoutMs: 1234,
+    keepAlive: '4m',
+    retryInvalidJson: true
+  }, {
+    uploadId
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.data.packId, 'prepared-review-draft');
+  assert.equal(response.body.data.message, 'Review draft prepared.');
+  assert.equal(response.body.data.dashboard.draftPacks, 2);
+  assert.ok(response.body.data.drafts.some((draft) => draft.packId === 'prepared-review-draft'));
+  assert.equal(response.body.data.draftReport.draftPack.packId, 'prepared-review-draft');
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].model, 'mock-local-model');
+  assert.equal(calls[0].timeoutMs, 1234);
+  assert.equal(calls[0].keepAlive, '4m');
+
+  const createdPath = path.join(draftPacksDir, 'prepared-review-draft', 'knowledge_pack.json');
+  assert.equal(fs.existsSync(createdPath), true, 'Prepare Review should write only to the configured draft-packs dir.');
+  const generated = JSON.parse(fs.readFileSync(createdPath, 'utf8'));
+  assert.equal(generated.title, 'Teacher Prepared Forces');
+  assert.equal(generated.vocabulary[0].reviewStatus, 'pending');
+  assert.equal(generated.concepts[0].reviewStatus, 'pending');
+  assert.equal(generated.problemBank[0].reviewStatus, 'pending');
+  assert.equal(generated.referenceFormulas[0].solverStatus, 'reference_only');
+  assert.equal(generated.referenceFormulas[0].reviewStatus, 'pending');
+
+  const addedDraftFiles = Object.keys(snapshotFiles(draftPacksDir)).filter((filePath) => !draftFilesBefore[filePath]);
+  assert.deepEqual(addedDraftFiles, [path.join('prepared-review-draft', 'knowledge_pack.json')]);
+  assert.deepEqual(snapshotFiles(realApprovedPacksDir), approvedFilesBefore, 'Prepare Review should not modify real approved packs.');
+}
+
+async function assertInvalidPrepareReviewUploadIdRejected(handlers) {
+  const response = await request(handlers, 'POST', '/uploads/:uploadId/prepare-review', {}, {
+    uploadId: '../prepare-review-upload'
+  });
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.success, false);
+  assert.match(response.body.errors[0], /uploadId/);
+}
+
+async function assertMissingPrepareReviewExtractionFails(handlers) {
+  const response = await request(handlers, 'POST', '/uploads/:uploadId/prepare-review', {}, {
+    uploadId: 'missing-upload'
+  });
+
+  assert.equal(response.statusCode, 404);
+  assert.equal(response.body.success, false);
+  assert.ok(response.body.errors.some((error) => error.includes('No extracted upload JSON')));
+}
+
+async function assertPrepareReviewModelFailureDoesNotWriteDraft(handlers) {
+  const uploadId = 'prepare-review-invalid';
+  fs.writeFileSync(path.join(uploadExtractedDir, `${uploadId}_extraction.json`), `${JSON.stringify(makeExtraction({
+    uploadId,
+    originalFileName: 'teacher_invalid_model_notes.txt'
+  }), null, 2)}\n`);
+
+  const draftFilesBefore = snapshotFiles(draftPacksDir);
+  mockDraftModelClient = async () => '{"packId":"broken",';
+
+  const response = await request(handlers, 'POST', '/uploads/:uploadId/prepare-review', {
+    retryInvalidJson: false
+  }, {
+    uploadId
+  });
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.success, false);
+  assert.ok(response.body.errors.some((error) => error.includes('Model response was not valid JSON')));
+  assert.ok(response.body.rawModelResponsePath, 'invalid model output should return the raw model response path when available');
+  assert.deepEqual(snapshotFiles(draftPacksDir), draftFilesBefore, 'invalid draft output should not write a draft pack');
+
+  mockDraftModelClient = async () => JSON.stringify(makeGeneratedPack());
 }
 
 async function assertSuccessfulTxtUploadExtraction(handlers) {
@@ -580,6 +689,66 @@ function writeKnowledgePack(rootDir, pack) {
 
 function readKnowledgePack(rootDir, packId) {
   return JSON.parse(fs.readFileSync(path.join(rootDir, packId, 'knowledge_pack.json'), 'utf8'));
+}
+
+function makeExtraction(overrides = {}) {
+  const uploadId = overrides.uploadId || 'prepare-review-upload';
+  const originalFileName = overrides.originalFileName || 'teacher_prepare_review_notes.txt';
+  return {
+    success: true,
+    fileName: originalFileName,
+    extension: '.txt',
+    mimeGuess: 'text/plain',
+    text: 'Balanced forces have a net force of zero. Unbalanced forces change motion.',
+    sections: [
+      {
+        title: 'Full Text',
+        text: 'Balanced forces have a net force of zero. Unbalanced forces change motion.',
+        startLine: 1,
+        endLine: 1
+      }
+    ],
+    tables: [],
+    warnings: [],
+    errors: [],
+    metadata: {
+      detectedType: 'txt'
+    },
+    upload: {
+      uploadId,
+      originalFileName,
+      storedFileName: `${uploadId}.txt`,
+      extractionJsonFileName: `${uploadId}_extraction.json`
+    }
+  };
+}
+
+function makeGeneratedPack(overrides = {}) {
+  return makePack({
+    packId: 'prepared-review-draft',
+    title: 'Prepared Review Draft',
+    sourceFiles: [
+      {
+        fileName: 'teacher_prepare_review_notes.txt',
+        fileType: 'txt',
+        reviewStatus: 'approved',
+        confidence: 'high',
+        notes: 'Model output is normalized back to pending.'
+      }
+    ],
+    vocabulary: [makeVocabularyItem('net-force', 'approved')],
+    concepts: [makeConceptItem('balanced-forces', 'approved')],
+    referenceFormulas: [
+      {
+        ...makeReferenceFormula('force-reference', 'approved'),
+        solverStatus: 'ready'
+      }
+    ],
+    problemBank: [makeProblemItem('balanced-force-problem', 'approved')],
+    standardsMap: [makeStandardsMapItem('SAMPLE.PS.FORCES.1', 'approved')],
+    smokeTests: [makeSmokeTest('approved')],
+    ...overrides
+  });
 }
 
 function makePack(overrides = {}) {

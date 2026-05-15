@@ -2,6 +2,7 @@
   const ENDPOINTS = {
     dashboard: '/api/teacher-content/dashboard',
     uploadExtract: '/api/teacher-content/uploads/extract',
+    uploadPrepareReview: (uploadId) => `/api/teacher-content/uploads/${encodeURIComponent(uploadId)}/prepare-review`,
     drafts: '/api/teacher-content/drafts',
     draftReport: (packId) => `/api/teacher-content/drafts/${encodeURIComponent(packId)}/report`,
     promoteDraft: (packId) => `/api/teacher-content/drafts/${encodeURIComponent(packId)}/promote`,
@@ -56,6 +57,9 @@
     selectedUploadFile: null,
     uploadExtractionLoading: false,
     uploadExtractionResult: null,
+    uploadContentName: '',
+    uploadPrepareReviewLoading: false,
+    uploadPrepareReviewMessage: '',
     errors: []
   };
 
@@ -203,6 +207,13 @@
       if (uploadExtract) {
         event.preventDefault();
         extractSelectedUpload();
+        return;
+      }
+
+      const prepareReview = event.target.closest('[data-upload-prepare-review]');
+      if (prepareReview) {
+        event.preventDefault();
+        prepareReviewFromUpload();
       }
     });
 
@@ -220,7 +231,14 @@
       if (event.target?.id !== 'teacherContentUploadFile') return;
       state.selectedUploadFile = event.target.files && event.target.files[0] ? event.target.files[0] : null;
       state.uploadExtractionResult = null;
+      state.uploadContentName = state.selectedUploadFile ? makeContentNameFromFileName(state.selectedUploadFile.name) : '';
+      state.uploadPrepareReviewMessage = '';
       render();
+    });
+
+    document.addEventListener('input', (event) => {
+      if (event.target?.id !== 'teacherContentKnowledgeName') return;
+      state.uploadContentName = event.target.value || '';
     });
 
     document.addEventListener('keydown', (event) => {
@@ -418,16 +436,21 @@
     const extraction = result.extraction || {};
     const selectedName = state.selectedUploadFile?.name || result.originalFileName || 'No file selected';
     const canExtract = Boolean(state.selectedUploadFile) && !state.uploadExtractionLoading;
+    const extractionSucceeded = Boolean(result.uploadId && extraction.success !== false && !(result.errors || []).length);
+    const canPrepareReview = extractionSucceeded && !state.uploadPrepareReviewLoading;
     const status = state.uploadExtractionLoading
       ? 'Extracting'
+      : state.uploadPrepareReviewLoading
+        ? 'Preparing'
       : result.uploadId
         ? (extraction.success === false || (result.errors || []).length ? 'Failed' : 'Extracted')
         : 'Ready';
+    const contentName = state.uploadContentName || makeContentNameFromFileName(result.originalFileName || selectedName);
     return `
       <div class="teacher-content-card-head">
         <div>
           <h4>Create New Knowledge</h4>
-          <p>This only extracts text. Draft generation comes next.</p>
+          <p>Upload a source, extract text, then prepare review cards for teacher approval.</p>
         </div>
         <span class="teacher-content-pill ${status === 'Failed' ? 'blocked' : status === 'Extracted' ? 'ready' : 'muted'}">${escapeHtml(status)}</span>
       </div>
@@ -450,7 +473,31 @@
           ${canExtract ? '' : 'disabled'}
         >${state.uploadExtractionLoading ? 'Extracting...' : 'Extract Text'}</button>
       </div>
-      <p class="teacher-content-upload-note">Supported file types: .txt, .csv, .json, .docx, .xlsx, .pdf. This only extracts text. Draft generation comes next.</p>
+      <p class="teacher-content-upload-note">Supported file types: .txt, .csv, .json, .docx, .xlsx, .pdf. Draft items stay pending until teacher review.</p>
+      <div class="teacher-content-upload-row">
+        <label class="teacher-content-name-field" for="teacherContentKnowledgeName">
+          <span>Knowledge Name</span>
+          <input
+            id="teacherContentKnowledgeName"
+            type="text"
+            value="${escapeAttr(contentName)}"
+            placeholder="Name this knowledge content"
+            data-upload-content-name
+            ${extractionSucceeded ? '' : 'disabled'}
+          >
+        </label>
+        <button
+          type="button"
+          class="small-button"
+          data-upload-prepare-review
+          ${canPrepareReview ? '' : 'disabled'}
+        >${state.uploadPrepareReviewLoading ? 'Preparing your review draft...' : 'Prepare Review'}</button>
+      </div>
+      <p class="teacher-content-upload-note" data-upload-prepare-review-status>
+        ${escapeHtml(state.uploadPrepareReviewLoading
+          ? 'Charlemagne is preparing your review draft...'
+          : state.uploadPrepareReviewMessage || 'Prepare Review becomes available after text extraction succeeds.')}
+      </p>
       <div class="teacher-content-metric-grid">
         ${metric('Original File', result.originalFileName || state.selectedUploadFile?.name || 'Not selected')}
         ${metric('File Type', result.fileType || extraction.detectedType || 'Not selected')}
@@ -965,7 +1012,9 @@
       });
       const data = unwrap(payload);
       state.uploadExtractionResult = data || null;
-      setStatus('Text extraction finished. Draft generation comes next.');
+      state.uploadContentName = state.uploadContentName || makeContentNameFromFileName(data?.originalFileName || state.selectedUploadFile?.name || '');
+      state.uploadPrepareReviewMessage = data?.uploadId ? 'Prepare Review is ready.' : '';
+      setStatus('Text extraction finished. Prepare Review is ready.');
     } catch (error) {
       state.uploadExtractionResult = {
         originalFileName: state.selectedUploadFile?.name || '',
@@ -980,6 +1029,46 @@
       setStatus('Upload extraction failed.');
     } finally {
       state.uploadExtractionLoading = false;
+      render();
+    }
+  }
+
+  async function prepareReviewFromUpload() {
+    const uploadId = state.uploadExtractionResult?.uploadId;
+    if (!uploadId || state.uploadPrepareReviewLoading) return;
+
+    state.uploadPrepareReviewLoading = true;
+    state.uploadPrepareReviewMessage = 'Charlemagne is preparing your review draft...';
+    state.errors = [];
+    setStatus('Preparing your review draft...');
+    render();
+
+    try {
+      const payload = await fetchJson(ENDPOINTS.uploadPrepareReview(uploadId), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          packName: state.uploadContentName || makeContentNameFromFileName(state.uploadExtractionResult?.originalFileName || ''),
+          retryInvalidJson: true
+        })
+      });
+      const data = unwrap(payload);
+      state.uploadPrepareReviewMessage = data?.message || 'Review draft prepared.';
+      if (data?.dashboard) state.dashboard = data.dashboard;
+      if (Array.isArray(data?.drafts)) state.drafts = data.drafts;
+      if (data?.packId) state.selectedDraftPackId = data.packId;
+      if (data?.draftReport) state.report = data.draftReport;
+      state.selectedReviewItem = null;
+      await refreshDraftLists();
+      if (state.selectedDraftPackId) await loadSelectedDraftReport();
+      state.activeTab = 'draftPack';
+      setStatus('Review draft prepared.');
+    } catch (error) {
+      state.uploadPrepareReviewMessage = 'Prepare Review failed.';
+      state.errors.push(`Prepare Review failed: ${error.message || 'Route error'}`);
+      setStatus('Prepare Review failed.');
+    } finally {
+      state.uploadPrepareReviewLoading = false;
       render();
     }
   }
@@ -1095,6 +1184,16 @@
       .replace(/([a-z])([A-Z])/g, '$1 $2')
       .replace(/[_-]+/g, ' ')
       .replace(/\b\w/g, (letter) => letter.toUpperCase());
+  }
+
+  function makeContentNameFromFileName(fileName) {
+    const baseName = String(fileName || '')
+      .replace(/^.*[\\/]/, '')
+      .replace(/\.[^.]+$/, '')
+      .replace(/[_-]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    return baseName ? titleCase(baseName) : '';
   }
 
   if (document.readyState === 'loading') {

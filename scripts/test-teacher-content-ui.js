@@ -66,6 +66,7 @@ function assertEndpointReferences() {
   [
     '/api/teacher-content/dashboard',
     '/api/teacher-content/uploads/extract',
+    '/api/teacher-content/uploads/${encodeURIComponent(uploadId)}/prepare-review',
     '/api/teacher-content/drafts',
     '/api/teacher-content/drafts/${encodeURIComponent(packId)}/report',
     '/api/teacher-content/drafts/${encodeURIComponent(packId)}/promote',
@@ -129,10 +130,17 @@ function assertUploadExtractionUi() {
     'data-upload-file-input',
     'data-upload-browse',
     'data-upload-extract',
+    'data-upload-content-name',
+    'data-upload-prepare-review',
+    'data-upload-prepare-review-status',
     'Extract Text',
+    'Prepare Review',
+    'Preparing your review draft',
+    'Charlemagne is preparing your review draft...',
+    'Review draft prepared.',
     'FormData',
     "method: 'POST'",
-    'This only extracts text. Draft generation comes next.',
+    'Prepare Review becomes available after text extraction succeeds.',
     'Original File',
     'File Type',
     'Extraction Status',
@@ -148,6 +156,7 @@ function assertUploadExtractionUi() {
 
 function assertNoForbiddenUiActions() {
   assert.doesNotMatch(ui, /Ollama|Gemma|ocr/i, 'Teacher Content UI should not expose forbidden generation/OCR actions.');
+  assert.doesNotMatch(ui, />\s*Generate Draft\s*</i, 'Teacher Content UI should not use Generate Draft as a visible button label.');
   assert.doesNotMatch(ui, /\/api\/student|\/api\/chat|\/api\/router-test/, 'Teacher Content UI should not reference student/router endpoints.');
   assert.doesNotMatch(ui, /\/api\/teacher-content\/drafts\/generate|\/api\/generate-draft|generateDraft/i, 'Teacher Content UI should not reference draft generation endpoints.');
   assert.doesNotMatch(ui, /data-upload-action|data-pack-toggle-action/, 'Teacher Content UI should not implement old placeholder upload/toggle actions.');
