@@ -44,6 +44,7 @@ async function main() {
       makeVocabularyItem('balanced-force', 'approved')
     ]
   }));
+  const localApprovedBefore = snapshotFiles(approvedPacksDir);
 
   const handlers = new Map();
   registerTeacherContentRoutes(createApp(handlers), {
@@ -56,9 +57,19 @@ async function main() {
     await assertDashboardEndpoint(handlers);
     await assertDraftsEndpoint(handlers);
     await assertDraftReportEndpoint(handlers);
+    await assertApproveDraftItemEndpoint(handlers);
+    await assertRejectDraftItemEndpoint(handlers);
+    await assertEditDraftItemEndpoint(handlers);
+    await assertDisallowedEditFails(handlers);
+    await assertInvalidPatchPathTraversalRejected(handlers);
+    await assertInvalidSectionRejected(handlers);
+    await assertInvalidIndexRejected(handlers);
+    await assertInvalidReviewStatusRejected(handlers);
+    await assertSolverStatusEditRejected(handlers);
     await assertApprovedEndpoint(handlers);
     await assertMissingDraftReportEndpoint(handlers);
     await assertPathTraversalRejected(handlers);
+    assert.deepEqual(snapshotFiles(approvedPacksDir), localApprovedBefore, 'test approved-packs dir should not be modified by draft review routes');
     assertRealApprovedPacksAreNotModified();
     assertNoRouterOrStudentModulesImported();
   } finally {
@@ -118,6 +129,141 @@ async function assertApprovedEndpoint(handlers) {
   assert.equal(response.body.data.indexedCounts.vocabularyTerms, 2);
 }
 
+async function assertApproveDraftItemEndpoint(handlers) {
+  const response = await request(handlers, 'PATCH', '/drafts/:packId/items/:section/:index/status', {
+    reviewStatus: 'approved'
+  }, {
+    packId: 'route-draft-pack',
+    section: 'vocabulary',
+    index: '0'
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.data.update.after, 'approved');
+  assert.equal(readKnowledgePack(draftPacksDir, 'route-draft-pack').vocabulary[0].reviewStatus, 'approved');
+  assert.equal(response.body.data.report.draftPack.reviewCountsBySection.vocabulary.approved, 2);
+}
+
+async function assertRejectDraftItemEndpoint(handlers) {
+  const response = await request(handlers, 'PATCH', '/drafts/:packId/items/:section/:index/status', {
+    reviewStatus: 'rejected'
+  }, {
+    packId: 'route-draft-pack',
+    section: 'concepts',
+    index: '0'
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.success, true);
+  assert.equal(readKnowledgePack(draftPacksDir, 'route-draft-pack').concepts[0].reviewStatus, 'rejected');
+}
+
+async function assertEditDraftItemEndpoint(handlers) {
+  const response = await request(handlers, 'PATCH', '/drafts/:packId/items/:section/:index', {
+    field: 'studentDefinition',
+    value: 'Updated draft-only student definition.'
+  }, {
+    packId: 'route-draft-pack',
+    section: 'vocabulary',
+    index: '0'
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.success, true);
+  const pack = readKnowledgePack(draftPacksDir, 'route-draft-pack');
+  assert.equal(pack.vocabulary[0].studentDefinition, 'Updated draft-only student definition.');
+  assert.equal(pack.vocabulary[0].sourceFile, 'teacher_force_notes.txt');
+  assert.equal(response.body.data.report.draftPack.packId, 'route-draft-pack');
+}
+
+async function assertDisallowedEditFails(handlers) {
+  const response = await request(handlers, 'PATCH', '/drafts/:packId/items/:section/:index', {
+    field: 'aliases',
+    value: ['force']
+  }, {
+    packId: 'route-draft-pack',
+    section: 'vocabulary',
+    index: '0'
+  });
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.success, false);
+  assert.match(response.body.errors[0], /not editable/);
+}
+
+async function assertInvalidPatchPathTraversalRejected(handlers) {
+  const response = await request(handlers, 'PATCH', '/drafts/:packId/items/:section/:index/status', {
+    reviewStatus: 'approved'
+  }, {
+    packId: '../route-draft-pack',
+    section: 'vocabulary',
+    index: '0'
+  });
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.success, false);
+  assert.match(response.body.errors[0], /packId/);
+}
+
+async function assertInvalidSectionRejected(handlers) {
+  const response = await request(handlers, 'PATCH', '/drafts/:packId/items/:section/:index/status', {
+    reviewStatus: 'approved'
+  }, {
+    packId: 'route-draft-pack',
+    section: 'router',
+    index: '0'
+  });
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.success, false);
+  assert.match(response.body.errors[0], /section/);
+}
+
+async function assertInvalidIndexRejected(handlers) {
+  const response = await request(handlers, 'PATCH', '/drafts/:packId/items/:section/:index/status', {
+    reviewStatus: 'approved'
+  }, {
+    packId: 'route-draft-pack',
+    section: 'vocabulary',
+    index: '9'
+  });
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.success, false);
+  assert.match(response.body.errors[0], /No item found/);
+}
+
+async function assertInvalidReviewStatusRejected(handlers) {
+  const response = await request(handlers, 'PATCH', '/drafts/:packId/items/:section/:index/status', {
+    reviewStatus: 'promoted'
+  }, {
+    packId: 'route-draft-pack',
+    section: 'vocabulary',
+    index: '0'
+  });
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.success, false);
+  assert.match(response.body.errors[0], /reviewStatus/);
+}
+
+async function assertSolverStatusEditRejected(handlers) {
+  const response = await request(handlers, 'PATCH', '/drafts/:packId/items/:section/:index', {
+    field: 'solverStatus',
+    value: 'ready'
+  }, {
+    packId: 'route-draft-pack',
+    section: 'referenceFormulas',
+    index: '0'
+  });
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.success, false);
+  assert.match(response.body.errors[0], /not editable/);
+  assert.equal(readKnowledgePack(draftPacksDir, 'route-draft-pack').referenceFormulas[0].solverStatus, 'reference_only');
+}
+
 async function assertMissingDraftReportEndpoint(handlers) {
   const response = await request(handlers, 'GET', '/drafts/:packId/report', {}, {
     packId: 'missing-draft-pack'
@@ -168,6 +314,9 @@ function createApp(handlers) {
   return {
     get(route, handler) {
       handlers.set(`GET ${route}`, handler);
+    },
+    patch(route, handler) {
+      handlers.set(`PATCH ${route}`, handler);
     }
   };
 }
@@ -203,6 +352,10 @@ function writeKnowledgePack(rootDir, pack) {
   fs.mkdirSync(packDir, { recursive: true });
   fs.writeFileSync(packPath, `${JSON.stringify(pack, null, 2)}\n`);
   return packPath;
+}
+
+function readKnowledgePack(rootDir, packId) {
+  return JSON.parse(fs.readFileSync(path.join(rootDir, packId, 'knowledge_pack.json'), 'utf8'));
 }
 
 function makePack(overrides = {}) {

@@ -3,6 +3,8 @@
     dashboard: '/api/teacher-content/dashboard',
     drafts: '/api/teacher-content/drafts',
     draftReport: (packId) => `/api/teacher-content/drafts/${encodeURIComponent(packId)}/report`,
+    draftItem: (packId, section, index) => `/api/teacher-content/drafts/${encodeURIComponent(packId)}/items/${encodeURIComponent(section)}/${encodeURIComponent(index)}`,
+    draftItemStatus: (packId, section, index) => `/api/teacher-content/drafts/${encodeURIComponent(packId)}/items/${encodeURIComponent(section)}/${encodeURIComponent(index)}/status`,
     approved: '/api/teacher-content/approved'
   };
 
@@ -24,6 +26,15 @@
     smokeTests: 'Smoke Tests'
   };
 
+  const EDITABLE_FIELDS = {
+    vocabulary: ['studentDefinition', 'teacherDefinition', 'misconception'],
+    concepts: ['studentExplanation', 'keyIdeas'],
+    referenceFormulas: ['equation'],
+    problemBank: ['expectedAnswer'],
+    standardsMap: ['standardId'],
+    smokeTests: ['expectedAnswer']
+  };
+
   const state = {
     initialized: false,
     loadedOnce: false,
@@ -36,6 +47,8 @@
     approvedIndexedCounts: null,
     approvedSearchableCounts: null,
     report: null,
+    selectedReviewItem: null,
+    reviewActionLoading: false,
     errors: []
   };
 
@@ -56,8 +69,8 @@
     return escapeHtml(value).replaceAll('`', '&#096;');
   }
 
-  async function fetchJson(url) {
-    return window.Charlemagne.api.fetchJson(url);
+  async function fetchJson(url, options) {
+    return window.Charlemagne.api.fetchJson(url, options);
   }
 
   function unwrap(payload) {
@@ -134,6 +147,34 @@
       if (tab) {
         event.preventDefault();
         setActiveTab(tab.getAttribute('data-teacher-content-tab'));
+        return;
+      }
+
+      const reviewEdit = event.target.closest('[data-review-edit]');
+      if (reviewEdit) {
+        event.preventDefault();
+        openReviewItem(reviewEdit);
+        return;
+      }
+
+      const reviewStatus = event.target.closest('[data-review-status]');
+      if (reviewStatus) {
+        event.preventDefault();
+        updateReviewStatusFromButton(reviewStatus);
+        return;
+      }
+
+      const reviewClose = event.target.closest('[data-review-close]');
+      if (reviewClose) {
+        event.preventDefault();
+        closeReviewItem();
+        return;
+      }
+
+      const reviewSave = event.target.closest('[data-review-save]');
+      if (reviewSave) {
+        event.preventDefault();
+        saveReviewEdits();
       }
     });
 
@@ -141,6 +182,7 @@
     byId('teacherContentNext')?.addEventListener('click', () => shiftTab(1));
     byId('teacherContentDraftSelect')?.addEventListener('change', async (event) => {
       state.selectedDraftPackId = event.target.value || '';
+      state.selectedReviewItem = null;
       await loadSelectedDraftReport();
       render();
     });
@@ -237,6 +279,7 @@
     try {
       const data = unwrap(await fetchJson(ENDPOINTS.draftReport(state.selectedDraftPackId)));
       state.report = data || null;
+      reconcileSelectedReviewItem();
       collectApiIssues(data);
     } catch (error) {
       state.errors.push(`Draft report failed to load: ${error.message || 'Route error'}`);
@@ -427,8 +470,24 @@
       return cardWithEmptyState('Review', 'No draft/report is selected yet.');
     }
 
+    if (state.reviewActionLoading) {
+      return `
+        <div class="teacher-content-card-head">
+          <div>
+            <h4>Review Draft</h4>
+            <p>Saving draft-only review change...</p>
+          </div>
+          <span class="teacher-content-pill review">Saving</span>
+        </div>
+        <p class="profile-empty-state">Refreshing the selected draft report.</p>
+      `;
+    }
+
     if (!pending || pending.totalPending === 0) {
-      return cardWithEmptyState('Review', 'No pending review items for this draft pack.');
+      return `
+        ${cardWithEmptyState('Review', 'No pending review items for this draft pack.')}
+        ${state.selectedReviewItem ? renderReviewDetailPanel(state.selectedReviewItem) : ''}
+      `;
     }
 
     const groups = pending.items || {};
@@ -438,11 +497,13 @@
           <h4>Pending Review</h4>
           <p>${formatNumber(pending.totalPending)} item${Number(pending.totalPending) === 1 ? '' : 's'} waiting for teacher review.</p>
         </div>
-        <span class="teacher-content-pill muted">Edit Coming Soon</span>
+        <span class="teacher-content-pill review">Draft Only</span>
       </div>
+      ${state.errors.length ? renderIssueList('Review Messages', state.errors) : ''}
       <div class="teacher-content-review-groups">
         ${Object.keys(SECTION_LABELS).map((sectionName) => renderReviewGroup(sectionName, groups[sectionName] || [])).join('')}
       </div>
+      ${state.selectedReviewItem ? renderReviewDetailPanel(state.selectedReviewItem) : ''}
     `;
   }
 
@@ -465,10 +526,59 @@
           <strong>${escapeHtml(item.label || 'Pending item')}</strong>
           <span>Confidence: ${escapeHtml(item.confidence || 'Not set')}</span>
           <span>${escapeHtml(item.sourceFile || 'No source file')} · ${escapeHtml(item.sourceLocation || 'No source location')}</span>
+          <span>Status: ${escapeHtml(item.reviewStatus || 'pending')}</span>
         </div>
         <p>${escapeHtml(item.sourceTextSnippet || 'No source snippet available.')}</p>
-        <button type="button" class="small-button secondary-small" disabled data-coming-soon="review-edit">View/Edit</button>
+        <div class="teacher-content-review-actions">
+          <button type="button" class="small-button secondary-small" data-review-edit data-section="${escapeAttr(item.section)}" data-index="${escapeAttr(item.index)}">View/Edit</button>
+          <button type="button" class="small-button" data-review-status="approved" data-section="${escapeAttr(item.section)}" data-index="${escapeAttr(item.index)}">Approve</button>
+          <button type="button" class="small-button secondary-small" data-review-status="rejected" data-section="${escapeAttr(item.section)}" data-index="${escapeAttr(item.index)}">Reject</button>
+        </div>
       </div>
+    `;
+  }
+
+  function renderReviewDetailPanel(item) {
+    const editableFields = EDITABLE_FIELDS[item.section] || [];
+    return `
+      <section class="teacher-content-review-detail" data-review-detail>
+        <div class="teacher-content-card-head">
+          <div>
+            <h4>${escapeHtml(item.label || 'Review item')}</h4>
+            <p>${escapeHtml(SECTION_LABELS[item.section] || item.section)} · index ${escapeHtml(item.index)}</p>
+          </div>
+          <span class="teacher-content-pill review">${escapeHtml(item.reviewStatus || 'pending')}</span>
+        </div>
+        <div class="teacher-content-detail-grid">
+          ${metric('Section', SECTION_LABELS[item.section] || item.section)}
+          ${metric('Index', item.index)}
+          ${metric('Confidence', item.confidence || 'Not set')}
+          ${metric('Source', `${item.sourceFile || 'No source file'} · ${item.sourceLocation || 'No source location'}`)}
+        </div>
+        <section class="teacher-content-issues">
+          <h5>Source Snippet</h5>
+          <p>${escapeHtml(item.sourceTextSnippet || 'No source snippet available.')}</p>
+        </section>
+        <div class="teacher-content-edit-fields">
+          ${editableFields.map((fieldName) => renderEditableField(fieldName, item.editableFields?.[fieldName])).join('')}
+        </div>
+        <div class="teacher-content-review-detail-actions">
+          <button type="button" class="small-button" data-review-save>Save</button>
+          <button type="button" class="small-button" data-review-status="approved" data-section="${escapeAttr(item.section)}" data-index="${escapeAttr(item.index)}">Approve</button>
+          <button type="button" class="small-button secondary-small" data-review-status="rejected" data-section="${escapeAttr(item.section)}" data-index="${escapeAttr(item.index)}">Reject</button>
+          <button type="button" class="small-button secondary-small" data-review-close>Cancel</button>
+        </div>
+      </section>
+    `;
+  }
+
+  function renderEditableField(fieldName, value) {
+    const stringValue = Array.isArray(value) ? value.join(' | ') : String(value ?? '');
+    return `
+      <label class="teacher-content-edit-field">
+        <span>${escapeHtml(titleCase(fieldName))}</span>
+        <textarea rows="3" data-review-field="${escapeAttr(fieldName)}">${escapeHtml(stringValue)}</textarea>
+      </label>
     `;
   }
 
@@ -575,7 +685,7 @@
     }
 
     if (state.errors.length) {
-      setStatus(`${state.errors.length} warning/error item${state.errors.length === 1 ? '' : 's'} found. Routes remain read-only.`);
+      setStatus(`${state.errors.length} warning/error item${state.errors.length === 1 ? '' : 's'} found. Draft review actions only.`);
       return;
     }
 
@@ -613,6 +723,129 @@
 
   function getSelectedDraftSummary() {
     return state.drafts.find((draft) => draft.packId === state.selectedDraftPackId) || null;
+  }
+
+  function openReviewItem(button) {
+    const item = findPendingItem(button.dataset.section, Number(button.dataset.index));
+    if (!item) {
+      state.errors.push('Review item is no longer pending. Refresh the draft report.');
+      render();
+      return;
+    }
+
+    state.selectedReviewItem = item;
+    render();
+  }
+
+  function closeReviewItem() {
+    state.selectedReviewItem = null;
+    render();
+  }
+
+  async function updateReviewStatusFromButton(button) {
+    await patchReviewStatus(button.dataset.section, Number(button.dataset.index), button.dataset.reviewStatus);
+  }
+
+  async function patchReviewStatus(section, index, reviewStatus) {
+    if (!state.selectedDraftPackId || !section || !Number.isInteger(index)) return;
+    await mutateReviewDraft(
+      ENDPOINTS.draftItemStatus(state.selectedDraftPackId, section, index),
+      { reviewStatus },
+      `Marked ${SECTION_LABELS[section] || section} item ${index} ${reviewStatus}.`
+    );
+  }
+
+  async function saveReviewEdits() {
+    const item = state.selectedReviewItem;
+    if (!item || !state.selectedDraftPackId) return;
+
+    const fields = Array.from(document.querySelectorAll('[data-review-field]'));
+    const allowedFields = EDITABLE_FIELDS[item.section] || [];
+    const changed = fields
+      .map((field) => ({
+        field: field.getAttribute('data-review-field'),
+        value: field.value
+      }))
+      .filter((entry) => allowedFields.includes(entry.field));
+
+    if (!changed.length) {
+      state.errors.push('No editable fields were available for this item.');
+      render();
+      return;
+    }
+
+    state.reviewActionLoading = true;
+    state.errors = [];
+    setStatus('Saving draft item edits...');
+    render();
+
+    try {
+      let latestReport = null;
+      for (const entry of changed) {
+        const payload = await fetchJson(ENDPOINTS.draftItem(state.selectedDraftPackId, item.section, item.index), {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(entry)
+        });
+        const data = unwrap(payload);
+        latestReport = data?.report || latestReport;
+      }
+
+      if (latestReport) state.report = latestReport;
+      await refreshDraftLists();
+      reconcileSelectedReviewItem();
+      setStatus('Saved draft item edits.');
+    } catch (error) {
+      state.errors.push(`Draft item save failed: ${error.message || 'Route error'}`);
+    } finally {
+      state.reviewActionLoading = false;
+      render();
+    }
+  }
+
+  async function mutateReviewDraft(url, body, successMessage) {
+    state.reviewActionLoading = true;
+    state.errors = [];
+    setStatus('Saving draft review action...');
+    render();
+
+    try {
+      const payload = await fetchJson(url, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = unwrap(payload);
+      if (data?.report) state.report = data.report;
+      await refreshDraftLists();
+      reconcileSelectedReviewItem();
+      setStatus(successMessage);
+    } catch (error) {
+      state.errors.push(`Draft review action failed: ${error.message || 'Route error'}`);
+    } finally {
+      state.reviewActionLoading = false;
+      render();
+    }
+  }
+
+  async function refreshDraftLists() {
+    const [dashboardResult, draftsResult] = await Promise.allSettled([
+      fetchJson(ENDPOINTS.dashboard),
+      fetchJson(ENDPOINTS.drafts)
+    ]);
+    applySettledResult(dashboardResult, 'dashboard');
+    applySettledResult(draftsResult, 'drafts');
+  }
+
+  function reconcileSelectedReviewItem() {
+    if (!state.selectedReviewItem) return;
+    const next = findPendingItem(state.selectedReviewItem.section, Number(state.selectedReviewItem.index));
+    state.selectedReviewItem = next || null;
+  }
+
+  function findPendingItem(section, index) {
+    const items = state.report?.pendingReview?.items?.[section] || [];
+    return items.find((item) => Number(item.index) === Number(index)) || null;
   }
 
   function metric(label, value) {

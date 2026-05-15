@@ -68,10 +68,16 @@ function assertPendingReviewAndCounts() {
     section: 'vocabulary',
     index: 0,
     label: 'net-force',
+    reviewStatus: 'pending',
     confidence: 'medium',
     sourceFile: 'teacher_force_notes.txt',
     sourceLocation: 'Full Text',
-    sourceTextSnippet: 'Force is a push or pull.'
+    sourceTextSnippet: 'Force is a push or pull.',
+    editableFields: {
+      studentDefinition: 'Net force is the total force on an object.',
+      teacherDefinition: 'Net force is the vector sum of forces acting on an object.',
+      misconception: 'Students may think balanced forces always mean no forces exist.'
+    }
   });
   assert.equal(report.pendingReview.items.referenceFormulas.length, 0);
   assert.equal(report.promotionReadiness.ready, false);

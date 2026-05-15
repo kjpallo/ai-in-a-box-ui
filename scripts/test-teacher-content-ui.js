@@ -21,7 +21,8 @@ const pkg = JSON.parse(read(packagePath));
 assertTeacherProfileEntry();
 assertOverlayMarkupAndSelectors();
 assertEndpointReferences();
-assertReadOnlyPlaceholders();
+assertReviewActions();
+assertDisabledPlaceholders();
 assertNoForbiddenUiActions();
 assertPackageScript();
 assertNoRouterOrStudentFilesChanged();
@@ -64,24 +65,39 @@ function assertEndpointReferences() {
     '/api/teacher-content/dashboard',
     '/api/teacher-content/drafts',
     '/api/teacher-content/drafts/${encodeURIComponent(packId)}/report',
+    '/api/teacher-content/drafts/${encodeURIComponent(packId)}/items/${encodeURIComponent(section)}/${encodeURIComponent(index)}',
+    '/api/teacher-content/drafts/${encodeURIComponent(packId)}/items/${encodeURIComponent(section)}/${encodeURIComponent(index)}/status',
     '/api/teacher-content/approved'
   ].forEach((endpoint) => {
     assert.ok(ui.includes(endpoint), `Expected endpoint reference ${endpoint}.`);
   });
 }
 
-function assertReadOnlyPlaceholders() {
+function assertReviewActions() {
+  [
+    'data-review-edit',
+    'data-review-status="approved"',
+    'data-review-status="rejected"',
+    'data-review-detail',
+    'data-review-field',
+    'data-review-save',
+    'data-review-close',
+    "method: 'PATCH'"
+  ].forEach((marker) => {
+    assert.ok(ui.includes(marker), `Expected review action marker ${marker}.`);
+  });
+}
+
+function assertDisabledPlaceholders() {
   const disabledCount = (ui.match(/disabled/g) || []).length;
-  assert.ok(disabledCount >= 6, 'Expected disabled placeholder controls.');
+  assert.ok(disabledCount >= 5, 'Expected disabled placeholder controls.');
   [
     'data-coming-soon="upload-browse"',
     'data-coming-soon="upload-process"',
     'data-coming-soon="standards-select"',
     'data-coming-soon="standards-upload"',
-    'data-coming-soon="review-edit"',
     'data-coming-soon="pack-toggle"',
     'Coming Soon',
-    'Edit Coming Soon',
     'Visual Only'
   ].forEach((marker) => {
     assert.ok(ui.includes(marker), `Expected placeholder marker ${marker}.`);
@@ -92,6 +108,7 @@ function assertNoForbiddenUiActions() {
   assert.doesNotMatch(ui, /method:\s*['"]POST['"]/, 'Teacher Content UI should not POST.');
   assert.doesNotMatch(ui, /promoteDraft|approveDraft|rejectDraft|Ollama|Gemma|ocr/i, 'Teacher Content UI should not expose forbidden phase actions.');
   assert.doesNotMatch(ui, /\/api\/student|\/api\/chat|\/api\/router-test/, 'Teacher Content UI should not reference student/router endpoints.');
+  assert.doesNotMatch(ui, /data-promote|data-upload-action|data-pack-toggle-action/, 'Teacher Content UI should not implement promote/upload/toggle actions.');
 }
 
 function assertPackageScript() {
