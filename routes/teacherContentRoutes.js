@@ -6,6 +6,7 @@ const {
   listApprovedPacksSummary,
   listDraftPacksForReview
 } = require('../lib/uploads/teacherContentAdapter');
+const { promoteDraftKnowledgePack } = require('../lib/knowledge/promoteDraftKnowledgePack');
 const {
   REVIEWABLE_SECTIONS,
   SAFE_EDIT_FIELDS,
@@ -111,6 +112,54 @@ function registerTeacherContentRoutes(app, options = {}) {
         options
       );
       return sendDraftMutationResponse(res, update, validation.packId, options);
+    } catch (error) {
+      return sendRouteError(res, error);
+    }
+  });
+
+  app.post('/drafts/:packId/promote', (req, res) => {
+    const packId = String(req.params && req.params.packId || '').trim();
+    if (!isSafePackId(packId)) {
+      return res.status(400).json({
+        success: false,
+        errors: ['packId must contain only lowercase letters, numbers, underscores, and hyphens.']
+      });
+    }
+
+    try {
+      const promotion = promoteDraftKnowledgePack(packId, {
+        ...options,
+        force: req.body && req.body.force === true
+      });
+
+      if (!promotion.success) {
+        const report = getDraftPackReport(packId, options);
+        const missingDraft = (promotion.errors || []).some((error) => String(error).includes('No draft knowledge pack found'));
+        return res.status(missingDraft ? 404 : 400).json({
+          success: false,
+          errors: promotion.errors || ['Draft promotion failed.'],
+          warnings: promotion.warnings || [],
+          promotionReadiness: report && report.promotionReadiness ? report.promotionReadiness : undefined
+        });
+      }
+
+      const approvedSummary = listApprovedPacksSummary(options);
+      const approved = approvedSummary.approvedPacks.find((pack) => pack.packId === promotion.packId) || null;
+
+      return res.json({
+        success: true,
+        data: {
+          packId: promotion.packId,
+          message: 'Draft promoted to approved knowledge pack.',
+          outputPath: promotion.outputPath,
+          approved,
+          dashboard: getTeacherContentDashboard(options),
+          report: getDraftPackReport(packId, options),
+          approvedSummary
+        },
+        warnings: promotion.warnings || [],
+        errors: []
+      });
     } catch (error) {
       return sendRouteError(res, error);
     }

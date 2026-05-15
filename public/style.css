@@ -2328,6 +2328,7 @@ button:disabled {
 .teacher-content-counts,
 .teacher-content-issues,
 .teacher-content-chip-section,
+.teacher-content-promotion-panel,
 .teacher-content-review-group,
 .teacher-content-approved-pack {
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -2356,10 +2357,33 @@ button:disabled {
 .teacher-content-counts,
 .teacher-content-issues,
 .teacher-content-chip-section,
+.teacher-content-promotion-panel,
 .teacher-content-review-groups,
 .teacher-content-approved-list {
   display: grid;
   gap: 10px;
+}
+
+.teacher-content-promotion-panel {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  border-color: rgba(102, 247, 209, 0.18);
+  background: rgba(102, 247, 209, 0.06);
+}
+
+.teacher-content-promotion-panel strong,
+.teacher-content-promotion-panel span {
+  display: block;
+}
+
+.teacher-content-promotion-panel strong {
+  color: #f4fffb;
+}
+
+.teacher-content-promotion-panel span {
+  margin-top: 4px;
+  color: #b7d1cf;
+  line-height: 1.35;
 }
 
 .teacher-content-count-strip,
@@ -3649,6 +3673,7 @@ button:disabled {
   .teacher-content-upload-row,
   .teacher-content-metric-grid,
   .teacher-content-detail-grid,
+  .teacher-content-promotion-panel,
   .teacher-content-review-item,
   .voice-content-row {
     grid-template-columns: 1fr;

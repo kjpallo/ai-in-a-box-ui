@@ -22,6 +22,7 @@ assertTeacherProfileEntry();
 assertOverlayMarkupAndSelectors();
 assertEndpointReferences();
 assertReviewActions();
+assertPromotionAction();
 assertDisabledPlaceholders();
 assertNoForbiddenUiActions();
 assertPackageScript();
@@ -65,11 +66,28 @@ function assertEndpointReferences() {
     '/api/teacher-content/dashboard',
     '/api/teacher-content/drafts',
     '/api/teacher-content/drafts/${encodeURIComponent(packId)}/report',
+    '/api/teacher-content/drafts/${encodeURIComponent(packId)}/promote',
     '/api/teacher-content/drafts/${encodeURIComponent(packId)}/items/${encodeURIComponent(section)}/${encodeURIComponent(index)}',
     '/api/teacher-content/drafts/${encodeURIComponent(packId)}/items/${encodeURIComponent(section)}/${encodeURIComponent(index)}/status',
     '/api/teacher-content/approved'
   ].forEach((endpoint) => {
     assert.ok(ui.includes(endpoint), `Expected endpoint reference ${endpoint}.`);
+  });
+}
+
+function assertPromotionAction() {
+  [
+    'data-promote-draft',
+    'promotionReadiness',
+    'Ready to promote',
+    'Needs teacher review',
+    'Blocked',
+    'Promoted successfully',
+    '!state.report?.promotionReadiness?.ready',
+    "method: 'POST'",
+    'This will copy reviewed draft content into approved knowledge packs. It will not change student answering yet.'
+  ].forEach((marker) => {
+    assert.ok(ui.includes(marker), `Expected promotion marker ${marker}.`);
   });
 }
 
@@ -105,10 +123,9 @@ function assertDisabledPlaceholders() {
 }
 
 function assertNoForbiddenUiActions() {
-  assert.doesNotMatch(ui, /method:\s*['"]POST['"]/, 'Teacher Content UI should not POST.');
-  assert.doesNotMatch(ui, /promoteDraft|approveDraft|rejectDraft|Ollama|Gemma|ocr/i, 'Teacher Content UI should not expose forbidden phase actions.');
+  assert.doesNotMatch(ui, /Ollama|Gemma|ocr/i, 'Teacher Content UI should not expose forbidden generation/OCR actions.');
   assert.doesNotMatch(ui, /\/api\/student|\/api\/chat|\/api\/router-test/, 'Teacher Content UI should not reference student/router endpoints.');
-  assert.doesNotMatch(ui, /data-promote|data-upload-action|data-pack-toggle-action/, 'Teacher Content UI should not implement promote/upload/toggle actions.');
+  assert.doesNotMatch(ui, /data-upload-action|data-pack-toggle-action/, 'Teacher Content UI should not implement upload/toggle actions.');
 }
 
 function assertPackageScript() {

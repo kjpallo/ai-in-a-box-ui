@@ -44,8 +44,6 @@ async function main() {
       makeVocabularyItem('balanced-force', 'approved')
     ]
   }));
-  const localApprovedBefore = snapshotFiles(approvedPacksDir);
-
   const handlers = new Map();
   registerTeacherContentRoutes(createApp(handlers), {
     draftPacksDir,
@@ -57,6 +55,13 @@ async function main() {
     await assertDashboardEndpoint(handlers);
     await assertDraftsEndpoint(handlers);
     await assertDraftReportEndpoint(handlers);
+    await assertPromoteDraftEndpointSucceeds(handlers);
+    await assertPromoteBlocksPendingItems(handlers);
+    await assertPromoteBlocksRejectedItems(handlers);
+    await assertPromoteBlocksInvalidFormulaSolverStatus(handlers);
+    await assertPromoteDoesNotOverwriteWithoutForce(handlers);
+    await assertPromoteOverwritesWithForce(handlers);
+    await assertInvalidPromotePathTraversalRejected(handlers);
     await assertApproveDraftItemEndpoint(handlers);
     await assertRejectDraftItemEndpoint(handlers);
     await assertEditDraftItemEndpoint(handlers);
@@ -69,7 +74,6 @@ async function main() {
     await assertApprovedEndpoint(handlers);
     await assertMissingDraftReportEndpoint(handlers);
     await assertPathTraversalRejected(handlers);
-    assert.deepEqual(snapshotFiles(approvedPacksDir), localApprovedBefore, 'test approved-packs dir should not be modified by draft review routes');
     assertRealApprovedPacksAreNotModified();
     assertNoRouterOrStudentModulesImported();
   } finally {
@@ -124,9 +128,122 @@ async function assertApprovedEndpoint(handlers) {
 
   assert.equal(response.statusCode, 200);
   assert.equal(response.body.success, true);
-  assert.equal(response.body.data.approvedPacks.length, 1);
-  assert.equal(response.body.data.approvedPacks[0].packId, 'route-approved-pack');
-  assert.equal(response.body.data.indexedCounts.vocabularyTerms, 2);
+  assert.ok(response.body.data.approvedPacks.length >= 1);
+  const approvedPack = response.body.data.approvedPacks.find((pack) => pack.packId === 'route-approved-pack');
+  assert.equal(approvedPack.packId, 'route-approved-pack');
+  assert.ok(response.body.data.indexedCounts.vocabularyTerms >= 1);
+}
+
+async function assertPromoteDraftEndpointSucceeds(handlers) {
+  writeKnowledgePack(draftPacksDir, makePack({
+    packId: 'route-promote-ready-pack',
+    title: 'Route Promote Ready Pack'
+  }));
+
+  const response = await request(handlers, 'POST', '/drafts/:packId/promote', {}, {
+    packId: 'route-promote-ready-pack'
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.data.packId, 'route-promote-ready-pack');
+  assert.equal(response.body.data.message, 'Draft promoted to approved knowledge pack.');
+  assert.equal(response.body.data.approved.packId, 'route-promote-ready-pack');
+  assert.equal(response.body.data.dashboard.approvedPacks, 2);
+  assert.ok(response.body.data.outputPath.startsWith(approvedPacksDir));
+  assert.equal(fs.existsSync(path.join(approvedPacksDir, 'route-promote-ready-pack', 'knowledge_pack.json')), true);
+}
+
+async function assertPromoteBlocksPendingItems(handlers) {
+  writeKnowledgePack(draftPacksDir, makePack({
+    packId: 'route-promote-pending-pack',
+    vocabulary: [makeVocabularyItem('pending-term', 'pending')]
+  }));
+
+  const response = await request(handlers, 'POST', '/drafts/:packId/promote', {}, {
+    packId: 'route-promote-pending-pack'
+  });
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.success, false);
+  assert.ok(response.body.errors.some((error) => error.includes('pending teacher review')));
+  assert.equal(response.body.promotionReadiness.ready, false);
+  assert.ok(response.body.promotionReadiness.blockedReasons.includes('pending items remain'));
+  assert.equal(fs.existsSync(path.join(approvedPacksDir, 'route-promote-pending-pack', 'knowledge_pack.json')), false);
+}
+
+async function assertPromoteBlocksRejectedItems(handlers) {
+  writeKnowledgePack(draftPacksDir, makePack({
+    packId: 'route-promote-rejected-pack',
+    concepts: [makeConceptItem('rejected-concept', 'rejected')]
+  }));
+
+  const response = await request(handlers, 'POST', '/drafts/:packId/promote', {}, {
+    packId: 'route-promote-rejected-pack'
+  });
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.success, false);
+  assert.ok(response.body.errors.some((error) => error.includes('has been rejected')));
+  assert.ok(response.body.promotionReadiness.blockedReasons.includes('rejected items remain'));
+}
+
+async function assertPromoteBlocksInvalidFormulaSolverStatus(handlers) {
+  writeKnowledgePack(draftPacksDir, makePack({
+    packId: 'route-promote-formula-pack',
+    referenceFormulas: [
+      {
+        ...makeReferenceFormula('force-reference', 'approved'),
+        solverStatus: 'science_formula_rules'
+      }
+    ]
+  }));
+
+  const response = await request(handlers, 'POST', '/drafts/:packId/promote', {}, {
+    packId: 'route-promote-formula-pack'
+  });
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.success, false);
+  assert.ok(response.body.errors.some((error) => error.includes('solver support')));
+  assert.ok(response.body.promotionReadiness.blockedReasons.includes('formula solverStatus is not reference_only'));
+}
+
+async function assertPromoteDoesNotOverwriteWithoutForce(handlers) {
+  writeKnowledgePack(draftPacksDir, makePack({
+    packId: 'route-approved-pack',
+    title: 'Draft Copy Of Existing Approved Pack'
+  }));
+  const before = readKnowledgePack(approvedPacksDir, 'route-approved-pack');
+
+  const response = await request(handlers, 'POST', '/drafts/:packId/promote', {}, {
+    packId: 'route-approved-pack'
+  });
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.success, false);
+  assert.ok(response.body.errors.some((error) => error.includes('already exists')));
+  assert.equal(readKnowledgePack(approvedPacksDir, 'route-approved-pack').title, before.title);
+}
+
+async function assertPromoteOverwritesWithForce(handlers) {
+  const response = await request(handlers, 'POST', '/drafts/:packId/promote', { force: true }, {
+    packId: 'route-approved-pack'
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.success, true);
+  assert.equal(readKnowledgePack(approvedPacksDir, 'route-approved-pack').title, 'Draft Copy Of Existing Approved Pack');
+}
+
+async function assertInvalidPromotePathTraversalRejected(handlers) {
+  const response = await request(handlers, 'POST', '/drafts/:packId/promote', {}, {
+    packId: '../route-promote-ready-pack'
+  });
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.success, false);
+  assert.match(response.body.errors[0], /packId/);
 }
 
 async function assertApproveDraftItemEndpoint(handlers) {
@@ -317,6 +434,9 @@ function createApp(handlers) {
     },
     patch(route, handler) {
       handlers.set(`PATCH ${route}`, handler);
+    },
+    post(route, handler) {
+      handlers.set(`POST ${route}`, handler);
     }
   };
 }
@@ -474,6 +594,13 @@ function makeSmokeTest(reviewStatus) {
 
 function makeStandardsBank() {
   return {
+    standardsBankId: 'sample_physical_science_standards',
+    title: 'Sample Physical Science Standards Bank',
+    version: '0.1.0',
+    subject: 'Physical Science',
+    gradeLevel: '8',
+    jurisdiction: 'Local Sample',
+    sourceFiles: [],
     standards: [
       {
         standardId: 'SAMPLE.PS.FORCES.1',
@@ -493,7 +620,8 @@ function makeStandardsBank() {
         sourceLocation: 'p. 1',
         sourceTextSnippet: 'Describe how balanced and unbalanced forces affect motion.'
       }
-    ]
+    ],
+    metadata: {}
   };
 }
 

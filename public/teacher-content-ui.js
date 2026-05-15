@@ -3,6 +3,7 @@
     dashboard: '/api/teacher-content/dashboard',
     drafts: '/api/teacher-content/drafts',
     draftReport: (packId) => `/api/teacher-content/drafts/${encodeURIComponent(packId)}/report`,
+    promoteDraft: (packId) => `/api/teacher-content/drafts/${encodeURIComponent(packId)}/promote`,
     draftItem: (packId, section, index) => `/api/teacher-content/drafts/${encodeURIComponent(packId)}/items/${encodeURIComponent(section)}/${encodeURIComponent(index)}`,
     draftItemStatus: (packId, section, index) => `/api/teacher-content/drafts/${encodeURIComponent(packId)}/items/${encodeURIComponent(section)}/${encodeURIComponent(index)}/status`,
     approved: '/api/teacher-content/approved'
@@ -49,6 +50,8 @@
     report: null,
     selectedReviewItem: null,
     reviewActionLoading: false,
+    promotionActionLoading: false,
+    promotionMessage: '',
     errors: []
   };
 
@@ -175,6 +178,13 @@
       if (reviewSave) {
         event.preventDefault();
         saveReviewEdits();
+        return;
+      }
+
+      const promoteButton = event.target.closest('[data-promote-draft]');
+      if (promoteButton) {
+        event.preventDefault();
+        promoteSelectedDraft();
       }
     });
 
@@ -183,6 +193,7 @@
     byId('teacherContentDraftSelect')?.addEventListener('change', async (event) => {
       state.selectedDraftPackId = event.target.value || '';
       state.selectedReviewItem = null;
+      state.promotionMessage = '';
       await loadSelectedDraftReport();
       render();
     });
@@ -592,12 +603,21 @@
     const readiness = state.report?.promotionReadiness || {};
     const status = readiness.ready ? 'Ready to promote' : readiness.blockedReasons?.length ? 'Blocked' : 'Needs teacher review';
     const statusClass = readiness.ready ? 'ready' : status === 'Blocked' ? 'blocked' : 'review';
+    const reviewCounts = draft.reviewCounts || {};
+    const pendingCount = Number(reviewCounts.pending || 0);
+    const rejectedCount = Number(reviewCounts.rejected || 0);
+    const blockedReasons = readiness.blockedReasons || [];
+    const disabledReason = readiness.ready
+      ? ''
+      : (blockedReasons.length ? blockedReasons.join('; ') : 'Teacher review is not complete.');
+    const promoteDisabled = !readiness.ready || state.promotionActionLoading;
+    const promoteLabel = state.promotionActionLoading ? 'Promoting...' : 'Promote';
 
     return `
       <div class="teacher-content-card-head">
         <div>
           <h4>Import Report</h4>
-          <p>Promotion controls are intentionally not present in Phase 7A.</p>
+          <p>Promote reviewed draft content only after validation and teacher review are complete.</p>
         </div>
         <span class="teacher-content-pill ${statusClass}">${escapeHtml(status)}</span>
       </div>
@@ -605,7 +625,22 @@
         ${metric('Extraction', passFail(extraction.success))}
         ${metric('Draft Validation', passFail(draft.validationPassed))}
         ${metric('Promotion Readiness', status)}
+        ${metric('Pending Items', formatNumber(pendingCount))}
+        ${metric('Rejected Items', formatNumber(rejectedCount))}
       </div>
+      <section class="teacher-content-promotion-panel">
+        <div>
+          <strong>${escapeHtml(state.promotionMessage || status)}</strong>
+          <span>${escapeHtml(readiness.ready ? 'Existing safety checks will run again before anything is copied.' : disabledReason)}</span>
+        </div>
+        <button
+          type="button"
+          class="small-button"
+          data-promote-draft
+          ${promoteDisabled ? 'disabled' : ''}
+          title="${escapeAttr(promoteDisabled ? disabledReason : 'Promote reviewed draft content')}"
+        >${escapeHtml(promoteLabel)}</button>
+      </section>
       ${renderIssueList('Blocked Reasons', readiness.blockedReasons)}
       ${renderIssueList('Warnings', state.report?.warnings)}
       ${renderIssueList('Errors', state.report?.errors)}
@@ -828,6 +863,43 @@
     }
   }
 
+  async function promoteSelectedDraft() {
+    if (!state.selectedDraftPackId || !state.report?.promotionReadiness?.ready || state.promotionActionLoading) return;
+
+    const confirmed = window.confirm(
+      'This will copy reviewed draft content into approved knowledge packs. It will not change student answering yet.'
+    );
+    if (!confirmed) return;
+
+    state.promotionActionLoading = true;
+    state.promotionMessage = '';
+    state.errors = [];
+    setStatus('Promoting draft knowledge pack...');
+    render();
+
+    try {
+      const payload = await fetchJson(ENDPOINTS.promoteDraft(state.selectedDraftPackId), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ force: false })
+      });
+      const data = unwrap(payload);
+      state.promotionMessage = 'Promoted successfully';
+      if (data?.dashboard) state.dashboard = data.dashboard;
+      if (data?.report) state.report = data.report;
+      if (data?.approvedSummary) applyApprovedSummary(data.approvedSummary);
+      await refreshTeacherContentSummaries();
+      setStatus('Promoted successfully');
+    } catch (error) {
+      state.errors.push(`Draft promotion failed: ${error.message || 'Route error'}`);
+      state.promotionMessage = 'Blocked';
+      await loadSelectedDraftReport();
+    } finally {
+      state.promotionActionLoading = false;
+      render();
+    }
+  }
+
   async function refreshDraftLists() {
     const [dashboardResult, draftsResult] = await Promise.allSettled([
       fetchJson(ENDPOINTS.dashboard),
@@ -835,6 +907,25 @@
     ]);
     applySettledResult(dashboardResult, 'dashboard');
     applySettledResult(draftsResult, 'drafts');
+  }
+
+  async function refreshTeacherContentSummaries() {
+    const [dashboardResult, draftsResult, approvedResult] = await Promise.allSettled([
+      fetchJson(ENDPOINTS.dashboard),
+      fetchJson(ENDPOINTS.drafts),
+      fetchJson(ENDPOINTS.approved)
+    ]);
+    applySettledResult(dashboardResult, 'dashboard');
+    applySettledResult(draftsResult, 'drafts');
+    applySettledResult(approvedResult, 'approved');
+    await loadSelectedDraftReport();
+  }
+
+  function applyApprovedSummary(data) {
+    state.approved = Array.isArray(data?.approvedPacks) ? data.approvedPacks : [];
+    state.approvedIndexedCounts = data?.indexedCounts || null;
+    state.approvedSearchableCounts = data?.searchableCounts || null;
+    collectApiIssues(data);
   }
 
   function reconcileSelectedReviewItem() {
