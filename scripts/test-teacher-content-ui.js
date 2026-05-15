@@ -27,6 +27,7 @@ assertSelectedDraftAndProgressUi();
 assertStandardsTabWorkflowUi();
 assertReviewCardPolishUi();
 assertImportReportPolishUi();
+assertApprovedPacksPolishUi();
 assertReviewActions();
 assertPromotionAction();
 assertDisabledPlaceholders();
@@ -153,7 +154,7 @@ function assertDisabledPlaceholders() {
     'data-standards-bank-select',
     'data-coming-soon="standards-upload"',
     'data-coming-soon="pack-toggle"',
-    'Visual Only'
+    'Activation coming soon'
   ].forEach((marker) => {
     assert.ok(ui.includes(marker), `Expected placeholder marker ${marker}.`);
   });
@@ -424,6 +425,57 @@ function assertImportReportPolishUi() {
   });
 }
 
+function assertApprovedPacksPolishUi() {
+  [
+    'Approved Knowledge Packs',
+    'Approved packs are reviewed knowledge packs. Student router activation will be added in a later phase.',
+    'data-approved-pack-card',
+    'data-approved-pack-title',
+    'data-approved-pack-pack-id',
+    'data-approved-pack-metadata',
+    'data-approved-pack-subject',
+    'data-approved-pack-grade-level',
+    'data-approved-pack-version',
+    'data-approved-pack-validation-status',
+    'data-approved-pack-source-path',
+    'data-approved-pack-vocabulary-count',
+    'data-approved-pack-concept-count',
+    'data-approved-pack-reference-formula-count',
+    'data-approved-pack-problem-bank-count',
+    'data-approved-pack-standards-count',
+    'data-approved-pack-smoke-test-count',
+    'data-approved-pack-indexed-total',
+    'data-approved-searchable-summary',
+    'data-approved-searchable-vocabulary-terms',
+    'data-approved-searchable-concepts',
+    'data-approved-searchable-problem-questions',
+    'data-approved-searchable-standards',
+    'Searchable vocabulary terms',
+    'Searchable concepts',
+    'Searchable problem questions',
+    'Searchable standards',
+    'data-approved-pack-switch-placeholder',
+    'Student use toggle coming later',
+    'Activation coming soon',
+    'Not connected to student answers yet',
+    'data-no-approved-packs-empty-state',
+    'No approved knowledge packs yet.',
+    'Review and promote a draft from the Import Report tab to create one.',
+    'data-approved-empty-tab="importReport"',
+    'View Import Report',
+    'Read-only pack details'
+  ].forEach((marker) => {
+    assert.ok(ui.includes(marker), `Expected Approved Packs polish marker ${marker}.`);
+  });
+
+  assert.match(
+    ui,
+    /data-approved-pack-switch-placeholder[\s\S]{0,180}disabled|disabled[\s\S]{0,180}data-approved-pack-switch-placeholder/,
+    'Approved pack switch placeholder should be disabled.'
+  );
+  assert.doesNotMatch(ui, /\/api\/teacher-content\/approved\/[^'"]*(enable|disable|toggle)|approved.*(enable|disable).*fetchJson/i, 'Approved pack switch should not reference enable/disable endpoints.');
+}
+
 function assertNoForbiddenUiActions() {
   assert.doesNotMatch(ui, /Ollama|Gemma|ocr/i, 'Teacher Content UI should not expose forbidden generation/OCR actions.');
   assert.doesNotMatch(style, /Ollama|Gemma|ocr/i, 'Teacher Content styles should not add forbidden generation/OCR references.');
@@ -432,7 +484,8 @@ function assertNoForbiddenUiActions() {
   assert.doesNotMatch(ui, /\/api\/teacher-content\/drafts\/generate|\/api\/generate-draft|generateDraft/i, 'Teacher Content UI should not reference draft generation endpoints.');
   assert.doesNotMatch(ui, /data-upload-action|data-pack-toggle-action/, 'Teacher Content UI should not implement old placeholder upload/toggle actions.');
   assert.equal((ui.match(/data-promote-draft/g) || []).length, 2, 'Promotion should remain limited to Import Report action wiring.');
-  assert.doesNotMatch(ui, /approved-pack-switch(?![\s\S]{0,120}disabled)|data-approved-pack-toggle-action/i, 'Approved-pack switches should remain disabled/placeholders.');
+  assert.doesNotMatch(ui, /data-approved-pack-toggle-action/i, 'Approved-pack switches should remain disabled/placeholders.');
+  assert.match(ui, /data-approved-pack-switch-placeholder[\s\S]{0,180}disabled|disabled[\s\S]{0,180}data-approved-pack-switch-placeholder/, 'Approved-pack switch placeholder should remain disabled.');
 }
 
 function assertPackageScript() {

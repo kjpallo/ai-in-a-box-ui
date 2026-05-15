@@ -2378,7 +2378,9 @@ button:disabled {
 .teacher-content-selected-draft,
 .teacher-content-review-progress,
 .teacher-content-review-group,
-.teacher-content-approved-pack {
+.teacher-content-approved-pack,
+.teacher-content-approved-empty,
+.teacher-content-approved-status {
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
   padding: 11px;
@@ -2989,12 +2991,70 @@ button:disabled {
 }
 
 .teacher-content-approved-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
   align-items: center;
 }
 
 .teacher-content-approved-head div {
   display: grid;
   gap: 4px;
+}
+
+.teacher-content-approved-status,
+.teacher-content-approved-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.teacher-content-approved-status span,
+.teacher-content-approved-badges span {
+  border: 1px solid rgba(102, 247, 209, 0.2);
+  border-radius: 999px;
+  padding: 5px 8px;
+  color: #dffbf5;
+  background: rgba(102, 247, 209, 0.08);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.teacher-content-approved-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.teacher-content-meta-pill {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  border: 1px solid rgba(126, 233, 255, 0.16);
+  border-radius: 10px;
+  padding: 8px;
+  background: rgba(126, 233, 255, 0.055);
+}
+
+.teacher-content-meta-pill small,
+.teacher-content-switch-block small {
+  color: #cafff0;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.teacher-content-meta-pill strong {
+  color: #f4fffb;
+  overflow-wrap: anywhere;
+}
+
+.teacher-content-switch-block {
+  display: grid;
+  justify-items: end;
+  gap: 5px;
+  text-align: right;
 }
 
 .teacher-content-switch {
@@ -3014,6 +3074,33 @@ button:disabled {
   border-radius: 999px;
   background: var(--neon);
   box-shadow: 0 0 12px rgba(102, 247, 209, 0.42);
+}
+
+.teacher-content-approved-details {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 8px;
+}
+
+.teacher-content-approved-details summary {
+  width: max-content;
+  color: var(--neon-2);
+  font-size: 0.76rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.teacher-content-approved-details[open] summary {
+  margin-bottom: 8px;
+}
+
+.teacher-content-approved-empty {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+
+.teacher-content-approved-empty strong {
+  color: #f4fffb;
 }
 
 .teacher-content-footer {
@@ -4112,7 +4199,8 @@ button:disabled {
   .teacher-content-selected-bank,
   .teacher-content-tabs,
   .teacher-content-metric-grid,
-  .teacher-content-detail-grid {
+  .teacher-content-detail-grid,
+  .teacher-content-approved-meta {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -4152,6 +4240,7 @@ button:disabled {
   .teacher-content-upload-row,
   .teacher-content-metric-grid,
   .teacher-content-detail-grid,
+  .teacher-content-approved-meta,
   .teacher-content-standards-tools,
   .teacher-content-standards-filters,
   .teacher-content-standards-layout,

@@ -244,6 +244,13 @@
       if (reviewEmptyNav) {
         event.preventDefault();
         setActiveTab(reviewEmptyNav.getAttribute('data-review-empty-tab'));
+        return;
+      }
+
+      const approvedEmptyNav = event.target.closest('[data-approved-empty-tab]');
+      if (approvedEmptyNav) {
+        event.preventDefault();
+        setActiveTab(approvedEmptyNav.getAttribute('data-approved-empty-tab'));
       }
     });
 
@@ -1157,47 +1164,117 @@
 
   function renderApprovedPacksCard() {
     if (!state.approved.length) {
-      return cardWithEmptyState('Approved Packs', 'No approved packs are available yet.');
+      return `
+        <div class="teacher-content-card-head">
+          <div>
+            <h4>Approved Knowledge Packs</h4>
+            <p>Approved packs are reviewed knowledge packs. Student router activation will be added in a later phase.</p>
+          </div>
+          <span class="teacher-content-pill muted">Empty</span>
+        </div>
+        <section class="teacher-content-approved-empty" data-no-approved-packs-empty-state>
+          <strong>No approved knowledge packs yet.</strong>
+          <p>Review and promote a draft from the Import Report tab to create one.</p>
+          <button type="button" class="small-button secondary-small" data-approved-empty-tab="importReport">View Import Report</button>
+        </section>
+      `;
     }
 
     return `
       <div class="teacher-content-card-head">
         <div>
-          <h4>Approved Packs</h4>
-          <p>Switches are visual placeholders only. Packs are not enabled or disabled from this UI.</p>
+          <h4>Approved Knowledge Packs</h4>
+          <p>Approved packs are reviewed knowledge packs. Student router activation will be added in a later phase.</p>
         </div>
-        <span class="teacher-content-pill muted">Visual Only</span>
+        <span class="teacher-content-pill ready">Approved</span>
       </div>
+      <section class="teacher-content-approved-status" data-approved-pack-status-language>
+        <span>Approved</span>
+        <span>Indexed</span>
+        <span>Not connected to student answers yet</span>
+        <span>Activation coming soon</span>
+      </section>
       <div class="teacher-content-approved-list">
         ${state.approved.map(renderApprovedPack).join('')}
       </div>
-      ${renderCounts('Indexed / Searchable Counts', state.approvedIndexedCounts || state.approvedSearchableCounts)}
+      ${renderApprovedSearchableSummary()}
     `;
   }
 
   function renderApprovedPack(pack) {
     const counts = pack.itemCounts || {};
     const indexed = pack.indexedCounts || {};
+    const searchable = pack.searchableCounts || indexed;
+    const indexedTotal = Object.values(indexed).reduce((sum, value) => sum + Number(value || 0), 0);
     return `
-      <section class="teacher-content-approved-pack">
+      <section class="teacher-content-approved-pack" data-approved-pack-card>
         <div class="teacher-content-approved-head">
           <div>
-            <strong>${escapeHtml(pack.title || pack.packId || 'Approved pack')}</strong>
-            <span>${escapeHtml(pack.packId || 'No pack ID')} · ${escapeHtml(pack.subject || 'No subject')} · Grade ${escapeHtml(pack.gradeLevel || 'not set')} · ${escapeHtml(pack.version || 'No version')}</span>
+            <strong data-approved-pack-title>${escapeHtml(pack.title || pack.packId || 'Approved pack')}</strong>
+            <span data-approved-pack-pack-id>${escapeHtml(pack.packId || 'No pack ID')}</span>
           </div>
-          <button type="button" class="teacher-content-switch" disabled aria-label="Pack enable switch placeholder" data-coming-soon="pack-toggle">
-            <span></span>
-          </button>
+          <div class="teacher-content-switch-block">
+            <button type="button" class="teacher-content-switch" disabled aria-label="Student use toggle coming later" data-coming-soon="pack-toggle" data-approved-pack-switch-placeholder>
+              <span></span>
+            </button>
+            <small>Activation coming soon</small>
+          </div>
+        </div>
+        <div class="teacher-content-approved-badges">
+          <span>Approved</span>
+          <span>Indexed</span>
+          <span>Not connected to student answers yet</span>
+        </div>
+        <div class="teacher-content-approved-meta" data-approved-pack-metadata>
+          ${metadataPill('Subject', pack.subject || 'Not set', 'data-approved-pack-subject')}
+          ${metadataPill('Grade level', pack.gradeLevel || 'Not set', 'data-approved-pack-grade-level')}
+          ${metadataPill('Version', pack.version || 'Not set', 'data-approved-pack-version')}
+          ${metadataPill('Validation status', pack.validationStatus || pack.validation || 'Not available', 'data-approved-pack-validation-status')}
+          ${pack.sourcePath ? metadataPill('Source path', pack.sourcePath, 'data-approved-pack-source-path') : ''}
         </div>
         <div class="teacher-content-count-strip">
-          ${countPill('Vocab', counts.vocabulary)}
-          ${countPill('Concepts', counts.concepts)}
-          ${countPill('Problems', counts.problemBank)}
-          ${countPill('Standards', counts.standardsMap)}
-          ${countPill('Smoke Tests', counts.smokeTests)}
-          ${countPill('Indexed', Object.values(indexed).reduce((sum, value) => sum + Number(value || 0), 0))}
+          ${countPill('Vocabulary count', counts.vocabulary, 'data-approved-pack-vocabulary-count')}
+          ${countPill('Concept count', counts.concepts, 'data-approved-pack-concept-count')}
+          ${countPill('Reference formula count', counts.referenceFormulas, 'data-approved-pack-reference-formula-count')}
+          ${countPill('Problem bank count', counts.problemBank, 'data-approved-pack-problem-bank-count')}
+          ${countPill('Standards count', counts.standardsMap, 'data-approved-pack-standards-count')}
+          ${countPill('Smoke test count', counts.smokeTests, 'data-approved-pack-smoke-test-count')}
+          ${countPill('Indexed total', indexedTotal, 'data-approved-pack-indexed-total')}
+        </div>
+        <details class="teacher-content-approved-details" data-approved-pack-details>
+          <summary>Read-only pack details</summary>
+          <div class="teacher-content-count-strip">
+            ${countPill('Searchable vocabulary terms', searchable.vocabularyTerms, 'data-approved-pack-searchable-vocabulary-terms')}
+            ${countPill('Searchable concepts', searchable.concepts, 'data-approved-pack-searchable-concepts')}
+            ${countPill('Searchable problem questions', searchable.problemQuestions, 'data-approved-pack-searchable-problem-questions')}
+            ${countPill('Searchable standards', searchable.standards, 'data-approved-pack-searchable-standards')}
+          </div>
+        </details>
+      </section>
+    `;
+  }
+
+  function renderApprovedSearchableSummary() {
+    const searchable = state.approvedSearchableCounts || state.approvedIndexedCounts || {};
+    return `
+      <section class="teacher-content-counts" data-approved-searchable-summary>
+        <h5>Indexed / Searchable Counts</h5>
+        <div class="teacher-content-count-strip">
+          ${countPill('Searchable vocabulary terms', searchable.vocabularyTerms, 'data-approved-searchable-vocabulary-terms')}
+          ${countPill('Searchable concepts', searchable.concepts, 'data-approved-searchable-concepts')}
+          ${countPill('Searchable problem questions', searchable.problemQuestions, 'data-approved-searchable-problem-questions')}
+          ${countPill('Searchable standards', searchable.standards, 'data-approved-searchable-standards')}
         </div>
       </section>
+    `;
+  }
+
+  function metadataPill(label, value, dataAttr = '') {
+    return `
+      <span class="teacher-content-meta-pill" ${dataAttr}>
+        <small>${escapeHtml(label)}</small>
+        <strong>${escapeHtml(value)}</strong>
+      </span>
     `;
   }
 
