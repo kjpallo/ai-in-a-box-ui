@@ -41,7 +41,8 @@ body {
 
 button,
 textarea,
-select {
+select,
+input {
   font: inherit;
 }
 
@@ -2627,6 +2628,17 @@ button:disabled {
   background: rgba(126, 233, 255, 0.045);
 }
 
+.teacher-content-standards-filters {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.25fr) minmax(150px, 0.7fr) minmax(150px, 0.7fr) minmax(190px, 0.8fr);
+  gap: 12px;
+  align-items: end;
+  border: 1px solid rgba(102, 247, 209, 0.16);
+  border-radius: 16px;
+  padding: 12px;
+  background: rgba(2, 9, 10, 0.36);
+}
+
 .teacher-content-selected-bank {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
@@ -2683,6 +2695,7 @@ button:disabled {
 }
 
 .teacher-content-standards-select span,
+.teacher-content-standards-field span,
 .teacher-content-standard-chips > span {
   color: #cafff0;
   font-size: 0.7rem;
@@ -2691,7 +2704,13 @@ button:disabled {
   text-transform: uppercase;
 }
 
-.teacher-content-standards-select select {
+.teacher-content-standards-field {
+  display: grid;
+  gap: 6px;
+}
+
+.teacher-content-standards-select select,
+.teacher-content-standards-field input {
   width: 100%;
   min-height: 34px;
   border: 1px solid rgba(102, 247, 209, 0.22);
@@ -2699,6 +2718,18 @@ button:disabled {
   padding: 0 10px;
   color: #effff8;
   background: rgba(2, 9, 10, 0.86);
+}
+
+.teacher-content-standards-field input:focus,
+.teacher-content-standards-select select:focus {
+  outline: 2px solid rgba(126, 233, 255, 0.34);
+  outline-offset: 2px;
+}
+
+.teacher-content-standards-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(260px, 0.75fr);
+  gap: 12px;
 }
 
 .teacher-content-standards-list {
@@ -2710,6 +2741,13 @@ button:disabled {
   border-color: rgba(102, 247, 209, 0.16);
   background:
     linear-gradient(180deg, rgba(102, 247, 209, 0.055), rgba(255, 255, 255, 0.035));
+}
+
+.teacher-content-standard-card.selected,
+.teacher-content-standard-card:focus {
+  outline: 2px solid rgba(126, 233, 255, 0.36);
+  outline-offset: 2px;
+  border-color: rgba(126, 233, 255, 0.42);
 }
 
 .teacher-content-standard-head {
@@ -2749,6 +2787,54 @@ button:disabled {
   font-size: 0.76rem;
   font-style: normal;
   font-weight: 800;
+}
+
+.teacher-content-standard-status {
+  border: 1px solid rgba(126, 233, 255, 0.2);
+  border-radius: 999px;
+  padding: 6px 9px;
+  background: rgba(126, 233, 255, 0.08);
+  color: #dffaff;
+  font-size: 0.75rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.teacher-content-standard-status.used {
+  border-color: rgba(102, 247, 209, 0.32);
+  background: rgba(102, 247, 209, 0.12);
+  color: #cafff0;
+}
+
+.teacher-content-standard-status.unused,
+.teacher-content-standard-status.unknown {
+  border-color: rgba(215, 239, 240, 0.14);
+  background: rgba(215, 239, 240, 0.055);
+  color: #d8eee9;
+}
+
+.teacher-content-standard-detail {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+  border: 1px solid rgba(126, 233, 255, 0.18);
+  border-radius: 16px;
+  padding: 14px;
+  background: rgba(126, 233, 255, 0.045);
+}
+
+.teacher-content-standard-detail h5 {
+  margin: 0;
+  color: #f4fffb;
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.teacher-content-standard-detail p {
+  margin: 0;
+  color: #e5f6f2;
+  overflow-wrap: anywhere;
 }
 
 .teacher-content-issues ul {
@@ -4021,6 +4107,8 @@ button:disabled {
   .live-attention-list,
   .reports-summary-grid,
   .teacher-content-standards-tools,
+  .teacher-content-standards-filters,
+  .teacher-content-standards-layout,
   .teacher-content-selected-bank,
   .teacher-content-tabs,
   .teacher-content-metric-grid,
@@ -4065,6 +4153,8 @@ button:disabled {
   .teacher-content-metric-grid,
   .teacher-content-detail-grid,
   .teacher-content-standards-tools,
+  .teacher-content-standards-filters,
+  .teacher-content-standards-layout,
   .teacher-content-selected-draft,
   .teacher-content-promotion-panel,
   .teacher-content-review-item,

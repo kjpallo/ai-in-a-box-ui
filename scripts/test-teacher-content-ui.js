@@ -258,6 +258,7 @@ function assertStandardsTabWorkflowUi() {
     'Selected standards set failed to load',
     'data-standard-id-list',
     'data-standard-card',
+    'data-standard-card-id',
     'data-standard-id',
     'data-standard-code',
     'data-standard-title',
@@ -272,8 +273,40 @@ function assertStandardsTabWorkflowUi() {
     'data-standard-vocabulary',
     'data-standard-concepts',
     'data-standard-review-status',
+    'teacherContentStandardsSearch',
+    'Search standards in this set',
+    'data-standards-search',
+    'teacherContentStandardsStrandFilter',
+    'data-standards-strand-filter',
+    'teacherContentStandardsTopicFilter',
+    'data-standards-topic-filter',
+    'teacherContentStandardsMatchFilter',
+    'Draft match status',
+    'data-standards-match-filter',
+    'All standards',
+    'Used in this draft',
+    'Not used in this draft',
+    'Unknown in selected bank / unmatched',
+    'data-standards-filter-controls',
+    'data-standard-match-status',
+    'data-standard-detail-panel',
+    'data-standard-detail-id',
+    'data-standard-detail-code',
+    'data-standard-detail-title',
+    'data-standard-detail-official-text',
+    'data-standard-detail-student-friendly-text',
+    'data-standard-detail-strand',
+    'data-standard-detail-topic',
+    'data-standard-detail-keywords',
+    'data-standard-detail-vocabulary',
+    'data-standard-detail-concepts',
+    'data-standard-detail-confidence',
+    'data-standard-detail-review-status',
     'No draft selected. Prepare Review from an upload or choose a draft pack to see its standards alignment.',
     'No standardsMap entries or standard IDs were found for this draft.',
+    'Selected standards set has no standards to preview.',
+    'No standards match search/filter.',
+    'Selected draft standard IDs are unknown in this bank.',
     'Standards bank not loaded. Existing draft IDs are shown without bank details.',
     'Unknown standards found',
     'Upload standards file',
@@ -306,7 +339,8 @@ function assertStandardsTabWorkflowUi() {
 
   assert.match(ui, /id="teacherContentStandardsBankSelect"[\s\S]*?data-standards-bank-select/, 'Saved standards selector should be real and enabled when not loading.');
   assert.doesNotMatch(ui, /data-coming-soon="standards-select"/, 'Saved standards selector should no longer be a disabled placeholder.');
-  assert.doesNotMatch(ui, /standardsUpload|uploadStandards|data-standards-upload-action|\/api\/teacher-content\/standards-upload|\/api\/teacher-content\/standards-banks\/upload/i, 'Standards upload should remain absent.');
+  assert.doesNotMatch(ui, /standardsUpload|uploadStandards|data-standards-upload-action|\/api\/teacher-content\/standards-upload|\/api\/teacher-content\/standards-banks\/upload/i, 'Standards upload POST should remain absent.');
+  assert.doesNotMatch(ui, /standardsBankUpload|postStandardsBank|createStandardsBank/i, 'Standards upload POST helpers should remain absent.');
 }
 
 function assertReviewCardPolishUi() {
@@ -392,10 +426,13 @@ function assertImportReportPolishUi() {
 
 function assertNoForbiddenUiActions() {
   assert.doesNotMatch(ui, /Ollama|Gemma|ocr/i, 'Teacher Content UI should not expose forbidden generation/OCR actions.');
+  assert.doesNotMatch(style, /Ollama|Gemma|ocr/i, 'Teacher Content styles should not add forbidden generation/OCR references.');
   assert.doesNotMatch(ui, />\s*Generate Draft\s*</i, 'Teacher Content UI should not use Generate Draft as a visible button label.');
   assert.doesNotMatch(ui, /\/api\/student|\/api\/chat|\/api\/router-test/, 'Teacher Content UI should not reference student/router endpoints.');
   assert.doesNotMatch(ui, /\/api\/teacher-content\/drafts\/generate|\/api\/generate-draft|generateDraft/i, 'Teacher Content UI should not reference draft generation endpoints.');
   assert.doesNotMatch(ui, /data-upload-action|data-pack-toggle-action/, 'Teacher Content UI should not implement old placeholder upload/toggle actions.');
+  assert.equal((ui.match(/data-promote-draft/g) || []).length, 2, 'Promotion should remain limited to Import Report action wiring.');
+  assert.doesNotMatch(ui, /approved-pack-switch(?![\s\S]{0,120}disabled)|data-approved-pack-toggle-action/i, 'Approved-pack switches should remain disabled/placeholders.');
 }
 
 function assertPackageScript() {
