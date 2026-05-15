@@ -20,6 +20,11 @@ const { REVIEW_STATUSES } = require('../lib/knowledge/packSchema');
 const { detectUploadFileType, supportedExtensions } = require('../lib/uploads/detectUploadFileType');
 const { extractTextFromFile } = require('../lib/uploads/extractTextFromFile');
 const { generateDraftKnowledgePack } = require('../lib/uploads/generateDraftKnowledgePack');
+const {
+  getStandardsBankDetails,
+  listStandardsBanks,
+  loadStandardsBankForReport
+} = require('../lib/standards/standardsBankDiscovery');
 
 const SAFE_PACK_ID_PATTERN = /^[a-z0-9_-]+$/;
 const SAFE_UPLOAD_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{0,127}$/;
@@ -38,6 +43,27 @@ function registerTeacherContentRoutes(app, options = {}) {
 
   app.get('/drafts', (_req, res) => {
     sendJson(res, () => listDraftPacksForReview(options));
+  });
+
+  app.get('/standards-banks', (_req, res) => {
+    sendJson(res, () => listStandardsBanks(options));
+  });
+
+  app.get('/standards-banks/:standardsBankId', (req, res) => {
+    const standardsBankId = String(req.params && req.params.standardsBankId || '').trim();
+    const result = getStandardsBankDetails(standardsBankId, options);
+    if (!result.success) {
+      return res.status(result.statusCode || 400).json({
+        success: false,
+        errors: result.errors || ['Standards bank could not be loaded.'],
+        warnings: result.warnings || []
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: result.standardsBank
+    });
   });
 
   app.post('/uploads/extract', async (req, res) => {
@@ -87,7 +113,22 @@ function registerTeacherContentRoutes(app, options = {}) {
     }
 
     try {
-      const report = getDraftPackReport(packId, options);
+      const reportOptions = { ...options };
+      const standardsBankId = String(req.query && req.query.standardsBankId || '').trim();
+      if (standardsBankId) {
+        const bankResult = loadStandardsBankForReport(standardsBankId, options);
+        if (!bankResult.success) {
+          return res.status(bankResult.statusCode || 400).json({
+            success: false,
+            errors: bankResult.errors || ['Standards bank could not be loaded.'],
+            warnings: bankResult.warnings || []
+          });
+        }
+        reportOptions.standardsBank = bankResult.standardsBank;
+        reportOptions.standardsBankSummary = bankResult.summary;
+      }
+
+      const report = getDraftPackReport(packId, reportOptions);
       if (!report.success) {
         return res.status(404).json({
           success: false,

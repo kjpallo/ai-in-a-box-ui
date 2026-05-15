@@ -4,7 +4,12 @@
     uploadExtract: '/api/teacher-content/uploads/extract',
     uploadPrepareReview: (uploadId) => `/api/teacher-content/uploads/${encodeURIComponent(uploadId)}/prepare-review`,
     drafts: '/api/teacher-content/drafts',
-    draftReport: (packId) => `/api/teacher-content/drafts/${encodeURIComponent(packId)}/report`,
+    draftReport: (packId, standardsBankId = '') => {
+      const query = standardsBankId ? `?standardsBankId=${encodeURIComponent(standardsBankId)}` : '';
+      return `/api/teacher-content/drafts/${encodeURIComponent(packId)}/report${query}`;
+    },
+    standardsBanks: '/api/teacher-content/standards-banks',
+    standardsBank: (standardsBankId) => `/api/teacher-content/standards-banks/${encodeURIComponent(standardsBankId)}`,
     promoteDraft: (packId) => `/api/teacher-content/drafts/${encodeURIComponent(packId)}/promote`,
     draftItem: (packId, section, index) => `/api/teacher-content/drafts/${encodeURIComponent(packId)}/items/${encodeURIComponent(section)}/${encodeURIComponent(index)}`,
     draftItemStatus: (packId, section, index) => `/api/teacher-content/drafts/${encodeURIComponent(packId)}/items/${encodeURIComponent(section)}/${encodeURIComponent(index)}/status`,
@@ -46,6 +51,11 @@
     selectedDraftPackId: '',
     dashboard: null,
     drafts: [],
+    standardsBanks: [],
+    selectedStandardsBankId: '',
+    selectedStandardsBank: null,
+    standardsBankLoading: false,
+    standardsBankError: '',
     approved: [],
     approvedIndexedCounts: null,
     approvedSearchableCounts: null,
@@ -243,6 +253,11 @@
     });
 
     document.addEventListener('change', (event) => {
+      if (event.target?.id === 'teacherContentStandardsBankSelect') {
+        selectStandardsBank(event.target.value || '');
+        return;
+      }
+
       if (event.target?.id !== 'teacherContentUploadFile') return;
       state.selectedUploadFile = event.target.files && event.target.files[0] ? event.target.files[0] : null;
       state.uploadExtractionResult = null;
@@ -296,14 +311,16 @@
     setStatus('Loading teacher content...');
     render();
 
-    const [dashboardResult, draftsResult, approvedResult] = await Promise.allSettled([
+    const [dashboardResult, draftsResult, standardsBanksResult, approvedResult] = await Promise.allSettled([
       fetchJson(ENDPOINTS.dashboard),
       fetchJson(ENDPOINTS.drafts),
+      fetchJson(ENDPOINTS.standardsBanks),
       fetchJson(ENDPOINTS.approved)
     ]);
 
     applySettledResult(dashboardResult, 'dashboard');
     applySettledResult(draftsResult, 'drafts');
+    applySettledResult(standardsBanksResult, 'standardsBanks');
     applySettledResult(approvedResult, 'approved');
 
     if (!state.selectedDraftPackId && state.drafts.length) {
@@ -336,6 +353,12 @@
       return;
     }
 
+    if (kind === 'standardsBanks') {
+      state.standardsBanks = Array.isArray(data?.standardsBanks) ? data.standardsBanks : [];
+      collectApiIssues(data);
+      return;
+    }
+
     state.approved = Array.isArray(data?.approvedPacks) ? data.approvedPacks : [];
     state.approvedIndexedCounts = data?.indexedCounts || null;
     state.approvedSearchableCounts = data?.searchableCounts || null;
@@ -347,13 +370,33 @@
     if (!state.selectedDraftPackId) return;
 
     try {
-      const data = unwrap(await fetchJson(ENDPOINTS.draftReport(state.selectedDraftPackId)));
+      const data = unwrap(await fetchJson(ENDPOINTS.draftReport(state.selectedDraftPackId, state.selectedStandardsBankId)));
       state.report = data || null;
       reconcileSelectedReviewItem();
       collectApiIssues(data);
     } catch (error) {
       state.errors.push(`Draft report failed to load: ${error.message || 'Route error'}`);
     }
+  }
+
+  async function selectStandardsBank(standardsBankId) {
+    state.selectedStandardsBankId = standardsBankId;
+    state.selectedStandardsBank = null;
+    state.standardsBankError = '';
+    state.standardsBankLoading = Boolean(standardsBankId);
+    render();
+
+    if (standardsBankId) {
+      try {
+        state.selectedStandardsBank = unwrap(await fetchJson(ENDPOINTS.standardsBank(standardsBankId)));
+      } catch (error) {
+        state.standardsBankError = `Selected standards set failed to load: ${error.message || 'Route error'}`;
+      }
+    }
+
+    state.standardsBankLoading = false;
+    await loadSelectedDraftReport();
+    render();
   }
 
   function collectApiIssues(data) {
@@ -556,7 +599,8 @@
         </div>
         <span class="teacher-content-pill muted">Read Only</span>
       </div>
-      ${renderStandardsPlaceholders()}
+      ${renderStandardsTools()}
+      ${renderSelectedStandardsBankSummary()}
       ${summary?.standardsBankLoaded === false ? '<p class="profile-empty-state" data-standards-bank-empty>Standards bank not loaded. Existing draft IDs are shown without bank details.</p>' : ''}
       <div class="teacher-content-metric-grid">
         ${metric('Standards Map Count', formatNumber(summary?.standardsMapCount), 'data-standards-map-count')}
@@ -571,13 +615,18 @@
     `;
   }
 
-  function renderStandardsPlaceholders() {
+  function renderStandardsTools() {
     return `
       <section class="teacher-content-standards-tools" data-standards-placeholder-controls>
         <label class="teacher-content-standards-select">
-          <span>Select existing standards</span>
-          <select disabled data-coming-soon="standards-select" aria-label="Select existing standards placeholder">
-            <option>Select existing standards - coming soon</option>
+          <span>Select Saved Standards Set</span>
+          <select
+            id="teacherContentStandardsBankSelect"
+            data-standards-bank-select
+            aria-label="Select Saved Standards Set"
+            ${state.standardsBankLoading ? 'disabled' : ''}
+          >
+            ${renderStandardsBankOptions()}
           </select>
         </label>
         <button type="button" class="small-button secondary-small" disabled data-coming-soon="standards-upload">Upload standards file</button>
@@ -595,24 +644,84 @@
     `;
   }
 
+  function renderStandardsPlaceholders() {
+    return renderStandardsTools();
+  }
+
+  function renderStandardsBankOptions() {
+    if (!state.standardsBanks.length) {
+      return '<option value="">No saved standards sets found. Standards upload will be added later.</option>';
+    }
+
+    return [
+      '<option value="">Choose a saved standards set</option>',
+      ...state.standardsBanks.map((bank) => `
+        <option value="${escapeAttr(bank.standardsBankId)}" ${bank.standardsBankId === state.selectedStandardsBankId ? 'selected' : ''}>
+          ${escapeHtml(formatStandardsBankOptionLabel(bank))}
+        </option>
+      `)
+    ].join('');
+  }
+
+  function renderSelectedStandardsBankSummary() {
+    if (state.standardsBankLoading) {
+      return '<p class="profile-empty-state" data-standards-bank-loading>Loading selected standards set...</p>';
+    }
+
+    if (state.standardsBankError) {
+      return `<p class="profile-empty-state" data-standards-bank-error>${escapeHtml(state.standardsBankError)}</p>`;
+    }
+
+    if (!state.selectedStandardsBankId) {
+      return '<p class="profile-empty-state" data-standards-bank-unselected>No saved standards set selected. Draft standard IDs are shown without saved-bank enrichment.</p>';
+    }
+
+    const selected = state.selectedStandardsBank || state.report?.selectedStandardsBank || state.standardsBanks.find((bank) => bank.standardsBankId === state.selectedStandardsBankId) || {};
+    return `
+      <section class="teacher-content-selected-bank" data-selected-standards-bank-summary>
+        <div>
+          <span>Selected Standards Set</span>
+          <strong data-selected-standards-bank-title>${escapeHtml(selected.title || state.selectedStandardsBankId)}</strong>
+          <small data-selected-standards-bank-id>${escapeHtml(selected.standardsBankId || state.selectedStandardsBankId)}</small>
+        </div>
+        <div class="teacher-content-selected-bank-meta">
+          <span data-selected-standards-bank-subject>${escapeHtml(selected.subject || 'Subject not set')}</span>
+          <span data-selected-standards-bank-grade>${escapeHtml(selected.gradeLevel ? `Grade ${selected.gradeLevel}` : 'Grade not set')}</span>
+          <span data-selected-standards-bank-jurisdiction>${escapeHtml(selected.jurisdiction || 'Jurisdiction not set')}</span>
+          <span data-selected-standards-bank-count>${formatNumber(selected.standardsCount)} standards</span>
+          <span data-selected-standards-bank-validation>${selected.validationPassed === false ? 'Validation failed' : 'Validation passed'}</span>
+        </div>
+      </section>
+    `;
+  }
+
   function renderStandardCard(standard) {
     const vocabulary = Array.isArray(standard.relatedVocabulary) ? standard.relatedVocabulary : [];
     const concepts = Array.isArray(standard.relatedConcepts) ? standard.relatedConcepts : [];
+    const keywords = Array.isArray(standard.keywords) ? standard.keywords : [];
     const confidence = standard.confidence ? formatConfidence(standard.confidence) : null;
     return `
       <section class="teacher-content-standard-card" data-standard-card>
         <div class="teacher-content-standard-head">
           <div>
             <strong data-standard-id>${escapeHtml(standard.standardId || 'Standard ID not set')}</strong>
+            ${standard.code ? `<span data-standard-code>${escapeHtml(standard.code)}</span>` : ''}
             ${standard.title ? `<span data-standard-title>${escapeHtml(standard.title)}</span>` : '<span data-standard-title>No title loaded for this standard.</span>'}
           </div>
           ${confidence ? `<span class="teacher-content-confidence ${escapeAttr(confidence.className)}" data-standard-confidence>${escapeHtml(confidence.label)}</span>` : ''}
         </div>
-        ${standard.description ? `<p data-standard-description>${escapeHtml(standard.description)}</p>` : '<p data-standard-description>Only the standard ID is available for this draft.</p>'}
+        ${standard.officialText ? `<p data-standard-official-text>${escapeHtml(standard.officialText)}</p>` : ''}
+        ${standard.studentFriendlyText ? `<p data-standard-student-friendly-text>${escapeHtml(standard.studentFriendlyText)}</p>` : ''}
+        ${!standard.officialText && !standard.studentFriendlyText && standard.description ? `<p data-standard-description>${escapeHtml(standard.description)}</p>` : ''}
+        ${!standard.officialText && !standard.studentFriendlyText && !standard.description ? '<p data-standard-description>Only the standard ID is available for this draft.</p>' : ''}
         <div class="teacher-content-standard-meta">
+          <span data-standard-bank-match>${standard.bankMatch ? 'Saved bank match' : 'Unknown in selected bank'}</span>
+          <span data-standard-strand>Strand: ${escapeHtml(standard.strand || 'Not loaded')}</span>
+          <span data-standard-topic>Topic: ${escapeHtml(standard.topic || 'Not loaded')}</span>
           <span data-standard-review-status>Review status: ${escapeHtml(standard.reviewStatus || 'Not set')}</span>
           <span data-standard-source>Source: ${escapeHtml([standard.sourceFile, standard.sourceLocation].filter(Boolean).join(' · ') || 'Not loaded')}</span>
         </div>
+        ${renderInlineChipList('Keywords', keywords, 'data-standard-keywords')}
         ${renderInlineChipList('Related vocabulary', vocabulary, 'data-standard-vocabulary')}
         ${renderInlineChipList('Related concepts', concepts, 'data-standard-concepts')}
       </section>
@@ -1448,6 +1557,16 @@
       .replace(/([a-z])([A-Z])/g, '$1 $2')
       .replace(/[_-]+/g, ' ')
       .replace(/\b\w/g, (letter) => letter.toUpperCase());
+  }
+
+  function formatStandardsBankOptionLabel(bank) {
+    const parts = [
+      bank.title || bank.standardsBankId || 'Untitled standards set',
+      bank.subject,
+      bank.gradeLevel ? `Grade ${bank.gradeLevel}` : '',
+      bank.jurisdiction
+    ].filter(Boolean);
+    return parts.join(' - ');
   }
 
   function makeContentNameFromFileName(fileName) {

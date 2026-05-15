@@ -2368,6 +2368,7 @@ button:disabled {
 .teacher-content-issues,
 .teacher-content-chip-section,
 .teacher-content-standards-tools,
+.teacher-content-selected-bank,
 .teacher-content-standard-card,
 .teacher-content-promotion-panel,
 .teacher-content-readiness-card,
@@ -2404,6 +2405,7 @@ button:disabled {
 .teacher-content-issues,
 .teacher-content-chip-section,
 .teacher-content-standards-tools,
+.teacher-content-selected-bank,
 .teacher-content-standard-card,
 .teacher-content-standards-list,
 .teacher-content-promotion-panel,
@@ -2623,6 +2625,56 @@ button:disabled {
   align-items: end;
   border-color: rgba(126, 233, 255, 0.16);
   background: rgba(126, 233, 255, 0.045);
+}
+
+.teacher-content-selected-bank {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  border-color: rgba(102, 247, 209, 0.22);
+  background: rgba(102, 247, 209, 0.055);
+}
+
+.teacher-content-selected-bank span,
+.teacher-content-selected-bank small,
+.teacher-content-selected-bank strong {
+  display: block;
+}
+
+.teacher-content-selected-bank > div:first-child span {
+  color: #cafff0;
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.teacher-content-selected-bank strong {
+  color: #f4fffb;
+  overflow-wrap: anywhere;
+}
+
+.teacher-content-selected-bank small {
+  margin-top: 4px;
+  color: #b7d1cf;
+  overflow-wrap: anywhere;
+}
+
+.teacher-content-selected-bank-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.teacher-content-selected-bank-meta span {
+  border: 1px solid rgba(102, 247, 209, 0.14);
+  border-radius: 999px;
+  padding: 6px 9px;
+  background: rgba(2, 9, 10, 0.46);
+  color: #d8eee9;
+  font-size: 0.78rem;
+  font-weight: 800;
 }
 
 .teacher-content-standards-select {
@@ -3969,6 +4021,7 @@ button:disabled {
   .live-attention-list,
   .reports-summary-grid,
   .teacher-content-standards-tools,
+  .teacher-content-selected-bank,
   .teacher-content-tabs,
   .teacher-content-metric-grid,
   .teacher-content-detail-grid {

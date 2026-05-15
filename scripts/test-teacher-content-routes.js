@@ -11,6 +11,7 @@ const approvedPacksDir = path.join(tempRoot, 'approved-packs');
 const uploadIncomingDir = path.join(tempRoot, 'uploads', 'incoming');
 const uploadExtractedDir = path.join(tempRoot, 'uploads', 'extracted');
 const rawModelResponsesDir = path.join(tempRoot, 'model-responses');
+const standardsBanksDir = path.join(tempRoot, 'standards-banks');
 const realApprovedPacksDir = path.join(projectRoot, 'knowledge', 'approved-packs');
 const standardsBank = makeStandardsBank();
 let mockDraftModelClient = async () => JSON.stringify(makeGeneratedPack());
@@ -20,6 +21,7 @@ fs.mkdirSync(draftPacksDir, { recursive: true });
 fs.mkdirSync(approvedPacksDir, { recursive: true });
 fs.mkdirSync(uploadIncomingDir, { recursive: true });
 fs.mkdirSync(uploadExtractedDir, { recursive: true });
+fs.mkdirSync(standardsBanksDir, { recursive: true });
 
 const approvedPacksBefore = snapshotFiles(realApprovedPacksDir);
 const routerStudentFilesBefore = snapshotRouterAndStudentFiles();
@@ -50,6 +52,7 @@ async function main() {
       makeVocabularyItem('balanced-force', 'approved')
     ]
   }));
+  writeStandardsBank(standardsBanksDir, standardsBank);
   const handlers = new Map();
   registerTeacherContentRoutes(createApp(handlers), {
     draftPacksDir,
@@ -57,6 +60,7 @@ async function main() {
     uploadIncomingDir,
     uploadExtractedDir,
     rawModelResponsesDir,
+    standardsBanksDir,
     modelClient: async (request) => mockDraftModelClient(request),
     standardsBank
   });
@@ -67,7 +71,12 @@ async function main() {
     await assertUnsupportedUploadExtensionFails(handlers);
     await assertUnsafeUploadFilenameIsSanitized(handlers);
     await assertDraftsEndpoint(handlers);
+    await assertStandardsBankListEndpoint(handlers);
+    await assertStandardsBankDetailEndpoint(handlers);
+    await assertInvalidStandardsBankIdRejected(handlers);
     await assertDraftReportEndpoint(handlers);
+    await assertDraftReportWithStandardsBankEndpoint(handlers);
+    await assertMissingDraftReportStandardsBankEndpoint(handlers);
     await assertPrepareReviewEndpointSucceeds(handlers);
     await assertInvalidPrepareReviewUploadIdRejected(handlers);
     await assertMissingPrepareReviewExtractionFails(handlers);
@@ -138,6 +147,87 @@ async function assertDraftReportEndpoint(handlers) {
   assert.equal(response.body.data.pendingReview.totalPending, 1);
   assert.equal(response.body.data.promotionReadiness.ready, false);
   assert.ok(response.body.data.promotionReadiness.blockedReasons.includes('pending items remain'));
+}
+
+async function assertStandardsBankListEndpoint(handlers) {
+  const response = await request(handlers, 'GET', '/standards-banks');
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.data.standardsBanks.length, 1);
+  assert.deepEqual(response.body.data.standardsBanks[0], {
+    standardsBankId: 'sample_physical_science_standards',
+    title: 'Sample Physical Science Standards Bank',
+    subject: 'Physical Science',
+    gradeLevel: '8',
+    jurisdiction: 'Local Sample',
+    version: '0.1.0',
+    standardsCount: 1,
+    validationPassed: true,
+    warnings: [],
+    errors: []
+  });
+}
+
+async function assertStandardsBankDetailEndpoint(handlers) {
+  const response = await request(handlers, 'GET', '/standards-banks/:standardsBankId', {}, {
+    standardsBankId: 'sample_physical_science_standards'
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.data.standardsBankId, 'sample_physical_science_standards');
+  assert.equal(response.body.data.standardsCount, 1);
+  assert.equal(response.body.data.standards[0].standardId, 'SAMPLE.PS.FORCES.1');
+  assert.equal(response.body.data.standards[0].officialText, 'Describe how balanced and unbalanced forces affect motion.');
+  assert.equal(response.body.data.standards[0].studentFriendlyText, 'I can explain how balanced and unbalanced forces change motion.');
+}
+
+async function assertInvalidStandardsBankIdRejected(handlers) {
+  const response = await request(handlers, 'GET', '/standards-banks/:standardsBankId', {}, {
+    standardsBankId: '../sample_physical_science_standards'
+  });
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.success, false);
+  assert.match(response.body.errors[0], /standardsBankId/);
+}
+
+async function assertDraftReportWithStandardsBankEndpoint(handlers) {
+  const draftBefore = snapshotFiles(draftPacksDir);
+  const approvedBefore = snapshotFiles(approvedPacksDir);
+  const standardsBefore = snapshotFiles(standardsBanksDir);
+  const response = await request(handlers, 'GET', '/drafts/:packId/report', {}, {
+    packId: 'route-draft-pack'
+  }, {
+    standardsBankId: 'sample_physical_science_standards'
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.data.selectedStandardsBank.standardsBankId, 'sample_physical_science_standards');
+  assert.equal(response.body.data.standardsSummary.standardsBankLoaded, true);
+  assert.equal(response.body.data.standardsSummary.standards[0].code, 'PS.FORCES.1');
+  assert.equal(response.body.data.standardsSummary.standards[0].officialText, 'Describe how balanced and unbalanced forces affect motion.');
+  assert.equal(response.body.data.standardsSummary.standards[0].studentFriendlyText, 'I can explain how balanced and unbalanced forces change motion.');
+  assert.equal(response.body.data.standardsSummary.standards[0].strand, 'Physical Science');
+  assert.equal(response.body.data.standardsSummary.standards[0].topic, 'Forces and Motion');
+  assert.deepEqual(response.body.data.standardsSummary.standards[0].keywords, ['balanced forces']);
+  assert.deepEqual(snapshotFiles(draftPacksDir), draftBefore, 'standards bank report selection should not modify drafts');
+  assert.deepEqual(snapshotFiles(approvedPacksDir), approvedBefore, 'standards bank report selection should not modify approved packs');
+  assert.deepEqual(snapshotFiles(standardsBanksDir), standardsBefore, 'standards bank report selection should not modify standards bank files');
+}
+
+async function assertMissingDraftReportStandardsBankEndpoint(handlers) {
+  const response = await request(handlers, 'GET', '/drafts/:packId/report', {}, {
+    packId: 'route-draft-pack'
+  }, {
+    standardsBankId: 'missing_standards_bank'
+  });
+
+  assert.equal(response.statusCode, 404);
+  assert.equal(response.body.success, false);
+  assert.ok(response.body.errors.some((error) => error.includes('Standards bank not found')));
 }
 
 async function assertPrepareReviewEndpointSucceeds(handlers) {
@@ -623,11 +713,11 @@ function createApp(handlers) {
   };
 }
 
-async function request(handlers, method, route, body = {}, params = {}) {
+async function request(handlers, method, route, body = {}, params = {}, query = {}) {
   const handler = handlers.get(`${method} ${route}`);
   assert.ok(handler, `Missing handler: ${method} ${route}`);
 
-  const req = { body, params, query: {}, headers: {} };
+  const req = { body, params, query, headers: {} };
   const res = createResponse();
   await handler(req, res);
   return res;
@@ -685,6 +775,14 @@ function writeKnowledgePack(rootDir, pack) {
   fs.mkdirSync(packDir, { recursive: true });
   fs.writeFileSync(packPath, `${JSON.stringify(pack, null, 2)}\n`);
   return packPath;
+}
+
+function writeStandardsBank(rootDir, bank) {
+  const bankDir = path.join(rootDir, bank.standardsBankId);
+  const bankPath = path.join(bankDir, 'standards_bank.json');
+  fs.mkdirSync(bankDir, { recursive: true });
+  fs.writeFileSync(bankPath, `${JSON.stringify(bank, null, 2)}\n`);
+  return bankPath;
 }
 
 function readKnowledgePack(rootDir, packId) {

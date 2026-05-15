@@ -73,7 +73,9 @@ function assertEndpointReferences() {
     '/api/teacher-content/uploads/extract',
     '/api/teacher-content/uploads/${encodeURIComponent(uploadId)}/prepare-review',
     '/api/teacher-content/drafts',
-    '/api/teacher-content/drafts/${encodeURIComponent(packId)}/report',
+    '/api/teacher-content/drafts/${encodeURIComponent(packId)}/report${query}',
+    '/api/teacher-content/standards-banks',
+    '/api/teacher-content/standards-banks/${encodeURIComponent(standardsBankId)}',
     '/api/teacher-content/drafts/${encodeURIComponent(packId)}/promote',
     '/api/teacher-content/drafts/${encodeURIComponent(packId)}/items/${encodeURIComponent(section)}/${encodeURIComponent(index)}',
     '/api/teacher-content/drafts/${encodeURIComponent(packId)}/items/${encodeURIComponent(section)}/${encodeURIComponent(index)}/status',
@@ -97,10 +99,12 @@ function assertEndpointReferences() {
       'draftReport',
       'drafts',
       'promoteDraft',
+      'standardsBank',
+      'standardsBanks',
       'uploadExtract',
       'uploadPrepareReview'
     ].sort(),
-    'Teacher Content UI should not add endpoint helpers beyond the existing dashboard, extract, prepare-review, drafts, report, review PATCH, promote, and approved helpers.'
+    'Teacher Content UI should keep endpoint helpers limited to teacher content read/review/promotion routes.'
   );
 }
 
@@ -146,7 +150,7 @@ function assertDisabledPlaceholders() {
   const disabledCount = (ui.match(/disabled/g) || []).length;
   assert.ok(disabledCount >= 5, 'Expected disabled placeholder controls.');
   [
-    'data-coming-soon="standards-select"',
+    'data-standards-bank-select',
     'data-coming-soon="standards-upload"',
     'data-coming-soon="pack-toggle"',
     'Visual Only'
@@ -236,11 +240,34 @@ function assertStandardsTabWorkflowUi() {
     'data-standards-id-count',
     'data-standards-missing-count',
     'data-standards-unknown-count',
+    'teacherContentStandardsBankSelect',
+    'Select Saved Standards Set',
+    'data-standards-bank-select',
+    '/api/teacher-content/standards-banks',
+    'standardsBankId=${encodeURIComponent(standardsBankId)}',
+    'No saved standards sets found. Standards upload will be added later.',
+    'data-selected-standards-bank-summary',
+    'data-selected-standards-bank-title',
+    'data-selected-standards-bank-id',
+    'data-selected-standards-bank-subject',
+    'data-selected-standards-bank-grade',
+    'data-selected-standards-bank-jurisdiction',
+    'data-selected-standards-bank-count',
+    'data-selected-standards-bank-validation',
+    'No saved standards set selected. Draft standard IDs are shown without saved-bank enrichment.',
+    'Selected standards set failed to load',
     'data-standard-id-list',
     'data-standard-card',
     'data-standard-id',
+    'data-standard-code',
     'data-standard-title',
     'data-standard-description',
+    'data-standard-official-text',
+    'data-standard-student-friendly-text',
+    'data-standard-strand',
+    'data-standard-topic',
+    'data-standard-keywords',
+    'data-standard-bank-match',
     'data-standard-confidence',
     'data-standard-vocabulary',
     'data-standard-concepts',
@@ -249,7 +276,6 @@ function assertStandardsTabWorkflowUi() {
     'No standardsMap entries or standard IDs were found for this draft.',
     'Standards bank not loaded. Existing draft IDs are shown without bank details.',
     'Unknown standards found',
-    'Select existing standards - coming soon',
     'Upload standards file',
     'Replace standard - coming soon',
     'Edit standard',
@@ -257,7 +283,6 @@ function assertStandardsTabWorkflowUi() {
     'Content/Concept',
     'Source',
     'data-standards-placeholder-controls',
-    'data-coming-soon="standards-select"',
     'data-coming-soon="standards-upload"',
     'data-coming-soon="standards-replace"',
     'data-coming-soon="standards-edit"',
@@ -269,7 +294,6 @@ function assertStandardsTabWorkflowUi() {
   });
 
   [
-    /data-coming-soon="standards-select"[\s\S]*?disabled|disabled[\s\S]*?data-coming-soon="standards-select"/,
     /data-coming-soon="standards-upload"[\s\S]*?disabled|disabled[\s\S]*?data-coming-soon="standards-upload"/,
     /data-coming-soon="standards-replace"[\s\S]*?disabled|disabled[\s\S]*?data-coming-soon="standards-replace"/,
     /data-coming-soon="standards-edit"[\s\S]*?disabled|disabled[\s\S]*?data-coming-soon="standards-edit"/,
@@ -280,7 +304,9 @@ function assertStandardsTabWorkflowUi() {
     assert.match(ui, pattern, `Expected disabled placeholder control matching ${pattern}.`);
   });
 
-  assert.doesNotMatch(ui, /\/api\/teacher-content\/standards|standardsUpload|uploadStandards|data-standards-upload-action/i, 'Standards placeholders should not call new standards endpoints.');
+  assert.match(ui, /id="teacherContentStandardsBankSelect"[\s\S]*?data-standards-bank-select/, 'Saved standards selector should be real and enabled when not loading.');
+  assert.doesNotMatch(ui, /data-coming-soon="standards-select"/, 'Saved standards selector should no longer be a disabled placeholder.');
+  assert.doesNotMatch(ui, /standardsUpload|uploadStandards|data-standards-upload-action|\/api\/teacher-content\/standards-upload|\/api\/teacher-content\/standards-banks\/upload/i, 'Standards upload should remain absent.');
 }
 
 function assertReviewCardPolishUi() {

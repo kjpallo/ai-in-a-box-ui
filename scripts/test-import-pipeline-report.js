@@ -21,6 +21,7 @@ const routerStudentFilesBefore = snapshotRouterAndStudentFiles();
 
 try {
   assertPendingReviewAndCounts();
+  assertStandardsBankEnrichmentAndUnknowns();
   assertReadyWhenAllReviewableItemsApproved();
   assertReferenceFormulasRemainReferenceOnly();
   assertIndexPreviewFromPromotedTempApprovedPack();
@@ -89,8 +90,15 @@ function assertPendingReviewAndCounts() {
   assert.equal(report.standardsSummary.standardsBankLoaded, true);
   assert.deepEqual(report.standardsSummary.standards[0], {
     standardId: 'SAMPLE.PS.FORCES.1',
+    code: 'PS.FORCES.1',
     title: 'Balanced and Unbalanced Forces',
     description: 'Describe how balanced and unbalanced forces affect motion.',
+    officialText: 'Describe how balanced and unbalanced forces affect motion.',
+    studentFriendlyText: 'I can explain how balanced and unbalanced forces change motion.',
+    strand: 'Physical Science',
+    topic: 'Forces and Motion',
+    keywords: ['balanced forces'],
+    bankMatch: true,
     confidence: 'high',
     relatedVocabulary: ['net-force'],
     relatedConcepts: ['balanced-forces'],
@@ -98,6 +106,62 @@ function assertPendingReviewAndCounts() {
     sourceFile: 'sample_standards_source.pdf',
     sourceLocation: 'p. 1'
   });
+}
+
+function assertStandardsBankEnrichmentAndUnknowns() {
+  writeDraftPack(makePack({
+    packId: 'report-standards-detail-pack',
+    vocabulary: [
+      {
+        ...makeVocabularyItem('net-force', 'approved'),
+        standards: ['SAMPLE.PS.FORCES.1', 'SAMPLE.PS.UNKNOWN.1', 'SAMPLE.PS.NO_MAP.1']
+      }
+    ],
+    concepts: [],
+    problemBank: [],
+    standardsMap: [
+      makeStandardsMapItem('SAMPLE.PS.FORCES.1', 'approved'),
+      makeStandardsMapItem('SAMPLE.PS.UNKNOWN.1', 'approved'),
+      makeStandardsMapItem('SAMPLE.PS.MISSING.1', 'approved')
+    ]
+  }));
+
+  const report = buildImportPipelineReport({
+    packId: 'report-standards-detail-pack',
+    draftPacksDir,
+    standardsBank,
+    standardsBankSummary: {
+      standardsBankId: standardsBank.standardsBankId,
+      title: standardsBank.title,
+      subject: standardsBank.subject,
+      gradeLevel: standardsBank.gradeLevel,
+      jurisdiction: standardsBank.jurisdiction,
+      version: standardsBank.version,
+      standardsCount: standardsBank.standards.length,
+      validationPassed: true,
+      warnings: [],
+      errors: []
+    }
+  });
+
+  assert.equal(report.selectedStandardsBank.standardsBankId, 'sample_physical_science_standards');
+  assert.deepEqual(report.standardsSummary.unknown, ['SAMPLE.PS.MISSING.1', 'SAMPLE.PS.NO_MAP.1', 'SAMPLE.PS.UNKNOWN.1']);
+  assert.deepEqual(report.standardsSummary.missing, ['SAMPLE.PS.NO_MAP.1']);
+
+  const known = report.standardsSummary.standards.find((standard) => standard.standardId === 'SAMPLE.PS.FORCES.1');
+  assert.equal(known.code, 'PS.FORCES.1');
+  assert.equal(known.officialText, 'Describe how balanced and unbalanced forces affect motion.');
+  assert.equal(known.studentFriendlyText, 'I can explain how balanced and unbalanced forces change motion.');
+  assert.equal(known.strand, 'Physical Science');
+  assert.equal(known.topic, 'Forces and Motion');
+  assert.deepEqual(known.keywords, ['balanced forces']);
+  assert.equal(known.bankMatch, true);
+
+  const unknown = report.standardsSummary.standards.find((standard) => standard.standardId === 'SAMPLE.PS.UNKNOWN.1');
+  assert.equal(unknown.bankMatch, false);
+  assert.equal(unknown.officialText, '');
+  assert.equal(unknown.title, '');
+  assert.deepEqual(unknown.relatedVocabulary, ['net-force']);
 }
 
 function assertReadyWhenAllReviewableItemsApproved() {
