@@ -6,6 +6,7 @@ const { spawnSync } = require('node:child_process');
 const projectRoot = path.join(__dirname, '..');
 const bladePath = path.join(projectRoot, 'public', 'blade-ui.js');
 const uiPath = path.join(projectRoot, 'public', 'teacher-content-ui.js');
+const apiClientPath = path.join(projectRoot, 'public', 'api-client.js');
 const stylePath = path.join(projectRoot, 'public', 'style.css');
 const indexPath = path.join(projectRoot, 'public', 'index.html');
 const packagePath = path.join(projectRoot, 'package.json');
@@ -14,14 +15,18 @@ const routerStudentFilesBefore = snapshotRouterAndStudentFiles();
 
 const blade = read(bladePath);
 const ui = read(uiPath);
+const apiClient = read(apiClientPath);
 const style = read(stylePath);
 const index = read(indexPath);
 const pkg = JSON.parse(read(packagePath));
 
 assertTeacherProfileEntry();
 assertOverlayMarkupAndSelectors();
+assertSafeImportWorkflowUi();
 assertEndpointReferences();
 assertUploadExtractionUi();
+assertUploadAndPrepareFormDataContract();
+assertBackendJsonErrorsAreDisplayed();
 assertPrepareReviewHandoffUi();
 assertSelectedDraftAndProgressUi();
 assertStandardsTabWorkflowUi();
@@ -58,20 +63,128 @@ function assertOverlayMarkupAndSelectors() {
     'teacherContentNext',
     'teacherContentDraftSelect',
     'teacher-content-card',
-    'teacher-content-tab'
+    'teacher-content-tab',
+    'teacher-content-tab-index',
+    'teacher-content-tab-copy',
+    'teacher-content-preview-card',
+    'renderDeckPreviewCard',
+    'data-review-evidence',
+    'data-review-evidence-card',
+    'data-review-evidence-close'
   ].forEach((selector) => {
     assert.ok(ui.includes(selector) || style.includes(selector), `Expected selector or hook ${selector}.`);
   });
 
-  ['Upload', 'Standards', 'Draft Pack', 'Review', 'Import Report', 'Approved Packs'].forEach((label) => {
+  ['Upload Source', 'Preview Import', 'Review Preview', 'Full Import', 'Review Content', 'Approved Packs'].forEach((label) => {
     assert.ok(ui.includes(label), `Expected tab/card label ${label}.`);
   });
+  assert.doesNotMatch(ui.match(/const TABS = \[[\s\S]*?\n  \];/)?.[0] || '', /Define Knowledge Pack|Assign Standards|Import Report \/ Audit/, 'Teacher Content deck should use the new safe import step labels.');
+
+  [
+    '--deck-offset',
+    '--deck-distance',
+    'teacher-content-card.preview',
+    'aria-hidden="${isActive ? \'false\' : \'true\'}"'
+  ].forEach((marker) => {
+    assert.ok(ui.includes(marker) || style.includes(marker), `Expected card-deck visual marker ${marker}.`);
+  });
+}
+
+function assertSafeImportWorkflowUi() {
+  const tabsBlock = ui.match(/const TABS = \[([\s\S]*?)\n  \];/);
+  assert.ok(tabsBlock, 'Expected TABS block.');
+  [
+    "id: 'upload', label: 'Upload Source'",
+    "id: 'previewImport', label: 'Preview Import'",
+    "id: 'reviewPreview', label: 'Review Preview'",
+    "id: 'fullImport', label: 'Full Import'",
+    "id: 'review', label: 'Review Content'",
+    "id: 'approvedPacks', label: 'Approved Packs'"
+  ].forEach((marker) => {
+    assert.ok(tabsBlock[1].includes(marker), `Expected safe import tab marker ${marker}.`);
+  });
+
+  [
+    'renderUploadSourceCard',
+    'renderPreviewImportCard',
+    'renderReviewPreviewCard',
+    'renderFullImportCard',
+    "state.activeTab = 'previewImport'",
+    "state.activeTab = 'reviewPreview'",
+    "state.activeTab = 'review'",
+    'ESTIMATE READY',
+    'PREVIEW READY',
+    'PENDING REVIEW',
+    'No preview yet. Run Preview Draft first.',
+    'Run Preview Draft first.',
+    'Gemma has not run yet.',
+    'Preview Draft uses a small sample',
+    'Import is running, do not close this window.'
+  ].forEach((marker) => {
+    assert.ok(ui.includes(marker), `Expected safe import workflow marker ${marker}.`);
+  });
+
+  [
+    'Import Selected Pages/Sections',
+    'data-selected-import-panel',
+    'data-selected-import-recommendation',
+    'For large packets, import one section at a time to avoid overloading local Gemma.',
+    'Import first 3 pages',
+    'Import next 3 pages',
+    'Import first detected section',
+    'Import page range',
+    'teacherContentSelectedPageStart',
+    'teacherContentSelectedPageEnd',
+    'data-selected-import-partial-note',
+    'Import this preview range as draft',
+    'data-full-import-advanced',
+    'Advanced whole-packet full import',
+    'teacherContentFullImportConfirm',
+    'Type CONFIRM',
+    'Run Whole Full Import',
+    'data-full-import-failure-message',
+    'Full import failed',
+    'data-full-import-technical-details',
+    'data-full-import-failed-batches',
+    'Selected pages:',
+    'Selected chunks:'
+  ].forEach((marker) => {
+    assert.ok(ui.includes(marker), `Expected selected import / gated full import marker ${marker}.`);
+  });
+
+  const uploadSourceFunction = ui.match(/function renderUploadSourceCard\(\) \{([\s\S]*?)\n  function renderPreviewImportCard/);
+  assert.ok(uploadSourceFunction, 'Expected renderUploadSourceCard function.');
+  assert.ok(uploadSourceFunction[1].includes('Create Review Draft'), 'Upload Source should keep Create Review Draft.');
+  assert.doesNotMatch(uploadSourceFunction[1], /Run Preview Draft|Run Full Import|renderImportEstimatePanel|renderPreviewReportPanel/, 'Upload Source should not own preview/full import controls or reports.');
+
+  const previewImportFunction = ui.match(/function renderPreviewImportCard\(\) \{([\s\S]*?)\n  function renderReviewPreviewCard/);
+  assert.ok(previewImportFunction, 'Expected renderPreviewImportCard function.');
+  assert.match(previewImportFunction[1], /renderImportEstimatePanel\(\)/, 'Preview Import should show the import estimate.');
+  assert.match(previewImportFunction[1], /data-upload-run-preview/, 'Preview Import should expose Run Preview Draft.');
+  assert.match(previewImportFunction[1], /data-upload-run-full-import[\s\S]*?disabled/, 'Preview Import should keep Full Import secondary/disabled until preview succeeds.');
+
+  const reviewPreviewFunction = ui.match(/function renderReviewPreviewCard\(\) \{([\s\S]*?)\n  function renderFullImportCard/);
+  assert.ok(reviewPreviewFunction, 'Expected renderReviewPreviewCard function.');
+  assert.match(reviewPreviewFunction[1], /renderPreviewReportPanel\(\)/, 'Review Preview should show preview report output.');
+  assert.match(reviewPreviewFunction[1], /data-selected-import-preset="preview"/, 'Review Preview should allow importing the preview range as a draft.');
+
+  const fullImportFunction = ui.match(/function renderFullImportCard\(\) \{([\s\S]*?)\n  function renderStandardsCard/);
+  assert.ok(fullImportFunction, 'Expected renderFullImportCard function.');
+  assert.match(fullImportFunction[1], /renderPrepareReviewFailurePanel\('full'\)/, 'Full Import card should show clear failure details.');
+  assert.match(fullImportFunction[1], /renderSelectedImportControls/, 'Full Import card should recommend selected imports.');
+  assert.match(fullImportFunction[1], /renderWholeImportAdvanced/, 'Whole full import should live behind advanced disclosure.');
+
+  assert.match(ui, /data-upload-run-full-import/, 'Full Import should expose Run Full Import.');
+  assert.match(fullImportFunction[1], /canRunFullImport[\s\S]*?state\.uploadPreviewComplete/, 'Full Import should require a successful preview.');
+
+  assert.equal((ui.match(/overload local Gemma/g) || []).length, 1, 'Local Gemma range warning copy should appear once.');
 }
 
 function assertEndpointReferences() {
   const expectedEndpoints = [
     '/api/teacher-content/dashboard',
     '/api/teacher-content/uploads/extract',
+    '/api/teacher-content/uploads/upload-and-prepare',
     '/api/teacher-content/uploads/${encodeURIComponent(uploadId)}/prepare-review',
     '/api/teacher-content/drafts',
     '/api/teacher-content/drafts/${encodeURIComponent(packId)}/report${query}',
@@ -104,6 +217,7 @@ function assertEndpointReferences() {
       'promoteDraft',
       'standardsBank',
       'standardsBanks',
+      'uploadAndPrepare',
       'uploadExtract',
       'uploadPrepareReview'
     ].sort(),
@@ -168,18 +282,43 @@ function assertUploadExtractionUi() {
     'accept=".txt,.csv,.json,.docx,.xlsx,.pdf"',
     'data-upload-file-input',
     'data-upload-browse',
-    'data-upload-extract',
     'data-upload-content-name',
-    'data-upload-prepare-review',
-    'data-upload-prepare-review-status',
-    'Extract Text',
-    'Prepare Review',
-    'Preparing your review draft',
-    'Charlemagne is preparing your review draft...',
+    'data-upload-create-review',
+    'data-upload-create-progress',
+    'data-upload-create-stage',
+    'data-upload-advanced-details',
+    'data-source-match-metadata',
+    'data-source-match-uploaded-file',
+    'data-source-match-draft-id',
+    'data-source-match-draft-title',
+    'data-source-match-draft-source-files',
+    'data-source-match-character-count',
+    'data-source-match-page-chunk-count',
+    'data-source-match-status',
+    'data-source-match-warning',
+    'Source mismatch warning',
+    'Create Review Draft',
+    'Uploading file...',
+    'Extracting text...',
+    'Building import estimate...',
+    'Import Estimate',
+    'Run Preview Draft',
+    'Run Full Import',
+    'Preview Draft',
+    'Temporary sample only. No final approved pack was created.',
+    'Import is running, do not close this window.',
+    'Gemma Draft Activity',
+    'data-import-activity-panel',
+    'data-import-activity-event',
+    'Operational import progress for this teacher draft.',
+    'Building draft packet wrapper',
+    'Running validation',
+    'Draft ready for review',
     'Review draft prepared.',
+    'Advanced details',
     'FormData',
     "method: 'POST'",
-    'Prepare Review becomes available after text extraction succeeds.',
+    'Review the import estimate, then run preview draft.',
     'Original File',
     'File Type',
     'Extraction Status',
@@ -191,6 +330,47 @@ function assertUploadExtractionUi() {
   ].forEach((marker) => {
     assert.ok(ui.includes(marker), `Expected upload extraction UI marker ${marker}.`);
   });
+
+  assert.doesNotMatch(ui, /data-upload-extract|data-upload-prepare-review/, 'Upload card should expose one teacher-facing create action.');
+  assert.doesNotMatch(ui, /chain-of-thought|hidden reasoning|Gemma's thoughts|Gemma’s thoughts/i, 'Import activity should not claim to show hidden reasoning.');
+  assert.equal((ui.match(/data-upload-create-review/g) || []).length, 2, 'Create Review Draft hook should be one handler and one button.');
+}
+
+function assertUploadAndPrepareFormDataContract() {
+  const createReviewFunction = ui.match(/async function createReviewDraftFromUpload\(\) \{([\s\S]*?)\n  async function runPreviewImport/);
+  assert.ok(createReviewFunction, 'Expected createReviewDraftFromUpload function.');
+  assert.ok(
+    createReviewFunction[1].includes("formData.append('sourceFile', state.selectedUploadFile)"),
+    'Create Review Draft should send the source file under the route upload field.'
+  );
+  assert.ok(
+    createReviewFunction[1].includes("formData.append('knowledgeName', state.uploadContentName || makeContentNameFromFileName(state.selectedUploadFile.name || ''))"),
+    'Create Review Draft should send the teacher-entered name as knowledgeName.'
+  );
+  assert.doesNotMatch(
+    createReviewFunction[1],
+    /formData\.append\('packName'/,
+    'Create Review Draft should not send the old packName field from the one-button upload form.'
+  );
+}
+
+function assertBackendJsonErrorsAreDisplayed() {
+  [
+    'data.error',
+    'data.message',
+    'Array.isArray(data.errors) && data.errors.length > 0 ? data.errors.join',
+    'data.details',
+    'error.errors = Array.isArray(data.errors) ? data.errors : []'
+  ].forEach((marker) => {
+    assert.ok(apiClient.includes(marker), `Expected API client to preserve backend JSON error marker ${marker}.`);
+  });
+  assert.ok(apiClient.includes('error.timeline = Array.isArray(data.timeline) ? data.timeline : []'));
+  assert.ok(apiClient.includes('error.data = data'));
+
+  assert.ok(
+    ui.includes("state.uploadCreateReviewError = error.message || 'Create Review Draft failed.'"),
+    'Teacher Content upload failure should render the backend error message surfaced by the API client.'
+  );
 }
 
 function assertPrepareReviewHandoffUi() {
@@ -201,9 +381,12 @@ function assertPrepareReviewHandoffUi() {
     'Draft packs are not live until approved and promoted.',
     'Review draft prepared, but the latest report could not be refreshed.',
     'data-handoff-tab="review"',
-    'data-handoff-tab="importReport"',
     'Go to Review',
-    'View Import Report'
+    'Review Content',
+    'state.selectedDraftPackId = data.packId',
+    'await refreshDraftLists()',
+    "state.activeTab = 'review'",
+    'state.latestPrepareReviewSourceMatch'
   ].forEach((marker) => {
     assert.ok(ui.includes(marker), `Expected Prepare Review handoff marker ${marker}.`);
   });
@@ -227,8 +410,8 @@ function assertSelectedDraftAndProgressUi() {
     'Approved Items',
     'Rejected Items',
     'Total Reviewable Items',
-    'No draft pack is selected yet. Prepare Review from an upload or choose a draft pack to see its review summary.',
-    'No draft report selected. Prepare Review from an upload or choose a draft pack to see whether it is ready to promote.'
+    'No draft pack is selected yet. Create Review Draft from an upload or choose a draft pack to see its review summary.',
+    'No draft report selected. Create Review Draft from an upload or choose a draft pack to see whether it is ready to promote.'
   ].forEach((marker) => {
     assert.ok(ui.includes(marker), `Expected selected draft/progress marker ${marker}.`);
   });
@@ -285,8 +468,10 @@ function assertStandardsTabWorkflowUi() {
     'teacherContentStandardsMatchFilter',
     'Draft match status',
     'data-standards-match-filter',
-    'All standards',
     'Used in this draft',
+    'All standards',
+    'Default view: Used in this draft',
+    'data-standards-default-used',
     'Not used in this draft',
     'Unknown in selected bank / unmatched',
     'data-standards-filter-controls',
@@ -304,7 +489,7 @@ function assertStandardsTabWorkflowUi() {
     'data-standard-detail-concepts',
     'data-standard-detail-confidence',
     'data-standard-detail-review-status',
-    'No draft selected. Prepare Review from an upload or choose a draft pack to see its standards alignment.',
+    'No draft selected. Create Review Draft from an upload or choose a draft pack to see its standards alignment.',
     'No standardsMap entries or standard IDs were found for this draft.',
     'Selected standards set has no standards to preview.',
     'No standards match search/filter.',
@@ -357,20 +542,24 @@ function assertReviewCardPolishUi() {
     'standardsMap',
     'smokeTests',
     'data-review-section-pending',
+    'data-review-section-approved',
+    'data-review-section-rejected',
     'No pending items in this section.',
     'data-review-item-card',
     'data-review-item-label',
     'data-review-item-confidence',
     'data-review-item-source',
     'data-review-item-snippet',
+    'data-review-item-evidence',
+    'View Evidence',
     'High confidence',
     'Medium confidence',
     'Low confidence',
     'No pending review items.',
-    'Check the Import Report to see if this draft is ready to promote.',
+    'This draft has no pending items in the current review view.',
     'data-review-empty-state',
-    'data-review-empty-tab="importReport"',
-    'View Import Report',
+    'data-review-empty-tab="approvedPacks"',
+    'View Approved Packs',
     'Source evidence',
     'Editable fields',
     'Save changes',
@@ -411,6 +600,20 @@ function assertImportReportPolishUi() {
     'data-import-report-validation',
     'data-import-report-warnings',
     'data-import-report-errors',
+    'data-import-coverage-report',
+    'data-import-coverage-total-pages',
+    'data-import-coverage-total-chunks',
+    'data-import-coverage-processed-chunks',
+    'data-import-coverage-chunks-with-items',
+    'data-import-coverage-empty-chunks',
+    'data-import-coverage-sections-detected',
+    'data-import-coverage-empty-chunk-list',
+    'data-import-coverage-failed-batches',
+    'Failed model batches',
+    'Retry limit:',
+    'Coverage report',
+    'Draft item counts by section',
+    'Chunks with no extracted knowledge',
     'Extraction',
     'Draft validation',
     'Warnings',
@@ -418,7 +621,7 @@ function assertImportReportPolishUi() {
     'Passed',
     'Failed',
     'Unknown',
-    'No draft report selected. Prepare Review from an upload or choose a draft pack to see whether it is ready to promote.',
+    'No draft report selected. Create Review Draft from an upload or choose a draft pack to see whether it is ready to promote.',
     'Report failed to load or is still unavailable. Refresh the selected draft before promoting.',
     'Draft not ready. Finish teacher review before promoting.'
   ].forEach((marker) => {
@@ -469,9 +672,9 @@ function assertApprovedPacksPolishUi() {
     'This setting is saved for future student activation. This does not change student answers yet. Student router activation will be added in a later phase.',
     'data-no-approved-packs-empty-state',
     'No approved knowledge packs yet.',
-    'Review and promote a draft from the Import Report tab to create one.',
-    'data-approved-empty-tab="importReport"',
-    'View Import Report',
+    'Review imported draft content before creating approved packs.',
+    'data-approved-empty-tab="review"',
+    'View Review Content',
     'Read-only pack details'
   ].forEach((marker) => {
     assert.ok(ui.includes(marker), `Expected Approved Packs polish marker ${marker}.`);
@@ -483,7 +686,7 @@ function assertApprovedPacksPolishUi() {
 }
 
 function assertNoForbiddenUiActions() {
-  assert.doesNotMatch(ui, /Ollama|Gemma|ocr/i, 'Teacher Content UI should not expose forbidden generation/OCR actions.');
+  assert.doesNotMatch(ui, /Ollama|ocr/i, 'Teacher Content UI should not expose forbidden generation/OCR actions.');
   assert.doesNotMatch(style, /Ollama|Gemma|ocr/i, 'Teacher Content styles should not add forbidden generation/OCR references.');
   assert.doesNotMatch(ui, />\s*Generate Draft\s*</i, 'Teacher Content UI should not use Generate Draft as a visible button label.');
   assert.doesNotMatch(ui, /\/api\/student|\/api\/chat|\/api\/router-test/, 'Teacher Content UI should not reference student/router endpoints.');

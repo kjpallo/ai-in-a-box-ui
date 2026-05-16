@@ -6,12 +6,19 @@ const os = require('node:os');
 const path = require('node:path');
 
 const { loadApprovedKnowledgePacks } = require('../lib/knowledge/loadApprovedKnowledgePacks');
+const { validateKnowledgePack } = require('../lib/knowledge/validateKnowledgePack');
 const { buildKnowledgePackPrompt } = require('../lib/uploads/buildKnowledgePackPrompt');
 const {
   DEFAULT_OLLAMA_KEEP_ALIVE,
   DEFAULT_OLLAMA_TIMEOUT_MS,
+  DEFAULT_BATCH_MAX_CHARACTERS,
+  DEFAULT_RETRY_BATCH_MAX_CHARACTERS,
+  DEFAULT_PREVIEW_MAX_PAGES,
+  buildImportEstimate,
+  buildExtractionBatches,
   callOllamaGenerate,
-  generateDraftKnowledgePack
+  generateDraftKnowledgePack,
+  makeSelectedExtraction
 } = require('../lib/uploads/generateDraftKnowledgePack');
 
 const projectRoot = path.join(__dirname, '..');
@@ -42,8 +49,16 @@ async function main() {
     await assertOllamaRequestIncludesKeepAliveAndUsesTimeout();
     await assertOllamaTimeoutReturnsUsefulError();
     await assertValidMockCreatesDraft();
+    await assertMultiChunkUploadMergesBatchDrafts();
+    await assertLargePdfSplitsIntoPageChunksAndBatches();
+    await assertPreviewModeProcessesOnlyFirstPagesAndWritesNoDraft();
+    await assertSelectedPageRangeProcessesOnlySelectedPages();
+    await assertModelCallsStaySequential();
+    await assertModelCrashRetriesWithSmallerChunks();
+    await assertRetryFailureReportsBatchCoverage();
     await assertCodeFencedJsonCreatesDraft();
     await assertExtraTextAroundJsonCreatesDraftWhenUnambiguous();
+    await assertItemOnlyModelOutputGetsWrappedFromKnowledgeName();
     await assertMissingMetadataIsNormalizedAndValidates();
     await assertMissingTopLevelArraysAreNormalizedAndValidate();
     await assertVocabularyReviewStatusIsNormalized();
@@ -53,12 +68,94 @@ async function main() {
     await assertInvalidMockJsonReturnsUsefulError();
     await assertRetryInvalidJsonCanRepairDraft();
     await assertInvalidStandardsAreRejected();
+    assertRawInvalidPacketStillFailsValidator();
     assertApprovedPacksAreNotModified();
   } finally {
     cleanupTempRoot();
   }
 
   console.log('Draft knowledge pack generation tests passed.');
+}
+
+async function assertItemOnlyModelOutputGetsWrappedFromKnowledgeName() {
+  const itemOnlyPath = path.join(tempRoot, 'item_only_upload_extraction.json');
+  fs.writeFileSync(itemOnlyPath, `${JSON.stringify({
+    ...makeExtraction(),
+    upload: {
+      uploadId: 'upload-20260516-0037',
+      originalFileName: 'Packet KEY Energy CP.pdf',
+      storedFileName: 'upload-20260516-0037.pdf',
+      extractionJsonFileName: 'upload-20260516-0037_extraction.json'
+    },
+    fileName: 'Packet KEY Energy CP.pdf',
+    extension: '.pdf',
+    mimeGuess: 'application/pdf',
+    metadata: {
+      detectedType: 'pdf',
+      characterCount: makeExtraction().text.length,
+      pageCount: 2
+    }
+  }, null, 2)}\n`);
+
+  const itemOnlyDraft = {
+    vocabulary: [makeVocabularyItem()],
+    concepts: [makeConceptItem()],
+    referenceFormulas: [makeReferenceFormula()],
+    problemBank: [makeProblemItem()],
+    standardsMap: [],
+    smokeTests: [makeGeneratedPack().smokeTests[0]],
+    metadata: {
+      packId: 'model-should-not-own-wrapper',
+      title: 'Model Should Not Own Wrapper'
+    }
+  };
+
+  const result = await generateDraftKnowledgePack({
+    extractionJsonPath: itemOnlyPath,
+    outputDraftDir: path.join(tempRoot, 'item-only-wrapped-drafts'),
+    packName: 'Energy',
+    modelClient: async () => JSON.stringify(itemOnlyDraft)
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  assert.equal(result.packId, 'draft-energy-upload-20260516-0037');
+  assert.equal(result.title, 'Energy');
+  assert.deepEqual(result.sourceFiles, ['Packet KEY Energy CP.pdf']);
+  assert.ok(Array.isArray(result.timeline));
+  assert.ok(result.timeline.some((event) => event.message === 'Building draft packet wrapper'));
+  assert.ok(result.timeline.some((event) => event.message === 'Running validation'));
+
+  const generated = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
+  assert.equal(generated.schemaVersion, '1.0.0');
+  assert.equal(generated.packId, 'draft-energy-upload-20260516-0037');
+  assert.equal(generated.title, 'Energy');
+  assert.equal(generated.status, 'draft');
+  assert.equal(generated.reviewStatus, 'pending');
+  assert.equal(generated.sourceFiles[0].fileName, 'Packet KEY Energy CP.pdf');
+  assert.equal(generated.sourceFiles[0].uploadId, 'upload-20260516-0037');
+  assert.equal(generated.metadata.sourceUpload.originalFileName, 'Packet KEY Energy CP.pdf');
+  assert.equal(generated.metadata.sourceUpload.uploadId, 'upload-20260516-0037');
+  assert.equal(generated.metadata.packId, 'draft-energy-upload-20260516-0037');
+}
+
+function assertRawInvalidPacketStillFailsValidator() {
+  const validation = validateKnowledgePack({
+    title: 'Raw Invalid Packet',
+    version: '0.1.0-draft',
+    subject: 'Physical Science',
+    gradeLevel: '8',
+    sourceFiles: [],
+    vocabulary: [],
+    concepts: [],
+    referenceFormulas: [],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: [],
+    metadata: {}
+  });
+
+  assert.equal(validation.valid, false);
+  assert.ok(validation.errors.includes('Missing required top-level field: packId'));
 }
 
 function assertPromptIncludesControls() {
@@ -68,8 +165,14 @@ function assertPromptIncludesControls() {
 
   assert.ok(prompt.includes('Do not invent facts.'));
   assert.ok(prompt.includes('Do not invent standards.'));
+  assert.ok(prompt.includes('Use only the provided extracted text.'));
+  assert.ok(prompt.includes('Do not add outside examples, outside definitions, outside standards, or outside problem details.'));
   assert.ok(prompt.includes('solverStatus: "reference_only"'));
   assert.ok(prompt.includes('Do not create solver code.'));
+  assert.ok(prompt.includes('Do not describe solver logic.'));
+  assert.ok(prompt.includes('Every generated vocabulary, concept, referenceFormula, and problemBank item must include sourceFile, sourceLocation, sourceTextSnippet, confidence, and reviewStatus.'));
+  assert.ok(prompt.includes('Formulas may be included only as referenceFormulas.'));
+  assert.ok(prompt.includes('reviewStatus: "pending" and confidence: "low"'));
   assert.ok(prompt.includes('Return valid JSON only.'));
   assert.ok(prompt.includes('Return one JSON object only.'));
   assert.ok(prompt.includes('Do not use markdown.'));
@@ -225,6 +328,10 @@ async function assertValidMockCreatesDraft() {
 
   assert.equal(result.success, true, result.errors.join('\n'));
   assert.equal(result.packId, 'generated-force-draft');
+  assert.equal(result.title, 'Generated Force Draft');
+  assert.deepEqual(result.sourceFiles, ['teacher_force_notes.txt']);
+  assert.equal(result.extractionCharacterCount, makeExtraction().text.length);
+  assert.equal(result.extractionChunkCount, 1);
   assert.equal(result.validationPassed, true);
   assert.ok(result.outputPath.endsWith(path.join('generated-force-draft', 'knowledge_pack.json')));
 
@@ -234,6 +341,274 @@ async function assertValidMockCreatesDraft() {
   assert.equal(generated.problemBank[0].reviewStatus, 'pending');
   assert.equal(generated.referenceFormulas[0].solverStatus, 'reference_only');
   assert.equal(generated.referenceFormulas[0].reviewStatus, 'pending');
+  assert.equal(result.coverageReport.totalChunks, 1);
+  assert.equal(result.coverageReport.processedChunks, 1);
+  assert.equal(result.coverageReport.chunksWithDraftItems, 1);
+}
+
+async function assertMultiChunkUploadMergesBatchDrafts() {
+  const multiChunkPath = path.join(tempRoot, 'multi_chunk_extraction.json');
+  fs.writeFileSync(multiChunkPath, `${JSON.stringify(makeMultiChunkExtraction(), null, 2)}\n`);
+
+  const calls = [];
+  const result = await generateDraftKnowledgePack({
+    extractionJsonPath: multiChunkPath,
+    outputDraftDir: path.join(tempRoot, 'multi-chunk-drafts'),
+    maxBatchChunks: 1,
+    modelClient: async ({ prompt }) => {
+      calls.push(prompt);
+      const index = calls.length;
+      return JSON.stringify(makeGeneratedPack({
+        packId: 'generated-multi-chunk-draft',
+        vocabulary: [makeVocabularyItemForChunk(index)],
+        concepts: [makeConceptItemForChunk(index)],
+        referenceFormulas: [],
+        problemBank: [makeProblemItemForChunk(index)],
+        standardsMap: [],
+        smokeTests: [
+          {
+            question: `What does topic ${index} say?`,
+            expectedAnswer: `Topic ${index} answer from the source.`,
+            reviewStatus: 'pending',
+            confidence: 'low'
+          }
+        ]
+      }));
+    }
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  assert.equal(calls.length, 3);
+  assert.ok(calls[0].includes('batch 1 of 3'));
+  assert.ok(calls[1].includes('Chunk 2'));
+  assert.equal(result.coverageReport.totalChunks, 3);
+  assert.equal(result.coverageReport.processedChunks, 3);
+  assert.equal(result.coverageReport.chunksWithDraftItems, 3);
+  assert.equal(result.coverageReport.itemCounts.vocabulary, 3);
+
+  const generated = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
+  assert.equal(generated.vocabulary.length, 3);
+  assert.equal(generated.concepts.length, 3);
+  assert.equal(generated.problemBank.length, 3);
+  assert.equal(generated.metadata.importBatches, 3);
+  assert.equal(generated.metadata.importCoverage.processedChunks, 3);
+  assert.equal(generated.vocabulary[1].sourceLocation, 'Chunk 2');
+  assert.equal(generated.problemBank[2].sourceTextSnippet, 'Chunk 3 includes a practice prompt.');
+}
+
+async function assertLargePdfSplitsIntoPageChunksAndBatches() {
+  const extraction = makeLargePdfExtraction();
+  const largePdfPath = path.join(tempRoot, 'large_pdf_extraction.json');
+  fs.writeFileSync(largePdfPath, `${JSON.stringify(extraction, null, 2)}\n`);
+
+  const plan = buildExtractionBatches(extraction, {
+    maxBatchCharacters: DEFAULT_BATCH_MAX_CHARACTERS,
+    maxBatchChunks: 2
+  });
+  assert.ok(plan.chunks.length > 1, 'large PDF should not remain one giant Gemma chunk');
+  assert.ok(plan.batches.length > 1, 'large PDF should become multiple Gemma batches');
+  plan.batches.forEach((batch) => {
+    assert.ok(String(batch.extraction.text || '').length <= DEFAULT_BATCH_MAX_CHARACTERS + 80, `batch too large: ${batch.extraction.text.length}`);
+  });
+  assert.equal(plan.chunks[0].pageNumber, 1);
+  assert.equal(plan.chunks[0].sourceLocation, 'Page 1');
+  assert.ok(plan.chunks[0].sourceSnippet.includes('Synthetic energy page 1'));
+
+  const calls = [];
+  const result = await generateDraftKnowledgePack({
+    extractionJsonPath: largePdfPath,
+    outputDraftDir: path.join(tempRoot, 'large-pdf-drafts'),
+    maxBatchChunks: 2,
+    modelClient: async ({ prompt }) => {
+      calls.push(prompt);
+      const pageMatch = prompt.match(/Page (\d+)/);
+      const page = pageMatch ? Number(pageMatch[1]) : calls.length;
+      return JSON.stringify(makeGeneratedPack({
+        packId: 'generated-large-pdf-draft',
+        vocabulary: [makeVocabularyItemForPage(page)],
+        concepts: [makeConceptItemForPage(page)],
+        referenceFormulas: [],
+        problemBank: [],
+        standardsMap: [],
+        smokeTests: []
+      }));
+    }
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  assert.ok(calls.length > 1);
+  assert.equal(result.coverageReport.totalPages, 29);
+  assert.equal(result.coverageReport.totalChunks, plan.chunks.length);
+  assert.equal(result.coverageReport.processedChunks, plan.chunks.length);
+
+  const generated = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
+  assert.ok(generated.vocabulary.some((item) => item.sourceLocation.includes('Page 1')));
+  assert.ok(generated.metadata.importCoverage.totalChunks > 1);
+}
+
+async function assertPreviewModeProcessesOnlyFirstPagesAndWritesNoDraft() {
+  const previewPath = path.join(tempRoot, 'large_preview_extraction.json');
+  fs.writeFileSync(previewPath, `${JSON.stringify(makeLargePdfExtraction({ pages: 8, charactersPerPage: 900 }), null, 2)}\n`);
+  const outputDraftDir = path.join(tempRoot, 'preview-drafts');
+  const prompts = [];
+  const result = await generateDraftKnowledgePack({
+    extractionJsonPath: previewPath,
+    outputDraftDir,
+    previewOnly: true,
+    modelClient: async ({ prompt }) => {
+      prompts.push(prompt);
+      return JSON.stringify(makeGeneratedPack({ packId: 'generated-preview-draft' }));
+    }
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  assert.equal(result.preview, true);
+  assert.equal(result.previewReport.processedPageCount, DEFAULT_PREVIEW_MAX_PAGES);
+  assert.ok(result.fullImportEstimate.characterCount > result.previewReport.processedCharacterCount);
+  assert.equal(fs.existsSync(outputDraftDir), false, 'preview mode should not write a final draft pack.');
+  assert.ok(prompts.some((prompt) => prompt.includes('Page 1')));
+  assert.ok(prompts.every((prompt) => !prompt.includes('Page 4')));
+}
+
+async function assertSelectedPageRangeProcessesOnlySelectedPages() {
+  const selectedPath = path.join(tempRoot, 'selected_range_extraction.json');
+  const extraction = makeLargePdfExtraction({ pages: 6, charactersPerPage: 700 });
+  fs.writeFileSync(selectedPath, `${JSON.stringify(extraction, null, 2)}\n`);
+
+  const selected = makeSelectedExtraction(extraction, {
+    importMode: 'selected',
+    importSelection: {
+      pageStart: 2,
+      pageEnd: 4
+    }
+  });
+  assert.equal(selected.success, true, selected.errors && selected.errors.join('\n'));
+  assert.deepEqual(selected.importSelection.pages, [2, 3, 4]);
+  assert.equal(selected.extraction.metadata.partialImport, true);
+
+  const prompts = [];
+  const result = await generateDraftKnowledgePack({
+    extractionJsonPath: selectedPath,
+    outputDraftDir: path.join(tempRoot, 'selected-range-drafts'),
+    packName: 'Selected Range',
+    importMode: 'selected',
+    importSelection: {
+      pageStart: 2,
+      pageEnd: 4
+    },
+    modelClient: async ({ prompt }) => {
+      prompts.push(prompt);
+      assert.ok(!prompt.includes('Synthetic energy page 1'), 'selected import must not send page 1 to Gemma');
+      assert.ok(!prompt.includes('Synthetic energy page 5'), 'selected import must not send page 5 to Gemma');
+      return JSON.stringify(makeGeneratedPack({
+        packId: 'generated-selected-range-draft',
+        vocabulary: [makeVocabularyItemForPage(2)],
+        concepts: [makeConceptItemForPage(2)],
+        referenceFormulas: [],
+        problemBank: [],
+        standardsMap: [],
+        smokeTests: []
+      }));
+    }
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  assert.deepEqual(result.importSelection.pages, [2, 3, 4]);
+  assert.equal(result.importSelection.completePacketImported, false);
+  assert.ok(result.selectedImportEstimate.characterCount < result.fullImportEstimate.characterCount);
+  assert.ok(result.timeline.some((event) => event.type === 'import_selection_ready'));
+  assert.ok(prompts.length >= 1);
+
+  const generated = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
+  assert.deepEqual(generated.metadata.partialImport.importedPages, [2, 3, 4]);
+  assert.equal(generated.metadata.partialImport.completePacketImported, false);
+  assert.equal(generated.metadata.partialImport.originalPageCount, 6);
+  assert.equal(generated.metadata.importSelection.label, 'Pages 2-4');
+  assert.equal(generated.metadata.importCoverage.totalPages, 3);
+  assert.equal(generated.vocabulary[0].sourceLocation, 'Page 2');
+}
+
+async function assertModelCallsStaySequential() {
+  const sequentialPath = path.join(tempRoot, 'sequential_extraction.json');
+  fs.writeFileSync(sequentialPath, `${JSON.stringify(makeLargePdfExtraction({ pages: 5, charactersPerPage: 900 }), null, 2)}\n`);
+  let activeCalls = 0;
+  let maxActiveCalls = 0;
+  let calls = 0;
+  const result = await generateDraftKnowledgePack({
+    extractionJsonPath: sequentialPath,
+    outputDraftDir: path.join(tempRoot, 'sequential-drafts'),
+    maxBatchCharacters: 1000,
+    modelClient: async () => {
+      activeCalls += 1;
+      maxActiveCalls = Math.max(maxActiveCalls, activeCalls);
+      calls += 1;
+      await new Promise((resolve) => setTimeout(resolve, 2));
+      activeCalls -= 1;
+      return JSON.stringify(makeGeneratedPack({ packId: `generated-sequential-draft-${calls}` }));
+    }
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  assert.ok(calls > 1, 'sequential test should exercise multiple batches.');
+  assert.equal(maxActiveCalls, 1, 'Gemma model calls must run one batch at a time.');
+}
+
+async function assertModelCrashRetriesWithSmallerChunks() {
+  const extraction = makeLargePdfExtraction({ pages: 2, charactersPerPage: 3200 });
+  const crashPath = path.join(tempRoot, 'large_retry_extraction.json');
+  fs.writeFileSync(crashPath, `${JSON.stringify(extraction, null, 2)}\n`);
+
+  const calls = [];
+  const result = await generateDraftKnowledgePack({
+    extractionJsonPath: crashPath,
+    outputDraftDir: path.join(tempRoot, 'retry-smaller-drafts'),
+    maxBatchCharacters: 7000,
+    retryMaxBatchCharacters: DEFAULT_RETRY_BATCH_MAX_CHARACTERS,
+    modelClient: async ({ prompt }) => {
+      calls.push(prompt);
+      if (calls.length === 1) {
+        throw new Error('Ollama returned HTTP 500: {"error":"model runner has unexpectedly stopped, this may be due to resource limitations"}');
+      }
+      assert.ok(prompt.length < calls[0].length, 'retry prompt should be smaller than the failed prompt');
+      return JSON.stringify(makeGeneratedPack({
+        packId: 'generated-retried-model-crash-draft',
+        vocabulary: [makeVocabularyItemForPage(calls.length - 1)],
+        concepts: [makeConceptItemForPage(calls.length - 1)],
+        referenceFormulas: [],
+        problemBank: [],
+        standardsMap: [],
+        smokeTests: []
+      }));
+    }
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  assert.ok(calls.length > 1, 'model crash should retry with smaller chunks');
+  assert.ok(result.timeline.some((event) => event.type === 'batch_retry'));
+  assert.ok(result.timeline.some((event) => event.type === 'batch_retry_sent'));
+}
+
+async function assertRetryFailureReportsBatchCoverage() {
+  const extraction = makeLargePdfExtraction({ pages: 2, charactersPerPage: 3200 });
+  const failurePath = path.join(tempRoot, 'large_retry_failure_extraction.json');
+  fs.writeFileSync(failurePath, `${JSON.stringify(extraction, null, 2)}\n`);
+
+  const result = await generateDraftKnowledgePack({
+    extractionJsonPath: failurePath,
+    outputDraftDir: path.join(tempRoot, 'retry-failure-drafts'),
+    maxBatchCharacters: 7000,
+    retryMaxBatchCharacters: DEFAULT_RETRY_BATCH_MAX_CHARACTERS,
+    modelClient: async () => {
+      throw new Error('Ollama returned HTTP 500: {"error":"model runner has unexpectedly stopped, this may be due to resource limitations"}');
+    }
+  });
+
+  assert.equal(result.success, false);
+  assert.ok(result.errors.some((error) => error.includes('Gemma crashed while reading batch 1')));
+  assert.ok(result.errors.some((error) => error.includes('retried with smaller chunks')));
+  assert.ok(result.coverageReport.failedBatches.length >= 1);
+  assert.ok(result.coverageReport.warnings.some((warning) => warning.includes('Model draft failed for batch 1')));
+  assert.ok(result.timeline.some((event) => event.type === 'error' && event.message.includes('Gemma crashed while reading batch 1')));
 }
 
 async function assertCodeFencedJsonCreatesDraft() {
@@ -296,7 +671,7 @@ async function assertMissingMetadataIsNormalizedAndValidates() {
 
   assert.equal(result.success, true, result.errors.join('\n'));
   const generated = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
-  assert.deepEqual(generated.metadata, {});
+  assert.equal(generated.metadata.importCoverage.totalChunks, 1);
 }
 
 async function assertMissingTopLevelArraysAreNormalizedAndValidate() {
@@ -559,6 +934,84 @@ function makeExtraction() {
   };
 }
 
+function makeMultiChunkExtraction() {
+  return {
+    success: true,
+    filePath: '/tmp/synthetic_packet.txt',
+    fileName: 'synthetic_packet.txt',
+    extension: '.txt',
+    mimeGuess: 'text/plain',
+    text: [
+      'Vocabulary: Chunk 1 term means the first source-supported idea.',
+      'Concepts: Chunk 2 concept explains the second source-supported idea.',
+      'Practice Problems: Chunk 3 includes a practice prompt.'
+    ].join('\n\n'),
+    sections: [
+      {
+        label: 'Chunk 1',
+        sourceLocation: 'Chunk 1',
+        text: 'Vocabulary: Chunk 1 term means the first source-supported idea.'
+      },
+      {
+        label: 'Chunk 2',
+        sourceLocation: 'Chunk 2',
+        text: 'Concepts: Chunk 2 concept explains the second source-supported idea.'
+      },
+      {
+        label: 'Chunk 3',
+        sourceLocation: 'Chunk 3',
+        text: 'Practice Problems: Chunk 3 includes a practice prompt.'
+      }
+    ],
+    tables: [],
+    metadata: {
+      detectedType: 'txt',
+      characterCount: 176,
+      pageCount: 3
+    },
+    warnings: [],
+    errors: []
+  };
+}
+
+function makeLargePdfExtraction(options = {}) {
+  const pageCount = Number(options.pages || 29);
+  const charactersPerPage = Number(options.charactersPerPage || 1200);
+  const pages = Array.from({ length: pageCount }, (_, index) => {
+    const pageNumber = index + 1;
+    const seed = `Synthetic energy page ${pageNumber}. Vocabulary: page-${pageNumber}-term. Concept: page ${pageNumber} explains energy practice with source-supported details. `;
+    return {
+      pageNumber,
+      text: seed.repeat(Math.ceil(charactersPerPage / seed.length)).slice(0, charactersPerPage)
+    };
+  });
+  const text = pages.map((page) => page.text).join('\n\n');
+  return {
+    success: true,
+    filePath: '/tmp/large_energy_packet.pdf',
+    fileName: 'large_energy_packet.pdf',
+    extension: '.pdf',
+    mimeGuess: 'application/pdf',
+    text,
+    pages,
+    sections: [
+      {
+        label: 'Full Text',
+        sourceLocation: 'Full Text',
+        text
+      }
+    ],
+    tables: [],
+    metadata: {
+      detectedType: 'pdf',
+      characterCount: text.length,
+      pageCount
+    },
+    warnings: [],
+    errors: []
+  };
+}
+
 function makeGeneratedPack(overrides = {}) {
   return {
     packId: 'generated-force-draft',
@@ -607,6 +1060,27 @@ function makeGeneratedPack(overrides = {}) {
   };
 }
 
+function makeVocabularyItemForPage(page) {
+  return {
+    ...makeVocabularyItem(),
+    term: `page-${page}-term`,
+    sourceFile: 'large_energy_packet.pdf',
+    sourceLocation: `Page ${page}`,
+    sourceTextSnippet: `Synthetic energy page ${page}`
+  };
+}
+
+function makeConceptItemForPage(page) {
+  return {
+    ...makeConceptItem(),
+    conceptId: `page-${page}-concept`,
+    title: `Page ${page} Concept`,
+    sourceFile: 'large_energy_packet.pdf',
+    sourceLocation: `Page ${page}`,
+    sourceTextSnippet: `Synthetic energy page ${page}`
+  };
+}
+
 function makeVocabularyItem() {
   return {
     term: 'force',
@@ -622,6 +1096,21 @@ function makeVocabularyItem() {
     sourceFile: 'teacher_force_notes.txt',
     sourceLocation: 'Full Text',
     sourceTextSnippet: 'Force is a push or pull.'
+  };
+}
+
+function makeVocabularyItemForChunk(index) {
+  return {
+    ...makeVocabularyItem(),
+    term: `chunk-${index}-term`,
+    aliases: [],
+    studentDefinition: `Chunk ${index} term definition from the source.`,
+    teacherDefinition: `Chunk ${index} term teacher definition from the source.`,
+    standards: [],
+    confidence: 'low',
+    sourceFile: 'synthetic_packet.txt',
+    sourceLocation: `Chunk ${index}`,
+    sourceTextSnippet: `Chunk ${index} term means the first source-supported idea.`
   };
 }
 
@@ -641,6 +1130,21 @@ function makeConceptItem() {
     sourceFile: 'teacher_force_notes.txt',
     sourceLocation: 'Full Text',
     sourceTextSnippet: 'Net force can change motion.'
+  };
+}
+
+function makeConceptItemForChunk(index) {
+  return {
+    ...makeConceptItem(),
+    conceptId: `chunk-${index}-concept`,
+    title: `Chunk ${index} Concept`,
+    standards: [],
+    confidence: 'low',
+    sourceFile: 'synthetic_packet.txt',
+    sourceLocation: `Chunk ${index}`,
+    sourceTextSnippet: index === 2
+      ? 'Chunk 2 concept explains the second source-supported idea.'
+      : `Chunk ${index} term means the first source-supported idea.`
   };
 }
 
@@ -684,6 +1188,22 @@ function makeProblemItem() {
     sourceFile: 'teacher_force_notes.txt',
     sourceLocation: 'Full Text',
     sourceTextSnippet: 'Force is a push or pull.'
+  };
+}
+
+function makeProblemItemForChunk(index) {
+  return {
+    ...makeProblemItem(),
+    problemId: `chunk-${index}-problem`,
+    question: `Synthetic source question ${index}?`,
+    expectedAnswer: `Synthetic source answer ${index}.`,
+    standards: [],
+    confidence: 'low',
+    sourceFile: 'synthetic_packet.txt',
+    sourceLocation: `Chunk ${index}`,
+    sourceTextSnippet: index === 3
+      ? 'Chunk 3 includes a practice prompt.'
+      : `Chunk ${index} term means the first source-supported idea.`
   };
 }
 
