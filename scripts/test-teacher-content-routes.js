@@ -8,6 +8,7 @@ const projectRoot = path.join(__dirname, '..');
 const tempRoot = path.join(projectRoot, 'tmp', 'test-teacher-content-routes');
 const draftPacksDir = path.join(tempRoot, 'draft-packs');
 const approvedPacksDir = path.join(tempRoot, 'approved-packs');
+const activationRegistryPath = path.join(approvedPacksDir, '_activation.json');
 const uploadIncomingDir = path.join(tempRoot, 'uploads', 'incoming');
 const uploadExtractedDir = path.join(tempRoot, 'uploads', 'extracted');
 const rawModelResponsesDir = path.join(tempRoot, 'model-responses');
@@ -98,6 +99,11 @@ async function main() {
     await assertInvalidReviewStatusRejected(handlers);
     await assertSolverStatusEditRejected(handlers);
     await assertApprovedEndpoint(handlers);
+    await assertApprovedActivationEndpointEnablesPack(handlers);
+    await assertApprovedActivationEndpointDisablesPack(handlers);
+    await assertInvalidApprovedActivationPathTraversalRejected(handlers);
+    await assertMissingApprovedActivationPackRejected(handlers);
+    await assertNonBooleanApprovedActivationRejected(handlers);
     await assertMissingDraftReportEndpoint(handlers);
     await assertPathTraversalRejected(handlers);
     assertRealApprovedPacksAreNotModified();
@@ -403,7 +409,82 @@ async function assertApprovedEndpoint(handlers) {
   assert.ok(response.body.data.approvedPacks.length >= 1);
   const approvedPack = response.body.data.approvedPacks.find((pack) => pack.packId === 'route-approved-pack');
   assert.equal(approvedPack.packId, 'route-approved-pack');
+  assert.equal(approvedPack.activationEnabled, false);
+  assert.equal(approvedPack.activationStatus, 'disabled');
   assert.ok(response.body.data.indexedCounts.vocabularyTerms >= 1);
+}
+
+async function assertApprovedActivationEndpointEnablesPack(handlers) {
+  const approvedBefore = snapshotKnowledgePackFiles(approvedPacksDir);
+  const draftBefore = snapshotFiles(draftPacksDir);
+  const response = await request(handlers, 'PATCH', '/approved/:packId/activation', {
+    enabled: true
+  }, {
+    packId: 'route-approved-pack'
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.data.packId, 'route-approved-pack');
+  assert.equal(response.body.data.activationEnabled, true);
+  assert.equal(response.body.data.activationStatus, 'enabled');
+  assert.equal(response.body.data.message, 'Activation setting saved. This does not change student answers yet.');
+  assert.equal(response.body.data.approved.activationEnabled, true);
+  assert.equal(response.body.data.approvedSummary.approvedPacks.find((pack) => pack.packId === 'route-approved-pack').activationEnabled, true);
+  assert.equal(fs.existsSync(activationRegistryPath), true, 'activation registry file should be written in the temp approved packs dir');
+  assert.equal(JSON.parse(fs.readFileSync(activationRegistryPath, 'utf8')).packs['route-approved-pack'].enabled, true);
+  assert.deepEqual(snapshotKnowledgePackFiles(approvedPacksDir), approvedBefore, 'activation should not modify approved knowledge_pack.json files');
+  assert.deepEqual(snapshotFiles(draftPacksDir), draftBefore, 'activation should not modify draft packs');
+}
+
+async function assertApprovedActivationEndpointDisablesPack(handlers) {
+  const response = await request(handlers, 'PATCH', '/approved/:packId/activation', {
+    enabled: false
+  }, {
+    packId: 'route-approved-pack'
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.data.activationEnabled, false);
+  assert.equal(response.body.data.activationStatus, 'disabled');
+  assert.equal(JSON.parse(fs.readFileSync(activationRegistryPath, 'utf8')).packs['route-approved-pack'].enabled, false);
+}
+
+async function assertInvalidApprovedActivationPathTraversalRejected(handlers) {
+  const response = await request(handlers, 'PATCH', '/approved/:packId/activation', {
+    enabled: true
+  }, {
+    packId: '../route-approved-pack'
+  });
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.success, false);
+  assert.match(response.body.errors[0], /packId/);
+}
+
+async function assertMissingApprovedActivationPackRejected(handlers) {
+  const response = await request(handlers, 'PATCH', '/approved/:packId/activation', {
+    enabled: true
+  }, {
+    packId: 'missing-approved-pack'
+  });
+
+  assert.equal(response.statusCode, 404);
+  assert.equal(response.body.success, false);
+  assert.match(response.body.errors[0], /Approved pack not found/);
+}
+
+async function assertNonBooleanApprovedActivationRejected(handlers) {
+  const response = await request(handlers, 'PATCH', '/approved/:packId/activation', {
+    enabled: 'true'
+  }, {
+    packId: 'route-approved-pack'
+  });
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.success, false);
+  assert.match(response.body.errors[0], /enabled must be a boolean/);
 }
 
 async function assertPromoteDraftEndpointSucceeds(handlers) {
@@ -999,6 +1080,14 @@ function makeStandardsBank() {
 function snapshotFiles(rootDir) {
   const snapshot = {};
   walkFiles(rootDir).forEach((filePath) => {
+    snapshot[path.relative(rootDir, filePath)] = fs.readFileSync(filePath, 'utf8');
+  });
+  return snapshot;
+}
+
+function snapshotKnowledgePackFiles(rootDir) {
+  const snapshot = {};
+  walkFiles(rootDir).filter((filePath) => path.basename(filePath) === 'knowledge_pack.json').forEach((filePath) => {
     snapshot[path.relative(rootDir, filePath)] = fs.readFileSync(filePath, 'utf8');
   });
   return snapshot;

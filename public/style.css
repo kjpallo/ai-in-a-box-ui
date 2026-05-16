@@ -3067,6 +3067,10 @@ button:disabled {
   background: rgba(102, 247, 209, 0.12);
 }
 
+.teacher-content-switch.is-on {
+  background: rgba(102, 247, 209, 0.34);
+}
+
 .teacher-content-switch span {
   display: block;
   width: 18px;
@@ -3074,6 +3078,23 @@ button:disabled {
   border-radius: 999px;
   background: var(--neon);
   box-shadow: 0 0 12px rgba(102, 247, 209, 0.42);
+}
+
+.teacher-content-switch.is-on span {
+  transform: translateX(20px);
+}
+
+.teacher-content-approved-activation-note,
+.teacher-content-approved-activation-message {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.teacher-content-approved-activation-message {
+  color: #cafff0;
+  min-height: 1.1em;
 }
 
 .teacher-content-approved-details {

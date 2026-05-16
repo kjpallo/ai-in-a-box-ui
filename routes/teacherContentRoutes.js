@@ -9,6 +9,7 @@ const {
   listApprovedPacksSummary,
   listDraftPacksForReview
 } = require('../lib/uploads/teacherContentAdapter');
+const { setApprovedPackActivation } = require('../lib/knowledge/approvedPackActivationStore');
 const { promoteDraftKnowledgePack } = require('../lib/knowledge/promoteDraftKnowledgePack');
 const {
   REVIEWABLE_SECTIONS,
@@ -253,6 +254,49 @@ function registerTeacherContentRoutes(app, options = {}) {
 
   app.get('/approved', (_req, res) => {
     sendJson(res, () => listApprovedPacksSummary(options));
+  });
+
+  app.patch('/approved/:packId/activation', (req, res) => {
+    const packId = String(req.params && req.params.packId || '').trim();
+    if (!isSafePackId(packId)) {
+      return res.status(400).json({
+        success: false,
+        errors: ['packId must contain only lowercase letters, numbers, underscores, and hyphens.']
+      });
+    }
+
+    if (!req.body || typeof req.body.enabled !== 'boolean') {
+      return res.status(400).json({
+        success: false,
+        errors: ['enabled must be a boolean.']
+      });
+    }
+
+    try {
+      const activation = setApprovedPackActivation(packId, req.body.enabled, options);
+      const approvedSummary = listApprovedPacksSummary(options);
+      const approved = approvedSummary.approvedPacks.find((pack) => pack.packId === packId) || null;
+
+      return res.json({
+        success: true,
+        data: {
+          packId,
+          activationEnabled: activation.activationEnabled,
+          activationStatus: activation.activationStatus,
+          activationUpdatedAt: activation.activationUpdatedAt,
+          message: 'Activation setting saved. This does not change student answers yet.',
+          approved,
+          approvedSummary
+        },
+        errors: [],
+        warnings: []
+      });
+    } catch (error) {
+      return res.status(error.statusCode || 500).json({
+        success: false,
+        errors: [error instanceof Error ? error.message : String(error)]
+      });
+    }
   });
 }
 

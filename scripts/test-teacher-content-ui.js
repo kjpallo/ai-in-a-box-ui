@@ -80,7 +80,8 @@ function assertEndpointReferences() {
     '/api/teacher-content/drafts/${encodeURIComponent(packId)}/promote',
     '/api/teacher-content/drafts/${encodeURIComponent(packId)}/items/${encodeURIComponent(section)}/${encodeURIComponent(index)}',
     '/api/teacher-content/drafts/${encodeURIComponent(packId)}/items/${encodeURIComponent(section)}/${encodeURIComponent(index)}/status',
-    '/api/teacher-content/approved'
+    '/api/teacher-content/approved',
+    '/api/teacher-content/approved/${encodeURIComponent(packId)}/activation'
   ];
 
   expectedEndpoints.forEach((endpoint) => {
@@ -94,6 +95,7 @@ function assertEndpointReferences() {
     endpointKeys.sort(),
     [
       'approved',
+      'approvedActivation',
       'dashboard',
       'draftItem',
       'draftItemStatus',
@@ -153,8 +155,7 @@ function assertDisabledPlaceholders() {
   [
     'data-standards-bank-select',
     'data-coming-soon="standards-upload"',
-    'data-coming-soon="pack-toggle"',
-    'Activation coming soon'
+    'data-coming-soon="standards-replace"'
   ].forEach((marker) => {
     assert.ok(ui.includes(marker), `Expected placeholder marker ${marker}.`);
   });
@@ -445,6 +446,12 @@ function assertApprovedPacksPolishUi() {
     'data-approved-pack-standards-count',
     'data-approved-pack-smoke-test-count',
     'data-approved-pack-indexed-total',
+    'data-approved-pack-activation-toggle',
+    'data-approved-pack-toggle-action',
+    'data-approved-pack-activation-status',
+    'data-approved-pack-activation-badge',
+    'data-approved-pack-activation-note',
+    'data-approved-pack-activation-message',
     'data-approved-searchable-summary',
     'data-approved-searchable-vocabulary-terms',
     'data-approved-searchable-concepts',
@@ -454,10 +461,12 @@ function assertApprovedPacksPolishUi() {
     'Searchable concepts',
     'Searchable problem questions',
     'Searchable standards',
-    'data-approved-pack-switch-placeholder',
-    'Student use toggle coming later',
-    'Activation coming soon',
+    'Saving activation setting...',
+    'Activation setting saved',
+    'Enabled',
+    'Disabled',
     'Not connected to student answers yet',
+    'This setting is saved for future student activation. This does not change student answers yet. Student router activation will be added in a later phase.',
     'data-no-approved-packs-empty-state',
     'No approved knowledge packs yet.',
     'Review and promote a draft from the Import Report tab to create one.',
@@ -468,12 +477,9 @@ function assertApprovedPacksPolishUi() {
     assert.ok(ui.includes(marker), `Expected Approved Packs polish marker ${marker}.`);
   });
 
-  assert.match(
-    ui,
-    /data-approved-pack-switch-placeholder[\s\S]{0,180}disabled|disabled[\s\S]{0,180}data-approved-pack-switch-placeholder/,
-    'Approved pack switch placeholder should be disabled.'
-  );
-  assert.doesNotMatch(ui, /\/api\/teacher-content\/approved\/[^'"]*(enable|disable|toggle)|approved.*(enable|disable).*fetchJson/i, 'Approved pack switch should not reference enable/disable endpoints.');
+  assert.doesNotMatch(ui, /data-approved-pack-switch-placeholder/, 'Approved pack switch should no longer be a disabled placeholder.');
+  assert.ok(ui.includes("method: 'PATCH'"), 'Approved pack activation should save with PATCH.');
+  assert.ok(ui.includes('approvedActivation'), 'Approved pack activation endpoint helper should exist.');
 }
 
 function assertNoForbiddenUiActions() {
@@ -484,8 +490,7 @@ function assertNoForbiddenUiActions() {
   assert.doesNotMatch(ui, /\/api\/teacher-content\/drafts\/generate|\/api\/generate-draft|generateDraft/i, 'Teacher Content UI should not reference draft generation endpoints.');
   assert.doesNotMatch(ui, /data-upload-action|data-pack-toggle-action/, 'Teacher Content UI should not implement old placeholder upload/toggle actions.');
   assert.equal((ui.match(/data-promote-draft/g) || []).length, 2, 'Promotion should remain limited to Import Report action wiring.');
-  assert.doesNotMatch(ui, /data-approved-pack-toggle-action/i, 'Approved-pack switches should remain disabled/placeholders.');
-  assert.match(ui, /data-approved-pack-switch-placeholder[\s\S]{0,180}disabled|disabled[\s\S]{0,180}data-approved-pack-switch-placeholder/, 'Approved-pack switch placeholder should remain disabled.');
+  assert.ok(ui.includes('data-approved-pack-toggle-action'), 'Approved-pack switches should be real activation controls.');
 }
 
 function assertPackageScript() {

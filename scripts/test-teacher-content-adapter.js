@@ -141,8 +141,27 @@ function assertApprovedPackSummary() {
   assert.equal(result.indexedCounts.standards, 1);
   assert.equal(result.searchableCounts.vocabularyTerms, 2);
   assert.equal(result.approvedPacks[0].packId, 'teacher-content-approved');
+  assert.equal(result.approvedPacks[0].activationEnabled, false);
+  assert.equal(result.approvedPacks[0].activationStatus, 'disabled');
+  assert.equal(result.approvedPacks[0].activationUpdatedAt, undefined);
   assert.equal(result.approvedPacks[0].itemCounts.vocabulary, 2);
   assert.equal(result.approvedPacks[0].indexedCounts.vocabularyTerms, 2);
+
+  const activationUpdatedAt = '2026-05-15T12:00:00.000Z';
+  fs.writeFileSync(path.join(approvedPacksDir, '_activation.json'), `${JSON.stringify({
+    version: 1,
+    packs: {
+      'teacher-content-approved': {
+        enabled: true,
+        updatedAt: activationUpdatedAt
+      }
+    }
+  }, null, 2)}\n`);
+
+  const activated = listApprovedPacksSummary({ approvedPacksDir, standardsBank });
+  assert.equal(activated.approvedPacks[0].activationEnabled, true);
+  assert.equal(activated.approvedPacks[0].activationStatus, 'enabled');
+  assert.equal(activated.approvedPacks[0].activationUpdatedAt, activationUpdatedAt);
 }
 
 function assertInvalidPacksAreErrors() {

@@ -13,7 +13,8 @@
     promoteDraft: (packId) => `/api/teacher-content/drafts/${encodeURIComponent(packId)}/promote`,
     draftItem: (packId, section, index) => `/api/teacher-content/drafts/${encodeURIComponent(packId)}/items/${encodeURIComponent(section)}/${encodeURIComponent(index)}`,
     draftItemStatus: (packId, section, index) => `/api/teacher-content/drafts/${encodeURIComponent(packId)}/items/${encodeURIComponent(section)}/${encodeURIComponent(index)}/status`,
-    approved: '/api/teacher-content/approved'
+    approved: '/api/teacher-content/approved',
+    approvedActivation: (packId) => `/api/teacher-content/approved/${encodeURIComponent(packId)}/activation`
   };
 
   const TABS = [
@@ -64,6 +65,8 @@
     approved: [],
     approvedIndexedCounts: null,
     approvedSearchableCounts: null,
+    approvedActivationSaving: {},
+    approvedActivationMessages: {},
     report: null,
     selectedReviewItem: null,
     reviewActionLoading: false,
@@ -251,6 +254,13 @@
       if (approvedEmptyNav) {
         event.preventDefault();
         setActiveTab(approvedEmptyNav.getAttribute('data-approved-empty-tab'));
+        return;
+      }
+
+      const approvedActivationToggle = event.target.closest('[data-approved-pack-toggle-action]');
+      if (approvedActivationToggle) {
+        event.preventDefault();
+        toggleApprovedPackActivation(approvedActivationToggle);
       }
     });
 
@@ -1192,7 +1202,7 @@
         <span>Approved</span>
         <span>Indexed</span>
         <span>Not connected to student answers yet</span>
-        <span>Activation coming soon</span>
+        <span>Activation setting saved</span>
       </section>
       <div class="teacher-content-approved-list">
         ${state.approved.map(renderApprovedPack).join('')}
@@ -1206,6 +1216,11 @@
     const indexed = pack.indexedCounts || {};
     const searchable = pack.searchableCounts || indexed;
     const indexedTotal = Object.values(indexed).reduce((sum, value) => sum + Number(value || 0), 0);
+    const packId = pack.packId || '';
+    const activationEnabled = pack.activationEnabled === true;
+    const activationSaving = state.approvedActivationSaving[packId] === true;
+    const activationMessage = state.approvedActivationMessages[packId] || '';
+    const activationLabel = activationSaving ? 'Saving...' : (activationEnabled ? 'Enabled' : 'Disabled');
     return `
       <section class="teacher-content-approved-pack" data-approved-pack-card>
         <div class="teacher-content-approved-head">
@@ -1214,17 +1229,22 @@
             <span data-approved-pack-pack-id>${escapeHtml(pack.packId || 'No pack ID')}</span>
           </div>
           <div class="teacher-content-switch-block">
-            <button type="button" class="teacher-content-switch" disabled aria-label="Student use toggle coming later" data-coming-soon="pack-toggle" data-approved-pack-switch-placeholder>
+            <button type="button" class="teacher-content-switch${activationEnabled ? ' is-on' : ''}" aria-pressed="${activationEnabled ? 'true' : 'false'}" aria-label="Save approved pack activation preference" ${activationSaving || !packId ? 'disabled' : ''} data-approved-pack-toggle-action data-approved-pack-id="${escapeAttr(packId)}" data-approved-pack-activation-toggle>
               <span></span>
             </button>
-            <small>Activation coming soon</small>
+            <small data-approved-pack-activation-status>${escapeHtml(activationLabel)}</small>
           </div>
         </div>
         <div class="teacher-content-approved-badges">
           <span>Approved</span>
           <span>Indexed</span>
           <span>Not connected to student answers yet</span>
+          <span data-approved-pack-activation-badge>${activationEnabled ? 'Enabled' : 'Disabled'}</span>
         </div>
+        <p class="teacher-content-approved-activation-note" data-approved-pack-activation-note>
+          This setting is saved for future student activation. This does not change student answers yet. Student router activation will be added in a later phase.
+        </p>
+        <p class="teacher-content-approved-activation-message" data-approved-pack-activation-message>${escapeHtml(activationMessage)}</p>
         <div class="teacher-content-approved-meta" data-approved-pack-metadata>
           ${metadataPill('Subject', pack.subject || 'Not set', 'data-approved-pack-subject')}
           ${metadataPill('Grade level', pack.gradeLevel || 'Not set', 'data-approved-pack-grade-level')}
@@ -1593,6 +1613,43 @@
     applySettledResult(draftsResult, 'drafts');
     applySettledResult(approvedResult, 'approved');
     await loadSelectedDraftReport();
+  }
+
+  async function toggleApprovedPackActivation(button) {
+    const packId = button.getAttribute('data-approved-pack-id') || '';
+    if (!packId || state.approvedActivationSaving[packId]) return;
+
+    const pack = state.approved.find((item) => item.packId === packId);
+    const enabled = !(pack && pack.activationEnabled === true);
+    state.approvedActivationSaving = { ...state.approvedActivationSaving, [packId]: true };
+    state.approvedActivationMessages = { ...state.approvedActivationMessages, [packId]: 'Saving activation setting...' };
+    setStatus('Saving activation setting...');
+    render();
+
+    try {
+      const payload = await fetchJson(ENDPOINTS.approvedActivation(packId), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled })
+      });
+      const data = unwrap(payload);
+      state.approvedActivationMessages = {
+        ...state.approvedActivationMessages,
+        [packId]: data?.message || 'Activation setting saved. This does not change student answers yet.'
+      };
+      if (data?.approvedSummary) applyApprovedSummary(data.approvedSummary);
+      await refreshTeacherContentSummaries();
+      setStatus('Activation setting saved. This does not change student answers yet.');
+    } catch (error) {
+      state.approvedActivationMessages = {
+        ...state.approvedActivationMessages,
+        [packId]: `Activation setting failed: ${error.message || 'Route error'}`
+      };
+      setStatus('Activation setting failed.');
+    } finally {
+      state.approvedActivationSaving = { ...state.approvedActivationSaving, [packId]: false };
+      render();
+    }
   }
 
   function applyApprovedSummary(data) {
