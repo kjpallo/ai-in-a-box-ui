@@ -14,10 +14,12 @@ const {
   DEFAULT_BATCH_MAX_CHARACTERS,
   DEFAULT_RETRY_BATCH_MAX_CHARACTERS,
   DEFAULT_PREVIEW_MAX_PAGES,
+  DEFAULT_PREVIEW_MAX_CHARACTERS,
   buildImportEstimate,
   buildExtractionBatches,
   callOllamaGenerate,
   generateDraftKnowledgePack,
+  identifyTextBearingPages,
   makeSelectedExtraction
 } = require('../lib/uploads/generateDraftKnowledgePack');
 
@@ -47,11 +49,23 @@ async function main() {
     await assertDefaultTimeoutAndKeepAliveReachModelClient();
     await assertCustomTimeoutAndKeepAliveReachModelClient();
     await assertOllamaRequestIncludesKeepAliveAndUsesTimeout();
+    await assertModelCallsUseDeterministicOptions();
     await assertOllamaTimeoutReturnsUsefulError();
     await assertValidMockCreatesDraft();
     await assertMultiChunkUploadMergesBatchDrafts();
+    await assertDuplicateVocabularyAcrossChunksIsMergedWithEvidence();
+    await assertSingularPluralVocabularyDuplicatesMergeWithAliases();
+    await assertParentheticalAbbreviationsBecomeAliases();
+    await assertVocabularyAndConceptCanSharePhrase();
+    await assertFormulaLikeSourceCreatesReferenceFormula();
+    await assertDamagedFormulaStaysPendingLowConfidence();
     await assertLargePdfSplitsIntoPageChunksAndBatches();
     await assertPreviewModeProcessesOnlyFirstPagesAndWritesNoDraft();
+    await assertUltraSafePreviewUsesOneSmallChunk();
+    await assertTextBearingPageMetadataAndEmptyPageFailure();
+    await assertFullImportDefaultsToAllTextBearingPages();
+    await assertPreviewBatchFailureReturnsPartialPreview();
+    await assertPreviewValidationFailureReturnsSalvagedPreview();
     await assertSelectedPageRangeProcessesOnlySelectedPages();
     await assertModelCallsStaySequential();
     await assertModelCrashRetriesWithSmallerChunks();
@@ -64,6 +78,10 @@ async function main() {
     await assertVocabularyReviewStatusIsNormalized();
     await assertFormulaSolverStatusIsNormalized();
     await assertConceptStructuralFieldsAreNormalized();
+    await assertConceptIdDerivedFromClaim();
+    await assertConceptTitleDerivedFromSummary();
+    await assertVocabularyTermAndIdAreNormalized();
+    await assertSourceLessItemsAreKeptPendingReview();
     await assertRequiredFactFieldsAreStillRejected();
     await assertInvalidMockJsonReturnsUsefulError();
     await assertRetryInvalidJsonCanRepairDraft();
@@ -156,6 +174,39 @@ function assertRawInvalidPacketStillFailsValidator() {
 
   assert.equal(validation.valid, false);
   assert.ok(validation.errors.includes('Missing required top-level field: packId'));
+
+  const missingConceptFields = validateKnowledgePack({
+    packId: 'raw-missing-concept-fields',
+    title: 'Raw Missing Concept Fields',
+    version: '0.1.0-draft',
+    subject: 'Physical Science',
+    gradeLevel: '8',
+    sourceFiles: [],
+    vocabulary: [],
+    concepts: [
+      {
+        aliases: [],
+        keyIdeas: [],
+        examples: [],
+        nonExamples: [],
+        commonMisconceptions: [],
+        standards: [],
+        reviewStatus: 'pending',
+        confidence: 'low',
+        sourceFile: 'raw.txt',
+        sourceLocation: 'p. 1',
+        sourceTextSnippet: 'Raw concept text.'
+      }
+    ],
+    referenceFormulas: [],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: [],
+    metadata: {}
+  });
+  assert.equal(missingConceptFields.valid, false);
+  assert.ok(missingConceptFields.errors.includes('concepts[0].conceptId must be a non-empty string.'));
+  assert.ok(missingConceptFields.errors.includes('concepts[0].title must be a non-empty string.'));
 }
 
 function assertPromptIncludesControls() {
@@ -171,7 +222,18 @@ function assertPromptIncludesControls() {
   assert.ok(prompt.includes('Do not create solver code.'));
   assert.ok(prompt.includes('Do not describe solver logic.'));
   assert.ok(prompt.includes('Every generated vocabulary, concept, referenceFormula, and problemBank item must include sourceFile, sourceLocation, sourceTextSnippet, confidence, and reviewStatus.'));
+  assert.ok(prompt.includes('Only include vocabulary terms explicitly present in the provided source text.'));
+  assert.ok(prompt.includes('Every vocabulary sourceTextSnippet must contain the term itself or very close wording from the source.'));
   assert.ok(prompt.includes('Formulas may be included only as referenceFormulas.'));
+  assert.ok(prompt.includes('Vocabulary = a named term, unit, variable, abbreviation, or phrase explicitly defined in the source text.'));
+  assert.ok(prompt.includes('Concept = a larger idea, relationship, category, process, or explanation supported by the source text.'));
+  assert.ok(prompt.includes('Reference formula = equation-like text, formula line, symbolic relationship, or unit relationship from the source.'));
+  assert.ok(prompt.includes('Problem bank = a worked example, practice question, exercise, or check-for-understanding prompt with an answer or expected answer from the source.'));
+  assert.ok(prompt.includes('The same phrase may appear once in vocabulary and once in concepts when the source supports both roles.'));
+  assert.ok(prompt.includes('Do not dedupe across vocabulary and concepts'));
+  assert.ok(prompt.includes('Preserve abbreviations shown in parentheses as aliases'));
+  assert.ok(prompt.includes('Treat simple singular/plural variants as the same vocabulary term'));
+  assert.ok(prompt.includes('Uploaded/reference formulas are for teacher review only and must not claim or imply built-in solver support.'));
   assert.ok(prompt.includes('reviewStatus: "pending" and confidence: "low"'));
   assert.ok(prompt.includes('Return valid JSON only.'));
   assert.ok(prompt.includes('Return one JSON object only.'));
@@ -215,6 +277,8 @@ async function assertDefaultTimeoutAndKeepAliveReachModelClient() {
   assert.equal(calls.length, 1);
   assert.equal(calls[0].timeoutMs, DEFAULT_OLLAMA_TIMEOUT_MS);
   assert.equal(calls[0].keepAlive, DEFAULT_OLLAMA_KEEP_ALIVE);
+  assert.equal(calls[0].options.temperature, 0);
+  assert.equal(calls[0].options.seed, 42);
 }
 
 async function assertCustomTimeoutAndKeepAliveReachModelClient() {
@@ -280,9 +344,34 @@ async function assertOllamaRequestIncludesKeepAliveAndUsesTimeout() {
     assert.equal(requests[0].body.keep_alive, '7m');
     assert.equal(requests[0].body.stream, false);
     assert.equal(requests[0].body.format, 'json');
+    assert.equal(requests[0].body.options.temperature, 0);
+    assert.equal(requests[0].body.options.seed, 42);
   } finally {
     restoreHttpRequest();
   }
+}
+
+async function assertModelCallsUseDeterministicOptions() {
+  const calls = [];
+  const result = await generateDraftKnowledgePack({
+    extractionJsonPath: extractionPath,
+    outputDraftDir: path.join(tempRoot, 'deterministic-options-drafts'),
+    modelClient: async (options) => {
+      calls.push(options);
+      return JSON.stringify(makeGeneratedPack({ packId: 'generated-deterministic-options-draft' }));
+    }
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  assert.deepEqual(calls[0].options, {
+    temperature: 0,
+    seed: 42,
+    top_p: 1,
+    top_k: 40
+  });
+  assert.equal(result.inputSnapshot.modelSettings.temperature, 0);
+  assert.equal(result.inputSnapshot.promptVersion, 'teacher-content-draft-v2');
+  assert.ok(result.inputSnapshot.chunkTextHashes[0].hash);
 }
 
 async function assertOllamaTimeoutReturnsUsefulError() {
@@ -396,6 +485,212 @@ async function assertMultiChunkUploadMergesBatchDrafts() {
   assert.equal(generated.problemBank[2].sourceTextSnippet, 'Chunk 3 includes a practice prompt.');
 }
 
+async function assertDuplicateVocabularyAcrossChunksIsMergedWithEvidence() {
+  const multiChunkPath = path.join(tempRoot, 'duplicate_vocab_extraction.json');
+  fs.writeFileSync(multiChunkPath, `${JSON.stringify(makeMultiChunkExtraction(), null, 2)}\n`);
+
+  let callCount = 0;
+  const result = await generateDraftKnowledgePack({
+    extractionJsonPath: multiChunkPath,
+    outputDraftDir: path.join(tempRoot, 'duplicate-vocab-drafts'),
+    maxBatchChunks: 1,
+    modelClient: async () => {
+      callCount += 1;
+      return JSON.stringify(makeGeneratedPack({
+        packId: 'generated-duplicate-vocab-draft',
+        vocabulary: [{
+          ...makeVocabularyItemForChunk(callCount),
+          term: callCount === 1 ? 'Net Force' : 'net-force',
+          sourceLocation: `Chunk ${callCount}`,
+          sourceTextSnippet: `Chunk ${callCount} says net force.`
+        }],
+        concepts: [],
+        referenceFormulas: [],
+        problemBank: [],
+        standardsMap: [],
+        smokeTests: []
+      }));
+    }
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  const generated = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
+  assert.equal(generated.vocabulary.length, 1);
+  assert.equal(generated.metadata.deduplication.vocabulary.raw, 3);
+  assert.equal(generated.metadata.deduplication.vocabulary.duplicatesRemoved, 2);
+  assert.equal(generated.metadata.deduplication.vocabulary.final, 1);
+  assert.ok(generated.vocabulary[0].sourceReferences.length >= 3);
+  assert.ok(generated.vocabulary[0].sourceReferences.some((reference) => reference.sourceLocation === 'Chunk 2'));
+}
+
+async function assertSingularPluralVocabularyDuplicatesMergeWithAliases() {
+  const result = await generateDraftKnowledgePack({
+    extractionJsonPath: extractionPath,
+    outputDraftDir: path.join(tempRoot, 'singular-plural-vocab-drafts'),
+    modelClient: async () => JSON.stringify(makeGeneratedPack({
+      packId: 'generated-singular-plural-vocab-draft',
+      vocabulary: [
+        {
+          ...makeVocabularyItem(),
+          term: 'Joule',
+          aliases: [],
+          sourceLocation: 'Page 2',
+          sourceTextSnippet: 'A Joule is a unit of energy.'
+        },
+        {
+          ...makeVocabularyItem(),
+          term: 'Joules',
+          aliases: [],
+          sourceLocation: 'Page 3',
+          sourceTextSnippet: 'Energy is measured in Joules.'
+        }
+      ],
+      concepts: [],
+      referenceFormulas: [],
+      problemBank: [],
+      standardsMap: [],
+      smokeTests: []
+    }))
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  const generated = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
+  assert.equal(generated.vocabulary.length, 1);
+  assert.equal(generated.vocabulary[0].term, 'Joule');
+  assert.ok(generated.vocabulary[0].aliases.includes('Joules'));
+  assert.equal(generated.metadata.deduplication.vocabulary.duplicatesRemoved, 1);
+  assert.ok(generated.vocabulary[0].sourceReferences.some((reference) => reference.sourceLocation === 'Page 3'));
+}
+
+async function assertParentheticalAbbreviationsBecomeAliases() {
+  const result = await generateDraftKnowledgePack({
+    extractionJsonPath: extractionPath,
+    outputDraftDir: path.join(tempRoot, 'parenthetical-alias-drafts'),
+    modelClient: async () => JSON.stringify(makeGeneratedPack({
+      packId: 'generated-parenthetical-alias-draft',
+      vocabulary: [
+        {
+          ...makeVocabularyItem(),
+          term: 'Kinetic Energy (KE)',
+          aliases: [],
+          sourceTextSnippet: 'Kinetic Energy (KE) is energy of motion.'
+        },
+        {
+          ...makeVocabularyItem(),
+          term: 'joule',
+          aliases: [],
+          sourceTextSnippet: 'A joule (J) is a unit.'
+        }
+      ],
+      concepts: [],
+      referenceFormulas: [],
+      problemBank: [],
+      standardsMap: [],
+      smokeTests: []
+    }))
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  const generated = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
+  const kineticEnergy = generated.vocabulary.find((item) => item.term === 'Kinetic Energy');
+  const joule = generated.vocabulary.find((item) => item.term === 'joule');
+  assert.ok(kineticEnergy);
+  assert.ok(kineticEnergy.aliases.includes('KE'));
+  assert.ok(joule);
+  assert.ok(joule.aliases.includes('J'));
+}
+
+async function assertVocabularyAndConceptCanSharePhrase() {
+  const result = await generateDraftKnowledgePack({
+    extractionJsonPath: extractionPath,
+    outputDraftDir: path.join(tempRoot, 'shared-vocab-concept-drafts'),
+    modelClient: async () => JSON.stringify(makeGeneratedPack({
+      packId: 'generated-shared-vocab-concept-draft',
+      vocabulary: [
+        {
+          ...makeVocabularyItem(),
+          term: 'Kinetic Energy',
+          sourceTextSnippet: 'Kinetic energy is energy of motion.'
+        }
+      ],
+      concepts: [
+        {
+          ...makeConceptItem(),
+          conceptId: 'kinetic-energy',
+          title: 'Kinetic Energy',
+          sourceTextSnippet: 'Kinetic energy depends on mass and speed.'
+        }
+      ],
+      referenceFormulas: [],
+      problemBank: [],
+      standardsMap: [],
+      smokeTests: []
+    }))
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  const generated = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
+  assert.equal(generated.vocabulary.length, 1);
+  assert.equal(generated.concepts.length, 1);
+  assert.equal(generated.vocabulary[0].term, 'Kinetic Energy');
+  assert.equal(generated.concepts[0].title, 'Kinetic Energy');
+}
+
+async function assertFormulaLikeSourceCreatesReferenceFormula() {
+  const formulaPath = path.join(tempRoot, 'formula_source_extraction.json');
+  fs.writeFileSync(formulaPath, `${JSON.stringify(makeFormulaExtraction(), null, 2)}\n`);
+
+  const result = await generateDraftKnowledgePack({
+    extractionJsonPath: formulaPath,
+    outputDraftDir: path.join(tempRoot, 'formula-source-drafts'),
+    modelClient: async () => JSON.stringify(makeGeneratedPack({
+      packId: 'generated-formula-source-draft',
+      vocabulary: [],
+      concepts: [],
+      referenceFormulas: [],
+      problemBank: [],
+      standardsMap: [],
+      smokeTests: []
+    }))
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  const generated = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
+  assert.equal(generated.referenceFormulas.length, 1);
+  assert.equal(generated.referenceFormulas[0].equation, 'v = d / t');
+  assert.equal(generated.referenceFormulas[0].solverStatus, 'reference_only');
+  assert.equal(generated.referenceFormulas[0].reviewStatus, 'pending');
+  assert.equal(generated.referenceFormulas[0].sourceLocation, 'Page 1');
+  assert.ok(generated.referenceFormulas[0].sourceTextSnippet.includes('v = d / t'));
+  assert.ok(generated.referenceFormulas[0].variables.some((variable) => variable.symbol === 'v' && variable.meaning === 'speed'));
+}
+
+async function assertDamagedFormulaStaysPendingLowConfidence() {
+  const result = await generateDraftKnowledgePack({
+    extractionJsonPath: extractionPath,
+    outputDraftDir: path.join(tempRoot, 'damaged-formula-drafts'),
+    modelClient: async () => JSON.stringify(makeGeneratedPack({
+      packId: 'generated-damaged-formula-draft',
+      referenceFormulas: [
+        {
+          ...makeReferenceFormula(),
+          equation: 'W = � / t',
+          confidence: 'high',
+          reviewStatus: 'approved'
+        }
+      ]
+    }))
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  const generated = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
+  assert.equal(generated.referenceFormulas[0].equation, 'W = � / t');
+  assert.equal(generated.referenceFormulas[0].solverStatus, 'reference_only');
+  assert.equal(generated.referenceFormulas[0].reviewStatus, 'pending');
+  assert.equal(generated.referenceFormulas[0].confidence, 'low');
+  assert.ok(generated.referenceFormulas[0].normalizationNotes.some((note) => note.includes('extraction-damaged')));
+}
+
 async function assertLargePdfSplitsIntoPageChunksAndBatches() {
   const extraction = makeLargePdfExtraction();
   const largePdfPath = path.join(tempRoot, 'large_pdf_extraction.json');
@@ -464,10 +759,239 @@ async function assertPreviewModeProcessesOnlyFirstPagesAndWritesNoDraft() {
   assert.equal(result.success, true, result.errors.join('\n'));
   assert.equal(result.preview, true);
   assert.equal(result.previewReport.processedPageCount, DEFAULT_PREVIEW_MAX_PAGES);
+  assert.equal(result.previewReport.importScope.scope, 'preview_sample');
+  assert.equal(result.previewReport.importScope.sampleOnly, true);
+  assert.equal(result.previewReport.importScope.rangeLabel, 'Pages 1-1');
   assert.ok(result.fullImportEstimate.characterCount > result.previewReport.processedCharacterCount);
   assert.equal(fs.existsSync(outputDraftDir), false, 'preview mode should not write a final draft pack.');
   assert.ok(prompts.some((prompt) => prompt.includes('Page 1')));
   assert.ok(prompts.every((prompt) => !prompt.includes('Page 4')));
+}
+
+async function assertUltraSafePreviewUsesOneSmallChunk() {
+  const previewPath = path.join(tempRoot, 'ultra_safe_preview_extraction.json');
+  fs.writeFileSync(previewPath, `${JSON.stringify(makeLargePdfExtraction({ pages: 4, charactersPerPage: 1800 }), null, 2)}\n`);
+  const outputDraftDir = path.join(tempRoot, 'ultra-safe-preview-drafts');
+  const prompts = [];
+  const result = await generateDraftKnowledgePack({
+    extractionJsonPath: previewPath,
+    outputDraftDir,
+    previewOnly: true,
+    previewMode: 'ultra-safe',
+    previewMaxCharacters: 800,
+    modelClient: async ({ prompt }) => {
+      prompts.push(prompt);
+      return JSON.stringify(makeGeneratedPack({ packId: 'generated-ultra-safe-preview-draft' }));
+    }
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  assert.equal(result.previewReport.processedPageCount, 1);
+  assert.equal(result.previewReport.processedChunkCount, 1);
+  assert.ok(result.previewReport.processedCharacterCount <= 800);
+  assert.equal(prompts.length, 1, 'ultra-safe preview should make one Gemma call.');
+  assert.equal(fs.existsSync(outputDraftDir), false, 'ultra-safe preview should not write a final draft pack.');
+}
+
+async function assertTextBearingPageMetadataAndEmptyPageFailure() {
+  const extraction = makeLargePdfExtraction({ pages: 4, charactersPerPage: 700 });
+  extraction.pages = extraction.pages.filter((page) => page.pageNumber !== 1);
+  extraction.text = extraction.pages.map((page) => page.text).join('\n\n');
+  extraction.metadata.characterCount = extraction.text.length;
+
+  const textPageInfo = identifyTextBearingPages(extraction);
+  assert.deepEqual(textPageInfo.pages, [2, 3, 4]);
+  assert.equal(textPageInfo.firstTextPage, 2);
+
+  const estimate = buildImportEstimate(extraction, {});
+  assert.equal(estimate.firstTextPage, 2);
+  assert.deepEqual(estimate.textBearingPages, [2, 3, 4]);
+
+  const selected = makeSelectedExtraction(extraction, {
+    importMode: 'selected',
+    importSelection: {
+      pageStart: 1,
+      pageEnd: 1
+    }
+  });
+  assert.equal(selected.success, false);
+  assert.ok(selected.errors[0].includes('The selected page exists, but no extractable text was found there.'));
+  assert.ok(selected.errors[0].includes('Try page 2, the first page with extracted text.'));
+
+  const blankExtraction = {
+    ...extraction,
+    text: '',
+    pages: [],
+    sections: [],
+    metadata: {
+      ...extraction.metadata,
+      characterCount: 0,
+      pageCount: 4
+    }
+  };
+  const blankSelected = makeSelectedExtraction(blankExtraction, {
+    importMode: 'selected',
+    importSelection: {
+      pageStart: 1,
+      pageEnd: 1
+    }
+  });
+  assert.equal(blankSelected.success, false);
+  assert.deepEqual(blankSelected.errors, ['No extractable text was found in this upload.']);
+}
+
+async function assertFullImportDefaultsToAllTextBearingPages() {
+  const fullPath = path.join(tempRoot, 'full_text_bearing_extraction.json');
+  const extraction = makeLargePdfExtraction({ pages: 5, charactersPerPage: 700 });
+  extraction.pages[0].text = '';
+  extraction.pages[4].text = '';
+  extraction.text = extraction.pages.map((page) => page.text).join('\n\n');
+  extraction.metadata.characterCount = extraction.text.length;
+  fs.writeFileSync(fullPath, `${JSON.stringify(extraction, null, 2)}\n`);
+
+  const prompts = [];
+  const result = await generateDraftKnowledgePack({
+    extractionJsonPath: fullPath,
+    outputDraftDir: path.join(tempRoot, 'full-text-bearing-drafts'),
+    maxBatchChunks: 1,
+    modelClient: async ({ prompt }) => {
+      prompts.push(prompt);
+      const pageMatch = prompt.match(/Synthetic energy page (\d+)/);
+      const page = pageMatch ? Number(pageMatch[1]) : prompts.length + 1;
+      return JSON.stringify(makeGeneratedPack({
+        packId: 'generated-full-text-bearing-draft',
+        vocabulary: [makeVocabularyItemForPage(page)],
+        concepts: [makeConceptItemForPage(page)],
+        referenceFormulas: [],
+        problemBank: [],
+        standardsMap: [],
+        smokeTests: []
+      }));
+    }
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  assert.equal(result.importSelection, null);
+  assert.equal(result.importScope.scope, 'full_document');
+  assert.equal(result.importScope.completePacketImported, true);
+  assert.deepEqual(result.importScope.pages, [2, 3, 4]);
+  assert.equal(result.importScope.rangeLabel, 'Pages 2-4');
+  assert.ok(prompts.length >= 3, 'full import should loop through all text-bearing page chunks.');
+  assert.ok(prompts.every((prompt) => !prompt.includes('Synthetic energy page 1')));
+  assert.ok(prompts.every((prompt) => !prompt.includes('Synthetic energy page 5')));
+  assert.ok(result.timeline.some((event) => event.type === 'batch_sent' && event.details.pageRange));
+  assert.ok(result.timeline.some((event) => event.type === 'batch_received' && event.details.itemCounts));
+
+  const generated = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
+  assert.equal(generated.metadata.importScope.scope, 'full_document');
+  assert.equal(generated.metadata.importScope.rangeLabel, 'Pages 2-4');
+  assert.equal(generated.metadata.importScope.completePacketImported, true);
+}
+
+async function assertPreviewBatchFailureReturnsPartialPreview() {
+  const previewPath = path.join(tempRoot, 'partial_preview_extraction.json');
+  fs.writeFileSync(previewPath, `${JSON.stringify(makeLargePdfExtraction({ pages: 3, charactersPerPage: 900 }), null, 2)}\n`);
+  const outputDraftDir = path.join(tempRoot, 'partial-preview-drafts');
+  let calls = 0;
+  const result = await generateDraftKnowledgePack({
+    extractionJsonPath: previewPath,
+    outputDraftDir,
+    previewOnly: true,
+    previewMode: 'normal',
+    previewMaxPages: 2,
+    previewMaxCharacters: DEFAULT_PREVIEW_MAX_CHARACTERS,
+    modelClient: async () => {
+      calls += 1;
+      if (calls > 1) {
+        throw new Error('Ollama returned HTTP 500: {"error":"model runner has unexpectedly stopped, this may be due to resource limitations"}');
+      }
+      return JSON.stringify(makeGeneratedPack({
+        packId: 'generated-partial-preview-draft',
+        vocabulary: [makeVocabularyItemForPage(1)],
+        concepts: [makeConceptItemForPage(1)],
+        referenceFormulas: [],
+        problemBank: [],
+        standardsMap: [],
+        smokeTests: []
+      }));
+    }
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  assert.equal(result.preview, true);
+  assert.equal(result.partialPreview, true);
+  assert.equal(result.validationPassed, false);
+  assert.ok(result.previewReport.itemCounts ? true : result.previewReport.pack.vocabulary.length > 0);
+  assert.ok(result.previewReport.failedBatches.length >= 1);
+  assert.ok(result.timeline.some((event) => event.type === 'partial_preview_ready'));
+  assert.equal(fs.existsSync(outputDraftDir), false, 'partial preview must not write a final draft pack.');
+}
+
+async function assertPreviewValidationFailureReturnsSalvagedPreview() {
+  const previewPath = path.join(tempRoot, 'salvaged_validation_preview_extraction.json');
+  fs.writeFileSync(previewPath, `${JSON.stringify(makeLargePdfExtraction({ pages: 1, charactersPerPage: 900 }), null, 2)}\n`);
+  const outputDraftDir = path.join(tempRoot, 'salvaged-validation-preview-drafts');
+  const invalidPack = makeGeneratedPack({
+    packId: 'generated-salvaged-validation-preview',
+    concepts: [makeConceptItemForPage(1)],
+    referenceFormulas: [
+      {
+        ...makeReferenceFormula(),
+        equation: ''
+      }
+    ],
+    problemBank: [
+      {
+        ...makeProblemItem(),
+        expectedAnswer: ''
+      }
+    ],
+    standardsMap: [],
+    smokeTests: []
+  });
+  const modelClient = async () => JSON.stringify(invalidPack);
+
+  const previewResult = await generateDraftKnowledgePack({
+    extractionJsonPath: previewPath,
+    outputDraftDir,
+    rawModelResponsesDir,
+    previewOnly: true,
+    previewMode: 'ultra-safe',
+    previewMaxCharacters: 1000,
+    modelClient
+  });
+
+  assert.equal(previewResult.success, true, previewResult.errors.join('\n'));
+  assert.equal(previewResult.preview, true);
+  assert.equal(previewResult.partialPreview, true);
+  assert.equal(previewResult.validationPassed, false);
+  assert.equal(previewResult.previewReport.partialPreview, true);
+  assert.equal(previewResult.previewReport.validationPassed, false);
+  assert.equal(previewResult.previewReport.pack.concepts.length, 1);
+  assert.equal(previewResult.previewReport.pack.referenceFormulas.length, 0);
+  assert.equal(previewResult.previewReport.pack.problemBank.length, 0);
+  assert.ok(previewResult.invalidItems.length >= 2);
+  assert.ok(previewResult.previewReport.invalidItems.some((entry) => entry.section === 'referenceFormulas'));
+  assert.ok(previewResult.previewReport.invalidItems.some((entry) => entry.section === 'problemBank'));
+  assert.ok(previewResult.previewReport.validationErrors.includes('referenceFormulas[0].equation must be a non-empty string.'));
+  assert.ok(previewResult.previewReport.validationErrors.includes('problemBank[0].expectedAnswer must be a non-empty string.'));
+  assert.ok(previewResult.timeline.some((event) => event.type === 'preview_validation_repair_needed'));
+  assert.ok(previewResult.timeline.some((event) => event.type === 'preview_valid_items_kept'));
+  assert.ok(previewResult.timeline.some((event) => event.type === 'preview_invalid_items_quarantined'));
+  assert.ok(previewResult.timeline.some((event) => event.type === 'preview_final_draft_not_written'));
+  assert.equal(fs.existsSync(outputDraftDir), false, 'preview salvage must not write a final draft pack.');
+
+  const fullResult = await generateDraftKnowledgePack({
+    extractionJsonPath: previewPath,
+    outputDraftDir,
+    rawModelResponsesDir,
+    modelClient
+  });
+  assert.equal(fullResult.success, false);
+  assert.equal(fullResult.validationPassed, false);
+  assert.ok(fullResult.errors.includes('referenceFormulas[0].equation must be a non-empty string.'));
+  assert.ok(fullResult.errors.includes('problemBank[0].expectedAnswer must be a non-empty string.'));
+  assert.equal(fs.existsSync(outputDraftDir), false, 'strict full import should not write the invalid draft pack.');
 }
 
 async function assertSelectedPageRangeProcessesOnlySelectedPages() {
@@ -514,6 +1038,8 @@ async function assertSelectedPageRangeProcessesOnlySelectedPages() {
 
   assert.equal(result.success, true, result.errors.join('\n'));
   assert.deepEqual(result.importSelection.pages, [2, 3, 4]);
+  assert.equal(result.importScope.scope, 'selected_range');
+  assert.equal(result.importScope.rangeLimited, true);
   assert.equal(result.importSelection.completePacketImported, false);
   assert.ok(result.selectedImportEstimate.characterCount < result.fullImportEstimate.characterCount);
   assert.ok(result.timeline.some((event) => event.type === 'import_selection_ready'));
@@ -524,6 +1050,8 @@ async function assertSelectedPageRangeProcessesOnlySelectedPages() {
   assert.equal(generated.metadata.partialImport.completePacketImported, false);
   assert.equal(generated.metadata.partialImport.originalPageCount, 6);
   assert.equal(generated.metadata.importSelection.label, 'Pages 2-4');
+  assert.equal(generated.metadata.importScope.scope, 'selected_range');
+  assert.equal(generated.metadata.importScope.warning, 'This draft covers only Pages 2-4. It does not mark the whole packet imported.');
   assert.equal(generated.metadata.importCoverage.totalPages, 3);
   assert.equal(generated.vocabulary[0].sourceLocation, 'Page 2');
 }
@@ -696,7 +1224,9 @@ async function assertMissingTopLevelArraysAreNormalizedAndValidate() {
   assert.equal(generated.sourceFiles[0].fileName, 'teacher_force_notes.txt');
   assert.deepEqual(generated.vocabulary, []);
   assert.deepEqual(generated.concepts, []);
-  assert.deepEqual(generated.referenceFormulas, []);
+  assert.equal(generated.referenceFormulas.length, 1);
+  assert.equal(generated.referenceFormulas[0].equation, 'F = m * a');
+  assert.equal(generated.referenceFormulas[0].solverStatus, 'reference_only');
   assert.deepEqual(generated.problemBank, []);
   assert.deepEqual(generated.standardsMap, []);
   assert.deepEqual(generated.smokeTests, []);
@@ -786,6 +1316,113 @@ async function assertConceptStructuralFieldsAreNormalized() {
   assert.ok(generated.concepts[0].sourceTextSnippet.includes('Force is a push or pull.'));
 }
 
+async function assertConceptIdDerivedFromClaim() {
+  const concept = makeConceptItem();
+  delete concept.conceptId;
+  concept.title = '';
+  concept.claim = 'Net force changes motion';
+
+  const result = await generateDraftKnowledgePack({
+    extractionJsonPath: extractionPath,
+    outputDraftDir: path.join(tempRoot, 'concept-id-derived-drafts'),
+    modelClient: async () => JSON.stringify(makeGeneratedPack({
+      packId: 'generated-concept-id-derived-draft',
+      concepts: [concept]
+    }))
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  const generated = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
+  assert.equal(generated.concepts[0].conceptId, 'concept-net-force-changes-motion');
+  assert.equal(generated.concepts[0].title, 'Net force changes motion');
+  assert.ok(generated.concepts[0].normalizationNotes.some((note) => note.includes('concept ID')));
+  assert.ok(generated.metadata.importNormalization.conceptIdsGenerated >= 1);
+
+  const repeatResult = await generateDraftKnowledgePack({
+    extractionJsonPath: extractionPath,
+    outputDraftDir: path.join(tempRoot, 'concept-id-derived-repeat-drafts'),
+    modelClient: async () => JSON.stringify(makeGeneratedPack({
+      packId: 'generated-concept-id-derived-repeat-draft',
+      concepts: [concept]
+    }))
+  });
+  assert.equal(repeatResult.success, true, repeatResult.errors.join('\n'));
+  const repeated = JSON.parse(fs.readFileSync(repeatResult.outputPath, 'utf8'));
+  assert.equal(repeated.concepts[0].conceptId, generated.concepts[0].conceptId);
+}
+
+async function assertConceptTitleDerivedFromSummary() {
+  const concept = makeConceptItem();
+  concept.conceptId = '';
+  concept.title = '';
+  concept.claim = '';
+  concept.summary = 'Balanced forces do not change an object motion.';
+
+  const result = await generateDraftKnowledgePack({
+    extractionJsonPath: extractionPath,
+    outputDraftDir: path.join(tempRoot, 'concept-title-derived-drafts'),
+    modelClient: async () => JSON.stringify(makeGeneratedPack({
+      packId: 'generated-concept-title-derived-draft',
+      concepts: [concept]
+    }))
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  const generated = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
+  assert.equal(generated.concepts[0].title, 'Balanced forces do not change an object motion');
+  assert.equal(generated.concepts[0].conceptId, 'concept-balanced-forces-do-not-change-an-object-motion');
+  assert.ok(generated.concepts[0].normalizationNotes.some((note) => note.includes('concept title')));
+  assert.ok(generated.metadata.importNormalization.conceptTitlesGenerated >= 1);
+}
+
+async function assertVocabularyTermAndIdAreNormalized() {
+  const vocabulary = makeVocabularyItem();
+  delete vocabulary.term;
+  vocabulary.synonym = 'force';
+
+  const result = await generateDraftKnowledgePack({
+    extractionJsonPath: extractionPath,
+    outputDraftDir: path.join(tempRoot, 'vocab-term-normalized-drafts'),
+    modelClient: async () => JSON.stringify(makeGeneratedPack({
+      packId: 'generated-vocab-term-normalized-draft',
+      vocabulary: [vocabulary]
+    }))
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  const generated = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
+  assert.equal(generated.vocabulary[0].term, 'force');
+  assert.equal(generated.vocabulary[0].vocabId, 'vocab-force');
+  assert.ok(generated.metadata.importNormalization.vocabularyTermsGenerated >= 1);
+  assert.ok(generated.metadata.importNormalization.vocabularyIdsGenerated >= 1);
+}
+
+async function assertSourceLessItemsAreKeptPendingReview() {
+  const concept = makeConceptItem();
+  delete concept.sourceFile;
+  delete concept.sourceLocation;
+  delete concept.sourceTextSnippet;
+  concept.confidence = 'high';
+
+  const result = await generateDraftKnowledgePack({
+    extractionJsonPath: extractionPath,
+    outputDraftDir: path.join(tempRoot, 'sourceless-normalized-drafts'),
+    modelClient: async () => JSON.stringify(makeGeneratedPack({
+      packId: 'generated-sourceless-normalized-draft',
+      concepts: [concept]
+    }))
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  const generated = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
+  assert.equal(generated.concepts[0].reviewStatus, 'pending');
+  assert.equal(generated.concepts[0].confidence, 'low');
+  assert.equal(generated.concepts[0].sourceFile, 'teacher_force_notes.txt');
+  assert.ok(generated.concepts[0].normalizationNotes.some((note) => note.includes('Source evidence was filled')));
+  assert.ok(generated.metadata.importNormalization.sourceEvidenceFilled >= 1);
+  assert.ok(generated.metadata.importNormalization.reviewNeededItems >= 1);
+}
+
 async function assertRequiredFactFieldsAreStillRejected() {
   const outputDraftDir = path.join(tempRoot, 'missing-facts-drafts');
   const result = await generateDraftKnowledgePack({
@@ -794,16 +1431,16 @@ async function assertRequiredFactFieldsAreStillRejected() {
     rawModelResponsesDir,
     modelClient: async () => JSON.stringify(makeGeneratedPack({
       packId: 'generated-missing-facts-draft',
-      vocabulary: [
+      referenceFormulas: [
         {
-          ...makeVocabularyItem(),
-          term: ''
+          ...makeReferenceFormula(),
+          equation: ''
         }
       ],
-      concepts: [
+      problemBank: [
         {
-          ...makeConceptItem(),
-          title: ''
+          ...makeProblemItem(),
+          expectedAnswer: ''
         }
       ]
     }))
@@ -811,13 +1448,13 @@ async function assertRequiredFactFieldsAreStillRejected() {
 
   assert.equal(result.success, false);
   assert.equal(result.validationPassed, false);
-  assert.ok(result.errors.some((error) => error.includes('vocabulary[0].term must be a non-empty string.')));
-  assert.ok(result.errors.some((error) => error.includes('concepts[0].title must be a non-empty string.')));
+  assert.ok(result.errors.some((error) => error.includes('referenceFormulas[0].equation must be a non-empty string.')));
+  assert.ok(result.errors.some((error) => error.includes('problemBank[0].expectedAnswer must be a non-empty string.')));
   assert.ok(result.rawModelResponsePath);
   assert.ok(result.rawModelResponsePath.startsWith(rawModelResponsesDir));
   const debug = JSON.parse(fs.readFileSync(result.rawModelResponsePath, 'utf8'));
-  assert.equal(debug.normalizedDraftAttempt.vocabulary[0].term, '');
-  assert.equal(debug.normalizedDraftAttempt.concepts[0].title, '');
+  assert.equal(debug.normalizedDraftAttempt.referenceFormulas[0].equation, '');
+  assert.equal(debug.normalizedDraftAttempt.problemBank[0].expectedAnswer, '');
   assert.equal(fs.existsSync(outputDraftDir), false);
 }
 
@@ -1006,6 +1643,34 @@ function makeLargePdfExtraction(options = {}) {
       detectedType: 'pdf',
       characterCount: text.length,
       pageCount
+    },
+    warnings: [],
+    errors: []
+  };
+}
+
+function makeFormulaExtraction() {
+  const text = 'Formula: v = d / t where v is speed, d is distance, and t is time.';
+  return {
+    success: true,
+    filePath: '/tmp/formula_source.txt',
+    fileName: 'formula_source.txt',
+    extension: '.txt',
+    mimeGuess: 'text/plain',
+    text,
+    sections: [
+      {
+        label: 'Page 1',
+        sourceLocation: 'Page 1',
+        pageNumber: 1,
+        text
+      }
+    ],
+    tables: [],
+    metadata: {
+      detectedType: 'txt',
+      characterCount: text.length,
+      pageCount: 1
     },
     warnings: [],
     errors: []

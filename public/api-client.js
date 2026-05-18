@@ -8,9 +8,18 @@
         window.location.href = '/login.html';
       }
 
-      const error = new Error(data.error || data.message || `HTTP ${response.status}`);
+      const errorMessage = data.error
+        || data.message
+        || (Array.isArray(data.errors) && data.errors.length > 0 ? data.errors.join('; ') : '')
+        || data.details
+        || `HTTP ${response.status}`;
+      const error = new Error(errorMessage);
       error.status = response.status;
       error.code = data.code || '';
+      error.details = data.details || '';
+      error.errors = Array.isArray(data.errors) ? data.errors : [];
+      error.timeline = Array.isArray(data.timeline) ? data.timeline : [];
+      error.data = data;
       error.rateLimit = data.rateLimit || null;
       throw error;
     }

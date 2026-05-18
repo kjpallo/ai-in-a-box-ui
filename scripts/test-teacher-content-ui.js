@@ -31,6 +31,7 @@ assertPrepareReviewHandoffUi();
 assertSelectedDraftAndProgressUi();
 assertStandardsTabWorkflowUi();
 assertReviewCardPolishUi();
+assertReviewPromotionButtonConditions();
 assertImportReportPolishUi();
 assertApprovedPacksPolishUi();
 assertReviewActions();
@@ -75,7 +76,7 @@ function assertOverlayMarkupAndSelectors() {
     assert.ok(ui.includes(selector) || style.includes(selector), `Expected selector or hook ${selector}.`);
   });
 
-  ['Upload Source', 'Preview Import', 'Review Preview', 'Full Import', 'Review Content', 'Approved Packs'].forEach((label) => {
+  ['Upload Source', 'Preview Import', 'Review Preview', 'Full Import', 'Review Content', 'Knowledge Packs'].forEach((label) => {
     assert.ok(ui.includes(label), `Expected tab/card label ${label}.`);
   });
   assert.doesNotMatch(ui.match(/const TABS = \[[\s\S]*?\n  \];/)?.[0] || '', /Define Knowledge Pack|Assign Standards|Import Report \/ Audit/, 'Teacher Content deck should use the new safe import step labels.');
@@ -99,7 +100,7 @@ function assertSafeImportWorkflowUi() {
     "id: 'reviewPreview', label: 'Review Preview'",
     "id: 'fullImport', label: 'Full Import'",
     "id: 'review', label: 'Review Content'",
-    "id: 'approvedPacks', label: 'Approved Packs'"
+    "id: 'approvedPacks', label: 'Knowledge Packs'"
   ].forEach((marker) => {
     assert.ok(tabsBlock[1].includes(marker), `Expected safe import tab marker ${marker}.`);
   });
@@ -118,7 +119,24 @@ function assertSafeImportWorkflowUi() {
     'No preview yet. Run Preview Draft first.',
     'Run Preview Draft first.',
     'Gemma has not run yet.',
+    'Gemma returned draft items, but validation found fields that need repair.',
+    'Gemma returned draft items. Charlemagne normalized IDs/titles and kept items pending review.',
+    'getPreviewImportNote',
+    "entry.type === 'batch_received'",
+    "entry.type === 'normalization_complete'",
+    'Normalized concept IDs',
+    'Normalized concept titles',
+    'Review-needed items',
     'Preview Draft uses a small sample',
+    'PARTIAL PREVIEW',
+    'data-preview-repair-needed',
+    'data-preview-validation-errors',
+    'data-preview-invalid-items',
+    'data-preview-valid-items',
+    'Repair-needed items',
+    'Validation errors',
+    'Valid preview items kept',
+    'PREVIEW READY',
     'Import is running, do not close this window.'
   ].forEach((marker) => {
     assert.ok(ui.includes(marker), `Expected safe import workflow marker ${marker}.`);
@@ -128,7 +146,8 @@ function assertSafeImportWorkflowUi() {
     'Import Selected Pages/Sections',
     'data-selected-import-panel',
     'data-selected-import-recommendation',
-    'For large packets, import one section at a time to avoid overloading local Gemma.',
+    'Full Document Import defaults to all text-bearing pages from the upload, not the preview page.',
+    'For large packets, selected range import remains available when you intentionally want only part of the document.',
     'Import first 3 pages',
     'Import next 3 pages',
     'Import first detected section',
@@ -136,16 +155,25 @@ function assertSafeImportWorkflowUi() {
     'teacherContentSelectedPageStart',
     'teacherContentSelectedPageEnd',
     'data-selected-import-partial-note',
-    'Import this preview range as draft',
+    'Rerun preview range as strict draft',
     'data-full-import-advanced',
-    'Advanced whole-packet full import',
+    'Full document import confirmation',
     'teacherContentFullImportConfirm',
     'Type CONFIRM',
-    'Run Whole Full Import',
+    'Run Full Document Import',
     'data-full-import-failure-message',
     'Full import failed',
     'data-full-import-technical-details',
     'data-full-import-failed-batches',
+    'data-prepare-review-failure-message',
+    'Preview failed',
+    'data-preview-retry-panel',
+    'Backend details',
+    'Suggested next steps',
+    'Retry Preview Draft',
+    'Return to Upload Source',
+    'Gemma did not return any usable preview items from this range.',
+    'If the selected text is short or mostly a title page, try pages 2-4 or increase max preview chars.',
     'Selected pages:',
     'Selected chunks:'
   ].forEach((marker) => {
@@ -166,7 +194,9 @@ function assertSafeImportWorkflowUi() {
   const reviewPreviewFunction = ui.match(/function renderReviewPreviewCard\(\) \{([\s\S]*?)\n  function renderFullImportCard/);
   assert.ok(reviewPreviewFunction, 'Expected renderReviewPreviewCard function.');
   assert.match(reviewPreviewFunction[1], /renderPreviewReportPanel\(\)/, 'Review Preview should show preview report output.');
+  assert.match(reviewPreviewFunction[1], /renderPrepareReviewFailurePanel\('preview'\)/, 'Review Preview should show preview failures with backend details.');
   assert.match(reviewPreviewFunction[1], /data-selected-import-preset="preview"/, 'Review Preview should allow importing the preview range as a draft.');
+  assert.doesNotMatch(reviewPreviewFunction[1], /Import valid preview items as partial draft/, 'Review Preview should not imply selected import saves already-salvaged preview items.');
 
   const fullImportFunction = ui.match(/function renderFullImportCard\(\) \{([\s\S]*?)\n  function renderStandardsCard/);
   assert.ok(fullImportFunction, 'Expected renderFullImportCard function.');
@@ -194,7 +224,8 @@ function assertEndpointReferences() {
     '/api/teacher-content/drafts/${encodeURIComponent(packId)}/items/${encodeURIComponent(section)}/${encodeURIComponent(index)}',
     '/api/teacher-content/drafts/${encodeURIComponent(packId)}/items/${encodeURIComponent(section)}/${encodeURIComponent(index)}/status',
     '/api/teacher-content/approved',
-    '/api/teacher-content/approved/${encodeURIComponent(packId)}/activation'
+    '/api/teacher-content/approved/${encodeURIComponent(packId)}/activation',
+    '/api/teacher-content/approved/${encodeURIComponent(packId)}'
   ];
 
   expectedEndpoints.forEach((endpoint) => {
@@ -209,6 +240,7 @@ function assertEndpointReferences() {
     [
       'approved',
       'approvedActivation',
+      'approvedDelete',
       'dashboard',
       'draftItem',
       'draftItemStatus',
@@ -233,7 +265,11 @@ function assertPromotionAction() {
     'Needs teacher review',
     'Blocked',
     'Promoted successfully',
-    '!state.report?.promotionReadiness?.ready',
+    'summary.pending > 0 || summary.approved < 1',
+    'Create Approved Pack from Approved Items',
+    'data-review-create-approved-pack',
+    'data-import-scope-warning',
+    'Run Full Document Import before approving this as your main pack.',
     "method: 'POST'",
     'Promotion copies reviewed draft content into approved knowledge packs.',
     'It will not change student answering yet.'
@@ -241,7 +277,7 @@ function assertPromotionAction() {
     assert.ok(ui.includes(marker), `Expected promotion marker ${marker}.`);
   });
 
-  assert.equal((ui.match(/data-promote-draft/g) || []).length, 2, 'Promote hook should remain limited to one event handler and one Import Report button.');
+  assert.equal((ui.match(/data-promote-draft/g) || []).length, 3, 'Promote hook should remain limited to one event handler, one Review Content button, and one Import Report button.');
   assert.ok(
     ui.indexOf('function renderImportReportCard') < ui.lastIndexOf('data-promote-draft'),
     'Promote button should remain in the Import Report card.'
@@ -306,6 +342,10 @@ function assertUploadExtractionUi() {
     'Run Full Import',
     'Preview Draft',
     'Temporary sample only. No final approved pack was created.',
+    'data-preview-scope',
+    'Sample draft',
+    'data-preview-deduplication-counts',
+    'raw ${formatNumber(entry.stats.raw)} | duplicates ${formatNumber(entry.stats.duplicatesRemoved)} | final ${formatNumber(entry.stats.final)}',
     'Import is running, do not close this window.',
     'Gemma Draft Activity',
     'data-import-activity-panel',
@@ -319,6 +359,12 @@ function assertUploadExtractionUi() {
     'FormData',
     "method: 'POST'",
     'Review the import estimate, then run preview draft.',
+    'Preview Size',
+    'Ultra-safe',
+    'Page 1 only',
+    'Next page',
+    'Custom page range - more demanding',
+    'Partial preview created. Some pages/chunks failed.',
     'Original File',
     'File Type',
     'Extraction Status',
@@ -334,6 +380,28 @@ function assertUploadExtractionUi() {
   assert.doesNotMatch(ui, /data-upload-extract|data-upload-prepare-review/, 'Upload card should expose one teacher-facing create action.');
   assert.doesNotMatch(ui, /chain-of-thought|hidden reasoning|Gemma's thoughts|Gemma’s thoughts/i, 'Import activity should not claim to show hidden reasoning.');
   assert.equal((ui.match(/data-upload-create-review/g) || []).length, 2, 'Create Review Draft hook should be one handler and one button.');
+  assert.match(ui, /function makePreviewImportPayload\(\)/, 'Run Preview Draft should build an explicit preview selection payload.');
+  assert.match(ui, /function getTextBearingPages\(\)/, 'Preview UI should read text-bearing page metadata.');
+  assert.match(ui, /function applyDefaultPreviewTextPage\(\)/, 'Preview UI should default to the first text-bearing page when needed.');
+  assert.match(ui, /state\.uploadPreviewAutoTextPage/, 'Preview UI should distinguish automatic first-text-page defaults from explicit page choices.');
+  assert.match(ui, /importSelection:\s*\{\s*pageStart,\s*pageEnd/s, 'Run Preview Draft should send selected preview pages.');
+  assert.match(ui, /previewMaxPages:\s*size === 'range'[\s\S]*?: 1/, 'Run Preview Draft should default to one preview page outside custom ranges.');
+  assert.match(ui, /previewMode:\s*size === 'ultraSafe' \? 'ultra-safe'/, 'Run Preview Draft should send ultra-safe preview mode.');
+  assert.match(ui, /previewMaxCharacters:\s*maxChars/, 'Run Preview Draft should send the preview character limit.');
+  assert.match(ui, /data-use-first-text-page/, 'Preview UI should expose a Use first text page action.');
+  assert.match(ui, /Page 1 has no extractable text\. Try Page/, 'Preview UI should explain empty Page 1 recovery.');
+  assert.match(ui, /data-import-estimate-first-text-page/, 'Import estimate should display first text page metadata.');
+  assert.match(ui, /data-import-estimate-pages-with-text/, 'Import estimate should display pages with text metadata.');
+  assert.match(ui, /knowledgeName: state\.uploadContentName/, 'Run Preview Draft should send the teacher knowledge name.');
+  assert.match(ui, /previewOnly: importMode === 'preview'/, 'Run Preview Draft should mark previewOnly.');
+  assert.match(ui, /appendImportActivity\('error'/, 'Prepare Review failures should be appended to Gemma Draft Activity.');
+  assert.match(ui, /state\.uploadPrepareReviewFailedMode = importMode/, 'Prepare Review failure should keep the failing step marked failed.');
+  assert.match(ui, /state\.uploadPreviewComplete = !state\.uploadPreviewPartial/, 'Only successful preview responses should mark Review Preview ready.');
+  const prepareReviewFunction = ui.match(/async function prepareReviewFromUpload\(importMode = 'preview', extraBody = \{\}\) \{([\s\S]*?)\n  function makeSelectedImportPayload/);
+  assert.ok(prepareReviewFunction, 'Expected prepareReviewFromUpload function.');
+  const prepareReviewCatch = prepareReviewFunction[1].match(/catch \(error\) \{([\s\S]*?)\n    \} finally \{/);
+  assert.ok(prepareReviewCatch, 'Expected prepareReviewFromUpload catch block.');
+  assert.doesNotMatch(prepareReviewCatch[1], /uploadPreviewComplete\s*=\s*true/, 'Failed Prepare Review should not mark preview ready.');
 }
 
 function assertUploadAndPrepareFormDataContract() {
@@ -371,6 +439,19 @@ function assertBackendJsonErrorsAreDisplayed() {
     ui.includes("state.uploadCreateReviewError = error.message || 'Create Review Draft failed.'"),
     'Teacher Content upload failure should render the backend error message surfaced by the API client.'
   );
+  [
+    'error?.data?.validationErrors',
+    'error?.data?.invalidItems',
+    'error?.data?.repairNeeded',
+    'error?.data?.failedBatches',
+    'error?.data?.rawModelResponsePath',
+    'error?.data?.extractionCounts',
+    'data-prepare-review-backend-details',
+    'data-prepare-review-retry-guidance',
+    'data-prepare-review-repair-details'
+  ].forEach((marker) => {
+    assert.ok(ui.includes(marker), `Expected prepare-review 400 recovery marker ${marker}.`);
+  });
 }
 
 function assertPrepareReviewHandoffUi() {
@@ -397,6 +478,7 @@ function assertSelectedDraftAndProgressUi() {
     'data-selected-draft-summary',
     'data-selected-draft-title',
     'data-selected-draft-pack-id',
+    'data-selected-draft-import-scope',
     'data-selected-draft-pending',
     'data-selected-draft-validation',
     'data-review-progress-summary',
@@ -556,7 +638,11 @@ function assertReviewCardPolishUi() {
     'Medium confidence',
     'Low confidence',
     'No pending review items.',
-    'This draft has no pending items in the current review view.',
+    'This draft is ready to create an approved pack from approved items only.',
+    'This draft has no approved items to promote yet.',
+    'Promotion Validation Errors',
+    'data-review-create-approved-pack',
+    'Create Approved Pack from Approved Items',
     'data-review-empty-state',
     'data-review-empty-tab="approvedPacks"',
     'View Approved Packs',
@@ -569,6 +655,21 @@ function assertReviewCardPolishUi() {
   ].forEach((marker) => {
     assert.ok(ui.includes(marker), `Expected review polish marker ${marker}.`);
   });
+}
+
+function assertReviewPromotionButtonConditions() {
+  const reviewFunction = ui.match(/function renderReviewCard\(\) \{([\s\S]*?)\n  function renderReviewGroup/);
+  assert.ok(reviewFunction, 'Expected renderReviewCard function.');
+  assert.match(
+    reviewFunction[1],
+    /canCreateApprovedPack\s*=\s*summary\.pending\s*===\s*0\s*&&\s*summary\.approved\s*>\s*0/,
+    'Review Content should show Create Approved Pack only when pending is 0 and approved is greater than 0.'
+  );
+  assert.match(
+    reviewFunction[1],
+    /canCreateApprovedPack \?[\s\S]*data-review-create-approved-pack/,
+    'Review Content promotion button should be conditional.'
+  );
 }
 
 function assertImportReportPolishUi() {
@@ -631,17 +732,20 @@ function assertImportReportPolishUi() {
 
 function assertApprovedPacksPolishUi() {
   [
-    'Approved Knowledge Packs',
-    'Approved packs are reviewed knowledge packs. Student router activation will be added in a later phase.',
+    'Knowledge Packs',
+    'Manage approved knowledge packs. Student router activation will be added in a later phase.',
+    'data-knowledge-packs-blade',
     'data-approved-pack-card',
     'data-approved-pack-title',
     'data-approved-pack-pack-id',
     'data-approved-pack-metadata',
+    'data-approved-pack-status',
     'data-approved-pack-subject',
     'data-approved-pack-grade-level',
     'data-approved-pack-version',
     'data-approved-pack-validation-status',
-    'data-approved-pack-source-path',
+    'data-approved-pack-import-scope',
+    'data-approved-pack-source-range',
     'data-approved-pack-vocabulary-count',
     'data-approved-pack-concept-count',
     'data-approved-pack-reference-formula-count',
@@ -651,10 +755,15 @@ function assertApprovedPacksPolishUi() {
     'data-approved-pack-indexed-total',
     'data-approved-pack-activation-toggle',
     'data-approved-pack-toggle-action',
+    'data-approved-pack-activation-checkbox',
     'data-approved-pack-activation-status',
+    'data-approved-pack-activation-status-meta',
     'data-approved-pack-activation-badge',
     'data-approved-pack-activation-note',
     'data-approved-pack-activation-message',
+    'data-approved-pack-delete-action',
+    'data-approved-pack-delete-message',
+    'data-approved-pack-view-edit-action',
     'data-approved-searchable-summary',
     'data-approved-searchable-vocabulary-terms',
     'data-approved-searchable-concepts',
@@ -666,16 +775,23 @@ function assertApprovedPacksPolishUi() {
     'Searchable standards',
     'Saving activation setting...',
     'Activation setting saved',
+    'Enable for future student router use',
     'Enabled',
     'Disabled',
-    'Not connected to student answers yet',
-    'This setting is saved for future student activation. This does not change student answers yet. Student router activation will be added in a later phase.',
+    'Delete Pack',
+    'Deleting approved pack...',
+    'Type DELETE',
+    'Uploaded source files and draft packs will not be deleted.',
+    "method: 'DELETE'",
+    'Saved for later. Not connected to student answers yet.',
+    'data-approved-pack-sample-badge',
+    'data-approved-pack-range-limited',
     'data-no-approved-packs-empty-state',
     'No approved knowledge packs yet.',
     'Review imported draft content before creating approved packs.',
     'data-approved-empty-tab="review"',
     'View Review Content',
-    'Read-only pack details'
+    'View / Edit Pack'
   ].forEach((marker) => {
     assert.ok(ui.includes(marker), `Expected Approved Packs polish marker ${marker}.`);
   });
@@ -683,6 +799,8 @@ function assertApprovedPacksPolishUi() {
   assert.doesNotMatch(ui, /data-approved-pack-switch-placeholder/, 'Approved pack switch should no longer be a disabled placeholder.');
   assert.ok(ui.includes("method: 'PATCH'"), 'Approved pack activation should save with PATCH.');
   assert.ok(ui.includes('approvedActivation'), 'Approved pack activation endpoint helper should exist.');
+  assert.ok(ui.includes('approvedDelete'), 'Approved pack delete endpoint helper should exist.');
+  assert.match(ui, /window\.prompt/, 'Approved pack delete should require typed confirmation in the UI.');
 }
 
 function assertNoForbiddenUiActions() {
@@ -692,7 +810,7 @@ function assertNoForbiddenUiActions() {
   assert.doesNotMatch(ui, /\/api\/student|\/api\/chat|\/api\/router-test/, 'Teacher Content UI should not reference student/router endpoints.');
   assert.doesNotMatch(ui, /\/api\/teacher-content\/drafts\/generate|\/api\/generate-draft|generateDraft/i, 'Teacher Content UI should not reference draft generation endpoints.');
   assert.doesNotMatch(ui, /data-upload-action|data-pack-toggle-action/, 'Teacher Content UI should not implement old placeholder upload/toggle actions.');
-  assert.equal((ui.match(/data-promote-draft/g) || []).length, 2, 'Promotion should remain limited to Import Report action wiring.');
+  assert.equal((ui.match(/data-promote-draft/g) || []).length, 3, 'Promotion should remain limited to Review Content and Import Report action wiring.');
   assert.ok(ui.includes('data-approved-pack-toggle-action'), 'Approved-pack switches should be real activation controls.');
 }
 

@@ -1,0 +1,265 @@
+{
+  "results": [
+    {
+      "question": "What is the relationship between kinetic energy and potential energy?",
+      "answer": "Kinetic energy is the energy of motion, and potential energy is the stored energy due to an object's position or state. They are related through the principles of physics, such as the conservation of energy, where energy can be converted between the two forms (e.g., gravitational potential energy converting to kinetic energy when an object falls)."
+    },
+    {
+      "question": "How is potential energy calculated?",
+      "answer": "Potential energy is generally calculated based on the object's position or configuration relative to a reference point. For gravitational potential energy, it is calculated using the formula $PE = mgh$, where $m$ is the mass of the object, $g$ is the acceleration due to gravity, and $h$ is the height of the object above the reference point."
+    },
+    {
+      "question": "What is the formula for kinetic energy?",
+      "answer": "Kinetic energy is calculated using the formula $KE = \frac{1}{2}mv^2$, where $m$ is the mass of the object and $v$ is its velocity."
+    },
+    {
+      "question": "What is the principle of conservation of energy?",
+      "answer": "The principle of conservation of energy states that energy cannot be created or destroyed; it can only be transformed from one form to another or transferred from one system to another. The total energy of an isolated system remains constant."
+    },
+    {
+      "question": "Can energy be created or destroyed?",
+      "answer": "No, energy cannot be created or destroyed. It can only be transformed from one form to another or transferred from one system to another. This is a fundamental law of physics."
+    }
+  ],
+  "schemaVersion": "1.0.0",
+  "packId": "draft-energy-pages-1-3-3a487ac3-fc9d-4c39-93db-6f5ea64f1465",
+  "version": "0.1.0-draft",
+  "title": "Energy Pages 1-3",
+  "subject": "Teacher Uploaded Content",
+  "gradeLevel": "Teacher Review",
+  "status": "draft",
+  "reviewStatus": "pending",
+  "sourceFiles": [
+    {
+      "fileName": "Packet KEY Energy CP.pdf",
+      "fileType": "pdf",
+      "uploadId": "3a487ac3-fc9d-4c39-93db-6f5ea64f1465",
+      "storedFileName": "3a487ac3-fc9d-4c39-93db-6f5ea64f1465.pdf",
+      "extractionJsonFileName": "3a487ac3-fc9d-4c39-93db-6f5ea64f1465_extraction.json",
+      "characterCount": 2520,
+      "pageCount": 3,
+      "chunkCount": 1,
+      "reviewStatus": "pending",
+      "confidence": "low",
+      "notes": "Added from extraction metadata for draft traceability.",
+      "sourceReferences": []
+    },
+    {
+      "fileName": "3a487ac3-fc9d-4c39-93db-6f5ea64f1465.pdf",
+      "fileType": "application/pdf",
+      "reviewStatus": "pending",
+      "confidence": "low",
+      "notes": "Extracted from provided PDF source.",
+      "uploadId": "3a487ac3-fc9d-4c39-93db-6f5ea64f1465",
+      "storedFileName": "3a487ac3-fc9d-4c39-93db-6f5ea64f1465.pdf",
+      "extractionJsonFileName": "3a487ac3-fc9d-4c39-93db-6f5ea64f1465_extraction.json",
+      "characterCount": 1141,
+      "pageCount": 3,
+      "chunkCount": 3
+    }
+  ],
+  "vocabulary": [
+    {
+      "term": "Energy",
+      "aliases": [],
+      "studentDefinition": "The general concept of energy.",
+      "teacherDefinition": "The general concept of energy.",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "standards": [],
+      "reviewStatus": "rejected",
+      "confidence": "low",
+      "sourceFile": "3a487ac3-fc9d-4c39-93db-6f5ea64f1465.pdf",
+      "sourceLocation": "Page 2",
+      "sourceTextSnippet": "Energy",
+      "vocabId": "vocab-energy",
+      "notes": "Generated vocabulary ID during import normalization.",
+      "normalizationNotes": [
+        "Generated vocabulary ID during import normalization."
+      ]
+    },
+    {
+      "term": "Kinetic Energy",
+      "aliases": [],
+      "studentDefinition": "The energy an object possesses due to its motion.",
+      "teacherDefinition": "The energy an object possesses due to its motion.",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "standards": [],
+      "reviewStatus": "approved",
+      "confidence": "low",
+      "sourceFile": "3a487ac3-fc9d-4c39-93db-6f5ea64f1465.pdf",
+      "sourceLocation": "Page 2",
+      "sourceTextSnippet": "Kinetic Energy",
+      "vocabId": "vocab-kinetic-energy",
+      "notes": "Generated vocabulary ID during import normalization.",
+      "normalizationNotes": [
+        "Generated vocabulary ID during import normalization."
+      ]
+    },
+    {
+      "term": "Potential Energy",
+      "aliases": [],
+      "studentDefinition": "Energy stored due to position or state.",
+      "teacherDefinition": "Energy stored due to position or state.",
+      "name": "Potential Energy",
+      "description": "Energy that is stored by an object due to its position or state.",
+      "example": "Gravitational potential energy.",
+      "related_concept": "Energy storage",
+      "related_concept_to": "Kinetic Energy",
+      "related_concept_to_other": "Potential Energy",
+      "related_concept_to_other_2": "Work",
+      "vocabId": "vocab-potential-energy",
+      "reviewStatus": "approved",
+      "confidence": "low",
+      "notes": "Generated vocabulary ID during import normalization. Source evidence was filled from extraction defaults during import normalization; keep pending review.",
+      "normalizationNotes": [
+        "Generated vocabulary ID during import normalization.",
+        "Source evidence was filled from extraction defaults during import normalization; keep pending review."
+      ],
+      "standards": [],
+      "sourceFile": "Packet KEY Energy CP.pdf",
+      "sourceLocation": "Pages 1-3",
+      "sourceTextSnippet": "[Page 1 / Chunk 2] How far was the crate lifted? 18. How much power is used if a force of 90 N is used to push a box a distance of 30 m in 10 s? 19. A go-cart and rider have a mass of 100 kg. If the cart accelerates at 5 m/s 2 during a 25 m..."
+    }
+  ],
+  "concepts": [],
+  "referenceFormulas": [],
+  "problemBank": [],
+  "standardsMap": [],
+  "smokeTests": [],
+  "metadata": {
+    "modelMetadata": {
+      "createdBy": "charlemagne-teacher-content-import"
+    },
+    "createdBy": "charlemagne-teacher-content-import",
+    "createdAt": "2026-05-18T15:24:01.390Z",
+    "updatedAt": "2026-05-18T15:24:34.075Z",
+    "status": "draft",
+    "reviewStatus": "pending",
+    "packName": "Energy Pages 1-3",
+    "packId": "draft-energy-pages-1-3-3a487ac3-fc9d-4c39-93db-6f5ea64f1465",
+    "sourceUpload": {
+      "uploadId": "3a487ac3-fc9d-4c39-93db-6f5ea64f1465",
+      "originalFileName": "Packet KEY Energy CP.pdf",
+      "storedFileName": "3a487ac3-fc9d-4c39-93db-6f5ea64f1465.pdf",
+      "extractionJsonFileName": "3a487ac3-fc9d-4c39-93db-6f5ea64f1465_extraction.json",
+      "fileType": "pdf",
+      "characterCount": 3606,
+      "pageCount": 3,
+      "chunkCount": 3
+    },
+    "extraction": {
+      "characterCount": 3606,
+      "pageCount": 3,
+      "chunkCount": 3
+    },
+    "deduplication": {
+      "vocabulary": {
+        "raw": 3,
+        "duplicatesRemoved": 0,
+        "final": 3
+      },
+      "concepts": {
+        "raw": 0,
+        "duplicatesRemoved": 0,
+        "final": 0
+      },
+      "problemBank": {
+        "raw": 0,
+        "duplicatesRemoved": 0,
+        "final": 0
+      }
+    },
+    "importNormalization": {
+      "conceptIdsGenerated": 0,
+      "conceptTitlesGenerated": 0,
+      "vocabularyIdsGenerated": 0,
+      "vocabularyTermsGenerated": 0,
+      "problemIdsGenerated": 0,
+      "smokeTestIdsGenerated": 0,
+      "standardsMapIdsMapped": 0,
+      "sourceEvidenceFilled": 0,
+      "reviewNeededItems": 0,
+      "droppedItems": 0,
+      "totalNormalized": 0,
+      "notes": []
+    },
+    "importBatches": 2,
+    "importCoverage": {
+      "totalPages": 3,
+      "totalChunks": 4,
+      "processedPages": 3,
+      "processedChunks": 4,
+      "pagesWithDraftItems": 1,
+      "chunksWithDraftItems": 1,
+      "chunksWithNoExtractedKnowledge": 3,
+      "noKnowledgeChunks": [
+        "Page 1 / Chunk 1",
+        "Page 1 / Chunk 2",
+        "Page 3"
+      ],
+      "sectionsDetected": [
+        "concepts",
+        "problemBank",
+        "standardsMap",
+        "vocabulary"
+      ],
+      "itemCounts": {
+        "vocabulary": 3,
+        "concepts": 0,
+        "referenceFormulas": 0,
+        "problemBank": 0,
+        "standardsMap": 0,
+        "smokeTests": 0
+      },
+      "failedBatches": [],
+      "warnings": [
+        "Many chunks produced no items.",
+        "Problem bank detected but few/no problems were drafted."
+      ]
+    },
+    "importSelection": {
+      "kind": "pages",
+      "label": "Pages 1-3",
+      "pages": [
+        1,
+        2,
+        3
+      ],
+      "chunks": [
+        1,
+        2,
+        3
+      ],
+      "pageRangeLabel": "1-3",
+      "chunkRangeLabel": "1-3",
+      "pageCount": 3,
+      "chunkCount": 3,
+      "characterCount": 3602,
+      "originalPageCount": 29,
+      "originalChunkCount": 32,
+      "originalCharacterCount": 33771,
+      "completePacketImported": false
+    },
+    "partialImport": {
+      "completePacketImported": false,
+      "note": "This draft was generated from a selected page/chunk range, not the whole source packet.",
+      "importedPages": [
+        1,
+        2,
+        3
+      ],
+      "importedChunks": [
+        1,
+        2,
+        3
+      ],
+      "originalPageCount": 29,
+      "originalChunkCount": 32,
+      "originalCharacterCount": 33771
+    }
+  }
+}

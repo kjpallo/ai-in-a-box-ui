@@ -133,6 +133,9 @@ async function assertPdfExtraction() {
   assert.ok(result.text.includes('Embedded text'));
   assert.equal(result.metadata.parser, 'pdf-parse');
   assert.equal(result.metadata.pageCount, 1);
+  assert.equal(result.metadata.firstTextPage, 1);
+  assert.deepEqual(result.metadata.textBearingPages, [1]);
+  assert.deepEqual(result.metadata.pagesWithText, [1]);
 }
 
 async function assertBlankPdfWarning() {

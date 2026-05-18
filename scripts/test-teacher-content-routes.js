@@ -8,6 +8,7 @@ const projectRoot = path.join(__dirname, '..');
 const tempRoot = path.join(projectRoot, 'tmp', 'test-teacher-content-routes');
 const draftPacksDir = path.join(tempRoot, 'draft-packs');
 const approvedPacksDir = path.join(tempRoot, 'approved-packs');
+const deletedApprovedPacksDir = path.join(tempRoot, 'deleted-approved-packs');
 const activationRegistryPath = path.join(approvedPacksDir, '_activation.json');
 const uploadIncomingDir = path.join(tempRoot, 'uploads', 'incoming');
 const uploadExtractedDir = path.join(tempRoot, 'uploads', 'extracted');
@@ -20,6 +21,7 @@ let mockDraftModelClient = async () => JSON.stringify(makeGeneratedPack());
 cleanupTempRoot();
 fs.mkdirSync(draftPacksDir, { recursive: true });
 fs.mkdirSync(approvedPacksDir, { recursive: true });
+fs.mkdirSync(deletedApprovedPacksDir, { recursive: true });
 fs.mkdirSync(uploadIncomingDir, { recursive: true });
 fs.mkdirSync(uploadExtractedDir, { recursive: true });
 fs.mkdirSync(standardsBanksDir, { recursive: true });
@@ -67,6 +69,7 @@ async function main() {
   registerTeacherContentRoutes(createApp(handlers), {
     draftPacksDir,
     approvedPacksDir,
+    deletedApprovedPacksDir,
     uploadIncomingDir,
     uploadExtractedDir,
     rawModelResponsesDir,
@@ -90,6 +93,12 @@ async function main() {
     await assertPrepareReviewEndpointSucceeds(handlers);
     await assertLargeFullImportRequiresConfirmation(handlers);
     await assertPreviewPrepareReviewDoesNotWriteDraft(handlers);
+    await assertPreviewEmptyFirstPageReturnsTextPageRecovery(handlers);
+    await assertUltraSafePreviewNormalizesConceptFields(handlers);
+    await assertPreviewValidationFailureReturnsHttp200PartialPreview(handlers);
+    await assertPartialPreviewReturnsSuccessfulItemsWithoutDraft(handlers);
+    await assertPreviewPrepareReviewRequiresRange(handlers);
+    await assertPrepareReviewNoUsablePreviewItemsReturnsStructuredRecoveryJson(handlers);
     await assertSelectedPageRangeImportWritesPartialDraft(handlers);
     await assertUploadAndPrepareEndpointSucceeds(handlers);
     await assertUploadAndPreparePdfWithKnowledgeNameSucceeds(handlers);
@@ -102,8 +111,10 @@ async function main() {
     await assertPrepareReviewModelFailureDoesNotWriteDraft(handlers);
     await assertPromoteDraftEndpointSucceeds(handlers);
     await assertPromoteBlocksPendingItems(handlers);
-    await assertPromoteBlocksRejectedItems(handlers);
+    await assertPromoteExcludesRejectedItems(handlers);
+    await assertPromoteExcludesRepairNeededItems(handlers);
     await assertPromoteBlocksInvalidFormulaSolverStatus(handlers);
+    await assertPromoteStrictValidationBlocksInvalidApprovedOutput(handlers);
     await assertPromoteDoesNotOverwriteWithoutForce(handlers);
     await assertPromoteOverwritesWithForce(handlers);
     await assertInvalidPromotePathTraversalRejected(handlers);
@@ -122,6 +133,10 @@ async function main() {
     await assertInvalidApprovedActivationPathTraversalRejected(handlers);
     await assertMissingApprovedActivationPackRejected(handlers);
     await assertNonBooleanApprovedActivationRejected(handlers);
+    await assertApprovedDeleteRequiresConfirmation(handlers);
+    await assertInvalidApprovedDeletePathTraversalRejected(handlers);
+    await assertMissingApprovedDeletePackRejected(handlers);
+    await assertApprovedDeleteArchivesPackAndActivationOnly(handlers);
     await assertMissingDraftReportEndpoint(handlers);
     await assertPathTraversalRejected(handlers);
     assertRealApprovedPacksAreNotModified();
@@ -288,12 +303,12 @@ async function assertPrepareReviewEndpointSucceeds(handlers) {
 
   assert.equal(response.statusCode, 200);
   assert.equal(response.body.success, true);
-  assert.equal(response.body.data.packId, 'draft-teacher-prepared-forces-prepare-review-upload');
-  assert.equal(response.body.data.title, 'Teacher Prepared Forces');
+  assert.equal(response.body.data.packId, 'draft-full-import-teacher-prepared-forces-prepare-review-upload');
+  assert.equal(response.body.data.title, 'Full Import: Teacher Prepared Forces');
   assert.equal(response.body.data.message, 'Review draft prepared.');
   assert.equal(response.body.data.sourceMatch.uploadedFileName, 'teacher_prepare_review_notes.txt');
   assert.equal(response.body.data.sourceMatch.draftPackId, response.body.data.packId);
-  assert.equal(response.body.data.sourceMatch.draftTitle, 'Teacher Prepared Forces');
+  assert.equal(response.body.data.sourceMatch.draftTitle, 'Full Import: Teacher Prepared Forces');
   assert.deepEqual(response.body.data.sourceMatch.draftSourceFiles, ['teacher_prepare_review_notes.txt']);
   assert.equal(response.body.data.sourceMatch.extractionCharacterCount, 74);
   assert.equal(response.body.data.sourceMatch.chunkCount, 1);
@@ -301,6 +316,8 @@ async function assertPrepareReviewEndpointSucceeds(handlers) {
   assert.equal(response.body.data.dashboard.draftPacks, 2);
   assert.ok(response.body.data.drafts.some((draft) => draft.packId === response.body.data.packId));
   assert.equal(response.body.data.draftReport.draftPack.packId, response.body.data.packId);
+  assert.equal(response.body.data.draftReport.draftPack.importScope.scope, 'full_document');
+  assert.equal(response.body.data.importScope.completePacketImported, true);
   assert.equal(response.body.data.draftReport.coverageReport.totalChunks, 1);
   assert.equal(response.body.data.draftReport.coverageReport.processedChunks, 1);
   assert.ok(response.body.data.timeline.some((event) => event.message === 'Building draft packet wrapper'));
@@ -314,7 +331,8 @@ async function assertPrepareReviewEndpointSucceeds(handlers) {
   assert.equal(fs.existsSync(createdPath), true, 'Prepare Review should write only to the configured draft-packs dir.');
   const generated = JSON.parse(fs.readFileSync(createdPath, 'utf8'));
   assert.equal(generated.packId, response.body.data.packId);
-  assert.equal(generated.title, 'Teacher Prepared Forces');
+  assert.equal(generated.title, 'Full Import: Teacher Prepared Forces');
+  assert.equal(generated.metadata.importScope.scope, 'full_document');
   assert.equal(generated.vocabulary[0].reviewStatus, 'pending');
   assert.equal(generated.concepts[0].reviewStatus, 'pending');
   assert.equal(generated.problemBank[0].reviewStatus, 'pending');
@@ -375,16 +393,11 @@ async function assertLargeFullImportRequiresConfirmation(handlers) {
 async function assertPreviewPrepareReviewDoesNotWriteDraft(handlers) {
   const uploadId = 'preview-only-upload';
   const draftFilesBefore = snapshotFiles(draftPacksDir);
-  fs.writeFileSync(path.join(uploadExtractedDir, `${uploadId}_extraction.json`), `${JSON.stringify(makeExtraction({
+  fs.writeFileSync(path.join(uploadExtractedDir, `${uploadId}_extraction.json`), `${JSON.stringify(makeLargePdfExtraction({
     uploadId,
     originalFileName: 'preview_teacher_packet.txt',
-    text: 'Preview packet sentence. '.repeat(500),
-    sections: [{
-      title: 'Full Text',
-      text: 'Preview packet sentence. '.repeat(500),
-      startLine: 1,
-      endLine: 1
-    }]
+    pages: 5,
+    charactersPerPage: 650
   }), null, 2)}\n`);
   let calls = 0;
   mockDraftModelClient = async () => {
@@ -394,7 +407,13 @@ async function assertPreviewPrepareReviewDoesNotWriteDraft(handlers) {
 
   const response = await request(handlers, 'POST', '/uploads/:uploadId/prepare-review', {
     packName: 'Preview Only',
-    importMode: 'preview'
+    knowledgeName: 'Preview Only',
+    importMode: 'preview',
+    previewOnly: true,
+    importSelection: {
+      pageStart: 1,
+      pageEnd: 3
+    }
   }, {
     uploadId
   });
@@ -402,9 +421,328 @@ async function assertPreviewPrepareReviewDoesNotWriteDraft(handlers) {
   assert.equal(response.statusCode, 200);
   assert.equal(response.body.success, true);
   assert.equal(response.body.data.preview, true);
+  assert.deepEqual(response.body.data.importSelection.pages, [1, 2, 3]);
+  assert.equal(response.body.data.inputSnapshot.modelSettings.temperature, 0);
   assert.ok(response.body.data.previewReport.processedChunkCount >= 1);
   assert.ok(calls >= 1, 'preview should call Gemma on the sample.');
   assert.deepEqual(snapshotFiles(draftPacksDir), draftFilesBefore, 'preview should not write a final draft pack.');
+
+  mockDraftModelClient = async () => JSON.stringify(makeGeneratedPack());
+}
+
+async function assertPreviewEmptyFirstPageReturnsTextPageRecovery(handlers) {
+  const uploadId = 'preview-empty-first-page';
+  const extraction = makeLargePdfExtraction({
+    uploadId,
+    originalFileName: 'preview_empty_first_page.pdf',
+    pages: 4,
+    charactersPerPage: 650
+  });
+  extraction.pages = extraction.pages.filter((page) => page.pageNumber !== 1);
+  extraction.sections = extraction.sections.filter((section) => section.pageNumber !== 1);
+  extraction.text = extraction.pages.map((page) => page.text).join('\n\n');
+  extraction.metadata.characterCount = extraction.text.length;
+  fs.writeFileSync(path.join(uploadExtractedDir, `${uploadId}_extraction.json`), `${JSON.stringify(extraction, null, 2)}\n`);
+  let calls = 0;
+  mockDraftModelClient = async () => {
+    calls += 1;
+    return JSON.stringify(makeGeneratedPack());
+  };
+
+  const response = await request(handlers, 'POST', '/uploads/:uploadId/prepare-review', {
+    packName: 'Preview Empty First Page',
+    knowledgeName: 'Preview Empty First Page',
+    importMode: 'preview',
+    previewOnly: true,
+    previewMode: 'ultraSafe',
+    importSelection: {
+      pageStart: 1,
+      pageEnd: 1
+    }
+  }, {
+    uploadId
+  });
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.success, false);
+  assert.ok(response.body.errors.some((error) => error.includes('The selected page exists, but no extractable text was found there.')));
+  assert.ok(response.body.errors.some((error) => error.includes('Try page 2, the first page with extracted text.')));
+  assert.equal(response.body.importEstimate.firstTextPage, 2);
+  assert.deepEqual(response.body.importEstimate.textBearingPages, [2, 3, 4]);
+  assert.equal(response.body.extractionCounts.firstTextPage, 2);
+  assert.equal(calls, 0, 'empty selected text page should fail before calling Gemma.');
+
+  mockDraftModelClient = async () => JSON.stringify(makeGeneratedPack());
+}
+
+async function assertUltraSafePreviewNormalizesConceptFields(handlers) {
+  const uploadId = 'ultra-safe-normalized-preview-upload';
+  const draftFilesBefore = snapshotFiles(draftPacksDir);
+  fs.writeFileSync(path.join(uploadExtractedDir, `${uploadId}_extraction.json`), `${JSON.stringify(makeLargePdfExtraction({
+    uploadId,
+    originalFileName: 'ultra_safe_teacher_packet.txt',
+    pages: 1,
+    charactersPerPage: 950
+  }), null, 2)}\n`);
+  mockDraftModelClient = async () => JSON.stringify(makeGeneratedPack({
+    packId: 'route-ultra-safe-normalized-preview',
+    vocabulary: [],
+    concepts: [
+      {
+        claim: 'Preview source supports this review concept',
+        summary: 'Preview source supports this review concept.',
+        aliases: [],
+        keyIdeas: [],
+        examples: [],
+        nonExamples: [],
+        commonMisconceptions: [],
+        standards: [],
+        reviewStatus: 'pending',
+        confidence: 'low',
+        sourceFile: 'ultra_safe_teacher_packet.txt',
+        sourceLocation: 'Page 1',
+        sourceTextSnippet: 'Preview source supports this review concept.'
+      }
+    ],
+    referenceFormulas: [],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+
+  const response = await request(handlers, 'POST', '/uploads/:uploadId/prepare-review', {
+    packName: 'Ultra Safe Preview',
+    knowledgeName: 'Ultra Safe Preview',
+    importMode: 'preview',
+    previewOnly: true,
+    previewMode: 'ultraSafe',
+    previewMaxCharacters: 1000,
+    importSelection: {
+      pageStart: 1,
+      pageEnd: 1
+    }
+  }, {
+    uploadId
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.data.preview, true);
+  assert.equal(response.body.data.previewReport.itemCounts.concepts, 1);
+  assert.equal(response.body.data.previewReport.importNormalization.conceptIdsGenerated, 1);
+  assert.equal(response.body.data.previewReport.importNormalization.conceptTitlesGenerated, 1);
+  assert.ok(response.body.data.timeline.some((event) => event.type === 'normalization_complete'));
+  assert.deepEqual(snapshotFiles(draftPacksDir), draftFilesBefore, 'ultra-safe preview should not write a final draft pack.');
+
+  mockDraftModelClient = async () => JSON.stringify(makeGeneratedPack());
+}
+
+async function assertPreviewValidationFailureReturnsHttp200PartialPreview(handlers) {
+  const uploadId = 'salvage-preview-validation-upload';
+  const draftFilesBefore = snapshotFiles(draftPacksDir);
+  fs.writeFileSync(path.join(uploadExtractedDir, `${uploadId}_extraction.json`), `${JSON.stringify(makeLargePdfExtraction({
+    uploadId,
+    originalFileName: 'salvage_preview_teacher_packet.txt',
+    pages: 1,
+    charactersPerPage: 950
+  }), null, 2)}\n`);
+  mockDraftModelClient = async () => JSON.stringify(makeGeneratedPack({
+    packId: 'route-salvage-preview-pack',
+    vocabulary: [makeVocabularyItem('preview-valid', 'pending')],
+    concepts: [],
+    referenceFormulas: [
+      {
+        ...makeReferenceFormula('bad-formula', 'pending'),
+        equation: ''
+      }
+    ],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+
+  const response = await request(handlers, 'POST', '/uploads/:uploadId/prepare-review', {
+    packName: 'Salvage Preview',
+    knowledgeName: 'Salvage Preview',
+    importMode: 'preview',
+    previewOnly: true,
+    previewMode: 'ultraSafe',
+    previewMaxCharacters: 1000,
+    importSelection: {
+      pageStart: 1,
+      pageEnd: 1
+    }
+  }, {
+    uploadId
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.data.preview, true);
+  assert.equal(response.body.data.partialPreview, true);
+  assert.equal(response.body.data.validationPassed, false);
+  assert.equal(response.body.data.previewReport.partialPreview, true);
+  assert.equal(response.body.data.previewReport.validationPassed, false);
+  assert.equal(response.body.data.previewReport.pack.vocabulary.length, 1);
+  assert.equal(response.body.data.previewReport.pack.referenceFormulas.length, 0);
+  assert.ok(response.body.data.previewReport.invalidItems.some((entry) => entry.section === 'referenceFormulas'));
+  assert.ok(response.body.data.previewReport.validationErrors.includes('referenceFormulas[0].equation must be a non-empty string.'));
+  assert.ok(response.body.data.timeline.some((event) => event.type === 'preview_invalid_items_quarantined'));
+  assert.deepEqual(snapshotFiles(draftPacksDir), draftFilesBefore, 'salvaged preview should not write a final draft pack.');
+
+  const selectedDraftFilesBefore = snapshotFiles(draftPacksDir);
+  const selectedResponse = await request(handlers, 'POST', '/uploads/:uploadId/prepare-review', {
+    packName: 'Salvage Preview Selected',
+    knowledgeName: 'Salvage Preview Selected',
+    importMode: 'selected',
+    importSelection: {
+      pageStart: 1,
+      pageEnd: 1
+    }
+  }, {
+    uploadId
+  });
+
+  assert.equal(selectedResponse.statusCode, 400);
+  assert.equal(selectedResponse.body.success, false);
+  assert.ok(selectedResponse.body.errors.includes('referenceFormulas[0].equation must be a non-empty string.'));
+  assert.deepEqual(snapshotFiles(draftPacksDir), selectedDraftFilesBefore, 'selected import should stay strict and never write quarantined preview items to a draft.');
+
+  mockDraftModelClient = async () => JSON.stringify(makeGeneratedPack());
+}
+
+async function assertPartialPreviewReturnsSuccessfulItemsWithoutDraft(handlers) {
+  const uploadId = 'partial-preview-upload';
+  const draftFilesBefore = snapshotFiles(draftPacksDir);
+  fs.writeFileSync(path.join(uploadExtractedDir, `${uploadId}_extraction.json`), `${JSON.stringify(makeLargePdfExtraction({
+    uploadId,
+    originalFileName: 'partial_preview_teacher_packet.txt',
+    pages: 2,
+    charactersPerPage: 900
+  }), null, 2)}\n`);
+  let calls = 0;
+  mockDraftModelClient = async () => {
+    calls += 1;
+    if (calls > 1) {
+      throw new Error('Ollama returned HTTP 500: {"error":"model runner has unexpectedly stopped, this may be due to resource limitations"}');
+    }
+    return JSON.stringify(makeGeneratedPack({
+      packId: 'route-partial-preview-pack',
+      vocabulary: [makeVocabularyItem('preview-ok', 'pending')],
+      concepts: [],
+      referenceFormulas: [],
+      problemBank: [],
+      standardsMap: [],
+      smokeTests: []
+    }));
+  };
+
+  const response = await request(handlers, 'POST', '/uploads/:uploadId/prepare-review', {
+    packName: 'Partial Preview',
+    knowledgeName: 'Partial Preview',
+    importMode: 'preview',
+    previewOnly: true,
+    previewMode: 'normal',
+    previewMaxCharacters: 1000,
+    importSelection: {
+      pageStart: 1,
+      pageEnd: 2
+    }
+  }, {
+    uploadId
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.data.preview, true);
+  assert.equal(response.body.data.partialPreview, true);
+  assert.equal(response.body.data.previewReport.partialPreview, true);
+  assert.ok(response.body.data.previewReport.failedBatches.length >= 1);
+  assert.ok(response.body.data.timeline.some((event) => event.type === 'partial_preview_ready'));
+  assert.deepEqual(snapshotFiles(draftPacksDir), draftFilesBefore, 'partial preview should not write a final draft pack.');
+
+  mockDraftModelClient = async () => JSON.stringify(makeGeneratedPack());
+}
+
+async function assertPreviewPrepareReviewRequiresRange(handlers) {
+  const uploadId = 'preview-missing-range';
+  fs.writeFileSync(path.join(uploadExtractedDir, `${uploadId}_extraction.json`), `${JSON.stringify(makeExtraction({
+    uploadId,
+    originalFileName: 'preview_missing_range.txt'
+  }), null, 2)}\n`);
+  let calls = 0;
+  mockDraftModelClient = async () => {
+    calls += 1;
+    return JSON.stringify(makeGeneratedPack());
+  };
+
+  const response = await request(handlers, 'POST', '/uploads/:uploadId/prepare-review', {
+    knowledgeName: 'Preview Missing Range',
+    importMode: 'preview',
+    previewOnly: true
+  }, {
+    uploadId
+  });
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.success, false);
+  assert.ok(response.body.errors.some((error) => error.includes('Preview prepare requires selected pages or chunks')));
+  assert.equal(response.body.timeline[0].message, 'Full upload estimate ready');
+  assert.equal(calls, 0, 'missing preview range should fail before calling Gemma.');
+
+  mockDraftModelClient = async () => JSON.stringify(makeGeneratedPack());
+}
+
+async function assertPrepareReviewNoUsablePreviewItemsReturnsStructuredRecoveryJson(handlers) {
+  const uploadId = 'no-usable-preview-items';
+  fs.writeFileSync(path.join(uploadExtractedDir, `${uploadId}_extraction.json`), `${JSON.stringify(makeLargePdfExtraction({
+    uploadId,
+    originalFileName: 'Concept 1 Notes - Nature of Energy.pptx.pdf',
+    pages: 12,
+    charactersPerPage: 210
+  }), null, 2)}\n`);
+  mockDraftModelClient = async () => JSON.stringify(makeGeneratedPack({
+    packId: 'route-no-usable-preview-pack',
+    vocabulary: [],
+    concepts: [],
+    referenceFormulas: [
+      {
+        ...makeReferenceFormula('empty-equation', 'pending'),
+        equation: ''
+      }
+    ],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+
+  const response = await request(handlers, 'POST', '/uploads/:uploadId/prepare-review', {
+    knowledgeName: 'No Usable Preview',
+    importMode: 'preview',
+    previewOnly: true,
+    previewMode: 'ultraSafe',
+    previewMaxCharacters: 1000,
+    importSelection: {
+      pageStart: 1,
+      pageEnd: 1
+    }
+  }, {
+    uploadId
+  });
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.success, false);
+  assert.equal(response.body.message, 'Gemma did not return any usable preview items from this range.');
+  assert.equal(response.body.teacherFriendlyError, 'Gemma did not return any usable preview items from this range.');
+  assert.equal(response.body.uploadId, uploadId);
+  assert.equal(response.body.fileName, 'Concept 1 Notes - Nature of Energy.pptx.pdf');
+  assert.equal(response.body.sourceType, 'pdf');
+  assert.equal(response.body.selectedRange, 'Pages 1-1');
+  assert.equal(response.body.extractionCounts.pageCount, 12);
+  assert.equal(response.body.extractionCounts.chunkCount, 12);
+  assert.ok(response.body.extractionCounts.characterCount > 2000);
+  assert.ok(response.body.errors.includes('referenceFormulas[0].equation must be a non-empty string.'));
+  assert.ok(Array.isArray(response.body.invalidItems));
 
   mockDraftModelClient = async () => JSON.stringify(makeGeneratedPack());
 }
@@ -457,6 +795,8 @@ async function assertSelectedPageRangeImportWritesPartialDraft(handlers) {
   assert.equal(response.body.success, true);
   assert.equal(response.body.data.selectedImport, true);
   assert.deepEqual(response.body.data.importSelection.pages, [2, 3, 4]);
+  assert.equal(response.body.data.importScope.scope, 'selected_range');
+  assert.equal(response.body.data.importScope.rangeLimited, true);
   assert.equal(response.body.data.importSelection.completePacketImported, false);
   assert.ok(response.body.data.selectedImportEstimate.characterCount < response.body.data.importEstimate.characterCount);
   assert.ok(response.body.data.timeline.some((event) => event.type === 'import_selection_ready'));
@@ -466,6 +806,8 @@ async function assertSelectedPageRangeImportWritesPartialDraft(handlers) {
   assert.equal(fs.existsSync(createdPath), true);
   const generated = JSON.parse(fs.readFileSync(createdPath, 'utf8'));
   assert.deepEqual(generated.metadata.partialImport.importedPages, [2, 3, 4]);
+  assert.equal(generated.metadata.importScope.scope, 'selected_range');
+  assert.equal(generated.metadata.importScope.warning, 'This draft covers only Pages 2-4. It does not mark the whole packet imported.');
   assert.equal(generated.metadata.partialImport.completePacketImported, false);
   assert.equal(generated.metadata.partialImport.originalPageCount, 6);
   assert.equal(generated.metadata.importCoverage.totalPages, 3);
@@ -781,6 +1123,9 @@ async function assertApprovedEndpoint(handlers) {
   assert.ok(response.body.data.approvedPacks.length >= 1);
   const approvedPack = response.body.data.approvedPacks.find((pack) => pack.packId === 'route-approved-pack');
   assert.equal(approvedPack.packId, 'route-approved-pack');
+  assert.equal(approvedPack.status, 'Approved');
+  assert.equal(approvedPack.validationStatus, 'Passed');
+  assert.equal(approvedPack.sourceSummary, 'teacher_force_notes.txt');
   assert.equal(approvedPack.activationEnabled, false);
   assert.equal(approvedPack.activationStatus, 'disabled');
   assert.ok(response.body.data.indexedCounts.vocabularyTerms >= 1);
@@ -859,6 +1204,68 @@ async function assertNonBooleanApprovedActivationRejected(handlers) {
   assert.match(response.body.errors[0], /enabled must be a boolean/);
 }
 
+async function assertApprovedDeleteRequiresConfirmation(handlers) {
+  const response = await request(handlers, 'DELETE', '/approved/:packId', {}, {
+    packId: 'route-approved-pack'
+  });
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.success, false);
+  assert.match(response.body.errors[0], /confirmationText/);
+  assert.equal(fs.existsSync(path.join(approvedPacksDir, 'route-approved-pack', 'knowledge_pack.json')), true);
+}
+
+async function assertInvalidApprovedDeletePathTraversalRejected(handlers) {
+  const response = await request(handlers, 'DELETE', '/approved/:packId', {
+    confirmationText: 'DELETE'
+  }, {
+    packId: '../route-approved-pack'
+  });
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.success, false);
+  assert.match(response.body.errors[0], /packId/);
+}
+
+async function assertMissingApprovedDeletePackRejected(handlers) {
+  const response = await request(handlers, 'DELETE', '/approved/:packId', {
+    confirmationText: 'DELETE'
+  }, {
+    packId: 'missing-approved-pack'
+  });
+
+  assert.equal(response.statusCode, 404);
+  assert.equal(response.body.success, false);
+  assert.match(response.body.errors[0], /Approved pack not found/);
+}
+
+async function assertApprovedDeleteArchivesPackAndActivationOnly(handlers) {
+  const uploadedSourcePath = path.join(uploadIncomingDir, 'route-approved-source.pdf');
+  fs.writeFileSync(uploadedSourcePath, 'uploaded source remains');
+  const draftBefore = snapshotFiles(draftPacksDir);
+  const uploadsBefore = snapshotFiles(path.join(tempRoot, 'uploads'));
+  const response = await request(handlers, 'DELETE', '/approved/:packId', {
+    confirmationText: 'DELETE'
+  }, {
+    packId: 'route-approved-pack'
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.data.packId, 'route-approved-pack');
+  assert.equal(response.body.data.removedActivation, true);
+  assert.equal(response.body.data.sourceFilesPreserved, true);
+  assert.equal(response.body.data.draftPacksPreserved, true);
+  assert.equal(fs.existsSync(path.join(approvedPacksDir, 'route-approved-pack', 'knowledge_pack.json')), false);
+  assert.ok(response.body.data.archivedPath.startsWith(deletedApprovedPacksDir));
+  assert.equal(fs.existsSync(path.join(response.body.data.archivedPath, 'knowledge_pack.json')), true);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(response.body.data.archivedPath, 'knowledge_pack.json'), 'utf8')).packId, 'route-approved-pack');
+  assert.equal(Object.prototype.hasOwnProperty.call(JSON.parse(fs.readFileSync(activationRegistryPath, 'utf8')).packs, 'route-approved-pack'), false);
+  assert.equal(response.body.data.approvedSummary.approvedPacks.some((pack) => pack.packId === 'route-approved-pack'), false);
+  assert.deepEqual(snapshotFiles(draftPacksDir), draftBefore, 'delete should not remove or modify draft packs');
+  assert.deepEqual(snapshotFiles(path.join(tempRoot, 'uploads')), uploadsBefore, 'delete should not remove uploaded source files');
+}
+
 async function assertPromoteDraftEndpointSucceeds(handlers) {
   writeKnowledgePack(draftPacksDir, makePack({
     packId: 'route-promote-ready-pack',
@@ -897,9 +1304,10 @@ async function assertPromoteBlocksPendingItems(handlers) {
   assert.equal(fs.existsSync(path.join(approvedPacksDir, 'route-promote-pending-pack', 'knowledge_pack.json')), false);
 }
 
-async function assertPromoteBlocksRejectedItems(handlers) {
+async function assertPromoteExcludesRejectedItems(handlers) {
   writeKnowledgePack(draftPacksDir, makePack({
     packId: 'route-promote-rejected-pack',
+    vocabulary: [makeVocabularyItem('approved-term', 'approved')],
     concepts: [makeConceptItem('rejected-concept', 'rejected')]
   }));
 
@@ -907,10 +1315,36 @@ async function assertPromoteBlocksRejectedItems(handlers) {
     packId: 'route-promote-rejected-pack'
   });
 
-  assert.equal(response.statusCode, 400);
-  assert.equal(response.body.success, false);
-  assert.ok(response.body.errors.some((error) => error.includes('has been rejected')));
-  assert.ok(response.body.promotionReadiness.blockedReasons.includes('rejected items remain'));
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.success, true);
+  const promoted = readKnowledgePack(approvedPacksDir, 'route-promote-rejected-pack');
+  assert.deepEqual(promoted.vocabulary.map((item) => item.term), ['approved-term']);
+  assert.deepEqual(promoted.concepts, []);
+  assert.equal(JSON.stringify(promoted).includes('rejected-concept'), false);
+}
+
+async function assertPromoteExcludesRepairNeededItems(handlers) {
+  writeKnowledgePack(draftPacksDir, makePack({
+    packId: 'route-promote-repair-needed-pack',
+    vocabulary: [
+      makeVocabularyItem('approved-term', 'approved'),
+      {
+        ...makeVocabularyItem('repair-needed-term', 'approved'),
+        reviewStatus: 'repair_needed',
+        studentDefinition: ''
+      }
+    ]
+  }));
+
+  const response = await request(handlers, 'POST', '/drafts/:packId/promote', {}, {
+    packId: 'route-promote-repair-needed-pack'
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.success, true);
+  const promoted = readKnowledgePack(approvedPacksDir, 'route-promote-repair-needed-pack');
+  assert.deepEqual(promoted.vocabulary.map((item) => item.term), ['approved-term']);
+  assert.equal(JSON.stringify(promoted).includes('repair-needed-term'), false);
 }
 
 async function assertPromoteBlocksInvalidFormulaSolverStatus(handlers) {
@@ -930,8 +1364,29 @@ async function assertPromoteBlocksInvalidFormulaSolverStatus(handlers) {
 
   assert.equal(response.statusCode, 400);
   assert.equal(response.body.success, false);
-  assert.ok(response.body.errors.some((error) => error.includes('solver support')));
+  assert.ok(response.body.errors.some((error) => error.includes('solverStatus')));
   assert.ok(response.body.promotionReadiness.blockedReasons.includes('formula solverStatus is not reference_only'));
+}
+
+async function assertPromoteStrictValidationBlocksInvalidApprovedOutput(handlers) {
+  writeKnowledgePack(draftPacksDir, makePack({
+    packId: 'route-promote-invalid-approved-output-pack',
+    vocabulary: [
+      {
+        ...makeVocabularyItem('unknown-standard-term', 'approved'),
+        standards: ['SAMPLE.PS.UNKNOWN.1']
+      }
+    ]
+  }));
+
+  const response = await request(handlers, 'POST', '/drafts/:packId/promote', {}, {
+    packId: 'route-promote-invalid-approved-output-pack'
+  });
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.success, false);
+  assert.ok(response.body.errors.some((error) => error.includes('unknown standard reference')));
+  assert.equal(fs.existsSync(path.join(approvedPacksDir, 'route-promote-invalid-approved-output-pack', 'knowledge_pack.json')), false);
 }
 
 async function assertPromoteDoesNotOverwriteWithoutForce(handlers) {
@@ -1159,6 +1614,9 @@ function createApp(handlers) {
     },
     patch(route, handler) {
       handlers.set(`PATCH ${route}`, handler);
+    },
+    delete(route, handler) {
+      handlers.set(`DELETE ${route}`, handler);
     },
     post(route, handler) {
       handlers.set(`POST ${route}`, handler);

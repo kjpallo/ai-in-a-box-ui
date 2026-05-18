@@ -16,10 +16,13 @@ fs.mkdirSync(approvedPacksDir, { recursive: true });
 
 try {
   assertBlocksPendingItems();
-  assertBlocksRejectedItems();
+  assertPromotesApprovedItemsOnlyWhenRejectedItemsRemain();
+  assertExcludesRepairNeededItems();
   assertBlocksInvalidSolverStatus();
   assertBlocksInvalidStandardReferenceWithBank();
+  assertStrictFinalValidationBlocksInvalidApprovedOutput();
   assertPromotesApprovedOnlyPackToTempOutput();
+  assertPromotionPreservesRangeLimitedScopeWarning();
   assertExistingApprovedPackRequiresForce();
   assertDraftPacksAreNotModified();
 } finally {
@@ -46,14 +49,15 @@ function assertBlocksPendingItems() {
   });
 
   assert.equal(result.success, false);
-  assert.equal(result.validationPassed, true);
+  assert.equal(result.validationPassed, false);
   assert.ok(result.errors.some((error) => error.includes('pending teacher review')));
   assert.equal(fs.existsSync(path.join(approvedPacksDir, 'pending-draft-pack', 'knowledge_pack.json')), false);
 }
 
-function assertBlocksRejectedItems() {
+function assertPromotesApprovedItemsOnlyWhenRejectedItemsRemain() {
   writeDraftPack(makePack({
     packId: 'rejected-draft-pack',
+    vocabulary: [makeVocabularyItem('approved-term')],
     concepts: [
       {
         ...makeConceptItem('rejected-concept'),
@@ -68,8 +72,36 @@ function assertBlocksRejectedItems() {
     standardsBank
   });
 
-  assert.equal(result.success, false);
-  assert.ok(result.errors.some((error) => error.includes('has been rejected')));
+  assert.equal(result.success, true, result.errors.join('\n'));
+  const promotedPack = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
+  assert.deepEqual(promotedPack.vocabulary.map((item) => item.term), ['approved-term']);
+  assert.deepEqual(promotedPack.concepts.map((item) => item.conceptId), []);
+  assert.equal(JSON.stringify(promotedPack).includes('rejected-concept'), false);
+}
+
+function assertExcludesRepairNeededItems() {
+  writeDraftPack(makePack({
+    packId: 'repair-needed-draft-pack',
+    vocabulary: [
+      makeVocabularyItem('approved-term'),
+      {
+        ...makeVocabularyItem('repair-needed-term'),
+        reviewStatus: 'repair_needed',
+        studentDefinition: ''
+      }
+    ]
+  }));
+
+  const result = promoteDraftKnowledgePack('repair-needed-draft-pack', {
+    draftPacksDir,
+    approvedPacksDir,
+    standardsBank
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  const promotedPack = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
+  assert.deepEqual(promotedPack.vocabulary.map((item) => item.term), ['approved-term']);
+  assert.equal(JSON.stringify(promotedPack).includes('repair-needed-term'), false);
 }
 
 function assertBlocksInvalidSolverStatus() {
@@ -91,7 +123,7 @@ function assertBlocksInvalidSolverStatus() {
 
   assert.equal(result.success, false);
   assert.equal(result.validationPassed, false);
-  assert.ok(result.errors.some((error) => error.includes('cannot claim solver support')));
+  assert.ok(result.errors.some((error) => error.includes('solverStatus')));
 }
 
 function assertBlocksInvalidStandardReferenceWithBank() {
@@ -116,6 +148,29 @@ function assertBlocksInvalidStandardReferenceWithBank() {
   assert.ok(result.errors.some((error) => error.includes('unknown standard reference')));
 }
 
+function assertStrictFinalValidationBlocksInvalidApprovedOutput() {
+  writeDraftPack(makePack({
+    packId: 'invalid-approved-output-draft-pack',
+    vocabulary: [
+      {
+        ...makeVocabularyItem('invalid-approved-term'),
+        standards: ['SAMPLE.PS.UNKNOWN.1']
+      }
+    ]
+  }));
+
+  const result = promoteDraftKnowledgePack('invalid-approved-output-draft-pack', {
+    draftPacksDir,
+    approvedPacksDir,
+    standardsBank
+  });
+
+  assert.equal(result.success, false);
+  assert.equal(result.validationPassed, false);
+  assert.ok(result.errors.some((error) => error.includes('unknown standard reference')));
+  assert.equal(fs.existsSync(path.join(approvedPacksDir, 'invalid-approved-output-draft-pack', 'knowledge_pack.json')), false);
+}
+
 function assertPromotesApprovedOnlyPackToTempOutput() {
   const pack = makePack({ packId: 'approved-only-draft-pack' });
   const sourcePath = writeDraftPack(pack);
@@ -132,6 +187,40 @@ function assertPromotesApprovedOnlyPackToTempOutput() {
   const promotedPack = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
   assert.deepEqual(promotedPack.metadata, pack.metadata, 'metadata should be preserved');
   assert.deepEqual(promotedPack.vocabulary[0].sourceFile, pack.vocabulary[0].sourceFile, 'source tracking should be preserved');
+}
+
+function assertPromotionPreservesRangeLimitedScopeWarning() {
+  writeDraftPack(makePack({
+    packId: 'preview-sample-draft-pack',
+    title: 'Preview Sample: Energy Pages 2-2',
+    metadata: {
+      createdBy: 'test-suite',
+      createdAt: '2026-05-13T00:00:00.000Z',
+      importScope: {
+        scope: 'preview_sample',
+        scopeLabel: 'Preview Sample',
+        sampleOnly: true,
+        rangeLimited: true,
+        completePacketImported: false,
+        pageRangeLabel: '2-2',
+        rangeLabel: 'Pages 2-2',
+        warning: 'This draft only covers Pages 2-2. Run Full Import to process the whole document.'
+      }
+    }
+  }));
+
+  const result = promoteDraftKnowledgePack('preview-sample-draft-pack', {
+    draftPacksDir,
+    approvedPacksDir,
+    standardsBank
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  const promotedPack = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
+  assert.equal(promotedPack.title, 'Preview Sample: Energy Pages 2-2');
+  assert.equal(promotedPack.metadata.approvedImportScope.scope, 'preview_sample');
+  assert.equal(promotedPack.metadata.rangeLimitedApprovedPack, true);
+  assert.equal(promotedPack.metadata.approvalScopeWarning, 'This draft only covers Pages 2-2. Run Full Import to process the whole document.');
 }
 
 function assertExistingApprovedPackRequiresForce() {

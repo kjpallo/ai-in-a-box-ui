@@ -1,0 +1,131 @@
+{
+  "success": true,
+  "filePath": "/Users/kevinpallo/Projects/ai-in-a-box-ui/knowledge/uploads/incoming/3581be11-a665-4134-8fb3-8c5a7ddebb2a.pdf",
+  "fileName": "3581be11-a665-4134-8fb3-8c5a7ddebb2a.pdf",
+  "extension": ".pdf",
+  "mimeGuess": "application/pdf",
+  "text": "\n\n\n\n\nEnergy\n• Energy: the ability to cause change.\n– Measured in Joules (J)\n• 1 Joule = 1 kg*m 2\n/s 2\n– There are many different types of energy. We will\nstart by learning about kinetic and potential.\n\n\n\n\nKinetic Energy\n• Kinetic Energy: (KE) energy in motion.\nKE = ½ mv 2\n– Mass measured in\n(kg)\n– Velocity measured\nin (m/s)\n\n\n\n\nA jogger with a mass of 60 kg is moving at a\nspeed of 3.0 m/s. What is the jogger’s kinetic\nenergy?\nKE = ?\nm = 60.0 kg\nv = 3.0 m/s\nKE = ½ mv 2\nKE = ½ (60.0)(3.0) 2\nKE = (30)(9)\nKE = 270 J\nExample #1\n\n\n\n\nPractice Time\n1. \tA baseball with a mass of 0.15 kg is moving at a\nspeed of 40 m/s. What is the baseball’s kinetic\nenergy?\n2. \tIf a stone has 390 J of energy and is moving with\na speed of 12 m/s, what is the mass of the stone?\n3. \tWhat is the velocity of a 0.06 kg ball moving with\n75 J of energy?\nAnswer: KE = 120 J\nAnswer: m = 5.42 kg\nAnswer: v = 50 m/s\n\n\n\n\nPotential Energy\n• Potential Energy:\nstored energy\n– 3 types of potential\nenergy:\n• Elastic potential\nenergy\n• Chemical potential\nenergy\n• Gravitational\npotential energy\n\n\n\n\nPotential Energy\n• Elastic Potential\nEnergy: energy\nstored in objects\nbeing compressed\nor stretched\n– Examples:\n• Bow and arrow\n• Spring\n• Slingshot\n\n\n\n\nPotential Energy\n• Chemical\nPotential Energy:\nenergy stored in\nchemical bonds of\ncompounds.\n– Examples:\n• Firewood\n• Battery\n• Food\n\n\n\n\nPotential Energy\n• Gravitational Potential Energy: (GPE)\nenergy stored in objects that are above\nEarth’s surface.\nGPE = ham\n– Height measured in\n(m)\n– Acceleration due to\ngravity measured in\n(m/s 2)\n– Mass measured in\n(kg)\nAt the peak of its path, the sphere\npauses for just a second and has\ngravitational potential energy, before\nit converts back to kinetic energy as\nit moves towards the other spheres.\n\n\n\n\nHow much gravitational potential energy does\na 5 kg rock have if it is sitting on the edge of a\ncliff that is 10 m high?\nGPE = ?\nm = 5 kg\na = 9.8 m/s 2\nh = 10 m\nGPE = ham\nGPE = ham\nGPE = (10)(9.8)(5)\nGPE = 490 J\nExample #2\n\n\n\n\nPractice Time\n1. \tA Viking ship roller coaster at the fair has a mass\nof 36,000 kg. If at its peak it reaches a height of\n20 m off the ground, how much gravitational\npotential energy does it have?\n2. \tA 1.5 kg apple pie is sitting on the kitchen counter.\nIf it has 13.44 J of gravitational potential energy,\nhow tall is the counter it sits on?\n3. \tA suitcase weighing 120 N sits on a counter 1.8 m\nhigh in the airport. How much energy does it\nhave?\nAnswer: GPE = 7,056,000 J\nAnswer: h = 0.914 m\nAnswer: GPE = 216 J\n\n\n\n\n\n\n\n\n\n",
+  "sections": [
+    {
+      "label": "Page 2",
+      "sourceLocation": "Page 2",
+      "pageNumber": 2,
+      "text": "Energy\n• Energy: the ability to cause change.\n– Measured in Joules (J)\n• 1 Joule = 1 kg*m 2\n/s 2\n– There are many different types of energy. We will\nstart by learning about kinetic and potential."
+    },
+    {
+      "label": "Page 3",
+      "sourceLocation": "Page 3",
+      "pageNumber": 3,
+      "text": "Kinetic Energy\n• Kinetic Energy: (KE) energy in motion.\nKE = ½ mv 2\n– Mass measured in\n(kg)\n– Velocity measured\nin (m/s)"
+    },
+    {
+      "label": "Page 4",
+      "sourceLocation": "Page 4",
+      "pageNumber": 4,
+      "text": "A jogger with a mass of 60 kg is moving at a\nspeed of 3.0 m/s. What is the jogger’s kinetic\nenergy?\nKE = ?\nm = 60.0 kg\nv = 3.0 m/s\nKE = ½ mv 2\nKE = ½ (60.0)(3.0) 2\nKE = (30)(9)\nKE = 270 J\nExample #1"
+    },
+    {
+      "label": "Page 5",
+      "sourceLocation": "Page 5",
+      "pageNumber": 5,
+      "text": "Practice Time\n1. \tA baseball with a mass of 0.15 kg is moving at a\nspeed of 40 m/s. What is the baseball’s kinetic\nenergy?\n2. \tIf a stone has 390 J of energy and is moving with\na speed of 12 m/s, what is the mass of the stone?\n3. \tWhat is the velocity of a 0.06 kg ball moving with\n75 J of energy?\nAnswer: KE = 120 J\nAnswer: m = 5.42 kg\nAnswer: v = 50 m/s"
+    },
+    {
+      "label": "Page 6",
+      "sourceLocation": "Page 6",
+      "pageNumber": 6,
+      "text": "Potential Energy\n• Potential Energy:\nstored energy\n– 3 types of potential\nenergy:\n• Elastic potential\nenergy\n• Chemical potential\nenergy\n• Gravitational\npotential energy"
+    },
+    {
+      "label": "Page 7",
+      "sourceLocation": "Page 7",
+      "pageNumber": 7,
+      "text": "Potential Energy\n• Elastic Potential\nEnergy: energy\nstored in objects\nbeing compressed\nor stretched\n– Examples:\n• Bow and arrow\n• Spring\n• Slingshot"
+    },
+    {
+      "label": "Page 8",
+      "sourceLocation": "Page 8",
+      "pageNumber": 8,
+      "text": "Potential Energy\n• Chemical\nPotential Energy:\nenergy stored in\nchemical bonds of\ncompounds.\n– Examples:\n• Firewood\n• Battery\n• Food"
+    },
+    {
+      "label": "Page 9",
+      "sourceLocation": "Page 9",
+      "pageNumber": 9,
+      "text": "Potential Energy\n• Gravitational Potential Energy: (GPE)\nenergy stored in objects that are above\nEarth’s surface.\nGPE = ham\n– Height measured in\n(m)\n– Acceleration due to\ngravity measured in\n(m/s 2)\n– Mass measured in\n(kg)\nAt the peak of its path, the sphere\npauses for just a second and has\ngravitational potential energy, before\nit converts back to kinetic energy as\nit moves towards the other spheres."
+    },
+    {
+      "label": "Page 10",
+      "sourceLocation": "Page 10",
+      "pageNumber": 10,
+      "text": "How much gravitational potential energy does\na 5 kg rock have if it is sitting on the edge of a\ncliff that is 10 m high?\nGPE = ?\nm = 5 kg\na = 9.8 m/s 2\nh = 10 m\nGPE = ham\nGPE = ham\nGPE = (10)(9.8)(5)\nGPE = 490 J\nExample #2"
+    },
+    {
+      "label": "Page 11",
+      "sourceLocation": "Page 11",
+      "pageNumber": 11,
+      "text": "Practice Time\n1. \tA Viking ship roller coaster at the fair has a mass\nof 36,000 kg. If at its peak it reaches a height of\n20 m off the ground, how much gravitational\npotential energy does it have?\n2. \tA 1.5 kg apple pie is sitting on the kitchen counter.\nIf it has 13.44 J of gravitational potential energy,\nhow tall is the counter it sits on?\n3. \tA suitcase weighing 120 N sits on a counter 1.8 m\nhigh in the airport. How much energy does it\nhave?\nAnswer: GPE = 7,056,000 J\nAnswer: h = 0.914 m\nAnswer: GPE = 216 J"
+    }
+  ],
+  "pages": [
+    {
+      "pageNumber": 2,
+      "text": "Energy\n• Energy: the ability to cause change.\n– Measured in Joules (J)\n• 1 Joule = 1 kg*m 2\n/s 2\n– There are many different types of energy. We will\nstart by learning about kinetic and potential."
+    },
+    {
+      "pageNumber": 3,
+      "text": "Kinetic Energy\n• Kinetic Energy: (KE) energy in motion.\nKE = ½ mv 2\n– Mass measured in\n(kg)\n– Velocity measured\nin (m/s)"
+    },
+    {
+      "pageNumber": 4,
+      "text": "A jogger with a mass of 60 kg is moving at a\nspeed of 3.0 m/s. What is the jogger’s kinetic\nenergy?\nKE = ?\nm = 60.0 kg\nv = 3.0 m/s\nKE = ½ mv 2\nKE = ½ (60.0)(3.0) 2\nKE = (30)(9)\nKE = 270 J\nExample #1"
+    },
+    {
+      "pageNumber": 5,
+      "text": "Practice Time\n1. \tA baseball with a mass of 0.15 kg is moving at a\nspeed of 40 m/s. What is the baseball’s kinetic\nenergy?\n2. \tIf a stone has 390 J of energy and is moving with\na speed of 12 m/s, what is the mass of the stone?\n3. \tWhat is the velocity of a 0.06 kg ball moving with\n75 J of energy?\nAnswer: KE = 120 J\nAnswer: m = 5.42 kg\nAnswer: v = 50 m/s"
+    },
+    {
+      "pageNumber": 6,
+      "text": "Potential Energy\n• Potential Energy:\nstored energy\n– 3 types of potential\nenergy:\n• Elastic potential\nenergy\n• Chemical potential\nenergy\n• Gravitational\npotential energy"
+    },
+    {
+      "pageNumber": 7,
+      "text": "Potential Energy\n• Elastic Potential\nEnergy: energy\nstored in objects\nbeing compressed\nor stretched\n– Examples:\n• Bow and arrow\n• Spring\n• Slingshot"
+    },
+    {
+      "pageNumber": 8,
+      "text": "Potential Energy\n• Chemical\nPotential Energy:\nenergy stored in\nchemical bonds of\ncompounds.\n– Examples:\n• Firewood\n• Battery\n• Food"
+    },
+    {
+      "pageNumber": 9,
+      "text": "Potential Energy\n• Gravitational Potential Energy: (GPE)\nenergy stored in objects that are above\nEarth’s surface.\nGPE = ham\n– Height measured in\n(m)\n– Acceleration due to\ngravity measured in\n(m/s 2)\n– Mass measured in\n(kg)\nAt the peak of its path, the sphere\npauses for just a second and has\ngravitational potential energy, before\nit converts back to kinetic energy as\nit moves towards the other spheres."
+    },
+    {
+      "pageNumber": 10,
+      "text": "How much gravitational potential energy does\na 5 kg rock have if it is sitting on the edge of a\ncliff that is 10 m high?\nGPE = ?\nm = 5 kg\na = 9.8 m/s 2\nh = 10 m\nGPE = ham\nGPE = ham\nGPE = (10)(9.8)(5)\nGPE = 490 J\nExample #2"
+    },
+    {
+      "pageNumber": 11,
+      "text": "Practice Time\n1. \tA Viking ship roller coaster at the fair has a mass\nof 36,000 kg. If at its peak it reaches a height of\n20 m off the ground, how much gravitational\npotential energy does it have?\n2. \tA 1.5 kg apple pie is sitting on the kitchen counter.\nIf it has 13.44 J of gravitational potential energy,\nhow tall is the counter it sits on?\n3. \tA suitcase weighing 120 N sits on a counter 1.8 m\nhigh in the airport. How much energy does it\nhave?\nAnswer: GPE = 7,056,000 J\nAnswer: h = 0.914 m\nAnswer: GPE = 216 J"
+    }
+  ],
+  "tables": [],
+  "metadata": {
+    "detectedType": "pdf",
+    "parser": "pdf-parse",
+    "pageCount": 12,
+    "pdfInfo": {
+      "title": "Concept 1 Notes - Nature of Energy.pptx",
+      "creator": "Google"
+    },
+    "characterCount": 2516
+  },
+  "warnings": [],
+  "errors": [],
+  "upload": {
+    "uploadId": "3581be11-a665-4134-8fb3-8c5a7ddebb2a",
+    "originalFileName": "Concept 1 Notes - Nature of Energy.pptx.pdf",
+    "storedFileName": "3581be11-a665-4134-8fb3-8c5a7ddebb2a.pdf",
+    "extractionJsonFileName": "3581be11-a665-4134-8fb3-8c5a7ddebb2a_extraction.json"
+  }
+}

@@ -1,0 +1,21 @@
+ lib/knowledge/approvedPackActivationStore.js  |   15 +
+ lib/knowledge/loadApprovedKnowledgePacks.js   |   17 +-
+ lib/knowledge/loadDraftKnowledgePacks.js      |   17 +-
+ lib/knowledge/promoteDraftKnowledgePack.js    |   68 +-
+ lib/uploads/buildImportPipelineReport.js      |  136 ++-
+ lib/uploads/buildKnowledgePackPrompt.js       |   55 +-
+ lib/uploads/extractTextFromFile.js            |   29 +-
+ lib/uploads/generateDraftKnowledgePack.js     | 1474 +++++++++++++++++++++++--
+ lib/uploads/teacherContentAdapter.js          |   83 ++
+ public/api-client.js                          |   11 +-
+ public/style.css                              |  143 ++-
+ public/teacher-content-ui.js                  |  789 ++++++++++++-
+ routes/teacherContentRoutes.js                |  316 +++++-
+ scripts/test-generate-draft-knowledge-pack.js |  687 +++++++++++-
+ scripts/test-import-pipeline-report.js        |  148 ++-
+ scripts/test-promote-draft-knowledge-pack.js  |  101 +-
+ scripts/test-teacher-content-adapter.js       |   29 +-
+ scripts/test-teacher-content-routes.js        |  498 ++++++++-
+ scripts/test-teacher-content-ui.js            |  152 ++-
+ scripts/test-upload-text-extraction.js        |    3 +
+ 20 files changed, 4483 insertions(+), 288 deletions(-)

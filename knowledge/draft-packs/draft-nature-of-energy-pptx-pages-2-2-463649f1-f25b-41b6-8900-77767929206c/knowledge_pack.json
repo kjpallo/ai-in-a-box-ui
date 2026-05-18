@@ -1,0 +1,256 @@
+{
+  "packId": "draft-nature-of-energy-pptx-pages-2-2-463649f1-f25b-41b6-8900-77767929206c",
+  "title": "Nature Of Energy.Pptx Pages 2-2",
+  "version": "0.1.0-draft",
+  "subject": "Energy",
+  "gradeLevel": "unknown",
+  "sourceFiles": [
+    {
+      "fileName": "463649f1-f25b-41b6-8900-77767929206c.pdf",
+      "fileType": "application/pdf",
+      "reviewStatus": "pending",
+      "confidence": "low",
+      "notes": "Extracted from Page 2 of the source document.",
+      "uploadId": "463649f1-f25b-41b6-8900-77767929206c",
+      "storedFileName": "463649f1-f25b-41b6-8900-77767929206c.pdf",
+      "extractionJsonFileName": "463649f1-f25b-41b6-8900-77767929206c_extraction.json",
+      "characterCount": 195,
+      "pageCount": 1,
+      "chunkCount": 1
+    },
+    {
+      "fileName": "Concept 1 Notes - Nature of Energy.pptx.pdf",
+      "fileType": "pdf",
+      "uploadId": "463649f1-f25b-41b6-8900-77767929206c",
+      "storedFileName": "463649f1-f25b-41b6-8900-77767929206c.pdf",
+      "extractionJsonFileName": "463649f1-f25b-41b6-8900-77767929206c_extraction.json",
+      "characterCount": 195,
+      "pageCount": 1,
+      "chunkCount": 1,
+      "reviewStatus": "pending",
+      "confidence": "low",
+      "notes": "Added from extraction metadata for draft traceability."
+    }
+  ],
+  "vocabulary": [
+    {
+      "term": "Energy",
+      "aliases": [],
+      "studentDefinition": "the ability to cause change.",
+      "teacherDefinition": "the ability to cause change.",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "standards": [],
+      "reviewStatus": "approved",
+      "confidence": "low",
+      "sourceFile": "463649f1-f25b-41b6-8900-77767929206c.pdf",
+      "sourceLocation": "Page 2",
+      "sourceTextSnippet": "Energy: the ability to cause change.",
+      "vocabId": "vocab-energy",
+      "notes": "Generated vocabulary ID during import normalization.",
+      "normalizationNotes": [
+        "Generated vocabulary ID during import normalization."
+      ]
+    },
+    {
+      "term": "Joule",
+      "aliases": [],
+      "studentDefinition": "the unit used to measure energy.",
+      "teacherDefinition": "the unit used to measure energy.",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "standards": [],
+      "reviewStatus": "approved",
+      "confidence": "low",
+      "sourceFile": "463649f1-f25b-41b6-8900-77767929206c.pdf",
+      "sourceLocation": "Page 2",
+      "sourceTextSnippet": "Measured in Joules (J)",
+      "vocabId": "vocab-joule",
+      "notes": "Generated vocabulary ID during import normalization.",
+      "normalizationNotes": [
+        "Generated vocabulary ID during import normalization."
+      ]
+    }
+  ],
+  "concepts": [
+    {
+      "conceptId": "kinetic-potential-energy",
+      "title": "Types of Energy",
+      "aliases": [],
+      "studentExplanation": "There are many different types of energy, including kinetic and potential.",
+      "keyIdeas": [
+        "Energy is the ability to cause change.",
+        "There are many different types of energy, such as kinetic and potential."
+      ],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "standards": [],
+      "reviewStatus": "rejected",
+      "confidence": "low",
+      "sourceFile": "463649f1-f25b-41b6-8900-77767929206c.pdf",
+      "sourceLocation": "Page 2",
+      "sourceTextSnippet": "There are many different types of energy. We will start by learning about kinetic and potential."
+    }
+  ],
+  "referenceFormulas": [
+    {
+      "formulaId": "joule-definition",
+      "title": "Definition of 1 Joule",
+      "equation": "1 Joule = 1 kg*m 2/s 2",
+      "variables": [
+        "kg",
+        "m",
+        "s"
+      ],
+      "studentExplanation": "This formula defines the relationship between a Joule and mass, distance, and time.",
+      "solverStatus": "reference_only",
+      "reviewStatus": "rejected",
+      "confidence": "low",
+      "sourceFile": "463649f1-f25b-41b6-8900",
+      "sourceText": "1 Joule = 1 kg⋅m²/s²",
+      "sourceLocation": "Pages 2",
+      "sourceTextSnippet": "Energy • Energy: the ability to cause change. – Measured in Joules (J) • 1 Joule = 1 kg*m 2 /s 2 – There are many different types of energy. We will start by learning about kinetic and potential."
+    },
+    {
+      "formulaId": "formula-joule-1-kg-m-2",
+      "title": "Joule Reference Formula",
+      "equation": "Joule = 1 kg*m 2",
+      "variables": [],
+      "studentExplanation": "Reference formula extracted from the uploaded source for teacher review.",
+      "solverStatus": "reference_only",
+      "reviewStatus": "rejected",
+      "confidence": "low",
+      "sourceFile": "Concept 1 Notes - Nature of Energy.pptx.pdf",
+      "sourceLocation": "Page 2",
+      "sourceTextSnippet": "• 1 Joule = 1 kg*m 2"
+    }
+  ],
+  "schemaVersion": "1.0.0",
+  "status": "draft",
+  "reviewStatus": "pending",
+  "problemBank": [],
+  "standardsMap": [],
+  "smokeTests": [],
+  "metadata": {
+    "modelMetadata": {},
+    "createdBy": "charlemagne-teacher-content-import",
+    "createdAt": "2026-05-18T19:13:02.380Z",
+    "updatedAt": "2026-05-18T19:13:02.380Z",
+    "status": "draft",
+    "reviewStatus": "pending",
+    "packName": "Nature Of Energy.Pptx Pages 2-2",
+    "packId": "draft-nature-of-energy-pptx-pages-2-2-463649f1-f25b-41b6-8900-77767929206c",
+    "sourceUpload": {
+      "uploadId": "463649f1-f25b-41b6-8900-77767929206c",
+      "originalFileName": "Concept 1 Notes - Nature of Energy.pptx.pdf",
+      "storedFileName": "463649f1-f25b-41b6-8900-77767929206c.pdf",
+      "extractionJsonFileName": "463649f1-f25b-41b6-8900-77767929206c_extraction.json",
+      "fileType": "pdf",
+      "characterCount": 195,
+      "pageCount": 1,
+      "chunkCount": 1
+    },
+    "extraction": {
+      "characterCount": 195,
+      "pageCount": 1,
+      "chunkCount": 1
+    },
+    "deduplication": {
+      "vocabulary": {
+        "raw": 2,
+        "duplicatesRemoved": 0,
+        "final": 2
+      },
+      "concepts": {
+        "raw": 1,
+        "duplicatesRemoved": 0,
+        "final": 1
+      },
+      "problemBank": {
+        "raw": 0,
+        "duplicatesRemoved": 0,
+        "final": 0
+      }
+    },
+    "importNormalization": {
+      "conceptIdsGenerated": 0,
+      "conceptTitlesGenerated": 0,
+      "vocabularyIdsGenerated": 2,
+      "vocabularyTermsGenerated": 0,
+      "problemIdsGenerated": 0,
+      "smokeTestIdsGenerated": 0,
+      "standardsMapIdsMapped": 0,
+      "sourceEvidenceFilled": 0,
+      "reviewNeededItems": 2,
+      "droppedItems": 0,
+      "totalNormalized": 2,
+      "notes": [
+        "Generated vocabulary ID during import normalization."
+      ]
+    },
+    "importCoverage": {
+      "totalPages": 1,
+      "totalChunks": 1,
+      "processedPages": 1,
+      "processedChunks": 1,
+      "pagesWithDraftItems": 1,
+      "chunksWithDraftItems": 1,
+      "chunksWithNoExtractedKnowledge": 0,
+      "noKnowledgeChunks": [],
+      "sectionsDetected": [
+        "referenceFormulas",
+        "vocabulary"
+      ],
+      "sourceSignals": {
+        "definitionLikeText": true,
+        "equationLikeText": true,
+        "practiceLikeText": false
+      },
+      "itemCounts": {
+        "vocabulary": 2,
+        "concepts": 1,
+        "referenceFormulas": 2,
+        "problemBank": 0,
+        "standardsMap": 0,
+        "smokeTests": 0
+      },
+      "failedBatches": [],
+      "warnings": []
+    },
+    "importSelection": {
+      "kind": "pages",
+      "label": "Pages 2",
+      "pages": [
+        2
+      ],
+      "chunks": [
+        1
+      ],
+      "pageRangeLabel": "2",
+      "chunkRangeLabel": "1",
+      "pageCount": 1,
+      "chunkCount": 1,
+      "characterCount": 195,
+      "originalPageCount": 12,
+      "originalChunkCount": 10,
+      "originalCharacterCount": 2516,
+      "completePacketImported": false
+    },
+    "partialImport": {
+      "completePacketImported": false,
+      "note": "This draft was generated from a selected page/chunk range, not the whole source packet.",
+      "importedPages": [
+        2
+      ],
+      "importedChunks": [
+        1
+      ],
+      "originalPageCount": 12,
+      "originalChunkCount": 10,
+      "originalCharacterCount": 2516
+    }
+  }
+}

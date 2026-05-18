@@ -396,6 +396,12 @@ button:disabled {
   color: #bfd3d3;
 }
 
+.danger-small {
+  border-color: rgba(255, 118, 118, 0.34);
+  color: #ffdede;
+  background: rgba(82, 20, 26, 0.5);
+}
+
 .response-actions {
   display: flex;
   align-items: center;
@@ -2404,7 +2410,8 @@ button:disabled {
   text-transform: uppercase;
 }
 
-.teacher-content-name-field input {
+.teacher-content-name-field input,
+.teacher-content-name-field select {
   min-height: 38px;
   width: 100%;
   border: 1px solid rgba(102, 247, 209, 0.18);
@@ -2422,6 +2429,7 @@ button:disabled {
 }
 
 .teacher-content-import-estimate,
+.teacher-content-preview-controls,
 .teacher-content-preview-report,
 .teacher-content-selected-import,
 .teacher-content-whole-import-advanced {
@@ -2436,6 +2444,61 @@ button:disabled {
 .teacher-content-import-estimate.large {
   border-color: rgba(126, 233, 255, 0.34);
   background: rgba(126, 233, 255, 0.06);
+}
+
+.teacher-content-preview-controls,
+.teacher-content-preview-report.partial {
+  border-color: rgba(255, 207, 102, 0.32);
+  background: rgba(255, 207, 102, 0.055);
+}
+
+.teacher-content-preview-repair,
+.teacher-content-preview-items {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.teacher-content-preview-repair h5,
+.teacher-content-preview-items h5 {
+  margin: 0;
+}
+
+.teacher-content-preview-repair ul,
+.teacher-content-preview-items ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.teacher-content-recovery-panel {
+  border-color: rgba(255, 207, 102, 0.38);
+  background: rgba(255, 207, 102, 0.075);
+}
+
+.teacher-content-backend-details {
+  display: grid;
+  gap: 6px;
+}
+
+.teacher-content-backend-details strong {
+  color: #f4fffb;
+}
+
+.teacher-content-backend-details ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.teacher-content-preview-items li {
+  display: grid;
+  gap: 2px;
+}
+
+.teacher-content-preview-items small {
+  color: #bad7d3;
 }
 
 .teacher-content-selected-import {
@@ -3071,6 +3134,12 @@ button:disabled {
   color: #d8eee9;
 }
 
+.teacher-content-review-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .teacher-content-review-item {
   display: grid;
   grid-template-columns: minmax(0, 0.75fr) minmax(0, 1fr) auto;
@@ -3193,9 +3262,33 @@ button:disabled {
   gap: 10px;
 }
 
+.teacher-content-scope-warning {
+  border: 1px solid rgba(255, 205, 87, 0.32);
+  border-radius: 8px;
+  padding: 10px;
+  background: rgba(255, 205, 87, 0.08);
+  color: #fff6d7;
+  display: grid;
+  gap: 4px;
+}
+
+.teacher-content-scope-warning strong {
+  color: #ffe29a;
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.teacher-content-scope-warning p {
+  margin: 0;
+  color: #fff6d7;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
 .teacher-content-approved-head {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 12px;
   align-items: center;
 }
@@ -3260,6 +3353,32 @@ button:disabled {
   text-align: right;
 }
 
+.teacher-content-approved-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.teacher-content-checkbox-control {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  max-width: 260px;
+  color: #f4fffb;
+  font-size: 0.8rem;
+  font-weight: 900;
+  line-height: 1.25;
+}
+
+.teacher-content-checkbox-control input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--neon);
+  flex: 0 0 auto;
+}
+
 .teacher-content-switch {
   width: 48px;
   height: 26px;
@@ -3288,14 +3407,16 @@ button:disabled {
 }
 
 .teacher-content-approved-activation-note,
-.teacher-content-approved-activation-message {
+.teacher-content-approved-activation-message,
+.teacher-content-approved-delete-message {
   margin: 0;
   color: var(--muted);
   font-size: 0.78rem;
   line-height: 1.45;
 }
 
-.teacher-content-approved-activation-message {
+.teacher-content-approved-activation-message,
+.teacher-content-approved-delete-message {
   color: #cafff0;
   min-height: 1.1em;
 }
@@ -4500,6 +4621,18 @@ button:disabled {
     max-height: calc(100vh - 20px);
     grid-template-rows: auto auto auto minmax(0, 1fr) auto;
     padding: 12px;
+  }
+
+  .teacher-content-approved-head {
+    grid-template-columns: 1fr;
+  }
+
+  .teacher-content-approved-actions,
+  .teacher-content-switch-block,
+  .teacher-content-checkbox-control {
+    justify-content: flex-start;
+    justify-items: start;
+    text-align: left;
   }
 
   .teacher-content-deck {

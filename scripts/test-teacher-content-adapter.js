@@ -35,6 +35,10 @@ try {
     ]
   }));
   writeKnowledgePack(draftPacksDir, makeInvalidPack('invalid-draft-pack'));
+  writeKnowledgePack(path.join(draftPacksDir, '_example'), makePack({
+    packId: 'teacher-content-example-draft',
+    title: 'Example Draft Fixture'
+  }));
   writeKnowledgePack(approvedPacksDir, makePack({
     packId: 'teacher-content-approved',
     version: '1.0.0',
@@ -44,9 +48,15 @@ try {
     ]
   }));
   writeKnowledgePack(approvedPacksDir, makeInvalidPack('invalid-approved-pack'));
+  writeKnowledgePack(path.join(approvedPacksDir, '_example'), makePack({
+    packId: 'teacher-content-example-approved',
+    title: 'Example Approved Fixture',
+    version: '1.0.0'
+  }));
 
   assertDashboardCounts();
   assertDraftReviewList();
+  assertFixturePacksRequireExplicitOption();
   assertDraftPackReport();
   assertApprovedPackSummary();
   assertInvalidPacksAreErrors();
@@ -111,6 +121,18 @@ function assertDraftReviewList() {
   });
 }
 
+function assertFixturePacksRequireExplicitOption() {
+  const normalDrafts = listDraftPacksForReview({ draftPacksDir, standardsBank });
+  const fixtureDrafts = listDraftPacksForReview({ draftPacksDir, standardsBank, includeFixtures: true });
+  const normalApproved = listApprovedPacksSummary({ approvedPacksDir, standardsBank });
+  const fixtureApproved = listApprovedPacksSummary({ approvedPacksDir, standardsBank, includeExamples: true });
+
+  assert.equal(normalDrafts.draftPacks.some((pack) => pack.packId === 'teacher-content-example-draft'), false);
+  assert.equal(fixtureDrafts.draftPacks.some((pack) => pack.packId === 'teacher-content-example-draft'), true);
+  assert.equal(normalApproved.approvedPacks.some((pack) => pack.packId === 'teacher-content-example-approved'), false);
+  assert.equal(fixtureApproved.approvedPacks.some((pack) => pack.packId === 'teacher-content-example-approved'), true);
+}
+
 function assertDraftPackReport() {
   const report = getDraftPackReport('teacher-content-draft', {
     draftPacksDir,
@@ -121,12 +143,14 @@ function assertDraftPackReport() {
 
   assert.equal(report.success, true, report.errors.join('\n'));
   assert.equal(report.sourceExtraction.fileName, 'teacher_force_notes.txt');
+  assert.equal(report.coverageReport.totalChunks, 1);
+  assert.equal(report.coverageReport.processedChunks, 1);
   assert.equal(report.draftPack.packId, 'teacher-content-draft');
   assert.equal(report.pendingReview.totalPending, 1);
   assert.equal(report.pendingReview.items.vocabulary[0].label, 'net-force');
   assert.equal(report.promotionReadiness.ready, false);
   assert.ok(report.promotionReadiness.blockedReasons.includes('pending items remain'));
-  assert.ok(report.promotionReadiness.blockedReasons.includes('rejected items remain'));
+  assert.equal(report.promotionReadiness.blockedReasons.includes('rejected items remain'), false);
   assert.deepEqual(report.indexPreview.vocabularyKeys, ['balanced-force']);
 }
 
@@ -144,6 +168,9 @@ function assertApprovedPackSummary() {
   assert.equal(result.approvedPacks[0].activationEnabled, false);
   assert.equal(result.approvedPacks[0].activationStatus, 'disabled');
   assert.equal(result.approvedPacks[0].activationUpdatedAt, undefined);
+  assert.equal(result.approvedPacks[0].status, 'Approved');
+  assert.equal(result.approvedPacks[0].validationStatus, 'Passed');
+  assert.equal(result.approvedPacks[0].sourceSummary, 'teacher_force_notes.txt');
   assert.equal(result.approvedPacks[0].itemCounts.vocabulary, 2);
   assert.equal(result.approvedPacks[0].indexedCounts.vocabularyTerms, 2);
 

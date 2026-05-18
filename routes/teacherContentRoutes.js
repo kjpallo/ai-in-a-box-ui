@@ -10,6 +10,7 @@ const {
   listDraftPacksForReview
 } = require('../lib/uploads/teacherContentAdapter');
 const { setApprovedPackActivation } = require('../lib/knowledge/approvedPackActivationStore');
+const { deleteApprovedKnowledgePack } = require('../lib/knowledge/deleteApprovedKnowledgePack');
 const { promoteDraftKnowledgePack } = require('../lib/knowledge/promoteDraftKnowledgePack');
 const {
   REVIEWABLE_SECTIONS,
@@ -22,7 +23,8 @@ const { detectUploadFileType, supportedExtensions } = require('../lib/uploads/de
 const { extractTextFromFile } = require('../lib/uploads/extractTextFromFile');
 const {
   buildImportEstimate,
-  generateDraftKnowledgePack
+  generateDraftKnowledgePack,
+  identifyTextBearingPages
 } = require('../lib/uploads/generateDraftKnowledgePack');
 const {
   getStandardsBankDetails,
@@ -357,6 +359,47 @@ function registerTeacherContentRoutes(app, options = {}) {
       });
     }
   });
+
+  app.delete('/approved/:packId', (req, res) => {
+    const packId = String(req.params && req.params.packId || '').trim();
+    if (!isSafePackId(packId)) {
+      return res.status(400).json({
+        success: false,
+        errors: ['packId must contain only lowercase letters, numbers, underscores, and hyphens.']
+      });
+    }
+
+    const confirmationText = String(req.body && req.body.confirmationText || '').trim();
+    if (!confirmationText) {
+      return res.status(400).json({
+        success: false,
+        errors: ['confirmationText is required before deleting an approved pack.']
+      });
+    }
+
+    try {
+      const deletion = deleteApprovedKnowledgePack(packId, {
+        ...options,
+        confirmationText
+      });
+      const approvedSummary = listApprovedPacksSummary(options);
+      return res.json({
+        success: true,
+        data: {
+          ...deletion,
+          message: 'Approved pack archived. Uploaded source files and draft packs were left untouched.',
+          approvedSummary
+        },
+        errors: [],
+        warnings: []
+      });
+    } catch (error) {
+      return res.status(error.statusCode || 500).json({
+        success: false,
+        errors: [error instanceof Error ? error.message : String(error)]
+      });
+    }
+  });
 }
 
 async function storeAndExtractUpload(upload, options = {}) {
@@ -446,19 +489,21 @@ function getUploadExtractedDir(options = {}) {
 async function prepareReviewDraftFromUpload(uploadId, body = {}, options = {}) {
   const extractionJsonPath = getExtractionJsonPathForUpload(uploadId, options);
   if (!fs.existsSync(extractionJsonPath)) {
-    return {
+    return makePrepareReviewFailurePayload({
       success: false,
       statusCode: 404,
       errors: ['No extracted upload JSON was found for this uploadId. Extract text before preparing review.'],
       warnings: []
-    };
+    }, { uploadId, body });
   }
   const extraction = readJsonFile(extractionJsonPath, 'extraction JSON').value || null;
   const generationOptions = {
     ...options,
     maxBatchCharacters: positiveNumberOrUndefined(body.maxBatchCharacters) || options.maxBatchCharacters,
     retryMaxBatchCharacters: positiveNumberOrUndefined(body.retryMaxBatchCharacters) || options.retryMaxBatchCharacters,
-    previewMaxPages: positiveNumberOrUndefined(body.previewMaxPages) || options.previewMaxPages
+    previewMaxPages: positiveNumberOrUndefined(body.previewMaxPages) || options.previewMaxPages,
+    previewMaxCharacters: positiveNumberOrUndefined(body.previewMaxCharacters) || positiveNumberOrUndefined(body.maxPreviewChars) || options.previewMaxCharacters,
+    previewMode: nonEmptyString(body.previewMode) ? body.previewMode.trim() : nonEmptyString(body.previewSize) ? body.previewSize.trim() : options.previewMode
   };
   const importEstimate = buildImportEstimate(extraction, generationOptions);
   const importMode = String(body.importMode || body.mode || '').trim().toLowerCase();
@@ -472,41 +517,73 @@ async function prepareReviewDraftFromUpload(uploadId, body = {}, options = {}) {
     || (body.confirmedFullImport === true && !importEstimate.isLarge);
 
   if (!previewOnly && !fullImportRequested && !selectedImportRequested) {
-    return {
+    return makePrepareReviewFailurePayload({
       success: false,
       statusCode: 409,
       errors: ['Run preview first, import a selected page range, or request a confirmed full import.'],
       warnings: [],
       importEstimate,
       timeline: [makeTimelineEvent('import_estimate_ready', 'Import estimate ready', importEstimate)]
-    };
+    }, { uploadId, body, extraction, importSelection: null, importEstimate });
   }
 
   if (fullImportRequested && importEstimate.hardStop) {
-    return {
+    return makePrepareReviewFailurePayload({
       success: false,
       statusCode: 413,
       errors: [importEstimate.hardStopMessage || 'This upload is large. Run preview first or lower batch size.'],
       warnings: importEstimate.hardStopReasons || [],
       importEstimate,
       timeline: [makeTimelineEvent('import_estimate_ready', 'Import estimate ready', importEstimate)]
-    };
+    }, { uploadId, body, extraction, importSelection: null, importEstimate });
   }
 
   if (fullImportRequested && importEstimate.fullImportRequiresConfirmation && importEstimate.isLarge && !confirmedFullImport) {
-    return {
+    return makePrepareReviewFailurePayload({
       success: false,
       statusCode: 409,
       errors: ['Whole-packet full import requires typing CONFIRM. For large packets, import one section at a time to avoid overloading local Gemma.'],
       warnings: importEstimate.largeReasons || [],
       importEstimate,
       timeline: [makeTimelineEvent('import_estimate_ready', 'Import estimate ready', importEstimate)]
-    };
+    }, { uploadId, body, extraction, importSelection: null, importEstimate });
   }
 
-  const importSelection = selectedImportRequested ? makeRouteImportSelection(body) : null;
+  const importSelection = (selectedImportRequested || previewOnly) ? makeRouteImportSelection(body) : null;
+  if (previewOnly && !hasUsableImportSelection(importSelection)) {
+    return makePrepareReviewFailurePayload({
+      success: false,
+      statusCode: 400,
+      errors: ['Preview prepare requires selected pages or chunks. Send importSelection.pageStart/pageEnd or importSelection.chunkStart/chunkEnd.'],
+      warnings: [],
+      importEstimate,
+      timeline: [makeTimelineEvent('full_import_estimate_ready', 'Full upload estimate ready', importEstimate)]
+    }, { uploadId, body, extraction, importSelection, importEstimate });
+  }
+  if (selectedImportRequested && !hasUsableImportSelection(importSelection)) {
+    return makePrepareReviewFailurePayload({
+      success: false,
+      statusCode: 400,
+      errors: ['Selected import requires selected pages or chunks. Send importSelection.pageStart/pageEnd or importSelection.chunkStart/chunkEnd.'],
+      warnings: [],
+      importEstimate,
+      timeline: [makeTimelineEvent('full_import_estimate_ready', 'Full upload estimate ready', importEstimate)]
+    }, { uploadId, body, extraction, importSelection, importEstimate });
+  }
   const selectionLabel = selectedImportRequested ? makeRouteImportSelectionLabel(importSelection) : '';
-  const packName = nonEmptyString(body.packName) ? body.packName.trim() : undefined;
+  const packName = getKnowledgeNameFromFields(body) || (nonEmptyString(body.packName) ? body.packName.trim() : undefined);
+  const importIntent = nonEmptyString(body.importIntent)
+    ? body.importIntent.trim()
+    : nonEmptyString(body.selectedImportPreset)
+      ? body.selectedImportPreset.trim()
+      : '';
+  const scopedPackName = makeScopedRoutePackName(packName, {
+    previewOnly,
+    selectedImportRequested,
+    importIntent,
+    selectionLabel,
+    importEstimate
+  });
 
   const generation = await generateDraftKnowledgePack({
     extractionJsonPath,
@@ -518,21 +595,27 @@ async function prepareReviewDraftFromUpload(uploadId, body = {}, options = {}) {
     timeoutMs: positiveNumberOrUndefined(body.timeoutMs),
     keepAlive: nonEmptyString(body.keepAlive) ? body.keepAlive.trim() : undefined,
     retryInvalidJson: body.retryInvalidJson === true,
-    packName: selectedImportRequested && packName ? `${packName} ${selectionLabel}` : packName,
+    packName: scopedPackName,
     modelClient: options.modelClient || options.draftModelClient,
     rawModelResponsesDir: options.rawModelResponsesDir,
     maxBatchCharacters: generationOptions.maxBatchCharacters,
     retryMaxBatchCharacters: generationOptions.retryMaxBatchCharacters,
     previewMaxPages: generationOptions.previewMaxPages,
+    previewMaxCharacters: generationOptions.previewMaxCharacters,
+    previewMode: generationOptions.previewMode,
+    maxBatchChunks: previewOnly && String(generationOptions.previewMode || '').toLowerCase().includes('ultra') ? 1 : options.maxBatchChunks,
     previewOnly,
     importMode: selectedImportRequested ? 'selected' : importMode,
+    importIntent,
     importSelection
   });
 
   if (!generation.success) {
-    const teacherFriendlyError = firstError(generation.errors, 'Review draft preparation failed.');
+    const teacherFriendlyError = previewOnly && isNoUsablePreviewFailure(generation)
+      ? 'Gemma did not return any usable preview items from this range.'
+      : firstError(generation.errors, 'Review draft preparation failed.');
     const technicalErrors = (generation.errors || []).slice(1);
-    return {
+    return makePrepareReviewFailurePayload({
       success: false,
       errors: generation.errors || ['Review draft preparation failed.'],
       teacherFriendlyError,
@@ -545,7 +628,7 @@ async function prepareReviewDraftFromUpload(uploadId, body = {}, options = {}) {
       timeline: generation.timeline || [],
       coverageReport: generation.coverageReport,
       failedBatches: generation.failedBatches || []
-    };
+    }, { uploadId, body, extraction, importSelection, importEstimate });
   }
 
   if (previewOnly) {
@@ -553,13 +636,26 @@ async function prepareReviewDraftFromUpload(uploadId, body = {}, options = {}) {
       success: true,
       data: {
         preview: true,
-        message: 'Preview draft prepared. Review the sample before running full import.',
+        partialPreview: generation.partialPreview === true,
+        validationPassed: generation.validationPassed === true,
+        message: generation.previewReport && generation.previewReport.message
+          ? generation.previewReport.message
+          : generation.partialPreview
+            ? 'Partial preview created. Some pages/chunks failed.'
+            : 'Preview draft prepared. Review the sample before running full import.',
         importEstimate,
         importSelection: generation.importSelection,
+        importScope: generation.importScope,
         selectedImportEstimate: generation.selectedImportEstimate,
+        inputSnapshot: generation.inputSnapshot,
         previewReport: makePreviewReportSummary(generation.previewReport),
         timeline: generation.timeline || [],
-        coverageReport: generation.coverageReport
+        coverageReport: generation.coverageReport,
+        failedBatches: generation.failedBatches || [],
+        invalidItems: generation.invalidItems || [],
+        repairNeeded: generation.repairNeeded || [],
+        validationErrors: generation.validationErrors || generation.errors || [],
+        errors: generation.errors || []
       },
       errors: [],
       warnings: generation.warnings || []
@@ -582,6 +678,7 @@ async function prepareReviewDraftFromUpload(uploadId, body = {}, options = {}) {
       importEstimate,
       selectedImport: selectedImportRequested,
       importSelection: generation.importSelection,
+      importScope: generation.importScope,
       selectedImportEstimate: generation.selectedImportEstimate,
       timeline: generation.timeline || [],
       dashboard: getTeacherContentDashboard(options),
@@ -630,6 +727,14 @@ function makePreviewReportSummary(previewReport = {}) {
   const pack = previewReport.pack || {};
   return {
     title: pack.title || '',
+    pack,
+    partialPreview: previewReport.partialPreview === true,
+    partialPreviewReason: previewReport.partialPreviewReason || '',
+    validationPassed: previewReport.validationPassed === true,
+    message: previewReport.message || '',
+    model: previewReport.model || '',
+    previewMode: previewReport.previewMode || '',
+    maxPreviewChars: Number(previewReport.maxPreviewChars || 0),
     sourceFiles: Array.isArray(pack.sourceFiles) ? pack.sourceFiles.map((source) => source.fileName).filter(Boolean) : [],
     processedPageCount: Number(previewReport.processedPageCount || 0),
     processedCharacterCount: Number(previewReport.processedCharacterCount || 0),
@@ -642,12 +747,25 @@ function makePreviewReportSummary(previewReport = {}) {
       standardsMap: Array.isArray(pack.standardsMap) ? pack.standardsMap.length : 0,
       smokeTests: Array.isArray(pack.smokeTests) ? pack.smokeTests.length : 0
     },
-    coverageReport: previewReport.coverageReport
+    deduplication: previewReport.deduplication || pack.metadata && pack.metadata.deduplication || {},
+    importNormalization: previewReport.importNormalization || pack.metadata && pack.metadata.importNormalization || {},
+    inputSnapshot: previewReport.inputSnapshot || null,
+    importScope: previewReport.importScope || pack.metadata && pack.metadata.importScope || null,
+    coverageReport: previewReport.coverageReport,
+    failedBatches: previewReport.failedBatches || [],
+    invalidItems: previewReport.invalidItems || [],
+    repairNeeded: previewReport.repairNeeded || [],
+    validationErrors: previewReport.validationErrors || previewReport.errors || [],
+    rawModelResponsePath: previewReport.rawModelResponsePath || '',
+    warnings: previewReport.warnings || [],
+    errors: previewReport.errors || []
   };
 }
 
 function makeRouteImportSelection(body = {}) {
   const selection = body.importSelection && typeof body.importSelection === 'object' ? body.importSelection : {};
+  const selectedPages = Array.isArray(body.selectedPages) ? body.selectedPages : Array.isArray(selection.selectedPages) ? selection.selectedPages : [];
+  const selectedChunks = Array.isArray(body.selectedChunks) ? body.selectedChunks : Array.isArray(selection.selectedChunks) ? selection.selectedChunks : [];
   const pageRange = firstNonEmptyString(body.pageRange, selection.pageRange, selection.pages);
   const rangeMatch = String(pageRange || '').match(/(\d+)\s*(?:-|–|to)\s*(\d+)/i)
     || String(pageRange || '').match(/^\s*(\d+)\s*$/);
@@ -656,21 +774,34 @@ function makeRouteImportSelection(body = {}) {
       || positiveNumberOrUndefined(body.importPageStart)
       || positiveNumberOrUndefined(selection.pageStart)
       || positiveNumberOrUndefined(selection.startPage)
+      || positiveNumberOrUndefined(selectedPages[0])
       || positiveNumberOrUndefined(rangeMatch && rangeMatch[1]),
     pageEnd: positiveNumberOrUndefined(body.pageEnd)
       || positiveNumberOrUndefined(body.importPageEnd)
       || positiveNumberOrUndefined(selection.pageEnd)
       || positiveNumberOrUndefined(selection.endPage)
+      || positiveNumberOrUndefined(selectedPages[selectedPages.length - 1])
       || positiveNumberOrUndefined(rangeMatch && (rangeMatch[2] || rangeMatch[1])),
     chunkStart: positiveNumberOrUndefined(body.chunkStart)
       || positiveNumberOrUndefined(body.importChunkStart)
       || positiveNumberOrUndefined(selection.chunkStart)
-      || positiveNumberOrUndefined(selection.startChunk),
+      || positiveNumberOrUndefined(selection.startChunk)
+      || positiveNumberOrUndefined(selectedChunks[0]),
     chunkEnd: positiveNumberOrUndefined(body.chunkEnd)
       || positiveNumberOrUndefined(body.importChunkEnd)
       || positiveNumberOrUndefined(selection.chunkEnd)
       || positiveNumberOrUndefined(selection.endChunk)
+      || positiveNumberOrUndefined(selectedChunks[selectedChunks.length - 1])
   };
+}
+
+function hasUsableImportSelection(selection = {}) {
+  return Boolean(
+    positiveNumberOrUndefined(selection.pageStart)
+    || positiveNumberOrUndefined(selection.pageEnd)
+    || positiveNumberOrUndefined(selection.chunkStart)
+    || positiveNumberOrUndefined(selection.chunkEnd)
+  );
 }
 
 function makeRouteImportSelectionLabel(selection = {}) {
@@ -683,6 +814,54 @@ function makeRouteImportSelectionLabel(selection = {}) {
     return `Chunks ${selection.chunkStart}-${end}`;
   }
   return 'Selected Range';
+}
+
+function makeScopedRoutePackName(packName, details = {}) {
+  const baseName = nonEmptyString(packName) ? packName.trim() : 'Teacher Upload';
+  const importIntent = String(details.importIntent || '').trim().toLowerCase();
+  const scopeLabel = details.previewOnly || importIntent === 'preview_range' || importIntent === 'preview'
+    ? 'Preview Sample'
+    : details.selectedImportRequested
+      ? 'Selected Range'
+      : 'Full Import';
+  const rangeLabel = details.selectedImportRequested || details.previewOnly
+    ? details.selectionLabel
+    : makeTextBearingRangeLabel(details.importEstimate);
+  const suffix = rangeLabel ? ` ${rangeLabel}` : '';
+  return `${scopeLabel}: ${baseName}${suffix}`;
+}
+
+function makeTextBearingRangeLabel(importEstimate = {}) {
+  const pages = Array.isArray(importEstimate.textBearingPages)
+    ? importEstimate.textBearingPages
+    : Array.isArray(importEstimate.pagesWithText)
+      ? importEstimate.pagesWithText
+      : [];
+  const range = pages.length === 1 ? `${Number(pages[0])}-${Number(pages[0])}` : formatNumberRange(pages);
+  if (range) return `Pages ${range}`;
+  if (importEstimate.pageCount) return `Pages 1-${importEstimate.pageCount}`;
+  return '';
+}
+
+function formatNumberRange(values) {
+  const unique = Array.from(new Set((Array.isArray(values) ? values : []).map(Number).filter((value) => Number.isFinite(value) && value > 0))).sort((a, b) => a - b);
+  if (!unique.length) return '';
+  if (unique.length === 1) return String(unique[0]);
+  const ranges = [];
+  let start = unique[0];
+  let previous = unique[0];
+  for (let index = 1; index < unique.length; index += 1) {
+    const value = unique[index];
+    if (value === previous + 1) {
+      previous = value;
+      continue;
+    }
+    ranges.push(start === previous ? String(start) : `${start}-${previous}`);
+    start = value;
+    previous = value;
+  }
+  ranges.push(start === previous ? String(start) : `${start}-${previous}`);
+  return ranges.join(', ');
 }
 
 function makePrepareReviewSourceMatch(extraction, draftPack) {
@@ -699,6 +878,103 @@ function makePrepareReviewSourceMatch(extraction, draftPack) {
     status: 'unknown',
     warning: ''
   };
+}
+
+function makePrepareReviewFailurePayload(result = {}, context = {}) {
+  const errors = Array.isArray(result.errors) && result.errors.length ? result.errors : ['Review draft preparation failed.'];
+  const extraction = context.extraction || null;
+  const importSelection = context.importSelection || makeRouteImportSelection(context.body || {});
+  const extractionCounts = makePrepareReviewExtractionCounts(extraction);
+  const fileName = firstNonEmptyString(
+    extraction && extraction.upload && extraction.upload.originalFileName,
+    extraction && extraction.fileName,
+    result.fileName
+  );
+  const sourceType = firstNonEmptyString(
+    extraction && extraction.metadata && extraction.metadata.detectedType,
+    extraction && extraction.extension,
+    extraction && extraction.mimeGuess,
+    result.sourceType
+  );
+  const teacherFriendlyError = firstNonEmptyString(result.teacherFriendlyError, firstError(errors, 'Review draft preparation failed.'));
+  return {
+    ...result,
+    success: false,
+    ok: false,
+    error: teacherFriendlyError,
+    message: teacherFriendlyError,
+    details: joinMessages(errors),
+    teacherFriendlyError,
+    errors,
+    warnings: Array.isArray(result.warnings) ? result.warnings : [],
+    uploadId: context.uploadId || '',
+    fileName,
+    sourceType,
+    importSelection,
+    selectedRange: makeRouteImportSelectionLabel(importSelection),
+    extractionCounts,
+    extractionSummary: {
+      uploadId: context.uploadId || '',
+      fileName,
+      sourceType,
+      ...extractionCounts
+    },
+    importEstimate: result.importEstimate || context.importEstimate,
+    validationErrors: result.validationErrors || [],
+    invalidItems: result.invalidItems || [],
+    repairNeeded: result.repairNeeded || [],
+    failedBatches: result.failedBatches || [],
+    rawModelResponsePath: result.rawModelResponsePath || ''
+  };
+}
+
+function makePrepareReviewExtractionCounts(extraction) {
+  if (!extraction) {
+    return {
+      characterCount: 0,
+      pageCount: 0,
+      chunkCount: 0,
+      firstTextPage: null,
+      textBearingPages: [],
+      pagesWithText: []
+    };
+  }
+  const textBearingPageInfo = identifyTextBearingPages(extraction);
+  return {
+    characterCount: Number(
+      extraction.characterCount
+      || extraction.metadata && extraction.metadata.characterCount
+      || String(extraction.text || '').length
+      || 0
+    ),
+    pageCount: Number(
+      extraction.pageCount
+      || extraction.metadata && extraction.metadata.pageCount
+      || (Array.isArray(extraction.pages) ? extraction.pages.length : 0)
+      || 0
+    ),
+    chunkCount: Number(
+      extraction.chunkCount
+      || extraction.sectionsCount
+      || (Array.isArray(extraction.sections) ? extraction.sections.length : 0)
+      || 0
+    ),
+    firstTextPage: textBearingPageInfo.firstTextPage,
+    textBearingPages: textBearingPageInfo.pages,
+    pagesWithText: textBearingPageInfo.pages
+  };
+}
+
+function isNoUsablePreviewFailure(generation = {}) {
+  if (Array.isArray(generation.errors) && generation.errors.some((error) => String(error || '').toLowerCase().includes('no usable preview items'))) {
+    return true;
+  }
+  if (Array.isArray(generation.invalidItems) && generation.invalidItems.length > 0 && !generation.packId) {
+    return true;
+  }
+  return Array.isArray(generation.errors)
+    && generation.errors.length > 0
+    && generation.errors.every((error) => /\[[0-9]+\]\./.test(String(error || '')));
 }
 
 function combineImportTimelines(...timelines) {

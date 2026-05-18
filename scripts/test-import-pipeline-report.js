@@ -21,6 +21,8 @@ const routerStudentFilesBefore = snapshotRouterAndStudentFiles();
 
 try {
   assertPendingReviewAndCounts();
+  assertCoverageReportAndLowCoverageWarnings();
+  assertCoverageReportIncludesFailedBatchWarnings();
   assertStandardsBankEnrichmentAndUnknowns();
   assertReadyWhenAllReviewableItemsApproved();
   assertReferenceFormulasRemainReferenceOnly();
@@ -57,6 +59,17 @@ function assertPendingReviewAndCounts() {
   assert.equal(report.sourceExtraction.fileName, 'teacher_force_notes.txt');
   assert.equal(report.sourceExtraction.fileType, 'txt');
   assert.equal(report.sourceExtraction.characterCount, makeExtraction().text.length);
+  assert.equal(report.sourceExtraction.chunkCount, 1);
+  assert.equal(report.coverageReport.totalChunks, 1);
+  assert.equal(report.coverageReport.processedChunks, 1);
+  assert.equal(report.coverageReport.itemCounts.vocabulary, 2);
+  assert.equal(report.sourceMatch.status, 'matched');
+  assert.equal(report.sourceMatch.uploadedFileName, 'teacher_force_notes.txt');
+  assert.equal(report.sourceMatch.draftPackId, 'report-pending-pack');
+  assert.equal(report.sourceMatch.draftTitle, 'Report Pack');
+  assert.deepEqual(report.sourceMatch.draftSourceFiles, ['teacher_force_notes.txt']);
+  assert.equal(report.sourceMatch.extractionCharacterCount, makeExtraction().text.length);
+  assert.equal(report.sourceMatch.chunkCount, 1);
   assert.equal(report.draftPack.itemCounts.vocabulary, 2);
   assert.equal(report.draftPack.reviewCounts.pending, 1);
   assert.equal(report.draftPack.reviewCounts.approved, 5);
@@ -83,7 +96,7 @@ function assertPendingReviewAndCounts() {
   assert.equal(report.pendingReview.items.referenceFormulas.length, 0);
   assert.equal(report.promotionReadiness.ready, false);
   assert.ok(report.promotionReadiness.blockedReasons.includes('pending items remain'));
-  assert.ok(report.promotionReadiness.blockedReasons.includes('rejected items remain'));
+  assert.equal(report.promotionReadiness.blockedReasons.includes('rejected items remain'), false);
   assert.equal(report.standardsSummary.standardsMapCount, 1);
   assert.deepEqual(report.standardsSummary.standardIds, ['SAMPLE.PS.FORCES.1']);
   assert.deepEqual(report.standardsSummary.unknown, []);
@@ -106,6 +119,94 @@ function assertPendingReviewAndCounts() {
     sourceFile: 'sample_standards_source.pdf',
     sourceLocation: 'p. 1'
   });
+
+  const mismatch = buildImportPipelineReport({
+    pack: makePack({
+      packId: 'report-mismatch-pack',
+      sourceFiles: [
+        {
+          fileName: 'sample_physical_science_fixture.txt',
+          fileType: 'txt',
+          reviewStatus: 'approved',
+          confidence: 'high',
+          notes: 'Synthetic mismatch fixture.'
+        }
+      ]
+    }),
+    standardsBank,
+    extraction: makeExtraction()
+  });
+  assert.equal(mismatch.sourceMatch.status, 'mismatch');
+  assert.match(mismatch.sourceMatch.warning, /do not appear to match/);
+}
+
+function assertCoverageReportAndLowCoverageWarnings() {
+  writeDraftPack(makePack({
+    packId: 'report-low-coverage-pack',
+    vocabulary: [],
+    concepts: [],
+    referenceFormulas: [],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+
+  const report = buildImportPipelineReport({
+    packId: 'report-low-coverage-pack',
+    draftPacksDir,
+    standardsBank,
+    extraction: makeLowCoverageExtraction()
+  });
+
+  assert.equal(report.success, true, report.errors.join('\n'));
+  assert.equal(report.coverageReport.totalPages, 4);
+  assert.equal(report.coverageReport.totalChunks, 4);
+  assert.equal(report.coverageReport.processedChunks, 4);
+  assert.equal(report.coverageReport.chunksWithDraftItems, 0);
+  assert.equal(report.coverageReport.chunksWithNoExtractedKnowledge, 4);
+  assert.deepEqual(report.coverageReport.noKnowledgeChunks, ['Vocabulary', 'Concepts', 'Practice Problems', 'Reference Formulas']);
+  assert.equal(report.coverageReport.itemCounts.problemBank, 0);
+  assert.ok(report.coverageReport.sectionsDetected.includes('vocabulary'));
+  assert.ok(report.coverageReport.sectionsDetected.includes('problemBank'));
+  assert.ok(report.warnings.includes('Draft appears incomplete for the amount of extracted text.'));
+  assert.ok(report.warnings.includes('Many chunks produced no items.'));
+  assert.ok(report.warnings.includes('No vocabulary was found even though the source appears to contain vocabulary sections.'));
+  assert.ok(report.warnings.includes('Equation-like source text was found but no reference formulas were drafted.'));
+  assert.ok(report.warnings.includes('Practice/example question text was found but no problem bank items were drafted.'));
+  assert.equal(report.promotionReadiness.ready, false);
+  assert.ok(report.promotionReadiness.blockedReasons.includes('At least one approved draft item is required before promotion.'));
+}
+
+function assertCoverageReportIncludesFailedBatchWarnings() {
+  writeDraftPack(makePack({
+    packId: 'report-failed-batch-pack',
+    metadata: {
+      importCoverage: {
+        failedBatches: [
+          {
+            batchIndex: 2,
+            chunkLabels: ['Page 7 / Chunk 1'],
+            pages: [7],
+            characterCount: 2500,
+            errors: ['Gemma crashed while reading batch 2 of 4.']
+          }
+        ]
+      }
+    }
+  }));
+
+  const report = buildImportPipelineReport({
+    packId: 'report-failed-batch-pack',
+    draftPacksDir,
+    standardsBank,
+    extraction: makeLowCoverageExtraction()
+  });
+
+  assert.equal(report.success, true, report.errors.join('\n'));
+  assert.equal(report.coverageReport.failedBatches.length, 1);
+  assert.equal(report.coverageReport.failedBatches[0].batchIndex, 2);
+  assert.ok(report.warnings.some((warning) => warning.includes('Model draft failed for batch 2')));
+  assert.ok(report.coverageReport.warnings.some((warning) => warning.includes('Page 7 / Chunk 1')));
 }
 
 function assertStandardsBankEnrichmentAndUnknowns() {
@@ -200,8 +301,8 @@ function assertReferenceFormulasRemainReferenceOnly() {
 
   assert.equal(report.draftPack.validationPassed, false);
   assert.equal(report.promotionReadiness.ready, false);
-  assert.ok(report.promotionReadiness.blockedReasons.includes('validation failed'));
   assert.ok(report.promotionReadiness.blockedReasons.includes('formula solverStatus is not reference_only'));
+  assert.ok(report.promotionReadiness.blockedReasons.some((reason) => reason.includes('solverStatus')));
 }
 
 function assertIndexPreviewFromPromotedTempApprovedPack() {
@@ -379,6 +480,49 @@ function makeExtraction() {
     metadata: {
       detectedType: 'txt',
       characterCount: text.length
+    },
+    warnings: [],
+    errors: []
+  };
+}
+
+function makeLowCoverageExtraction() {
+  const sections = [
+    {
+      label: 'Vocabulary',
+      pageNumber: 1,
+      text: 'Vocabulary: Alpha means the first source-supported term. Beta is the second source-supported term. '.repeat(20)
+    },
+    {
+      label: 'Concepts',
+      pageNumber: 2,
+      text: 'Concepts: a source-supported concept explanation appears here. '.repeat(20)
+    },
+    {
+      label: 'Practice Problems',
+      pageNumber: 3,
+      text: 'Practice Problems: What happens when balanced forces act? Answer: motion does not change. '.repeat(20)
+    },
+    {
+      label: 'Reference Formulas',
+      pageNumber: 4,
+      text: 'Reference Formulas: F = m * a where F is force, m is mass, and a is acceleration. '.repeat(20)
+    }
+  ];
+  const text = sections.map((section) => section.text).join('\n\n');
+  return {
+    success: true,
+    filePath: path.join(tempRoot, 'synthetic_packet.txt'),
+    fileName: 'synthetic_packet.txt',
+    extension: 'txt',
+    mimeGuess: 'text/plain',
+    text,
+    sections,
+    tables: [],
+    metadata: {
+      detectedType: 'txt',
+      characterCount: text.length,
+      pageCount: 4
     },
     warnings: [],
     errors: []
