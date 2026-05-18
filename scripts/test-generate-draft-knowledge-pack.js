@@ -58,12 +58,14 @@ async function main() {
     await assertParentheticalAbbreviationsBecomeAliases();
     await assertVocabularyAndConceptCanSharePhrase();
     await assertFormulaLikeSourceCreatesReferenceFormula();
+    await assertPptxFormulaLikeSourceCreatesReferenceFormula();
     await assertDamagedFormulaStaysPendingLowConfidence();
     await assertLargePdfSplitsIntoPageChunksAndBatches();
     await assertPreviewModeProcessesOnlyFirstPagesAndWritesNoDraft();
     await assertUltraSafePreviewUsesOneSmallChunk();
     await assertTextBearingPageMetadataAndEmptyPageFailure();
     await assertFullImportDefaultsToAllTextBearingPages();
+    await assertPptxFullImportAndPreviewUseTextBearingSlides();
     await assertPreviewBatchFailureReturnsPartialPreview();
     await assertPreviewValidationFailureReturnsSalvagedPreview();
     await assertSelectedPageRangeProcessesOnlySelectedPages();
@@ -665,6 +667,34 @@ async function assertFormulaLikeSourceCreatesReferenceFormula() {
   assert.ok(generated.referenceFormulas[0].variables.some((variable) => variable.symbol === 'v' && variable.meaning === 'speed'));
 }
 
+async function assertPptxFormulaLikeSourceCreatesReferenceFormula() {
+  const formulaPath = path.join(tempRoot, 'pptx_formula_source_extraction.json');
+  fs.writeFileSync(formulaPath, `${JSON.stringify(makePptxExtraction(), null, 2)}\n`);
+
+  const result = await generateDraftKnowledgePack({
+    extractionJsonPath: formulaPath,
+    outputDraftDir: path.join(tempRoot, 'pptx-formula-source-drafts'),
+    modelClient: async () => JSON.stringify(makeGeneratedPack({
+      packId: 'generated-pptx-formula-source-draft',
+      vocabulary: [],
+      concepts: [],
+      referenceFormulas: [],
+      problemBank: [],
+      standardsMap: [],
+      smokeTests: []
+    }))
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  const generated = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
+  assert.equal(generated.referenceFormulas.length, 1);
+  assert.equal(generated.referenceFormulas[0].equation, 'v = d / t');
+  assert.equal(generated.referenceFormulas[0].solverStatus, 'reference_only');
+  assert.equal(generated.referenceFormulas[0].reviewStatus, 'pending');
+  assert.equal(generated.referenceFormulas[0].sourceFile, 'teacher_energy_slides.pptx');
+  assert.equal(generated.referenceFormulas[0].sourceLocation, 'Slide 2');
+}
+
 async function assertDamagedFormulaStaysPendingLowConfidence() {
   const result = await generateDraftKnowledgePack({
     extractionJsonPath: extractionPath,
@@ -886,6 +916,86 @@ async function assertFullImportDefaultsToAllTextBearingPages() {
   assert.equal(generated.metadata.importScope.scope, 'full_document');
   assert.equal(generated.metadata.importScope.rangeLabel, 'Pages 2-4');
   assert.equal(generated.metadata.importScope.completePacketImported, true);
+}
+
+async function assertPptxFullImportAndPreviewUseTextBearingSlides() {
+  const pptxPath = path.join(tempRoot, 'pptx_text_bearing_extraction.json');
+  const extraction = makePptxExtraction();
+  fs.writeFileSync(pptxPath, `${JSON.stringify(extraction, null, 2)}\n`);
+
+  const estimate = buildImportEstimate(extraction, {});
+  assert.equal(estimate.pageCount, 3);
+  assert.deepEqual(estimate.textBearingPages, [2, 3]);
+  assert.equal(estimate.firstTextPage, 2);
+
+  const previewPrompts = [];
+  const previewResult = await generateDraftKnowledgePack({
+    extractionJsonPath: pptxPath,
+    outputDraftDir: path.join(tempRoot, 'pptx-preview-drafts'),
+    previewOnly: true,
+    modelClient: async ({ prompt }) => {
+      previewPrompts.push(prompt);
+      return JSON.stringify(makeGeneratedPack({
+        packId: 'generated-pptx-preview-draft',
+        vocabulary: [],
+        concepts: [],
+        referenceFormulas: [],
+        problemBank: [],
+        standardsMap: [],
+        smokeTests: []
+      }));
+    }
+  });
+
+  assert.equal(previewResult.success, true, previewResult.errors.join('\n'));
+  assert.equal(previewPrompts.length, 1);
+  assert.ok(previewPrompts[0].includes('Slide 2'));
+  assert.ok(previewPrompts[0].includes('Formula: v = d / t'));
+  assert.ok(!previewPrompts[0].includes('Slide 1'));
+  assert.ok(!previewPrompts[0].includes('Slide 3'));
+  assert.equal(previewResult.previewReport.importScope.rangeLabel, 'Pages 2-2');
+
+  let activeCalls = 0;
+  let maxActiveCalls = 0;
+  const fullPrompts = [];
+  const fullResult = await generateDraftKnowledgePack({
+    extractionJsonPath: pptxPath,
+    outputDraftDir: path.join(tempRoot, 'pptx-full-import-drafts'),
+    maxBatchChunks: 1,
+    modelClient: async ({ prompt }) => {
+      activeCalls += 1;
+      maxActiveCalls = Math.max(maxActiveCalls, activeCalls);
+      fullPrompts.push(prompt);
+      await new Promise((resolve) => setTimeout(resolve, 2));
+      activeCalls -= 1;
+      const slideMatch = prompt.match(/Slide (\d+)/);
+      const slide = slideMatch ? Number(slideMatch[1]) : fullPrompts.length;
+      return JSON.stringify(makeGeneratedPack({
+        packId: 'generated-pptx-full-import-draft',
+        vocabulary: [{
+          ...makeVocabularyItemForPage(slide),
+          sourceFile: 'teacher_energy_slides.pptx',
+          sourceLocation: `Slide ${slide}`,
+          sourceTextSnippet: `Slide ${slide}`
+        }],
+        concepts: [],
+        referenceFormulas: [],
+        problemBank: [],
+        standardsMap: [],
+        smokeTests: []
+      }));
+    }
+  });
+
+  assert.equal(fullResult.success, true, fullResult.errors.join('\n'));
+  assert.equal(maxActiveCalls, 1, 'PPTX Gemma batches must run one at a time.');
+  assert.equal(fullPrompts.length, 2, 'full import should send all text-bearing slides.');
+  assert.ok(fullPrompts[0].includes('Slide 2'));
+  assert.ok(fullPrompts[1].includes('Slide 3'));
+  assert.ok(fullPrompts.every((prompt) => !prompt.includes('Slide 1')));
+  assert.deepEqual(fullResult.importScope.pages, [2, 3]);
+  assert.equal(fullResult.importScope.completePacketImported, true);
+  assert.equal(fullResult.importScope.rangeLabel, 'Pages 2-3');
 }
 
 async function assertPreviewBatchFailureReturnsPartialPreview() {
@@ -1671,6 +1781,56 @@ function makeFormulaExtraction() {
       detectedType: 'txt',
       characterCount: text.length,
       pageCount: 1
+    },
+    warnings: [],
+    errors: []
+  };
+}
+
+function makePptxExtraction() {
+  const pages = [
+    {
+      label: 'Slide 1',
+      sourceLocation: 'Slide 1',
+      pageNumber: 1,
+      text: ''
+    },
+    {
+      label: 'Slide 2',
+      sourceLocation: 'Slide 2',
+      pageNumber: 2,
+      text: 'Formula: v = d / t where v is speed, d is distance, and t is time.'
+    },
+    {
+      label: 'Slide 3',
+      sourceLocation: 'Slide 3',
+      pageNumber: 3,
+      text: 'Kinetic energy is energy of motion.'
+    }
+  ];
+  const text = pages.filter((page) => page.text).map((page) => page.text).join('\n\n');
+  return {
+    success: true,
+    filePath: '/tmp/teacher_energy_slides.pptx',
+    fileName: 'teacher_energy_slides.pptx',
+    extension: '.pptx',
+    mimeGuess: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    text,
+    pages,
+    sections: pages,
+    tables: [],
+    metadata: {
+      detectedType: 'pptx',
+      parser: 'pptx-ooxml',
+      characterCount: text.length,
+      slideCount: 3,
+      pageCount: 3,
+      textBearingPages: [2, 3],
+      pagesWithText: [2, 3],
+      textBearingSlides: [2, 3],
+      firstTextPage: 2,
+      firstTextSlide: 2,
+      hasImagesOrMedia: false
     },
     warnings: [],
     errors: []

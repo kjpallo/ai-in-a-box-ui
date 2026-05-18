@@ -315,7 +315,7 @@ function assertUploadExtractionUi() {
   [
     'teacherContentUploadFile',
     'type="file"',
-    'accept=".txt,.csv,.json,.docx,.xlsx,.pdf"',
+    'accept=".txt,.csv,.json,.docx,.xlsx,.pptx,.pdf"',
     'data-upload-file-input',
     'data-upload-browse',
     'data-upload-content-name',

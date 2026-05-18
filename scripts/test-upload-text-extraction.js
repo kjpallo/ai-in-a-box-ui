@@ -27,6 +27,8 @@ async function main() {
     await assertJsonExtraction();
     await assertXlsxExtraction();
     await assertDocxExtraction();
+    await assertPptxExtraction();
+    await assertLegacyPptUnsupported();
     await assertPdfExtraction();
     await assertBlankPdfWarning();
     await assertUnsupportedExtension();
@@ -122,6 +124,69 @@ async function assertDocxExtraction() {
   assert.equal(result.metadata.parser, 'mammoth');
 }
 
+async function assertPptxExtraction() {
+  const sourcePath = path.join(tempRoot, 'sample.pptx');
+  await writeMinimalPptx(sourcePath, [
+    {
+      paragraphs: [],
+      hasImage: true
+    },
+    {
+      paragraphs: ['Kinetic energy is energy of motion.', 'Formula: KE = 1/2mv^2.']
+    },
+    {
+      paragraphs: ['Potential energy depends on height.'],
+      notes: ['Teacher note: emphasize stored energy.']
+    }
+  ]);
+
+  const detected = detectUploadFileType(sourcePath);
+  assert.equal(detected.supported, true);
+  assert.equal(detected.type, 'pptx');
+
+  const result = await extractTextFromFile(sourcePath);
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  assert.equal(result.extension, '.pptx');
+  assert.equal(result.mimeGuess, 'application/vnd.openxmlformats-officedocument.presentationml.presentation');
+  assert.equal(result.metadata.parser, 'pptx-ooxml');
+  assert.equal(result.metadata.slideCount, 3);
+  assert.equal(result.metadata.pageCount, 3);
+  assert.deepEqual(result.metadata.textBearingPages, [2, 3]);
+  assert.deepEqual(result.metadata.pagesWithText, [2, 3]);
+  assert.deepEqual(result.metadata.textBearingSlides, [2, 3]);
+  assert.equal(result.metadata.firstTextPage, 2);
+  assert.equal(result.metadata.firstTextSlide, 2);
+  assert.equal(result.metadata.hasImagesOrMedia, true);
+  assert.equal(result.sections.length, 3);
+  assert.deepEqual(result.sections[0], {
+    label: 'Slide 1',
+    sourceLocation: 'Slide 1',
+    pageNumber: 1,
+    text: ''
+  });
+  assert.equal(result.pages[1].label, 'Slide 2');
+  assert.ok(result.text.indexOf('Kinetic energy') < result.text.indexOf('Potential energy'));
+  assert.ok(result.text.includes('Formula: KE = 1/2mv^2.'));
+  assert.ok(result.text.includes('Speaker notes:'));
+  assert.ok(result.text.includes('Teacher note: emphasize stored energy.'));
+  assert.ok(result.warnings.some((warning) => warning.includes('OCR/vision') && warning.includes('image-only slides')));
+}
+
+async function assertLegacyPptUnsupported() {
+  const sourcePath = path.join(tempRoot, 'legacy.ppt');
+  fs.writeFileSync(sourcePath, 'legacy binary PowerPoint placeholder');
+
+  const detected = detectUploadFileType(sourcePath);
+  assert.equal(detected.supported, false);
+  assert.ok(detected.errors[0].includes('Legacy .ppt uploads are not supported'));
+  assert.ok(detected.errors[0].includes('save the presentation as .pptx or PDF'));
+
+  const result = await extractTextFromFile(sourcePath);
+  assert.equal(result.success, false);
+  assert.ok(result.errors.some((error) => error.includes('save the presentation as .pptx or PDF')));
+}
+
 async function assertPdfExtraction() {
   const sourcePath = path.join(tempRoot, 'sample.pdf');
   fs.writeFileSync(sourcePath, makeMinimalPdf('Embedded text from a teacher PDF.'));
@@ -149,7 +214,7 @@ async function assertBlankPdfWarning() {
 }
 
 async function assertUnsupportedExtension() {
-  const sourcePath = path.join(tempRoot, 'sample.pptx');
+  const sourcePath = path.join(tempRoot, 'sample.key');
   fs.writeFileSync(sourcePath, 'not supported in Phase 5A');
 
   const detected = detectUploadFileType(sourcePath);
@@ -195,6 +260,96 @@ async function writeMinimalDocx(filePath, paragraphs) {
     compression: 'DEFLATE'
   });
   fs.writeFileSync(filePath, content);
+}
+
+async function writeMinimalPptx(filePath, slides) {
+  const zip = new JSZip();
+  zip.file('[Content_Types].xml', xmlDeclaration(`\
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Default Extension="png" ContentType="image/png"/>
+  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
+  ${slides.map((_, index) => `<Override PartName="/ppt/slides/slide${index + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>`).join('\n  ')}
+  ${slides.map((slide, index) => slide.notes ? `<Override PartName="/ppt/notesSlides/notesSlide${index + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.notesSlide+xml"/>` : '').filter(Boolean).join('\n  ')}
+</Types>`));
+  zip.folder('_rels').file('.rels', xmlDeclaration(`\
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>
+</Relationships>`));
+  zip.folder('ppt').file('presentation.xml', xmlDeclaration(`\
+<p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <p:sldIdLst>
+    ${slides.map((_, index) => `<p:sldId id="${256 + index}" r:id="rId${index + 1}"/>`).join('\n    ')}
+  </p:sldIdLst>
+</p:presentation>`));
+  zip.folder('ppt').folder('_rels').file('presentation.xml.rels', xmlDeclaration(`\
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  ${slides.map((_, index) => `<Relationship Id="rId${index + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide${index + 1}.xml"/>`).join('\n  ')}
+</Relationships>`));
+
+  slides.forEach((slide, index) => {
+    const slideNumber = index + 1;
+    zip.folder('ppt').folder('slides').file(`slide${slideNumber}.xml`, xmlDeclaration(makeSlideXml(slide)));
+    const relationships = [];
+    if (slide.notes) {
+      relationships.push(`<Relationship Id="rIdNotes" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesSlide" Target="../notesSlides/notesSlide${slideNumber}.xml"/>`);
+      zip.folder('ppt').folder('notesSlides').file(`notesSlide${slideNumber}.xml`, xmlDeclaration(makeNotesXml(slide.notes)));
+    }
+    if (slide.hasImage) {
+      relationships.push('<Relationship Id="rIdImage" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.png"/>');
+      zip.folder('ppt').folder('media').file('image1.png', Buffer.from([]));
+    }
+    if (relationships.length) {
+      zip.folder('ppt').folder('slides').folder('_rels').file(`slide${slideNumber}.xml.rels`, xmlDeclaration(`\
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  ${relationships.join('\n  ')}
+</Relationships>`));
+    }
+  });
+
+  const content = await zip.generateAsync({
+    type: 'nodebuffer',
+    compression: 'DEFLATE'
+  });
+  fs.writeFileSync(filePath, content);
+}
+
+function makeSlideXml(slide) {
+  const paragraphs = (slide.paragraphs || [])
+    .map((paragraph) => `<a:p><a:r><a:t>${escapeXml(paragraph)}</a:t></a:r></a:p>`)
+    .join('\n          ');
+  const picture = slide.hasImage
+    ? '<p:pic><p:blipFill><a:blip r:embed="rIdImage"/></p:blipFill></p:pic>'
+    : '';
+  return `\
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <p:cSld>
+    <p:spTree>
+      <p:sp>
+        <p:txBody>
+          ${paragraphs}
+        </p:txBody>
+      </p:sp>
+      ${picture}
+    </p:spTree>
+  </p:cSld>
+</p:sld>`;
+}
+
+function makeNotesXml(paragraphs) {
+  return `\
+<p:notes xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld>
+    <p:spTree>
+      <p:sp>
+        <p:txBody>
+          ${paragraphs.map((paragraph) => `<a:p><a:r><a:t>${escapeXml(paragraph)}</a:t></a:r></a:p>`).join('\n          ')}
+        </p:txBody>
+      </p:sp>
+    </p:spTree>
+  </p:cSld>
+</p:notes>`;
 }
 
 function xmlDeclaration(xml) {

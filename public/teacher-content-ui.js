@@ -758,7 +758,7 @@
           id="teacherContentUploadFile"
           class="sr-only"
           type="file"
-          accept=".txt,.csv,.json,.docx,.xlsx,.pdf"
+          accept=".txt,.csv,.json,.docx,.xlsx,.pptx,.pdf"
           data-upload-file-input
         >
         <button type="button" class="small-button" data-upload-browse>Browse</button>
@@ -766,7 +766,7 @@
           ${escapeHtml(selectedName)}
         </div>
       </div>
-      <p class="teacher-content-upload-note">Supported file types: .txt, .csv, .json, .docx, .xlsx, .pdf. Draft items stay pending until teacher review.</p>
+      <p class="teacher-content-upload-note">Supported file types: .txt, .csv, .json, .docx, .xlsx, .pptx, .pdf. Draft items stay pending until teacher review.</p>
       <div class="teacher-content-upload-row">
         <label class="teacher-content-name-field" for="teacherContentKnowledgeName">
           <span>Knowledge Name</span>

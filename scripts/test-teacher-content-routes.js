@@ -1089,14 +1089,15 @@ async function assertUnsupportedUploadExtensionFails(handlers) {
   const incomingBefore = snapshotFiles(uploadIncomingDir);
   const extractedBefore = snapshotFiles(uploadExtractedDir);
   const response = await requestMultipart(handlers, '/uploads/extract', {
-    fileName: 'slides.pptx',
-    contentType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-    content: 'PowerPoint is not supported in this phase.'
+    fileName: 'slides.ppt',
+    contentType: 'application/vnd.ms-powerpoint',
+    content: 'Legacy PowerPoint is not supported in this phase.'
   });
 
   assert.equal(response.statusCode, 400);
   assert.equal(response.body.success, false);
-  assert.ok(response.body.errors.some((error) => error.includes('Unsupported upload file type')));
+  assert.ok(response.body.errors.some((error) => error.includes('Legacy .ppt uploads are not supported')));
+  assert.ok(response.body.errors.some((error) => error.includes('save the presentation as .pptx or PDF')));
   assert.deepEqual(snapshotFiles(uploadIncomingDir), incomingBefore, 'unsupported source should not be stored');
   assert.deepEqual(snapshotFiles(uploadExtractedDir), extractedBefore, 'unsupported extraction JSON should not be created');
 }
