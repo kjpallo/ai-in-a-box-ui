@@ -6,11 +6,15 @@ const path = require('node:path');
 const {
   getDraftPackReport,
   getTeacherContentDashboard,
+  listUploadedSourceHistory,
   listApprovedPacksSummary,
   listDraftPacksForReview
 } = require('../lib/uploads/teacherContentAdapter');
 const { setApprovedPackActivation } = require('../lib/knowledge/approvedPackActivationStore');
-const { deleteApprovedKnowledgePack } = require('../lib/knowledge/deleteApprovedKnowledgePack');
+const {
+  deleteApprovedKnowledgePack,
+  deleteApprovedKnowledgePacks
+} = require('../lib/knowledge/deleteApprovedKnowledgePack');
 const { promoteDraftKnowledgePack } = require('../lib/knowledge/promoteDraftKnowledgePack');
 const {
   REVIEWABLE_SECTIONS,
@@ -49,6 +53,10 @@ function registerTeacherContentRoutes(app, options = {}) {
 
   app.get('/drafts', (_req, res) => {
     sendJson(res, () => listDraftPacksForReview(options));
+  });
+
+  app.get('/uploads/history', (_req, res) => {
+    sendJson(res, () => listUploadedSourceHistory(options));
   });
 
   app.get('/standards-banks', (_req, res) => {
@@ -315,6 +323,48 @@ function registerTeacherContentRoutes(app, options = {}) {
 
   app.get('/approved', (_req, res) => {
     sendJson(res, () => listApprovedPacksSummary(options));
+  });
+
+  app.delete('/approved', (req, res) => {
+    const packIds = Array.isArray(req.body && req.body.packIds) ? req.body.packIds : [];
+    const invalidPackId = packIds.map((packId) => String(packId || '').trim()).find((packId) => !isSafePackId(packId));
+    if (invalidPackId || !packIds.length) {
+      return res.status(400).json({
+        success: false,
+        errors: [packIds.length ? 'packIds must contain only lowercase letters, numbers, underscores, and hyphens.' : 'packIds must include at least one approved pack ID.']
+      });
+    }
+
+    const confirmationText = String(req.body && req.body.confirmationText || '').trim();
+    if (!confirmationText) {
+      return res.status(400).json({
+        success: false,
+        errors: ['confirmationText is required before deleting approved packs.']
+      });
+    }
+
+    try {
+      const deletion = deleteApprovedKnowledgePacks(packIds, {
+        ...options,
+        confirmationText
+      });
+      const approvedSummary = listApprovedPacksSummary(options);
+      return res.json({
+        success: true,
+        data: {
+          ...deletion,
+          message: 'Selected approved packs archived. Uploaded source files and draft packs were left untouched.',
+          approvedSummary
+        },
+        errors: [],
+        warnings: []
+      });
+    } catch (error) {
+      return res.status(error.statusCode || 500).json({
+        success: false,
+        errors: [error instanceof Error ? error.message : String(error)]
+      });
+    }
   });
 
   app.patch('/approved/:packId/activation', (req, res) => {

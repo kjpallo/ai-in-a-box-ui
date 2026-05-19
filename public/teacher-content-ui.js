@@ -4,6 +4,7 @@
     uploadExtract: '/api/teacher-content/uploads/extract',
     uploadAndPrepare: '/api/teacher-content/uploads/upload-and-prepare',
     uploadPrepareReview: (uploadId) => `/api/teacher-content/uploads/${encodeURIComponent(uploadId)}/prepare-review`,
+    uploadHistory: '/api/teacher-content/uploads/history',
     drafts: '/api/teacher-content/drafts',
     draftReport: (packId, standardsBankId = '') => {
       const query = standardsBankId ? `?standardsBankId=${encodeURIComponent(standardsBankId)}` : '';
@@ -16,7 +17,8 @@
     draftItemStatus: (packId, section, index) => `/api/teacher-content/drafts/${encodeURIComponent(packId)}/items/${encodeURIComponent(section)}/${encodeURIComponent(index)}/status`,
     approved: '/api/teacher-content/approved',
     approvedActivation: (packId) => `/api/teacher-content/approved/${encodeURIComponent(packId)}/activation`,
-    approvedDelete: (packId) => `/api/teacher-content/approved/${encodeURIComponent(packId)}`
+    approvedDelete: (packId) => `/api/teacher-content/approved/${encodeURIComponent(packId)}`,
+    approvedBulkDelete: '/api/teacher-content/approved'
   };
 
   const TABS = [
@@ -74,12 +76,16 @@
     standardsBankLoading: false,
     standardsBankError: '',
     approved: [],
+    uploadedSources: [],
     approvedIndexedCounts: null,
     approvedSearchableCounts: null,
     approvedActivationSaving: {},
     approvedActivationMessages: {},
     approvedDeleteSaving: {},
     approvedDeleteMessages: {},
+    selectedApprovedPackIds: [],
+    approvedBulkDeleteSaving: false,
+    approvedBulkDeleteMessage: '',
     report: null,
     selectedReviewItem: null,
     selectedReviewEvidenceItem: null,
@@ -352,6 +358,13 @@
         return;
       }
 
+      const approvedBulkDelete = event.target.closest('[data-approved-pack-bulk-delete-action]');
+      if (approvedBulkDelete) {
+        event.preventDefault();
+        deleteSelectedApprovedPacks();
+        return;
+      }
+
       const approvedViewEdit = event.target.closest('[data-approved-pack-view-edit-action]');
       if (approvedViewEdit) {
         event.preventDefault();
@@ -399,6 +412,11 @@
 
       if (event.target?.matches?.('[data-approved-pack-activation-checkbox]')) {
         toggleApprovedPackActivation(event.target);
+        return;
+      }
+
+      if (event.target?.matches?.('[data-approved-pack-select-checkbox]')) {
+        toggleApprovedPackSelection(event.target);
         return;
       }
 
@@ -531,17 +549,19 @@
     setStatus('Loading teacher content...');
     render();
 
-    const [dashboardResult, draftsResult, standardsBanksResult, approvedResult] = await Promise.allSettled([
+    const [dashboardResult, draftsResult, standardsBanksResult, approvedResult, uploadHistoryResult] = await Promise.allSettled([
       fetchJson(ENDPOINTS.dashboard),
       fetchJson(ENDPOINTS.drafts),
       fetchJson(ENDPOINTS.standardsBanks),
-      fetchJson(ENDPOINTS.approved)
+      fetchJson(ENDPOINTS.approved),
+      fetchJson(ENDPOINTS.uploadHistory)
     ]);
 
     applySettledResult(dashboardResult, 'dashboard');
     applySettledResult(draftsResult, 'drafts');
     applySettledResult(standardsBanksResult, 'standardsBanks');
     applySettledResult(approvedResult, 'approved');
+    applySettledResult(uploadHistoryResult, 'uploadHistory');
 
     if (!state.selectedDraftPackId && state.drafts.length) {
       state.selectedDraftPackId = state.drafts[0].packId || '';
@@ -575,6 +595,12 @@
 
     if (kind === 'standardsBanks') {
       state.standardsBanks = Array.isArray(data?.standardsBanks) ? data.standardsBanks : [];
+      collectApiIssues(data);
+      return;
+    }
+
+    if (kind === 'uploadHistory') {
+      state.uploadedSources = Array.isArray(data?.uploadedSources) ? data.uploadedSources : [];
       collectApiIssues(data);
       return;
     }
@@ -1454,12 +1480,14 @@
   }
 
   function renderApprovedPacksCard() {
+    const history = renderUploadedSourcesHistory();
+    const selectedCount = state.selectedApprovedPackIds.length;
     if (!state.approved.length) {
       return `
         <div class="teacher-content-card-head">
           <div>
             <h4>Knowledge Packs</h4>
-            <p>Manage approved knowledge packs. Student router activation will be added in a later phase.</p>
+            <p>Dedicated management blade for approved packs and uploaded source history.</p>
           </div>
           <span class="teacher-content-pill muted">Empty</span>
         </div>
@@ -1468,6 +1496,7 @@
           <p>Review imported draft content before creating approved packs.</p>
           <button type="button" class="small-button secondary-small" data-approved-empty-tab="review">View Review Content</button>
         </section>
+        ${history}
       `;
     }
 
@@ -1475,7 +1504,7 @@
       <div class="teacher-content-card-head">
         <div>
           <h4>Knowledge Packs</h4>
-          <p>Manage approved knowledge packs. Student router activation will be added in a later phase.</p>
+          <p>Dedicated management blade for approved packs and uploaded source history.</p>
         </div>
         <span class="teacher-content-pill ready">Approved</span>
       </div>
@@ -1483,10 +1512,26 @@
         <span>Approved</span>
         <span>Saved for later. Not connected to student answers yet.</span>
       </section>
+      <section class="teacher-content-approved-bulk-actions" data-approved-pack-bulk-delete-panel>
+        <div>
+          <strong>Selected for deletion: <span data-approved-pack-selected-count>${selectedCount}</span></strong>
+          <p>Selection checkboxes only choose approved packs to archive. Activation checkboxes only save future router activation settings.</p>
+        </div>
+        <button
+          type="button"
+          class="small-button danger-small"
+          ${selectedCount && !state.approvedBulkDeleteSaving ? '' : 'disabled'}
+          data-approved-pack-bulk-delete-action
+        >
+          ${state.approvedBulkDeleteSaving ? 'Deleting selected...' : 'Delete selected knowledge packs'}
+        </button>
+      </section>
+      <p class="teacher-content-approved-delete-message" data-approved-pack-bulk-delete-message>${escapeHtml(state.approvedBulkDeleteMessage)}</p>
       <div class="teacher-content-approved-list" data-knowledge-packs-blade>
         ${state.approved.map(renderApprovedPack).join('')}
       </div>
       ${renderApprovedSearchableSummary()}
+      ${history}
     `;
   }
 
@@ -1501,13 +1546,26 @@
     const activationMessage = state.approvedActivationMessages[packId] || '';
     const deleteSaving = state.approvedDeleteSaving[packId] === true;
     const deleteMessage = state.approvedDeleteMessages[packId] || '';
+    const selectedForDeletion = state.selectedApprovedPackIds.includes(packId);
     const activationLabel = activationSaving ? 'Saving...' : (activationEnabled ? 'Enabled' : 'Disabled');
     const importScope = pack.importScope || {};
     const scopeLabel = formatImportScopeLabel(importScope);
+    const sourceNames = Array.isArray(pack.sourceFileNames) ? pack.sourceFileNames : [];
     return `
       <section class="teacher-content-approved-pack" data-approved-pack-card>
         <div class="teacher-content-approved-head">
           <div>
+            <label class="teacher-content-checkbox-control teacher-content-approved-select-control">
+              <input
+                type="checkbox"
+                ${selectedForDeletion ? 'checked' : ''}
+                ${!packId || state.approvedBulkDeleteSaving ? 'disabled' : ''}
+                data-approved-pack-select-checkbox
+                data-approved-pack-select-for-delete
+                data-approved-pack-id="${escapeAttr(packId)}"
+              >
+              <span>Select approved pack for deletion</span>
+            </label>
             <strong data-approved-pack-title>${escapeHtml(pack.title || pack.packId || 'Approved pack')}</strong>
             <span data-approved-pack-pack-id>${escapeHtml(pack.packId || 'No pack ID')}</span>
           </div>
@@ -1554,8 +1612,11 @@
           ${metadataPill('Validation status', pack.validationStatus || pack.validation || 'Not available', 'data-approved-pack-validation-status')}
           ${metadataPill('Import scope', scopeLabel || 'Full Import', 'data-approved-pack-import-scope')}
           ${metadataPill('Source / range', pack.sourceSummary || 'Not set', 'data-approved-pack-source-range')}
+          ${metadataPill('Created', formatDate(pack.createdAt) || 'Not available', 'data-approved-pack-created-date')}
+          ${metadataPill('Updated', formatDate(pack.updatedAt) || 'Not available', 'data-approved-pack-updated-date')}
           ${metadataPill('Activation status', activationEnabled ? 'Enabled' : 'Disabled', 'data-approved-pack-activation-status-meta')}
         </div>
+        ${renderChipList('Source file names', sourceNames, 'data-approved-pack-source-file-names')}
         <div class="teacher-content-count-strip">
           ${countPill('Vocabulary count', counts.vocabulary, 'data-approved-pack-vocabulary-count')}
           ${countPill('Concept count', counts.concepts, 'data-approved-pack-concept-count')}
@@ -1576,6 +1637,61 @@
         </details>
       </section>
     `;
+  }
+
+  function renderUploadedSourcesHistory() {
+    const sources = Array.isArray(state.uploadedSources) ? state.uploadedSources : [];
+    return `
+      <section class="teacher-content-uploaded-sources" data-uploaded-sources-history data-upload-history-blade>
+        <div class="teacher-content-card-head">
+          <div>
+            <h5>Uploaded Sources</h5>
+            <p>Upload History for extracted source files. Source files, draft packs, and approved packs are preserved.</p>
+          </div>
+          <span class="teacher-content-pill ${sources.length ? 'ready' : 'muted'}">${sources.length ? 'Available' : 'Empty'}</span>
+        </div>
+        ${sources.length ? `
+          <div class="teacher-content-approved-list">
+            ${sources.map(renderUploadedSourceHistoryItem).join('')}
+          </div>
+        ` : '<p class="profile-empty-state" data-no-uploaded-sources-empty-state>No uploaded source history yet. Extraction records will appear here after files are uploaded.</p>'}
+      </section>
+    `;
+  }
+
+  function renderUploadedSourceHistoryItem(source) {
+    const warnings = Array.isArray(source.warnings) ? source.warnings : [];
+    const draftPacks = Array.isArray(source.draftPacks) ? source.draftPacks : [];
+    const approvedPacks = Array.isArray(source.approvedPacks) ? source.approvedPacks : [];
+    return `
+      <section class="teacher-content-approved-pack" data-uploaded-source-card>
+        <div class="teacher-content-approved-head">
+          <div>
+            <strong data-uploaded-source-original-filename>${escapeHtml(source.originalFileName || source.storedFileName || 'Uploaded source')}</strong>
+            <span data-uploaded-source-upload-id>${escapeHtml(source.uploadId || 'No upload ID')}</span>
+          </div>
+          <div class="teacher-content-approved-badges">
+            <span data-uploaded-source-draft-exists>${source.draftPackExists ? 'Draft pack exists' : 'No draft pack'}</span>
+            <span data-uploaded-source-approved-exists>${source.approvedPackExists ? 'Approved pack exists' : 'No approved pack'}</span>
+          </div>
+        </div>
+        <div class="teacher-content-approved-meta">
+          ${metadataPill('File type', source.fileType || 'Unknown', 'data-uploaded-source-file-type')}
+          ${metadataPill('Extracted pages/slides/sheets', formatNumber(source.extractedUnitCount), 'data-uploaded-source-extracted-count')}
+          ${metadataPill('Text-bearing pages/slides', formatNumber(source.textBearingUnitCount), 'data-uploaded-source-text-bearing-count')}
+          ${metadataPill('First text-bearing page/slide', source.firstTextBearingUnit ? formatNumber(source.firstTextBearingUnit) : 'None found', 'data-uploaded-source-first-text-bearing')}
+          ${metadataPill('Updated', formatDate(source.updatedAt) || 'Not available', 'data-uploaded-source-updated-date')}
+        </div>
+        ${renderChipList('Draft pack from upload', draftPacks.map(formatPackMatch), 'data-uploaded-source-draft-packs')}
+        ${renderChipList('Approved pack from upload', approvedPacks.map(formatPackMatch), 'data-uploaded-source-approved-packs')}
+        ${renderChipList('Warnings', warnings, 'data-uploaded-source-warnings')}
+      </section>
+    `;
+  }
+
+  function formatPackMatch(pack) {
+    if (!pack) return '';
+    return pack.title && pack.packId ? `${pack.title} (${pack.packId})` : pack.packId || pack.title || '';
   }
 
   function renderApprovedSearchableSummary() {
@@ -2256,23 +2372,27 @@
   }
 
   async function refreshDraftLists() {
-    const [dashboardResult, draftsResult] = await Promise.allSettled([
+    const [dashboardResult, draftsResult, uploadHistoryResult] = await Promise.allSettled([
       fetchJson(ENDPOINTS.dashboard),
-      fetchJson(ENDPOINTS.drafts)
+      fetchJson(ENDPOINTS.drafts),
+      fetchJson(ENDPOINTS.uploadHistory)
     ]);
     applySettledResult(dashboardResult, 'dashboard');
     applySettledResult(draftsResult, 'drafts');
+    applySettledResult(uploadHistoryResult, 'uploadHistory');
   }
 
   async function refreshTeacherContentSummaries() {
-    const [dashboardResult, draftsResult, approvedResult] = await Promise.allSettled([
+    const [dashboardResult, draftsResult, approvedResult, uploadHistoryResult] = await Promise.allSettled([
       fetchJson(ENDPOINTS.dashboard),
       fetchJson(ENDPOINTS.drafts),
-      fetchJson(ENDPOINTS.approved)
+      fetchJson(ENDPOINTS.approved),
+      fetchJson(ENDPOINTS.uploadHistory)
     ]);
     applySettledResult(dashboardResult, 'dashboard');
     applySettledResult(draftsResult, 'drafts');
     applySettledResult(approvedResult, 'approved');
+    applySettledResult(uploadHistoryResult, 'uploadHistory');
     await loadSelectedDraftReport();
   }
 
@@ -2352,6 +2472,67 @@
     }
   }
 
+  function toggleApprovedPackSelection(checkbox) {
+    const packId = checkbox.getAttribute('data-approved-pack-id') || '';
+    if (!packId) return;
+
+    const selected = new Set(state.selectedApprovedPackIds);
+    if (checkbox.checked) {
+      selected.add(packId);
+    } else {
+      selected.delete(packId);
+    }
+    state.selectedApprovedPackIds = Array.from(selected).filter((selectedPackId) => {
+      return state.approved.some((pack) => pack.packId === selectedPackId);
+    });
+    state.approvedBulkDeleteMessage = '';
+    render();
+  }
+
+  async function deleteSelectedApprovedPacks() {
+    const selectedPacks = state.selectedApprovedPackIds
+      .map((packId) => state.approved.find((pack) => pack.packId === packId))
+      .filter(Boolean);
+    if (!selectedPacks.length || state.approvedBulkDeleteSaving) return;
+
+    const selectedList = selectedPacks
+      .map((pack) => `${pack.title || 'Approved pack'} (${pack.packId})`)
+      .join('\n');
+    const confirmationText = window.prompt(
+      `Type DELETE to archive these approved knowledge packs:\n\n${selectedList}\n\nUploaded source files and draft packs will not be deleted.`
+    );
+    if (confirmationText === null) return;
+
+    state.approvedBulkDeleteSaving = true;
+    state.approvedBulkDeleteMessage = 'Deleting selected approved packs...';
+    setStatus('Deleting selected approved packs...');
+    render();
+
+    try {
+      const payload = await fetchJson(ENDPOINTS.approvedBulkDelete, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          packIds: selectedPacks.map((pack) => pack.packId),
+          confirmationText
+        })
+      });
+      const data = unwrap(payload);
+      state.selectedApprovedPackIds = [];
+      state.approvedDeleteMessages = {};
+      state.approvedBulkDeleteMessage = data?.message || 'Selected approved packs archived. Uploaded source files and draft packs were left untouched.';
+      if (data?.approvedSummary) applyApprovedSummary(data.approvedSummary);
+      await refreshTeacherContentSummaries();
+      setStatus(state.approvedBulkDeleteMessage);
+    } catch (error) {
+      state.approvedBulkDeleteMessage = `Delete selected failed: ${error.message || 'Route error'}`;
+      setStatus('Delete selected approved packs failed.');
+    } finally {
+      state.approvedBulkDeleteSaving = false;
+      render();
+    }
+  }
+
   function toggleApprovedPackDetails(button) {
     const packId = button.getAttribute('data-approved-pack-id') || '';
     const details = document.querySelector(`[data-approved-pack-details][data-approved-pack-id="${cssEscape(packId)}"]`);
@@ -2360,6 +2541,9 @@
 
   function applyApprovedSummary(data) {
     state.approved = Array.isArray(data?.approvedPacks) ? data.approvedPacks : [];
+    state.selectedApprovedPackIds = state.selectedApprovedPackIds.filter((packId) => {
+      return state.approved.some((pack) => pack.packId === packId);
+    });
     state.approvedIndexedCounts = data?.indexedCounts || null;
     state.approvedSearchableCounts = data?.searchableCounts || null;
     collectApiIssues(data);
@@ -3369,6 +3553,17 @@
   function formatNumber(value) {
     const number = Number(value || 0);
     return Number.isFinite(number) ? number.toLocaleString() : '0';
+  }
+
+  function formatDate(value) {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+    return date.toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
   }
 
   function titleCase(value) {

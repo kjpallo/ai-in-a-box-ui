@@ -216,6 +216,7 @@ function assertEndpointReferences() {
     '/api/teacher-content/uploads/extract',
     '/api/teacher-content/uploads/upload-and-prepare',
     '/api/teacher-content/uploads/${encodeURIComponent(uploadId)}/prepare-review',
+    '/api/teacher-content/uploads/history',
     '/api/teacher-content/drafts',
     '/api/teacher-content/drafts/${encodeURIComponent(packId)}/report${query}',
     '/api/teacher-content/standards-banks',
@@ -240,6 +241,7 @@ function assertEndpointReferences() {
     [
       'approved',
       'approvedActivation',
+      'approvedBulkDelete',
       'approvedDelete',
       'dashboard',
       'draftItem',
@@ -251,6 +253,7 @@ function assertEndpointReferences() {
       'standardsBanks',
       'uploadAndPrepare',
       'uploadExtract',
+      'uploadHistory',
       'uploadPrepareReview'
     ].sort(),
     'Teacher Content UI should keep endpoint helpers limited to teacher content read/review/promotion routes.'
@@ -733,7 +736,7 @@ function assertImportReportPolishUi() {
 function assertApprovedPacksPolishUi() {
   [
     'Knowledge Packs',
-    'Manage approved knowledge packs. Student router activation will be added in a later phase.',
+    'Dedicated management blade for approved packs and uploaded source history.',
     'data-knowledge-packs-blade',
     'data-approved-pack-card',
     'data-approved-pack-title',
@@ -746,6 +749,9 @@ function assertApprovedPacksPolishUi() {
     'data-approved-pack-validation-status',
     'data-approved-pack-import-scope',
     'data-approved-pack-source-range',
+    'data-approved-pack-source-file-names',
+    'data-approved-pack-created-date',
+    'data-approved-pack-updated-date',
     'data-approved-pack-vocabulary-count',
     'data-approved-pack-concept-count',
     'data-approved-pack-reference-formula-count',
@@ -763,6 +769,12 @@ function assertApprovedPacksPolishUi() {
     'data-approved-pack-activation-message',
     'data-approved-pack-delete-action',
     'data-approved-pack-delete-message',
+    'data-approved-pack-select-checkbox',
+    'data-approved-pack-select-for-delete',
+    'data-approved-pack-bulk-delete-panel',
+    'data-approved-pack-bulk-delete-action',
+    'data-approved-pack-bulk-delete-message',
+    'data-approved-pack-selected-count',
     'data-approved-pack-view-edit-action',
     'data-approved-searchable-summary',
     'data-approved-searchable-vocabulary-terms',
@@ -779,6 +791,12 @@ function assertApprovedPacksPolishUi() {
     'Enabled',
     'Disabled',
     'Delete Pack',
+    'Delete selected knowledge packs',
+    'Selected for deletion',
+    'Select approved pack for deletion',
+    'Selection checkboxes only choose approved packs to archive. Activation checkboxes only save future router activation settings.',
+    'Deleting selected approved packs...',
+    'Type DELETE to archive these approved knowledge packs:',
     'Deleting approved pack...',
     'Type DELETE',
     'Uploaded source files and draft packs will not be deleted.',
@@ -791,7 +809,28 @@ function assertApprovedPacksPolishUi() {
     'Review imported draft content before creating approved packs.',
     'data-approved-empty-tab="review"',
     'View Review Content',
-    'View / Edit Pack'
+    'View / Edit Pack',
+    'Uploaded Sources',
+    'Upload History',
+    'data-uploaded-sources-history',
+    'data-upload-history-blade',
+    'data-uploaded-source-card',
+    'data-uploaded-source-original-filename',
+    'data-uploaded-source-upload-id',
+    'data-uploaded-source-file-type',
+    'data-uploaded-source-extracted-count',
+    'data-uploaded-source-text-bearing-count',
+    'data-uploaded-source-first-text-bearing',
+    'data-uploaded-source-draft-exists',
+    'data-uploaded-source-approved-exists',
+    'data-uploaded-source-draft-packs',
+    'data-uploaded-source-approved-packs',
+    'data-uploaded-source-warnings',
+    'data-no-uploaded-sources-empty-state',
+    'Draft pack exists',
+    'Approved pack exists',
+    'Source files, draft packs, and approved packs are preserved.',
+    'formatDate'
   ].forEach((marker) => {
     assert.ok(ui.includes(marker), `Expected Approved Packs polish marker ${marker}.`);
   });
@@ -800,11 +839,12 @@ function assertApprovedPacksPolishUi() {
   assert.ok(ui.includes("method: 'PATCH'"), 'Approved pack activation should save with PATCH.');
   assert.ok(ui.includes('approvedActivation'), 'Approved pack activation endpoint helper should exist.');
   assert.ok(ui.includes('approvedDelete'), 'Approved pack delete endpoint helper should exist.');
+  assert.ok(ui.includes('approvedBulkDelete'), 'Approved pack bulk delete endpoint helper should exist.');
   assert.match(ui, /window\.prompt/, 'Approved pack delete should require typed confirmation in the UI.');
 }
 
 function assertNoForbiddenUiActions() {
-  assert.doesNotMatch(ui, /Ollama|ocr/i, 'Teacher Content UI should not expose forbidden generation/OCR actions.');
+  assert.doesNotMatch(ui, /Ollama/i, 'Teacher Content UI should not expose forbidden generation actions.');
   assert.doesNotMatch(style, /Ollama|Gemma|ocr/i, 'Teacher Content styles should not add forbidden generation/OCR references.');
   assert.doesNotMatch(ui, />\s*Generate Draft\s*</i, 'Teacher Content UI should not use Generate Draft as a visible button label.');
   assert.doesNotMatch(ui, /\/api\/student|\/api\/chat|\/api\/router-test/, 'Teacher Content UI should not reference student/router endpoints.');

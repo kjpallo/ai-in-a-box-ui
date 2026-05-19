@@ -136,7 +136,10 @@ async function main() {
     await assertApprovedDeleteRequiresConfirmation(handlers);
     await assertInvalidApprovedDeletePathTraversalRejected(handlers);
     await assertMissingApprovedDeletePackRejected(handlers);
+    await assertApprovedBulkDeleteArchivesSelectedPacksOnly(handlers);
+    await assertApprovedBulkDeletePathTraversalRejectedBeforeMutation(handlers);
     await assertApprovedDeleteArchivesPackAndActivationOnly(handlers);
+    await assertUploadHistoryEndpoint(handlers);
     await assertMissingDraftReportEndpoint(handlers);
     await assertPathTraversalRejected(handlers);
     assertRealApprovedPacksAreNotModified();
@@ -901,6 +904,88 @@ async function assertSuccessfulTxtUploadExtraction(handlers) {
   assert.deepEqual(snapshotFiles(realApprovedPacksDir), approvedFilesBefore, 'upload extraction should not modify real approved packs');
 }
 
+async function assertUploadHistoryEndpoint(handlers) {
+  const uploadId = 'history-upload';
+  fs.writeFileSync(path.join(uploadExtractedDir, `${uploadId}_extraction.json`), `${JSON.stringify(makeExtraction({
+    uploadId,
+    originalFileName: 'history_packet.pdf',
+    extension: '.pdf',
+    mimeGuess: 'application/pdf',
+    sections: [
+      {
+        label: 'Page 2',
+        sourceLocation: 'Page 2',
+        pageNumber: 2,
+        text: 'History page with extractable science text.'
+      }
+    ],
+    metadata: {
+      detectedType: 'pdf',
+      pageCount: 3,
+      textBearingPages: [2],
+      pagesWithText: [2],
+      firstTextPage: 2,
+      characterCount: 43
+    }
+  }), null, 2)}\n`);
+  writeKnowledgePack(path.join(draftPacksDir, 'history-draft-pack'), makePack({
+    packId: 'history-draft-pack',
+    title: 'History Draft Pack',
+    sourceFiles: [{
+      fileName: 'history_packet.pdf',
+      uploadId,
+      fileType: 'pdf',
+      reviewStatus: 'approved',
+      confidence: 'high'
+    }],
+    metadata: {
+      createdBy: 'test-suite',
+      createdAt: '2026-05-18T12:00:00.000Z',
+      sourceUpload: {
+        uploadId,
+        originalFileName: 'history_packet.pdf'
+      }
+    }
+  }));
+  writeKnowledgePack(path.join(approvedPacksDir, 'history-approved-pack'), makePack({
+    packId: 'history-approved-pack',
+    title: 'History Approved Pack',
+    sourceFiles: [{
+      fileName: 'history_packet.pdf',
+      uploadId,
+      fileType: 'pdf',
+      reviewStatus: 'approved',
+      confidence: 'high'
+    }],
+    metadata: {
+      createdBy: 'test-suite',
+      sourceUpload: {
+        uploadId,
+        originalFileName: 'history_packet.pdf'
+      },
+      createdAt: '2026-05-18T12:00:00.000Z',
+      updatedAt: '2026-05-18T12:30:00.000Z'
+    }
+  }));
+
+  const response = await request(handlers, 'GET', '/uploads/history');
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.success, true);
+  const source = response.body.data.uploadedSources.find((item) => item.uploadId === uploadId);
+  assert.ok(source, 'uploaded source history should include extraction records');
+  assert.equal(source.originalFileName, 'history_packet.pdf');
+  assert.equal(source.fileType, 'pdf');
+  assert.equal(source.extractedUnitCount, 3);
+  assert.equal(source.textBearingUnitCount, 1);
+  assert.equal(source.firstTextBearingUnit, 2);
+  assert.equal(source.draftPackExists, true);
+  assert.equal(source.approvedPackExists, true);
+  assert.equal(source.draftPacks[0].packId, 'history-draft-pack');
+  assert.equal(source.approvedPacks[0].packId, 'history-approved-pack');
+  assert.ok(source.warnings.some((warning) => /image-only page\/slide.*OCR later/i.test(warning)));
+}
+
 async function assertUploadAndPrepareEndpointSucceeds(handlers) {
   const draftFilesBefore = snapshotFiles(draftPacksDir);
   const approvedFilesBefore = snapshotFiles(realApprovedPacksDir);
@@ -1127,6 +1212,7 @@ async function assertApprovedEndpoint(handlers) {
   assert.equal(approvedPack.status, 'Approved');
   assert.equal(approvedPack.validationStatus, 'Passed');
   assert.equal(approvedPack.sourceSummary, 'teacher_force_notes.txt');
+  assert.deepEqual(approvedPack.sourceFileNames, ['teacher_force_notes.txt']);
   assert.equal(approvedPack.activationEnabled, false);
   assert.equal(approvedPack.activationStatus, 'disabled');
   assert.ok(response.body.data.indexedCounts.vocabularyTerms >= 1);
@@ -1265,6 +1351,94 @@ async function assertApprovedDeleteArchivesPackAndActivationOnly(handlers) {
   assert.equal(response.body.data.approvedSummary.approvedPacks.some((pack) => pack.packId === 'route-approved-pack'), false);
   assert.deepEqual(snapshotFiles(draftPacksDir), draftBefore, 'delete should not remove or modify draft packs');
   assert.deepEqual(snapshotFiles(path.join(tempRoot, 'uploads')), uploadsBefore, 'delete should not remove uploaded source files');
+}
+
+async function assertApprovedBulkDeleteArchivesSelectedPacksOnly(handlers) {
+  writeKnowledgePack(approvedPacksDir, makePack({
+    packId: 'route-bulk-delete-pack-one',
+    title: 'Route Bulk Delete Pack One',
+    version: '1.0.0',
+    vocabulary: [makeVocabularyItem('bulk-delete-one', 'approved')]
+  }));
+  writeKnowledgePack(approvedPacksDir, makePack({
+    packId: 'route-bulk-delete-pack-two',
+    title: 'Route Bulk Delete Pack Two',
+    version: '1.0.0',
+    vocabulary: [makeVocabularyItem('bulk-delete-two', 'approved')]
+  }));
+  writeKnowledgePack(approvedPacksDir, makePack({
+    packId: 'route-bulk-keep-pack',
+    title: 'Route Bulk Keep Pack',
+    version: '1.0.0',
+    vocabulary: [makeVocabularyItem('bulk-keep', 'approved')]
+  }));
+  fs.writeFileSync(activationRegistryPath, `${JSON.stringify({
+    version: 1,
+    packs: {
+      'route-approved-pack': { enabled: false, updatedAt: '2026-01-01T00:00:00.000Z' },
+      'route-bulk-delete-pack-one': { enabled: true, updatedAt: '2026-01-01T00:00:00.000Z' },
+      'route-bulk-delete-pack-two': { enabled: true, updatedAt: '2026-01-01T00:00:00.000Z' },
+      'route-bulk-keep-pack': { enabled: true, updatedAt: '2026-01-01T00:00:00.000Z' }
+    }
+  }, null, 2)}\n`);
+
+  const uploadedSourcePath = path.join(uploadIncomingDir, 'route-bulk-delete-source.pdf');
+  fs.writeFileSync(uploadedSourcePath, 'bulk delete uploaded source remains');
+  const draftBefore = snapshotFiles(draftPacksDir);
+  const uploadsBefore = snapshotFiles(path.join(tempRoot, 'uploads'));
+  const nonSelectedBefore = readKnowledgePack(approvedPacksDir, 'route-bulk-keep-pack');
+  const response = await request(handlers, 'DELETE', '/approved', {
+    packIds: ['route-bulk-delete-pack-one', 'route-bulk-delete-pack-two'],
+    confirmationText: 'DELETE'
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.data.deletedCount, 2);
+  assert.deepEqual(response.body.data.deletedPackIds, ['route-bulk-delete-pack-one', 'route-bulk-delete-pack-two']);
+  assert.equal(response.body.data.sourceFilesPreserved, true);
+  assert.equal(response.body.data.draftPacksPreserved, true);
+  assert.equal(fs.existsSync(path.join(approvedPacksDir, 'route-bulk-delete-pack-one', 'knowledge_pack.json')), false);
+  assert.equal(fs.existsSync(path.join(approvedPacksDir, 'route-bulk-delete-pack-two', 'knowledge_pack.json')), false);
+  assert.equal(fs.existsSync(path.join(approvedPacksDir, 'route-bulk-keep-pack', 'knowledge_pack.json')), true);
+  assert.deepEqual(readKnowledgePack(approvedPacksDir, 'route-bulk-keep-pack'), nonSelectedBefore, 'non-selected approved pack should remain untouched');
+  assert.equal(response.body.data.deletions.length, 2);
+  response.body.data.deletions.forEach((deletion) => {
+    assert.ok(deletion.archivedPath.startsWith(deletedApprovedPacksDir));
+    assert.equal(fs.existsSync(path.join(deletion.archivedPath, 'knowledge_pack.json')), true);
+  });
+  const activationState = JSON.parse(fs.readFileSync(activationRegistryPath, 'utf8'));
+  assert.equal(Object.prototype.hasOwnProperty.call(activationState.packs, 'route-bulk-delete-pack-one'), false);
+  assert.equal(Object.prototype.hasOwnProperty.call(activationState.packs, 'route-bulk-delete-pack-two'), false);
+  assert.equal(activationState.packs['route-bulk-keep-pack'].enabled, true);
+  assert.equal(response.body.data.approvedSummary.approvedPacks.some((pack) => pack.packId === 'route-bulk-delete-pack-one'), false);
+  assert.equal(response.body.data.approvedSummary.approvedPacks.some((pack) => pack.packId === 'route-bulk-delete-pack-two'), false);
+  assert.equal(response.body.data.approvedSummary.approvedPacks.some((pack) => pack.packId === 'route-bulk-keep-pack'), true);
+  assert.deepEqual(snapshotFiles(draftPacksDir), draftBefore, 'bulk delete should not remove or modify draft packs');
+  assert.deepEqual(snapshotFiles(path.join(tempRoot, 'uploads')), uploadsBefore, 'bulk delete should not remove uploaded source files');
+}
+
+async function assertApprovedBulkDeletePathTraversalRejectedBeforeMutation(handlers) {
+  writeKnowledgePack(approvedPacksDir, makePack({
+    packId: 'route-bulk-invalid-guard-pack',
+    title: 'Route Bulk Invalid Guard Pack',
+    version: '1.0.0',
+    vocabulary: [makeVocabularyItem('bulk-invalid-guard', 'approved')]
+  }));
+  const approvedBefore = snapshotFiles(approvedPacksDir);
+  const deletedBefore = snapshotFiles(deletedApprovedPacksDir);
+  const draftBefore = snapshotFiles(draftPacksDir);
+  const response = await request(handlers, 'DELETE', '/approved', {
+    packIds: ['route-bulk-invalid-guard-pack', '../route-approved-pack'],
+    confirmationText: 'DELETE'
+  });
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.success, false);
+  assert.match(response.body.errors[0], /packIds/);
+  assert.deepEqual(snapshotFiles(approvedPacksDir), approvedBefore, 'invalid bulk delete should not modify approved packs');
+  assert.deepEqual(snapshotFiles(deletedApprovedPacksDir), deletedBefore, 'invalid bulk delete should not archive any packs');
+  assert.deepEqual(snapshotFiles(draftPacksDir), draftBefore, 'invalid bulk delete should not modify draft packs');
 }
 
 async function assertPromoteDraftEndpointSucceeds(handlers) {
@@ -1724,8 +1898,8 @@ function makeExtraction(overrides = {}) {
   return {
     success: true,
     fileName: originalFileName,
-    extension: '.txt',
-    mimeGuess: 'text/plain',
+    extension: overrides.extension || '.txt',
+    mimeGuess: overrides.mimeGuess || 'text/plain',
     text,
     sections: overrides.sections || [
       {
@@ -1738,7 +1912,7 @@ function makeExtraction(overrides = {}) {
     tables: [],
     warnings: [],
     errors: [],
-    metadata: {
+    metadata: overrides.metadata || {
       detectedType: 'txt'
     },
     upload: {
