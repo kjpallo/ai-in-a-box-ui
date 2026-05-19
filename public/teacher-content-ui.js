@@ -22,22 +22,32 @@
   };
 
   const TABS = [
-    { id: 'upload', label: 'Upload Source', shortLabel: 'Upload Source' },
-    { id: 'previewImport', label: 'Preview Import', shortLabel: 'Preview Import' },
-    { id: 'reviewPreview', label: 'Review Preview', shortLabel: 'Review Preview' },
-    { id: 'fullImport', label: 'Full Import', shortLabel: 'Full Import' },
-    { id: 'review', label: 'Review Content', shortLabel: 'Review Content' },
+    { id: 'upload', label: 'Upload / Start', shortLabel: 'Upload / Start' },
+    { id: 'review', label: 'Review Draft Content', shortLabel: 'Review Draft Content' },
     { id: 'approvedPacks', label: 'Knowledge Packs', shortLabel: 'Knowledge Packs' }
   ];
 
   const SECTION_LABELS = {
     vocabulary: 'Vocabulary',
     concepts: 'Concepts',
-    referenceFormulas: 'Reference Formulas',
-    problemBank: 'Problem Bank',
-    standardsMap: 'Standards Map',
-    smokeTests: 'Smoke Tests'
+    referenceFormulas: 'Reference formulas',
+    problemBank: 'Problem-bank items',
+    examples: 'Examples',
+    misconceptions: 'Misconceptions',
+    standardsMap: 'Standards suggestions',
+    smokeTests: 'Warnings / needs repair'
   };
+
+  const REVIEW_GROUP_ORDER = [
+    'vocabulary',
+    'concepts',
+    'referenceFormulas',
+    'problemBank',
+    'examples',
+    'misconceptions',
+    'standardsMap',
+    'smokeTests'
+  ];
 
   const EDITABLE_FIELDS = {
     vocabulary: ['studentDefinition', 'teacherDefinition', 'misconception'],
@@ -783,8 +793,8 @@
     return `
       <div class="teacher-content-card-head">
         <div>
-          <h4>Upload Source</h4>
-          <p>Choose a source file and name the knowledge before building a resource-safe import estimate.</p>
+          <h4>Upload / Start</h4>
+          <p>Upload a source file, name the knowledge pack, review the planner recommendation, then generate a draft.</p>
         </div>
         <span class="teacher-content-pill ${status === 'FAILED' ? 'blocked' : status === 'EXTRACTED' ? 'ready' : state.uploadCreateReviewLoading || state.uploadExtractionLoading ? 'review' : 'muted'}">${escapeHtml(status)}</span>
       </div>
@@ -804,7 +814,7 @@
       <p class="teacher-content-upload-note">Supported file types: .txt, .csv, .json, .docx, .xlsx, .pptx, .pdf. Draft items stay pending until teacher review.</p>
       <div class="teacher-content-upload-row">
         <label class="teacher-content-name-field" for="teacherContentKnowledgeName">
-          <span>Knowledge Name</span>
+          <span>Knowledge Pack Name</span>
           <input
             id="teacherContentKnowledgeName"
             type="text"
@@ -816,17 +826,54 @@
         </label>
         <button
           type="button"
-          class="small-button"
+          class="small-button secondary-small"
           data-upload-create-review
         ${canCreateReview ? '' : 'disabled'}
-      >${state.uploadCreateReviewLoading ? 'Creating review draft...' : 'Create Review Draft'}</button>
+      >${state.uploadCreateReviewLoading ? 'Analyzing upload...' : 'Upload and Analyze'}</button>
       </div>
       ${renderUploadCreateProgress()}
       ${state.uploadCreateReviewError ? renderIssueList('Errors', [state.uploadCreateReviewError]) : ''}
       ${extractionSucceeded ? renderUploadExtractionSummary(result, extraction) : ''}
+      ${extractionSucceeded ? renderUploadStartPlanShell(uploadBusy) : ''}
+      ${state.uploadPrepareReviewLoading || state.uploadCreateReviewTimeline.length ? renderImportActivityPanel() : ''}
+      ${state.uploadPrepareReviewHandoff?.packId ? renderPrepareReviewHandoff() : ''}
+      ${state.uploadPrepareReviewLastFailure ? renderPrepareReviewFailurePanel(state.uploadPrepareReviewFailedMode || 'preview') : ''}
       <details class="teacher-content-upload-details" data-upload-advanced-details>
         <summary>Advanced details</summary>
         ${renderAdvancedUploadDetails(result, extraction, false)}
+      </details>
+    `;
+  }
+
+  function renderUploadStartPlanShell(uploadBusy) {
+    const result = state.uploadExtractionResult || {};
+    const estimate = state.uploadImportEstimate || null;
+    const largeFullImport = Boolean(estimate?.isLarge);
+    const fullImportConfirmed = !largeFullImport || state.fullImportConfirmText === 'CONFIRM';
+    const canRunRecommended = Boolean(result.uploadId && estimate) && !uploadBusy;
+    const canRunPreview = Boolean(result.uploadId && estimate) && !uploadBusy;
+    const canRunSelectedImport = Boolean(result.uploadId && estimate) && !uploadBusy;
+    const canRunFullImport = Boolean(result.uploadId && estimate) && !uploadBusy && fullImportConfirmed;
+    return `
+      <section class="teacher-content-start-plan" data-upload-start-page data-upload-start-planner>
+        ${state.uploadImportEstimate ? renderImportEstimatePanel() : ''}
+        ${state.uploadAutoImportPlan ? renderAutoImportPlanPanel() : ''}
+        ${state.uploadAutoImportPlan ? renderRecommendedImportAction(canRunRecommended) : ''}
+        <p class="teacher-content-upload-note" data-generate-draft-click-required>Gemma will not start automatically. Click Generate Draft when you are ready.</p>
+      </section>
+      <details class="teacher-content-upload-details" data-upload-advanced-import-controls data-import-override-controls>
+        <summary>Advanced import controls</summary>
+        <p class="teacher-content-upload-note">Manual preview, selected range, and full-document overrides are secondary controls.</p>
+        ${renderPreviewSizeControls(canRunPreview)}
+        <div class="teacher-content-import-actions">
+          <button type="button" class="small-button secondary-small" data-upload-run-preview ${canRunPreview ? '' : 'disabled'}>${state.uploadPrepareReviewLoading && !state.uploadPreviewComplete ? 'Running Preview Draft...' : 'Run Preview Draft'}</button>
+          <button type="button" class="small-button secondary-small" data-upload-run-full-import ${canRunFullImport ? '' : 'disabled'}>${state.uploadPrepareReviewLoading ? 'Running Full Document Import...' : 'Run Full Document Import'}</button>
+        </div>
+        ${state.uploadPreviewReport ? renderPreviewReportPanel() : '<p class="profile-empty-state">No manual preview yet.</p>'}
+        ${state.uploadPreviewReport ? `<div class="teacher-content-import-actions"><button type="button" class="small-button secondary-small" data-upload-run-selected-import data-selected-import-preset="preview">Rerun preview range as strict draft</button>${state.uploadPreviewPartial ? '<button type="button" class="small-button secondary-small" data-upload-retry-preview>Retry failed chunks with smaller limit</button>' : ''}</div>` : ''}
+        <p class="profile-empty-state" data-selected-import-recommendation>For large packets, selected range import remains available when you intentionally want only part of the document.</p>
+        ${renderSelectedImportControls(canRunSelectedImport)}
+        ${renderWholeImportAdvanced(Boolean(result.uploadId && estimate) && !uploadBusy && fullImportConfirmed, largeFullImport)}
       </details>
     `;
   }
@@ -1232,14 +1279,14 @@
   function renderReviewCard() {
     const pending = state.report?.pendingReview;
     if (!state.selectedDraftPackId) {
-      return cardWithEmptyState('Review', 'No draft pack is selected yet. Choose a draft pack before reviewing pending items.');
+      return cardWithEmptyState('Review Draft Content', 'No draft pack is selected yet. Choose a draft pack before reviewing pending items.');
     }
 
     if (state.reviewActionLoading) {
       return `
         <div class="teacher-content-card-head">
           <div>
-            <h4>Review Draft Items</h4>
+            <h4>Review Draft Content</h4>
             <p>Saving draft-only review change...</p>
           </div>
           <span class="teacher-content-pill review">Saving</span>
@@ -1256,8 +1303,8 @@
       return `
         <div class="teacher-content-card-head">
           <div>
-            <h4>Review Draft Items</h4>
-            <p>Check each pending item before this knowledge can go live.</p>
+            <h4>Review Draft Content</h4>
+            <p>Review generated draft content in one scrollable page. Existing approve, reject, edit, and promote actions stay available.</p>
           </div>
           <span class="teacher-content-pill ready">Review complete</span>
         </div>
@@ -1271,6 +1318,7 @@
             ${canCreateApprovedPack ? `
               <button type="button" class="small-button" data-promote-draft data-review-create-approved-pack ${state.promotionActionLoading ? 'disabled' : ''}>${escapeHtml(promoteLabel)}</button>
             ` : ''}
+            <button type="button" class="small-button secondary-small" data-handoff-tab="upload">Back to Upload / Start</button>
             <button type="button" class="small-button secondary-small" data-review-empty-tab="approvedPacks">View Approved Packs</button>
           </div>
         </section>
@@ -1286,16 +1334,16 @@
     return `
       <div class="teacher-content-card-head">
         <div>
-          <h4>Review Draft Items</h4>
-          <p>Check each pending item before this knowledge can go live.</p>
+          <h4>Review Draft Content</h4>
+          <p>Review generated draft content in one scrollable page. Existing approve, reject, edit, and promote actions stay available.</p>
         </div>
         <span class="teacher-content-pill review">Draft Only</span>
       </div>
       ${renderReviewProgressSummary(summary)}
       ${renderImportScopeWarning(importScope, 'review')}
       ${state.errors.length ? renderIssueList('Review Messages', state.errors) : ''}
-      <div class="teacher-content-review-groups">
-        ${Object.keys(SECTION_LABELS).map((sectionName) => renderReviewGroup(sectionName, groups[sectionName] || [])).join('')}
+      <div class="teacher-content-review-groups" data-review-draft-content-page>
+        ${REVIEW_GROUP_ORDER.map((sectionName) => renderReviewGroup(sectionName, groups[sectionName] || [])).join('')}
       </div>
       ${state.selectedReviewEvidenceItem ? renderReviewEvidencePanel(state.selectedReviewEvidenceItem) : ''}
       ${state.selectedReviewItem ? renderReviewDetailPanel(state.selectedReviewItem) : ''}
@@ -1304,10 +1352,12 @@
 
   function renderReviewGroup(sectionName, items) {
     const counts = state.report?.draftPack?.reviewCountsBySection?.[sectionName] || {};
+    const totalCount = Number(counts.total || counts.pending || 0) || items.length;
     return `
-      <details class="teacher-content-review-group" data-review-section="${escapeAttr(sectionName)}">
+      <details class="teacher-content-review-group" data-review-section="${escapeAttr(sectionName)}" open>
         <summary class="teacher-content-review-group-head">
           <h5>${escapeHtml(SECTION_LABELS[sectionName])}</h5>
+          <span data-review-section-count="${escapeAttr(sectionName)}">${formatNumber(totalCount)} total</span>
           <span data-review-section-pending="${escapeAttr(sectionName)}">${formatNumber(counts.pending ?? items.length)} pending</span>
           <span data-review-section-approved="${escapeAttr(sectionName)}">${formatNumber(counts.approved)} approved</span>
           <span data-review-section-rejected="${escapeAttr(sectionName)}">${formatNumber(counts.rejected)} rejected</span>
@@ -1319,18 +1369,23 @@
 
   function renderPendingItem(item) {
     const confidence = formatConfidence(item.confidence);
+    const wording = getDraftItemWording(item);
+    const itemStatus = getDraftItemSafetyStatus(item);
     return `
       <div class="teacher-content-review-item" data-review-item-card>
         <div class="teacher-content-review-item-main">
           <strong data-review-item-label>${escapeHtml(item.label || 'Pending item')}</strong>
-          <span data-review-item-section>Section: ${escapeHtml(SECTION_LABELS[item.section] || item.section || 'Not set')}</span>
-          <span data-review-item-status>Status: ${escapeHtml(item.reviewStatus || 'pending')}</span>
-          <span data-review-item-source>Source: ${escapeHtml(item.sourceFile || 'No source file')} · ${escapeHtml(item.sourceLocation || 'No source location')}</span>
+          <span data-review-item-category>Category: ${escapeHtml(SECTION_LABELS[item.section] || item.section || 'Not set')}</span>
+          <span data-review-item-status>Validation/review status: ${escapeHtml(item.reviewStatus || 'pending')}</span>
+          <span data-review-item-warning-status>Warning/repair/quarantine status: ${escapeHtml(itemStatus)}</span>
+          <span data-review-item-source-file>Source file: ${escapeHtml(item.sourceFile || 'No source file')}</span>
+          <span data-review-item-source-location>Source location: ${escapeHtml(item.sourceLocation || 'No source location')}</span>
+          <p data-review-item-wording>${escapeHtml(wording)}</p>
+          <p data-review-item-snippet>Source snippet: ${escapeHtml(item.sourceTextSnippet || 'No source snippet available.')}</p>
         </div>
         <div class="teacher-content-review-item-evidence">
           <span class="teacher-content-confidence ${escapeAttr(confidence.className)}" data-review-item-confidence>${escapeHtml(confidence.label)}</span>
           <button type="button" class="small-button secondary-small" data-review-item-evidence data-review-evidence data-section="${escapeAttr(item.section)}" data-index="${escapeAttr(item.index)}">View Evidence</button>
-          <span class="sr-only" data-review-item-snippet>${escapeHtml(item.sourceTextSnippet || 'No source snippet available.')}</span>
         </div>
         <div class="teacher-content-review-actions">
           <button type="button" class="small-button secondary-small" data-review-edit data-section="${escapeAttr(item.section)}" data-index="${escapeAttr(item.index)}">View/Edit</button>
@@ -1339,6 +1394,42 @@
         </div>
       </div>
     `;
+  }
+
+  function getDraftItemWording(item) {
+    const fields = item?.editableFields && typeof item.editableFields === 'object' ? item.editableFields : {};
+    const orderedValues = [
+      item?.draftWording,
+      item?.studentDefinition,
+      item?.studentExplanation,
+      item?.expectedAnswer,
+      item?.question,
+      item?.equation,
+      item?.standardId,
+      fields.studentDefinition,
+      fields.studentExplanation,
+      fields.expectedAnswer,
+      fields.equation,
+      fields.standardId,
+      fields.teacherDefinition,
+      fields.misconception
+    ];
+    const value = orderedValues.find((entry) => {
+      if (Array.isArray(entry)) return entry.length > 0;
+      return String(entry || '').trim();
+    });
+    if (Array.isArray(value)) return value.join(' ');
+    return String(value || 'Draft wording not available in this report item.');
+  }
+
+  function getDraftItemSafetyStatus(item) {
+    const raw = [
+      item?.validationStatus,
+      item?.repairStatus,
+      item?.quarantineStatus,
+      item?.warningStatus
+    ].filter(Boolean).join(' / ');
+    return raw || (item?.reviewStatus === 'pending' ? 'Needs teacher review' : 'No warnings recorded');
   }
 
   function renderReviewDetailPanel(item) {
@@ -1505,7 +1596,7 @@
         <section class="teacher-content-approved-empty" data-no-approved-packs-empty-state data-knowledge-packs-blade>
           <strong>No approved knowledge packs yet.</strong>
           <p>Review imported draft content before creating approved packs.</p>
-          <button type="button" class="small-button secondary-small" data-approved-empty-tab="review">View Review Content</button>
+          <button type="button" class="small-button secondary-small" data-approved-empty-tab="review">View Review Draft Content</button>
         </section>
         ${history}
       `;
@@ -2102,7 +2193,7 @@
       state.uploadPreviewSize = state.uploadImportEstimate?.isLarge ? 'ultraSafe' : state.uploadPreviewSize || 'normal';
       applyDefaultPreviewTextPage();
       state.uploadPreviewCustomMaxChars = String(state.uploadImportEstimate?.previewMaxCharacters || 1000);
-      state.activeTab = 'previewImport';
+      state.activeTab = 'upload';
       state.uploadCreateReviewStage = 'Import estimate ready';
       state.uploadPrepareReviewMessage = data?.message || 'Review the recommended plan, then click Generate Draft.';
       setStatus('Recommended import plan ready.');
@@ -2192,7 +2283,7 @@
         state.uploadPreviewReport = data.previewReport || null;
         state.uploadPreviewPartial = data.partialPreview === true || data.previewReport?.partialPreview === true;
         state.uploadPreviewComplete = !state.uploadPreviewPartial;
-        state.activeTab = 'reviewPreview';
+        state.activeTab = 'upload';
         state.uploadPrepareReviewMessage = data?.message || (state.uploadPreviewPartial ? 'Partial preview created. Some pages/chunks failed.' : 'Preview draft prepared. Review the sample before running full import.');
         setStatus(state.uploadPreviewPartial ? 'Partial preview ready. Review before continuing.' : 'Preview draft ready.');
       } else {
@@ -3001,7 +3092,7 @@
           <div class="teacher-content-import-actions">
             <button type="button" class="small-button" data-upload-run-preview ${state.uploadPrepareReviewLoading ? 'disabled' : ''}>Retry Preview Draft</button>
             ${getFirstTextPageFromFailure(failure) ? `<button type="button" class="small-button secondary-small" data-preview-range-mode="firstTextPage" data-use-first-text-page ${state.uploadPrepareReviewLoading ? 'disabled' : ''}>Use first text page</button>` : ''}
-            <button type="button" class="small-button secondary-small" data-handoff-tab="upload">Return to Upload Source</button>
+            <button type="button" class="small-button secondary-small" data-handoff-tab="upload">Return to Upload / Start</button>
           </div>
         ` : ''}
         ${technical.length || failure.rawModelResponsePath ? `
@@ -3063,7 +3154,7 @@
     if (failure.rawModelResponsePath) {
       suggestions.push('The raw model response path is available in Advanced details for local debugging.');
     }
-    suggestions.push('Return to Upload Source only if this was the wrong file or content name.');
+    suggestions.push('Return to Upload / Start only if this was the wrong file or content name.');
     return uniqueStrings(suggestions);
   }
 
@@ -3164,7 +3255,7 @@
         ${renderReviewProgressSummary(summary)}
         <div class="teacher-content-handoff-actions">
           <button type="button" class="small-button" data-handoff-tab="review">Go to Review</button>
-          <button type="button" class="small-button secondary-small" data-handoff-tab="review">Review Content</button>
+          <button type="button" class="small-button secondary-small" data-handoff-tab="review">Review Draft Content</button>
         </div>
       </section>
     `;
@@ -3173,7 +3264,7 @@
   function renderUploadCreateProgress() {
     const message = state.uploadCreateReviewLoading
       ? state.uploadCreateReviewStage || 'Uploading file...'
-      : state.uploadCreateReviewStage || state.uploadPrepareReviewMessage || 'Create Review Draft uploads, extracts, and prepares a draft in one step.';
+      : state.uploadCreateReviewStage || state.uploadPrepareReviewMessage || 'Upload and Analyze uploads, extracts, and prepares the planner in one step.';
     const ready = message === 'Draft ready for review' || state.uploadPrepareReviewHandoff?.packId;
     return `
       <section class="teacher-content-upload-progress ${ready ? 'ready' : ''}" data-upload-create-progress>
@@ -3307,14 +3398,31 @@
   }
 
   function renderUploadExtractionSummary(result, extraction) {
+    const estimate = state.uploadImportEstimate || {};
+    const plan = state.uploadAutoImportPlan || {};
+    const metadata = result.metadata || extraction.metadata || {};
+    const unitCount = estimate.pageCount || metadata.pageCount || metadata.slideCount || metadata.sheetCount || result.pageCount || extraction.pageCount || 0;
+    const textBearing = getTextBearingPages();
+    const firstTextBearing = plan.extractionSummary?.firstTextBearingPageSlideSheet || estimate.firstTextPage || metadata.firstTextPage || metadata.firstTextSlide || textBearing[0] || '';
+    const plannerWarnings = Array.from(new Set([
+      ...(Array.isArray(plan.warnings) ? plan.warnings : []),
+      ...(Array.isArray(result.warnings) ? result.warnings : []),
+      ...(Array.isArray(extraction.warnings) ? extraction.warnings : [])
+    ]));
     return `
       <section class="teacher-content-upload-summary" data-upload-source-summary>
         <div class="teacher-content-metric-grid">
-          ${metric('Original File', result.originalFileName || state.selectedUploadFile?.name || 'Not selected')}
-          ${metric('Extraction Status', extraction.success === false ? 'Failed' : 'Extracted')}
-          ${metric('Character Count', formatNumber(result.characterCount ?? extraction.characterCount))}
-          ${metric('Page Count', formatNumber(result.pageCount ?? extraction.pageCount))}
+          ${metric('Original filename', result.originalFileName || state.selectedUploadFile?.name || 'Not selected', 'data-upload-summary-original-filename')}
+          ${metric('File type', result.fileType || extraction.detectedType || metadata.detectedType || 'Unknown', 'data-upload-summary-file-type')}
+          ${metric('Pages/slides/sheets found', formatNumber(unitCount), 'data-upload-summary-unit-count')}
+          ${metric('Text-bearing pages/slides/sheets', formatNumber(plan.extractionSummary?.textBearingPageSlideSheetCount || textBearing.length || metadata.textBearingPages?.length || 0), 'data-upload-summary-text-bearing-count')}
+          ${metric('First text-bearing page/slide/sheet', firstTextBearing ? formatNumber(firstTextBearing) : 'None found', 'data-upload-summary-first-text-bearing')}
+          ${metric('Estimated batches', formatNumber(plan.batchCount || estimate.estimatedGemmaBatches), 'data-upload-summary-estimated-batches')}
+          ${metric('Planner reason', plan.reason || state.uploadPrepareReviewMessage || 'Planner recommendation will appear after analysis.', 'data-upload-summary-planner-reason')}
+          ${metric('Extraction status', extraction.success === false ? 'Failed' : 'Extracted')}
+          ${metric('Character count', formatNumber(result.characterCount ?? extraction.characterCount ?? metadata.characterCount))}
         </div>
+        ${plannerWarnings.length ? renderIssueList('Planner warnings', plannerWarnings) : ''}
       </section>
     `;
   }

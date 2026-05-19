@@ -76,10 +76,10 @@ function assertOverlayMarkupAndSelectors() {
     assert.ok(ui.includes(selector) || style.includes(selector), `Expected selector or hook ${selector}.`);
   });
 
-  ['Upload Source', 'Preview Import', 'Review Preview', 'Full Import', 'Review Content', 'Knowledge Packs'].forEach((label) => {
+  ['Upload / Start', 'Review Draft Content', 'Knowledge Packs'].forEach((label) => {
     assert.ok(ui.includes(label), `Expected tab/card label ${label}.`);
   });
-  assert.doesNotMatch(ui.match(/const TABS = \[[\s\S]*?\n  \];/)?.[0] || '', /Define Knowledge Pack|Assign Standards|Import Report \/ Audit/, 'Teacher Content deck should use the new safe import step labels.');
+  assert.doesNotMatch(ui.match(/const TABS = \[[\s\S]*?\n  \];/)?.[0] || '', /Preview Import|Review Preview|Full Import|Define Knowledge Pack|Assign Standards|Import Report \/ Audit/, 'Teacher Content deck should expose only Upload / Start, Review Draft Content, and Knowledge Packs.');
 
   [
     '--deck-offset',
@@ -95,11 +95,8 @@ function assertSafeImportWorkflowUi() {
   const tabsBlock = ui.match(/const TABS = \[([\s\S]*?)\n  \];/);
   assert.ok(tabsBlock, 'Expected TABS block.');
   [
-    "id: 'upload', label: 'Upload Source'",
-    "id: 'previewImport', label: 'Preview Import'",
-    "id: 'reviewPreview', label: 'Review Preview'",
-    "id: 'fullImport', label: 'Full Import'",
-    "id: 'review', label: 'Review Content'",
+    "id: 'upload', label: 'Upload / Start'",
+    "id: 'review', label: 'Review Draft Content'",
     "id: 'approvedPacks', label: 'Knowledge Packs'"
   ].forEach((marker) => {
     assert.ok(tabsBlock[1].includes(marker), `Expected safe import tab marker ${marker}.`);
@@ -107,11 +104,14 @@ function assertSafeImportWorkflowUi() {
 
   [
     'renderUploadSourceCard',
+    'data-upload-start-page',
+    'data-upload-start-planner',
+    'data-generate-draft-click-required',
+    'Gemma will not start automatically. Click Generate Draft when you are ready.',
     'renderPreviewImportCard',
     'renderReviewPreviewCard',
     'renderFullImportCard',
-    "state.activeTab = 'previewImport'",
-    "state.activeTab = 'reviewPreview'",
+    "state.activeTab = 'upload'",
     "state.activeTab = 'review'",
     'ESTIMATE READY',
     'PREVIEW READY',
@@ -171,7 +171,7 @@ function assertSafeImportWorkflowUi() {
     'Backend details',
     'Suggested next steps',
     'Retry Preview Draft',
-    'Return to Upload Source',
+    'Return to Upload / Start',
     'Gemma did not return any usable preview items from this range.',
     'If the selected text is short or mostly a title page, try pages 2-4 or increase max preview chars.',
     'Selected pages:',
@@ -180,10 +180,13 @@ function assertSafeImportWorkflowUi() {
     assert.ok(ui.includes(marker), `Expected selected import / gated full import marker ${marker}.`);
   });
 
-  const uploadSourceFunction = ui.match(/function renderUploadSourceCard\(\) \{([\s\S]*?)\n  function renderPreviewImportCard/);
+  const uploadSourceFunction = ui.match(/function renderUploadSourceCard\(\) \{([\s\S]*?)\n  function renderUploadStartPlanShell/);
   assert.ok(uploadSourceFunction, 'Expected renderUploadSourceCard function.');
-  assert.ok(uploadSourceFunction[1].includes('Create Review Draft'), 'Upload Source should keep Create Review Draft.');
-  assert.doesNotMatch(uploadSourceFunction[1], /Run Preview Draft|Run Full Import|renderImportEstimatePanel|renderPreviewReportPanel/, 'Upload Source should not own preview/full import controls or reports.');
+  assert.ok(uploadSourceFunction[1].includes('Upload / Start'), 'Upload Source should render as Upload / Start.');
+  assert.ok(uploadSourceFunction[1].includes('Upload and Analyze'), 'Upload / Start should have an upload/analyze action before generation.');
+  assert.match(uploadSourceFunction[1], /renderUploadStartPlanShell/, 'Upload / Start should own the planner and advanced import shell.');
+  assert.match(ui, /function renderUploadStartPlanShell/, 'Upload / Start should expose a two-page workflow shell helper.');
+  assert.match(ui, /data-upload-advanced-import-controls/, 'Manual preview/range/full controls should live in advanced Upload / Start controls.');
 
   const previewImportFunction = ui.match(/function renderPreviewImportCard\(\) \{([\s\S]*?)\n  function renderReviewPreviewCard/);
   assert.ok(previewImportFunction, 'Expected renderPreviewImportCard function.');
@@ -204,7 +207,7 @@ function assertSafeImportWorkflowUi() {
   assert.match(fullImportFunction[1], /renderSelectedImportControls/, 'Full Import card should recommend selected imports.');
   assert.match(fullImportFunction[1], /renderWholeImportAdvanced/, 'Whole full import should live behind advanced disclosure.');
 
-  assert.match(ui, /data-upload-run-full-import/, 'Full Import should expose Run Full Import.');
+  assert.match(ui, /data-upload-run-full-import/, 'Full import override should remain available.');
   assert.match(fullImportFunction[1], /canRunFullImport[\s\S]*?state\.uploadPreviewComplete/, 'Full Import should require a successful preview.');
 
   assert.equal((ui.match(/overload local Gemma/g) || []).length, 1, 'Local Gemma range warning copy should appear once.');
@@ -336,7 +339,7 @@ function assertUploadExtractionUi() {
     'data-source-match-status',
     'data-source-match-warning',
     'Source mismatch warning',
-    'Create Review Draft',
+    'Upload and Analyze',
     'Uploading file...',
     'Extracting text...',
     'Building import estimate...',
@@ -377,10 +380,15 @@ function assertUploadExtractionUi() {
     'Next page',
     'Custom page range - more demanding',
     'Partial preview created. Some pages/chunks failed.',
-    'Original File',
-    'File Type',
-    'Extraction Status',
-    'Character Count',
+    'Original filename',
+    'File type',
+    'Pages/slides/sheets found',
+    'Text-bearing pages/slides/sheets',
+    'First text-bearing page/slide/sheet',
+    'Planner reason',
+    'Planner warnings',
+    'Extraction status',
+    'Character count',
     'Sections Found',
     'Tables Found',
     'Warnings',
@@ -391,7 +399,7 @@ function assertUploadExtractionUi() {
 
   assert.doesNotMatch(ui, /data-upload-extract|data-upload-prepare-review/, 'Upload card should expose one teacher-facing create action.');
   assert.doesNotMatch(ui, /chain-of-thought|hidden reasoning|Gemma's thoughts|Gemma’s thoughts/i, 'Import activity should not claim to show hidden reasoning.');
-  assert.equal((ui.match(/data-upload-create-review/g) || []).length, 2, 'Create Review Draft hook should be one handler and one button.');
+  assert.equal((ui.match(/data-upload-create-review/g) || []).length, 2, 'Upload/analyze hook should be one handler and one button.');
   assert.match(ui, /function makePreviewImportPayload\(\)/, 'Run Preview Draft should build an explicit preview selection payload.');
   assert.match(ui, /function getTextBearingPages\(\)/, 'Preview UI should read text-bearing page metadata.');
   assert.match(ui, /function applyDefaultPreviewTextPage\(\)/, 'Preview UI should default to the first text-bearing page when needed.');
@@ -480,7 +488,7 @@ function assertPrepareReviewHandoffUi() {
     'Review draft prepared, but the latest report could not be refreshed.',
     'data-handoff-tab="review"',
     'Go to Review',
-    'Review Content',
+    'Review Draft Content',
     'state.selectedDraftPackId = data.packId',
     'await refreshDraftLists()',
     "state.activeTab = 'review'",
@@ -631,24 +639,40 @@ function assertStandardsTabWorkflowUi() {
 
 function assertReviewCardPolishUi() {
   [
-    'Review Draft Items',
-    'Check each pending item before this knowledge can go live.',
+    'Review Draft Content',
+    'Review generated draft content in one scrollable page.',
+    'data-review-draft-content-page',
     'data-review-section=',
     'vocabulary',
     'concepts',
     'referenceFormulas',
     'problemBank',
+    'examples',
+    'misconceptions',
     'standardsMap',
     'smokeTests',
+    'Vocabulary',
+    'Concepts',
+    'Reference formulas',
+    'Problem-bank items',
+    'Examples',
+    'Misconceptions',
+    'Standards suggestions',
+    'Warnings / needs repair',
+    'data-review-section-count',
     'data-review-section-pending',
     'data-review-section-approved',
     'data-review-section-rejected',
     'No pending items in this section.',
     'data-review-item-card',
     'data-review-item-label',
+    'data-review-item-category',
+    'data-review-item-wording',
     'data-review-item-confidence',
-    'data-review-item-source',
+    'data-review-item-source-file',
+    'data-review-item-source-location',
     'data-review-item-snippet',
+    'data-review-item-warning-status',
     'data-review-item-evidence',
     'View Evidence',
     'High confidence',
@@ -822,7 +846,7 @@ function assertApprovedPacksPolishUi() {
     'No approved knowledge packs yet.',
     'Review imported draft content before creating approved packs.',
     'data-approved-empty-tab="review"',
-    'View Review Content',
+    'View Review Draft Content',
     'View / Edit Pack',
     'Uploaded Sources',
     'Upload History',
@@ -860,7 +884,7 @@ function assertApprovedPacksPolishUi() {
 function assertNoForbiddenUiActions() {
   assert.doesNotMatch(ui, /Ollama/i, 'Teacher Content UI should not expose forbidden generation actions.');
   assert.doesNotMatch(style, /Ollama|Gemma|ocr/i, 'Teacher Content styles should not add forbidden generation/OCR references.');
-  assert.doesNotMatch(ui, />\s*Generate Draft\s*</i, 'Teacher Content UI should not use Generate Draft as a visible button label.');
+  assert.match(ui, />\$\{state\.uploadPrepareReviewLoading \? 'Generating Draft\.\.\.' : 'Generate Draft'\}<\/button>/, 'Generate Draft should be the visible primary planner action.');
   assert.doesNotMatch(ui, /\/api\/student|\/api\/chat|\/api\/router-test/, 'Teacher Content UI should not reference student/router endpoints.');
   assert.doesNotMatch(ui, /\/api\/teacher-content\/drafts\/generate|\/api\/generate-draft|generateDraft/i, 'Teacher Content UI should not reference draft generation endpoints.');
   assert.doesNotMatch(ui, /data-upload-action|data-pack-toggle-action/, 'Teacher Content UI should not implement old placeholder upload/toggle actions.');
