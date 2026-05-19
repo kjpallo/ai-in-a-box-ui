@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const { registerTeacherContentRoutes } = require('../routes/teacherContentRoutes');
+const { planTeacherContentImport } = require('../lib/uploads/planTeacherContentImport');
 
 const projectRoot = path.join(__dirname, '..');
 const tempRoot = path.join(projectRoot, 'tmp', 'test-teacher-content-routes');
@@ -100,6 +101,12 @@ async function main() {
     await assertPreviewPrepareReviewRequiresRange(handlers);
     await assertPrepareReviewNoUsablePreviewItemsReturnsStructuredRecoveryJson(handlers);
     await assertSelectedPageRangeImportWritesPartialDraft(handlers);
+    assertAutoImportPlannerSmallFileSingleBatch();
+    assertAutoImportPlannerMultiPageSequentialBatches();
+    assertAutoImportPlannerVeryLargeDoesNotDropTextBearingPages();
+    assertAutoImportPlannerNoTextManualReview();
+    assertAutoImportPlannerLowMemorySaferDefault();
+    assertAutoImportPlannerImageOnlyWarning();
     await assertUploadAndPrepareEndpointSucceeds(handlers);
     await assertUploadAndPreparePdfWithKnowledgeNameSucceeds(handlers);
     await assertUploadAndPrepareMissingFileFailsClearly(handlers);
@@ -823,6 +830,93 @@ async function assertSelectedPageRangeImportWritesPartialDraft(handlers) {
   mockDraftModelClient = async () => JSON.stringify(makeGeneratedPack());
 }
 
+function assertAutoImportPlannerSmallFileSingleBatch() {
+  const plan = planTeacherContentImport({
+    extraction: makePlannerExtraction(['Balanced forces have zero net force.']),
+    fileSizeBytes: 512,
+    settings: { maxBatchCharacters: 2500, model: 'gemma4:e2b' },
+    memory: makePlannerMemory(4096, 8192)
+  });
+
+  assert.equal(plan.mode, 'auto_full');
+  assert.equal(plan.recommendedImportScope, 'full_document');
+  assert.equal(plan.batchStrategy, 'single_batch');
+  assert.equal(plan.batchCount, 1);
+  assert.equal(plan.batches[0].pageNumbers[0], 1);
+}
+
+function assertAutoImportPlannerMultiPageSequentialBatches() {
+  const plan = planTeacherContentImport({
+    extraction: makePlannerExtraction([
+      'A'.repeat(1600),
+      'B'.repeat(1600),
+      'C'.repeat(1600)
+    ]),
+    settings: { maxBatchCharacters: 2000 },
+    memory: makePlannerMemory(4096, 8192)
+  });
+
+  assert.equal(plan.recommendedImportScope, 'full_document');
+  assert.equal(plan.batchStrategy, 'sequential_batches');
+  assert.ok(plan.batchCount >= 3);
+  assert.deepEqual(plan.batches.flatMap((batch) => batch.pageNumbers), [1, 2, 3]);
+}
+
+function assertAutoImportPlannerVeryLargeDoesNotDropTextBearingPages() {
+  const pages = Array.from({ length: 12 }, (_value, index) => `Page ${index + 1} ${'x'.repeat(900)}`);
+  const plan = planTeacherContentImport({
+    extraction: makePlannerExtraction(pages),
+    settings: { maxBatchCharacters: 1200, veryLargeBatchLimit: 30 },
+    memory: makePlannerMemory(4096, 8192)
+  });
+
+  assert.equal(plan.recommendedImportScope, 'full_document');
+  assert.equal(plan.batchStrategy, 'sequential_batches');
+  assert.deepEqual(plan.batches.flatMap((batch) => batch.pageNumbers), Array.from({ length: 12 }, (_value, index) => index + 1));
+}
+
+function assertAutoImportPlannerNoTextManualReview() {
+  const plan = planTeacherContentImport({
+    extraction: makePlannerExtraction(['', ''], { hasImagesOrMedia: true }),
+    settings: { maxBatchCharacters: 1200 },
+    memory: makePlannerMemory(4096, 8192)
+  });
+
+  assert.equal(plan.mode, 'manual_review_needed');
+  assert.equal(plan.recommendedImportScope, 'preview_sample');
+  assert.equal(plan.batchStrategy, 'manual');
+  assert.ok(plan.warnings.some((warning) => /OCR\/vision is not part of this phase/i.test(warning)));
+}
+
+function assertAutoImportPlannerLowMemorySaferDefault() {
+  const plan = planTeacherContentImport({
+    extraction: makePlannerExtraction(['A'.repeat(1500), 'B'.repeat(1500)]),
+    settings: { maxBatchCharacters: 1600 },
+    memory: makePlannerMemory(512, 8192)
+  });
+
+  assert.equal(plan.mode, 'auto_preview_only');
+  assert.equal(plan.recommendedImportScope, 'preview_sample');
+  assert.equal(plan.batchStrategy, 'preview_then_continue');
+  assert.equal(plan.batchCount, 1);
+  assert.ok(plan.warnings.some((warning) => /Available memory is low/i.test(warning)));
+}
+
+function assertAutoImportPlannerImageOnlyWarning() {
+  const plan = planTeacherContentImport({
+    extraction: makePlannerExtraction(['', 'Slide text'], {
+      slideCount: 2,
+      pageCount: 2,
+      hasImagesOrMedia: true
+    }),
+    settings: { maxBatchCharacters: 1200 },
+    memory: makePlannerMemory(4096, 8192)
+  });
+
+  assert.equal(plan.recommendedImportScope, 'full_document');
+  assert.ok(plan.warnings.some((warning) => /OCR\/vision is not part of this phase/i.test(warning)));
+}
+
 async function assertInvalidPrepareReviewUploadIdRejected(handlers) {
   const response = await request(handlers, 'POST', '/uploads/:uploadId/prepare-review', {}, {
     uploadId: '../prepare-review-upload'
@@ -1015,12 +1109,15 @@ async function assertUploadAndPrepareEndpointSucceeds(handlers) {
   assert.equal(response.statusCode, 200);
   assert.equal(response.body.success, true);
   assert.equal(response.body.data.upload.originalFileName, 'teacher_one_button_notes.txt');
-  assert.equal(response.body.data.requiresPreview, true);
-  assert.equal(response.body.data.nextStep, 'run_preview');
+  assert.equal(response.body.data.requiresPreview, false);
+  assert.equal(response.body.data.nextStep, 'generate_draft');
   assert.equal(response.body.data.importEstimate.fileName, 'teacher_one_button_notes.txt');
   assert.equal(response.body.data.importEstimate.estimatedGemmaBatches, 1);
+  assert.equal(response.body.data.autoImportPlan.recommendedImportScope, 'full_document');
+  assert.equal(response.body.data.autoImportPlan.batchStrategy, 'single_batch');
   assert.ok(Array.isArray(response.body.data.timeline));
   assert.ok(response.body.data.timeline.some((event) => event.message === 'Import estimate ready'));
+  assert.ok(response.body.data.timeline.some((event) => event.message === 'Auto import plan ready'));
   assert.equal(calls.length, 0);
   assert.deepEqual(snapshotFiles(draftPacksDir), draftFilesBefore, 'combined upload-and-prepare should not create the generated draft before preview/full confirmation.');
   assert.deepEqual(snapshotFiles(realApprovedPacksDir), approvedFilesBefore, 'combined upload-and-prepare should not modify real approved packs.');
@@ -1058,9 +1155,10 @@ async function assertUploadAndPreparePdfWithKnowledgeNameSucceeds(handlers) {
   assert.equal(response.body.success, true);
   assert.equal(response.body.data.upload.originalFileName, 'teacher_energy_packet.pdf');
   assert.equal(response.body.data.upload.fileType, 'pdf');
-  assert.equal(response.body.data.requiresPreview, true);
-  assert.equal(response.body.data.nextStep, 'run_preview');
+  assert.equal(response.body.data.requiresPreview, false);
+  assert.equal(response.body.data.nextStep, 'generate_draft');
   assert.equal(response.body.data.importEstimate.fileName, 'teacher_energy_packet.pdf');
+  assert.equal(response.body.data.autoImportPlan.recommendedImportScope, 'full_document');
   assert.ok(response.body.data.timeline.some((event) => event.message === 'Extraction complete'));
   assert.ok(response.body.data.timeline.some((event) => event.message === 'Import estimate ready'));
   assert.equal(calls.length, 0);
@@ -2169,6 +2267,36 @@ function makeStandardsBank() {
       }
     ],
     metadata: {}
+  };
+}
+
+function makePlannerExtraction(pageTexts, metadata = {}) {
+  const pages = pageTexts.map((text, index) => ({
+    label: `Page ${index + 1}`,
+    sourceLocation: `Page ${index + 1}`,
+    pageNumber: index + 1,
+    text
+  }));
+  const text = pages.map((page) => page.text).filter(Boolean).join('\n\n');
+  return {
+    success: true,
+    text,
+    pages,
+    sections: pages,
+    metadata: {
+      pageCount: pages.length,
+      ...metadata
+    },
+    upload: {
+      originalFileName: 'planner-test.pdf'
+    }
+  };
+}
+
+function makePlannerMemory(availableMb, totalMb) {
+  return {
+    freeMemoryBytes: availableMb * 1024 * 1024,
+    totalMemoryBytes: totalMb * 1024 * 1024
   };
 }
 

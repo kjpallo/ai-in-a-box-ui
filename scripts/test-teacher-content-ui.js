@@ -341,6 +341,15 @@ function assertUploadExtractionUi() {
     'Extracting text...',
     'Building import estimate...',
     'Import Estimate',
+    'Recommended: Full document import',
+    'Estimated batches',
+    'Reason:',
+    'You can override this if needed.',
+    'Generate Draft',
+    'data-auto-import-plan-panel',
+    'data-auto-import-plan-warnings',
+    'data-upload-run-recommended-import',
+    'data-import-override-controls',
     'Run Preview Draft',
     'Run Full Import',
     'Preview Draft',
@@ -361,7 +370,7 @@ function assertUploadExtractionUi() {
     'Advanced details',
     'FormData',
     "method: 'POST'",
-    'Review the import estimate, then run preview draft.',
+    'Review the recommended plan, then click Generate Draft.',
     'Preview Size',
     'Ultra-safe',
     'Page 1 only',
@@ -386,6 +395,11 @@ function assertUploadExtractionUi() {
   assert.match(ui, /function makePreviewImportPayload\(\)/, 'Run Preview Draft should build an explicit preview selection payload.');
   assert.match(ui, /function getTextBearingPages\(\)/, 'Preview UI should read text-bearing page metadata.');
   assert.match(ui, /function applyDefaultPreviewTextPage\(\)/, 'Preview UI should default to the first text-bearing page when needed.');
+  assert.match(ui, /async function runRecommendedImport\(\)/, 'Teacher UI should run the automatic recommendation as the default Generate Draft action.');
+  assert.match(ui, /function renderAutoImportPlanPanel\(\)/, 'Teacher UI should render the automatic import plan.');
+  assert.match(ui, /function makeRecommendedImportPayload\(plan\)/, 'Teacher UI should build selected-range payloads from the recommended plan.');
+  assert.match(ui, /useAutoImportPlan:\s*true/, 'Generate Draft should mark the recommended plan as accepted.');
+  assert.match(ui, /state\.uploadAutoImportPlan = data\?\.autoImportPlan/, 'Teacher UI should store the route-provided automatic import plan.');
   assert.match(ui, /state\.uploadPreviewAutoTextPage/, 'Preview UI should distinguish automatic first-text-page defaults from explicit page choices.');
   assert.match(ui, /importSelection:\s*\{\s*pageStart,\s*pageEnd/s, 'Run Preview Draft should send selected preview pages.');
   assert.match(ui, /previewMaxPages:\s*size === 'range'[\s\S]*?: 1/, 'Run Preview Draft should default to one preview page outside custom ranges.');

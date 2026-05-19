@@ -104,6 +104,7 @@
     uploadPrepareReviewMessage: '',
     uploadPrepareReviewHandoff: null,
     uploadImportEstimate: null,
+    uploadAutoImportPlan: null,
     uploadPreviewReport: null,
     uploadPreviewComplete: false,
     uploadPreviewPartial: false,
@@ -294,6 +295,13 @@
         return;
       }
 
+      const recommendedImport = event.target.closest('[data-upload-run-recommended-import]');
+      if (recommendedImport) {
+        event.preventDefault();
+        runRecommendedImport();
+        return;
+      }
+
       const previewRangeButton = event.target.closest('[data-preview-range-mode]');
       if (previewRangeButton) {
         event.preventDefault();
@@ -430,6 +438,7 @@
       state.uploadCreateReviewTimeline = [];
       state.uploadPrepareReviewHandoff = null;
       state.uploadImportEstimate = null;
+      state.uploadAutoImportPlan = null;
       state.uploadPreviewReport = null;
       state.uploadPreviewComplete = false;
       state.uploadPreviewPartial = false;
@@ -836,9 +845,11 @@
         <span class="teacher-content-pill ${stepStatus('previewImport') === 'FAILED' ? 'blocked' : state.uploadPreviewPartial ? 'review' : state.uploadImportEstimate ? 'ready' : state.uploadPrepareReviewLoading ? 'review' : 'muted'}">${escapeHtml(stepStatus('previewImport'))}</span>
       </div>
       ${state.uploadImportEstimate ? renderImportEstimatePanel() : '<p class="profile-empty-state">Waiting for an import estimate. Upload a source and create a review draft first.</p>'}
+      ${state.uploadAutoImportPlan ? renderAutoImportPlanPanel() : ''}
       ${renderPrepareReviewFailurePanel('preview')}
       <p class="teacher-content-upload-note">${escapeHtml(getPreviewImportNote())}</p>
-      ${state.uploadImportEstimate ? renderPreviewSizeControls(canRunPreview) : ''}
+      ${state.uploadAutoImportPlan ? renderRecommendedImportAction(canRunPreview) : ''}
+      ${state.uploadImportEstimate ? `<details class="teacher-content-upload-details" data-import-override-controls><summary>Advanced import overrides</summary>${renderPreviewSizeControls(canRunPreview)}</details>` : ''}
       <div class="teacher-content-import-actions">
         <button type="button" class="small-button" data-upload-run-preview ${canRunPreview ? '' : 'disabled'}>${state.uploadPrepareReviewLoading && !state.uploadPreviewComplete ? 'Running Preview Draft...' : 'Run Preview Draft'}</button>
         <button type="button" class="small-button secondary-small" data-upload-run-full-import ${canRunFullImport ? '' : 'disabled'}>Run Full Document Import</button>
@@ -880,7 +891,7 @@
         <span class="teacher-content-pill ${state.uploadPrepareReviewHandoff?.packId ? 'ready' : state.uploadPrepareReviewLoading ? 'review' : canRunFullImport ? 'ready' : 'muted'}">${escapeHtml(stepStatus('fullImport'))}</span>
       </div>
       ${renderPrepareReviewFailurePanel('full')}
-      ${state.uploadPreviewComplete ? renderImportEstimatePanel() : `<p class="profile-empty-state">${state.uploadPreviewPartial ? 'Full Import is disabled until the partial preview is reviewed or the failed chunks are retried successfully.' : 'Run Preview Draft first.'}</p>`}
+      ${state.uploadPreviewComplete ? renderImportEstimatePanel() : `<p class="profile-empty-state">${state.uploadPreviewPartial ? 'Full Import is disabled until the partial preview is reviewed or the failed chunks are retried successfully.' : 'Use Generate Draft from the recommended plan, or run a preview override first.'}</p>`}
       ${state.uploadPreviewComplete ? '<p class="profile-empty-state" data-full-import-default-note>Full Document Import defaults to all text-bearing pages from the upload, not the preview page.</p>' : ''}
       ${state.uploadPreviewComplete ? `<div class="teacher-content-import-actions"><button type="button" class="small-button" data-upload-run-full-import ${canRunFullImport && fullImportConfirmed ? '' : 'disabled'}>${state.uploadPrepareReviewLoading ? 'Running Full Document Import...' : 'Run Full Document Import'}</button></div>` : ''}
       ${state.uploadPreviewComplete ? '<p class="profile-empty-state" data-selected-import-recommendation>For large packets, selected range import remains available when you intentionally want only part of the document.</p>' : ''}
@@ -2042,9 +2053,10 @@
     state.uploadCreateReviewError = '';
     state.uploadCreateReviewTimeline = makeStagedImportTimeline(IMPORT_ACTIVITY_MESSAGES.uploadReceived);
     state.uploadExtractionResult = null;
-    state.uploadPrepareReviewMessage = '';
+      state.uploadPrepareReviewMessage = '';
       state.uploadPrepareReviewHandoff = null;
       state.uploadImportEstimate = null;
+      state.uploadAutoImportPlan = null;
       state.uploadPreviewReport = null;
       state.uploadPreviewComplete = false;
       state.uploadPrepareReviewFailedMode = '';
@@ -2086,13 +2098,14 @@
       applyImportTimeline(data?.timeline || payload?.timeline);
       state.uploadExtractionResult = data?.upload || data?.extraction || null;
       state.uploadImportEstimate = data?.importEstimate || null;
+      state.uploadAutoImportPlan = data?.autoImportPlan || null;
       state.uploadPreviewSize = state.uploadImportEstimate?.isLarge ? 'ultraSafe' : state.uploadPreviewSize || 'normal';
       applyDefaultPreviewTextPage();
       state.uploadPreviewCustomMaxChars = String(state.uploadImportEstimate?.previewMaxCharacters || 1000);
       state.activeTab = 'previewImport';
       state.uploadCreateReviewStage = 'Import estimate ready';
-      state.uploadPrepareReviewMessage = data?.message || 'Review the import estimate, then run preview draft.';
-      setStatus('Import estimate ready. Run preview draft before full import.');
+      state.uploadPrepareReviewMessage = data?.message || 'Review the recommended plan, then click Generate Draft.';
+      setStatus('Recommended import plan ready.');
     } catch (error) {
       state.uploadCreateReviewError = error.message || 'Create Review Draft failed.';
       state.uploadCreateReviewStage = '';
@@ -2119,6 +2132,25 @@
 
   async function runSelectedImport(preset = 'range') {
     return prepareReviewFromUpload('selected', makeSelectedImportPayload(preset));
+  }
+
+  async function runRecommendedImport() {
+    const plan = state.uploadAutoImportPlan || {};
+    if (plan.recommendedImportScope === 'full_document') {
+      return prepareReviewFromUpload('full', {
+        useAutoImportPlan: true,
+        useRecommendedImportPlan: true,
+        confirmFullImport: true
+      });
+    }
+    if (plan.recommendedImportScope === 'selected_range') {
+      return prepareReviewFromUpload('selected', makeRecommendedImportPayload(plan));
+    }
+    return prepareReviewFromUpload('preview', {
+      ...makePreviewImportPayload(),
+      useAutoImportPlan: true,
+      useRecommendedImportPlan: true
+    });
   }
 
   async function prepareReviewFromUpload(importMode = 'preview', extraBody = {}) {
@@ -2155,6 +2187,7 @@
       const data = unwrap(payload);
       applyImportTimeline(data?.timeline || payload?.timeline);
       state.uploadImportEstimate = data?.importEstimate || state.uploadImportEstimate;
+      state.uploadAutoImportPlan = data?.autoImportPlan || state.uploadAutoImportPlan;
       if (data?.preview) {
         state.uploadPreviewReport = data.previewReport || null;
         state.uploadPreviewPartial = data.partialPreview === true || data.previewReport?.partialPreview === true;
@@ -2241,6 +2274,24 @@
       selectedImport: true,
       importIntent: intent,
       selectedImportPreset: preset,
+      importSelection: {
+        pageStart,
+        pageEnd
+      }
+    };
+  }
+
+  function makeRecommendedImportPayload(plan) {
+    const firstBatch = Array.isArray(plan?.batches) ? plan.batches[0] : null;
+    const pages = Array.isArray(firstBatch?.pageNumbers) ? firstBatch.pageNumbers.map(Number).filter((page) => Number.isFinite(page) && page > 0) : [];
+    const pageStart = pages.length ? Math.min(...pages) : getFirstTextPage() || 1;
+    const pageEnd = pages.length ? Math.max(...pages) : pageStart;
+    return {
+      selectedImport: true,
+      useAutoImportPlan: true,
+      useRecommendedImportPlan: true,
+      importIntent: 'auto_recommended_selected_range',
+      selectedImportPreset: 'auto_recommended',
       importSelection: {
         pageStart,
         pageEnd
@@ -2610,6 +2661,55 @@
         ${warning ? `<p class="profile-empty-state" data-import-estimate-warning>${escapeHtml(warning)}</p>` : ''}
       </section>
     `;
+  }
+
+  function renderAutoImportPlanPanel() {
+    const plan = state.uploadAutoImportPlan;
+    if (!plan) return '';
+    const scopeLabel = plan.recommendedImportScope === 'full_document'
+      ? 'Recommended: Full document import'
+      : plan.recommendedImportScope === 'selected_range'
+        ? 'Recommended: Selected range import'
+        : plan.mode === 'manual_review_needed'
+          ? 'Recommended: Manual review needed'
+          : 'Recommended: Preview sample';
+    const warnings = Array.isArray(plan.warnings) ? plan.warnings : [];
+    return `
+      <section class="teacher-content-import-estimate ${plan.mode === 'manual_review_needed' ? 'large' : ''}" data-auto-import-plan-panel>
+        <div class="teacher-content-card-head">
+          <div>
+            <h5>${escapeHtml(scopeLabel)}</h5>
+            <p data-auto-import-plan-reason>Reason: ${escapeHtml(plan.reason || 'The upload was inspected after extraction.')}</p>
+          </div>
+          <span class="teacher-content-pill ${plan.mode === 'manual_review_needed' ? 'blocked' : plan.recommendedImportScope === 'full_document' ? 'ready' : 'review'}">${escapeHtml(plan.batchStrategy || 'manual')}</span>
+        </div>
+        <div class="teacher-content-metric-grid">
+          ${metric('Estimated batches', formatNumber(plan.batchCount), 'data-auto-import-plan-batches')}
+          ${metric('Recommended scope', humanizeImportScope(plan.recommendedImportScope), 'data-auto-import-plan-scope')}
+          ${metric('Available RAM', `${formatNumber(plan.limits?.availableMemoryMb)} MB`, 'data-auto-import-plan-available-memory')}
+          ${metric('Max chars/batch', formatNumber(plan.limits?.maxCharactersPerBatch), 'data-auto-import-plan-max-chars')}
+        </div>
+        ${warnings.length ? `<div data-auto-import-plan-warnings>${renderIssueList('Warnings', warnings)}</div>` : ''}
+        <p class="teacher-content-upload-note" data-auto-import-plan-override>You can override this if needed.</p>
+      </section>
+    `;
+  }
+
+  function renderRecommendedImportAction(canRunRecommended) {
+    const plan = state.uploadAutoImportPlan || {};
+    const disabled = canRunRecommended && plan.mode !== 'manual_review_needed' ? '' : 'disabled';
+    return `
+      <div class="teacher-content-import-actions" data-recommended-import-action>
+        <button type="button" class="small-button" data-upload-run-recommended-import ${disabled}>${state.uploadPrepareReviewLoading ? 'Generating Draft...' : 'Generate Draft'}</button>
+      </div>
+    `;
+  }
+
+  function humanizeImportScope(scope) {
+    if (scope === 'full_document') return 'Full document';
+    if (scope === 'selected_range') return 'Selected range';
+    if (scope === 'preview_sample') return 'Preview sample';
+    return scope || 'Manual';
   }
 
   function renderPreviewSizeControls(canRunPreview) {

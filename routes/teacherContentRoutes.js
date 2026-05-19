@@ -30,6 +30,7 @@ const {
   generateDraftKnowledgePack,
   identifyTextBearingPages
 } = require('../lib/uploads/generateDraftKnowledgePack');
+const { planTeacherContentImport } = require('../lib/uploads/planTeacherContentImport');
 const {
   getStandardsBankDetails,
   listStandardsBanks,
@@ -129,6 +130,15 @@ function registerTeacherContentRoutes(app, options = {}) {
         maxBatchCharacters: positiveNumberOrUndefined(upload.fields && upload.fields.maxBatchCharacters) || options.maxBatchCharacters,
         retryMaxBatchCharacters: positiveNumberOrUndefined(upload.fields && upload.fields.retryMaxBatchCharacters) || options.retryMaxBatchCharacters
       });
+      const autoImportPlan = planTeacherContentImport({
+        extraction,
+        fileSizeBytes: upload.buffer.length,
+        settings: {
+          ...options,
+          maxBatchCharacters: positiveNumberOrUndefined(upload.fields && upload.fields.maxBatchCharacters) || options.maxBatchCharacters
+        },
+        memory: options.systemMemory
+      });
 
       return res.json({
         success: true,
@@ -136,16 +146,20 @@ function registerTeacherContentRoutes(app, options = {}) {
           upload: uploadData,
           extraction: uploadData,
           importEstimate,
-          requiresPreview: true,
-          nextStep: 'run_preview',
-          message: 'Upload extracted. Review the import estimate, then run preview before full import.',
+          autoImportPlan,
+          requiresPreview: autoImportPlan.recommendedImportScope !== 'full_document',
+          nextStep: autoImportPlan.recommendedImportScope === 'full_document' ? 'generate_draft' : 'run_preview',
+          message: autoImportPlan.recommendedImportScope === 'full_document'
+            ? 'Upload extracted. Review the recommended full-document plan, then click Generate Draft.'
+            : 'Upload extracted. Review the recommended safer plan, then click Generate Draft or override it.',
           timeline: [
             ...extractionTimeline,
-            makeTimelineEvent('import_estimate_ready', 'Import estimate ready', importEstimate)
+            makeTimelineEvent('import_estimate_ready', 'Import estimate ready', importEstimate),
+            makeTimelineEvent('auto_import_plan_ready', 'Auto import plan ready', autoImportPlan)
           ]
         },
         errors: [],
-        warnings: extractionResult.warnings || []
+        warnings: [...(extractionResult.warnings || []), ...(autoImportPlan.warnings || [])]
       });
     } catch (error) {
       return res.status(error.statusCode || 400).json(makeRouteErrorPayload(error instanceof Error ? error.message : String(error)));
@@ -483,6 +497,12 @@ async function storeAndExtractUpload(upload, options = {}) {
   fs.writeFileSync(storedFilePath, upload.buffer);
 
   const extraction = await extractTextFromFile(storedFilePath);
+  const autoImportPlan = planTeacherContentImport({
+    extraction,
+    fileSizeBytes: upload.buffer.length,
+    settings: options,
+    memory: options.systemMemory
+  });
   const extractionWithUploadMetadata = {
     ...extraction,
     upload: {
@@ -490,7 +510,8 @@ async function storeAndExtractUpload(upload, options = {}) {
       originalFileName,
       storedFileName,
       extractionJsonFileName
-    }
+    },
+    importPlan: autoImportPlan
   };
   fs.writeFileSync(extractionJsonPath, `${JSON.stringify(extractionWithUploadMetadata, null, 2)}\n`);
 
@@ -508,9 +529,10 @@ async function storeAndExtractUpload(upload, options = {}) {
       tablesCount: extraction.tables.length,
       warnings: extraction.warnings || [],
       errors: extraction.errors || [],
-      extraction: makeExtractionSummary(extraction)
+      extraction: makeExtractionSummary(extraction),
+      autoImportPlan
     },
-    warnings: extraction.warnings || [],
+    warnings: [...(extraction.warnings || []), ...(autoImportPlan.warnings || [])],
     errors: extraction.errors || []
   };
 
@@ -556,10 +578,18 @@ async function prepareReviewDraftFromUpload(uploadId, body = {}, options = {}) {
     previewMode: nonEmptyString(body.previewMode) ? body.previewMode.trim() : nonEmptyString(body.previewSize) ? body.previewSize.trim() : options.previewMode
   };
   const importEstimate = buildImportEstimate(extraction, generationOptions);
+  const autoImportPlan = extraction && extraction.importPlan
+    ? extraction.importPlan
+    : planTeacherContentImport({
+      extraction,
+      settings: generationOptions,
+      memory: options.systemMemory
+    });
   const importMode = String(body.importMode || body.mode || '').trim().toLowerCase();
   const previewOnly = importMode === 'preview' || body.preview === true;
   const fullImportRequested = importMode === 'full' || body.fullImport === true;
   const selectedImportRequested = importMode === 'selected' || importMode === 'range' || body.selectedImport === true;
+  const autoRecommendationAccepted = body.useAutoImportPlan === true || body.useRecommendedImportPlan === true;
   const confirmedFullImport = body.confirmFullImportText === 'CONFIRM'
     || body.fullImportConfirmation === 'CONFIRM'
     || body.confirmationText === 'CONFIRM'
@@ -570,9 +600,10 @@ async function prepareReviewDraftFromUpload(uploadId, body = {}, options = {}) {
     return makePrepareReviewFailurePayload({
       success: false,
       statusCode: 409,
-      errors: ['Run preview first, import a selected page range, or request a confirmed full import.'],
+      errors: ['Run preview first, import a selected page range, request a confirmed full import, or accept the automatic import recommendation.'],
       warnings: [],
       importEstimate,
+      autoImportPlan,
       timeline: [makeTimelineEvent('import_estimate_ready', 'Import estimate ready', importEstimate)]
     }, { uploadId, body, extraction, importSelection: null, importEstimate });
   }
@@ -584,17 +615,19 @@ async function prepareReviewDraftFromUpload(uploadId, body = {}, options = {}) {
       errors: [importEstimate.hardStopMessage || 'This upload is large. Run preview first or lower batch size.'],
       warnings: importEstimate.hardStopReasons || [],
       importEstimate,
+      autoImportPlan,
       timeline: [makeTimelineEvent('import_estimate_ready', 'Import estimate ready', importEstimate)]
     }, { uploadId, body, extraction, importSelection: null, importEstimate });
   }
 
-  if (fullImportRequested && importEstimate.fullImportRequiresConfirmation && importEstimate.isLarge && !confirmedFullImport) {
+  if (fullImportRequested && importEstimate.fullImportRequiresConfirmation && importEstimate.isLarge && !confirmedFullImport && !autoRecommendationAccepted) {
     return makePrepareReviewFailurePayload({
       success: false,
       statusCode: 409,
       errors: ['Whole-packet full import requires typing CONFIRM. For large packets, import one section at a time to avoid overloading local Gemma.'],
       warnings: importEstimate.largeReasons || [],
       importEstimate,
+      autoImportPlan,
       timeline: [makeTimelineEvent('import_estimate_ready', 'Import estimate ready', importEstimate)]
     }, { uploadId, body, extraction, importSelection: null, importEstimate });
   }
@@ -607,6 +640,7 @@ async function prepareReviewDraftFromUpload(uploadId, body = {}, options = {}) {
       errors: ['Preview prepare requires selected pages or chunks. Send importSelection.pageStart/pageEnd or importSelection.chunkStart/chunkEnd.'],
       warnings: [],
       importEstimate,
+      autoImportPlan,
       timeline: [makeTimelineEvent('full_import_estimate_ready', 'Full upload estimate ready', importEstimate)]
     }, { uploadId, body, extraction, importSelection, importEstimate });
   }
@@ -617,6 +651,7 @@ async function prepareReviewDraftFromUpload(uploadId, body = {}, options = {}) {
       errors: ['Selected import requires selected pages or chunks. Send importSelection.pageStart/pageEnd or importSelection.chunkStart/chunkEnd.'],
       warnings: [],
       importEstimate,
+      autoImportPlan,
       timeline: [makeTimelineEvent('full_import_estimate_ready', 'Full upload estimate ready', importEstimate)]
     }, { uploadId, body, extraction, importSelection, importEstimate });
   }
@@ -671,6 +706,7 @@ async function prepareReviewDraftFromUpload(uploadId, body = {}, options = {}) {
       teacherFriendlyError,
       technicalErrors,
       warnings: generation.warnings || [],
+      autoImportPlan,
       importEstimate,
       selectedImportEstimate: generation.selectedImportEstimate,
       importSelection: generation.importSelection || importSelection,
@@ -694,6 +730,7 @@ async function prepareReviewDraftFromUpload(uploadId, body = {}, options = {}) {
             ? 'Partial preview created. Some pages/chunks failed.'
             : 'Preview draft prepared. Review the sample before running full import.',
         importEstimate,
+        autoImportPlan,
         importSelection: generation.importSelection,
         importScope: generation.importScope,
         selectedImportEstimate: generation.selectedImportEstimate,
@@ -726,6 +763,7 @@ async function prepareReviewDraftFromUpload(uploadId, body = {}, options = {}) {
       sourceMatch,
       draftReport,
       importEstimate,
+      autoImportPlan,
       selectedImport: selectedImportRequested,
       importSelection: generation.importSelection,
       importScope: generation.importScope,
@@ -970,6 +1008,7 @@ function makePrepareReviewFailurePayload(result = {}, context = {}) {
       ...extractionCounts
     },
     importEstimate: result.importEstimate || context.importEstimate,
+    autoImportPlan: result.autoImportPlan || context.autoImportPlan,
     validationErrors: result.validationErrors || [],
     invalidItems: result.invalidItems || [],
     repairNeeded: result.repairNeeded || [],
