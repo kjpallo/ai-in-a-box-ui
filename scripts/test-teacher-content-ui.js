@@ -663,12 +663,20 @@ function assertReviewCardPolishUi() {
     'data-review-section-pending',
     'data-review-section-approved',
     'data-review-section-rejected',
-    'No pending items in this section.',
+    'No draft items in this section.',
     'data-review-item-card',
+    'data-review-selection-checkbox',
+    'data-review-selection-item-key',
+    'data-review-select-control',
+    'Select draft item',
     'data-review-item-label',
     'data-review-item-category',
     'data-review-item-wording',
     'data-review-item-confidence',
+    'data-review-item-standards',
+    'Standards: ${escapeHtml(formatStandardsAlignmentStatus(item))}',
+    'formatStandardsAlignmentStatus',
+    'not_aligned_yet',
     'data-review-item-source-file',
     'data-review-item-source-location',
     'data-review-item-snippet',
@@ -689,13 +697,47 @@ function assertReviewCardPolishUi() {
     'View Approved Packs',
     'Source evidence',
     'Editable fields',
+    'Edit',
     'Save changes',
     'Approve item',
     'Reject item',
-    'Cancel'
+    'Cancel',
+    'data-review-bottom-action-bar',
+    'data-review-cancel',
+    'data-review-accept-selected',
+    'data-review-accept-all',
+    'Accept Selected',
+    'Accept All',
+    'selectedReviewItemKeys',
+    'reviewBulkMessage',
+    'cancelReviewWorkflow',
+    'acceptSelectedReviewItems',
+    'acceptAllReviewItems',
+    'isReviewItemSafeToAccept',
+    'No valid items are selected for Accept Selected.',
+    'Skipped ${formatNumber(skipped)} unsafe',
+    'Approved packs are saved for later and are not connected to student answers yet.',
+    'Review canceled. Uploaded source files and draft packs were left untouched.'
   ].forEach((marker) => {
     assert.ok(ui.includes(marker), `Expected review polish marker ${marker}.`);
   });
+
+  assert.ok(
+    ui.includes('data-review-selection-checkbox') && ui.includes('data-approved-pack-activation-checkbox'),
+    'Review selection checkboxes and Knowledge Pack activation checkboxes should have distinct hooks.'
+  );
+  assert.notEqual(
+    ui.indexOf('data-review-selection-checkbox'),
+    ui.indexOf('data-approved-pack-activation-checkbox'),
+    'Review selection checkbox markup should be distinct from activation checkbox markup.'
+  );
+  assert.ok(style.includes('.teacher-content-review-select-control'), 'Review selection checkbox should have distinct styling.');
+  assert.ok(style.includes('accent-color: #f19f4c'), 'Review selection checkbox should use a distinct accent color.');
+  assert.ok(style.includes('.teacher-content-review-action-bar'), 'Review bottom action bar should be styled.');
+  assert.match(ui, /reviewStatus:\s*'approved'/, 'Accept Selected/All should approve via the existing draft review status route.');
+  assert.match(ui, /rejected\|reject\|repair\[_ -\]\?needed\|needs\? repair\|quarantine\|quarantined\|invalid\|failed\|failure\|error/, 'Accept Selected/All should skip unsafe item statuses.');
+  assert.match(ui, /ENDPOINTS\.draftItemStatus/, 'Bulk accept should use the existing draft item status endpoint.');
+  assert.doesNotMatch(ui, /data-review-selection-checkbox[\s\S]{0,220}data-approved-pack-activation-toggle/, 'Review selection checkboxes should not reuse activation checkbox hooks.');
 }
 
 function assertReviewPromotionButtonConditions() {
@@ -707,8 +749,8 @@ function assertReviewPromotionButtonConditions() {
     'Review Content should show Create Approved Pack only when pending is 0 and approved is greater than 0.'
   );
   assert.match(
-    reviewFunction[1],
-    /canCreateApprovedPack \?[\s\S]*data-review-create-approved-pack/,
+    ui,
+    /renderReviewCompletionPanel\(canCreateApprovedPack[\s\S]*data-review-create-approved-pack/,
     'Review Content promotion button should be conditional.'
   );
 }

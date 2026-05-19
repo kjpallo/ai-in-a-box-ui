@@ -80,6 +80,7 @@ async function main() {
     await assertVocabularyReviewStatusIsNormalized();
     await assertFormulaSolverStatusIsNormalized();
     await assertConceptStructuralFieldsAreNormalized();
+    await assertProblemBankStandardsMetadataIsNormalized();
     await assertConceptIdDerivedFromClaim();
     await assertConceptTitleDerivedFromSummary();
     await assertVocabularyTermAndIdAreNormalized();
@@ -88,6 +89,7 @@ async function main() {
     await assertInvalidMockJsonReturnsUsefulError();
     await assertRetryInvalidJsonCanRepairDraft();
     await assertInvalidStandardsAreRejected();
+    assertEmptyStandardsMetadataValidates();
     assertRawInvalidPacketStillFailsValidator();
     assertApprovedPacksAreNotModified();
   } finally {
@@ -95,6 +97,20 @@ async function main() {
   }
 
   console.log('Draft knowledge pack generation tests passed.');
+}
+
+function assertEmptyStandardsMetadataValidates() {
+  const standards = makeDefaultStandardsMetadata();
+  const validation = validateKnowledgePack(makeGeneratedPack({
+    vocabulary: [{ ...makeVocabularyItem(), standards }],
+    concepts: [{ ...makeConceptItem(), standards }],
+    referenceFormulas: [{ ...makeReferenceFormula(), standards }],
+    problemBank: [{ ...makeProblemItem(), standards }],
+    standardsMap: [],
+    smokeTests: [{ ...makeGeneratedPack().smokeTests[0], standards }]
+  }), { standardsBank: makeStandardsBank() });
+
+  assert.equal(validation.valid, true, validation.errors.join('\n'));
 }
 
 async function assertItemOnlyModelOutputGetsWrappedFromKnowledgeName() {
@@ -224,6 +240,8 @@ function assertPromptIncludesControls() {
   assert.ok(prompt.includes('Do not create solver code.'));
   assert.ok(prompt.includes('Do not describe solver logic.'));
   assert.ok(prompt.includes('Every generated vocabulary, concept, referenceFormula, and problemBank item must include sourceFile, sourceLocation, sourceTextSnippet, confidence, and reviewStatus.'));
+  assert.ok(prompt.includes('alignmentStatus: "not_aligned_yet"'));
+  assert.ok(prompt.includes('Do not auto-align generated draft items to standards yet.'));
   assert.ok(prompt.includes('Only include vocabulary terms explicitly present in the provided source text.'));
   assert.ok(prompt.includes('Every vocabulary sourceTextSnippet must contain the term itself or very close wording from the source.'));
   assert.ok(prompt.includes('Formulas may be included only as referenceFormulas.'));
@@ -261,7 +279,8 @@ function assertPromptIncludesStandardsList() {
 
   assert.ok(prompt.includes('Available standards bank:'));
   assert.ok(prompt.includes('SAMPLE.PS.FORCES.1'));
-  assert.ok(prompt.includes('You may only use standardIds from the available standards bank above.'));
+  assert.ok(prompt.includes('You may only use standardIds from the available standards bank above in standardsMap entries.'));
+  assert.ok(prompt.includes('Keep generated item standards metadata empty and not_aligned_yet in this phase.'));
 }
 
 async function assertDefaultTimeoutAndKeepAliveReachModelClient() {
@@ -432,6 +451,12 @@ async function assertValidMockCreatesDraft() {
   assert.equal(generated.problemBank[0].reviewStatus, 'pending');
   assert.equal(generated.referenceFormulas[0].solverStatus, 'reference_only');
   assert.equal(generated.referenceFormulas[0].reviewStatus, 'pending');
+  assert.deepEqual(generated.vocabulary[0].standards, makeDefaultStandardsMetadata());
+  assert.deepEqual(generated.concepts[0].standards, makeDefaultStandardsMetadata());
+  assert.deepEqual(generated.referenceFormulas[0].standards, makeDefaultStandardsMetadata());
+  assert.deepEqual(generated.problemBank[0].standards, makeDefaultStandardsMetadata());
+  assert.deepEqual(generated.standardsMap[0].standards, makeDefaultStandardsMetadata());
+  assert.deepEqual(generated.smokeTests[0].standards, makeDefaultStandardsMetadata());
   assert.equal(result.coverageReport.totalChunks, 1);
   assert.equal(result.coverageReport.processedChunks, 1);
   assert.equal(result.coverageReport.chunksWithDraftItems, 1);
@@ -1363,7 +1388,7 @@ async function assertVocabularyReviewStatusIsNormalized() {
   const generated = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
   assert.equal(generated.vocabulary[0].reviewStatus, 'pending');
   assert.equal(generated.vocabulary[0].confidence, 'low');
-  assert.deepEqual(generated.vocabulary[0].standards, []);
+  assert.deepEqual(generated.vocabulary[0].standards, makeDefaultStandardsMetadata());
 }
 
 async function assertFormulaSolverStatusIsNormalized() {
@@ -1388,6 +1413,7 @@ async function assertFormulaSolverStatusIsNormalized() {
   assert.equal(generated.referenceFormulas[0].solverStatus, 'reference_only');
   assert.equal(generated.referenceFormulas[0].reviewStatus, 'pending');
   assert.equal(generated.referenceFormulas[0].confidence, 'low');
+  assert.deepEqual(generated.referenceFormulas[0].standards, makeDefaultStandardsMetadata());
 }
 
 async function assertConceptStructuralFieldsAreNormalized() {
@@ -1418,12 +1444,30 @@ async function assertConceptStructuralFieldsAreNormalized() {
   assert.deepEqual(generated.concepts[0].examples, []);
   assert.deepEqual(generated.concepts[0].nonExamples, []);
   assert.deepEqual(generated.concepts[0].commonMisconceptions, []);
-  assert.deepEqual(generated.concepts[0].standards, []);
+  assert.deepEqual(generated.concepts[0].standards, makeDefaultStandardsMetadata());
   assert.equal(generated.concepts[0].reviewStatus, 'pending');
   assert.equal(generated.concepts[0].confidence, 'low');
   assert.equal(generated.concepts[0].sourceFile, 'teacher_force_notes.txt');
   assert.equal(generated.concepts[0].sourceLocation, 'extracted text');
   assert.ok(generated.concepts[0].sourceTextSnippet.includes('Force is a push or pull.'));
+}
+
+async function assertProblemBankStandardsMetadataIsNormalized() {
+  const problem = makeProblemItem();
+  delete problem.standards;
+
+  const result = await generateDraftKnowledgePack({
+    extractionJsonPath: extractionPath,
+    outputDraftDir: path.join(tempRoot, 'problem-standards-normalized-drafts'),
+    modelClient: async () => JSON.stringify(makeGeneratedPack({
+      packId: 'generated-problem-standards-normalized-draft',
+      problemBank: [problem]
+    }))
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  const generated = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
+  assert.deepEqual(generated.problemBank[0].standards, makeDefaultStandardsMetadata());
 }
 
 async function assertConceptIdDerivedFromClaim() {
@@ -2029,6 +2073,15 @@ function makeProblemItemForChunk(index) {
     sourceTextSnippet: index === 3
       ? 'Chunk 3 includes a practice prompt.'
       : `Chunk ${index} term means the first source-supported idea.`
+  };
+}
+
+function makeDefaultStandardsMetadata() {
+  return {
+    linkedStandardIds: [],
+    suggestedStandardIds: [],
+    alignmentStatus: 'not_aligned_yet',
+    alignmentSource: 'none'
   };
 }
 

@@ -99,6 +99,8 @@
     report: null,
     selectedReviewItem: null,
     selectedReviewEvidenceItem: null,
+    selectedReviewItemKeys: [],
+    reviewBulkMessage: '',
     reviewActionLoading: false,
     promotionActionLoading: false,
     promotionMessage: '',
@@ -249,6 +251,27 @@
         return;
       }
 
+      const reviewCancel = event.target.closest('[data-review-cancel]');
+      if (reviewCancel) {
+        event.preventDefault();
+        cancelReviewWorkflow();
+        return;
+      }
+
+      const acceptSelected = event.target.closest('[data-review-accept-selected]');
+      if (acceptSelected) {
+        event.preventDefault();
+        acceptSelectedReviewItems();
+        return;
+      }
+
+      const acceptAll = event.target.closest('[data-review-accept-all]');
+      if (acceptAll) {
+        event.preventDefault();
+        acceptAllReviewItems();
+        return;
+      }
+
       const reviewStatus = event.target.closest('[data-review-status]');
       if (reviewStatus) {
         event.preventDefault();
@@ -396,6 +419,8 @@
       state.selectedDraftPackId = event.target.value || '';
       state.selectedReviewItem = null;
       state.selectedReviewEvidenceItem = null;
+      state.selectedReviewItemKeys = [];
+      state.reviewBulkMessage = '';
       state.promotionMessage = '';
       await loadSelectedDraftReport();
       render();
@@ -404,6 +429,11 @@
     document.addEventListener('change', (event) => {
       if (event.target?.id === 'teacherContentStandardsBankSelect') {
         selectStandardsBank(event.target.value || '');
+        return;
+      }
+
+      if (event.target?.matches('[data-review-selection-checkbox]')) {
+        updateReviewSelection(event.target);
         return;
       }
 
@@ -1295,7 +1325,8 @@
       `;
     }
 
-    if (!pending || pending.totalPending === 0) {
+    const reviewTotal = Number(state.report?.reviewItems?.totalItems || 0);
+    if ((!pending || pending.totalPending === 0) && reviewTotal === 0) {
       const summary = getReviewProgressSummary(state.report?.draftPack || getSelectedDraftSummary());
       const importScope = getDraftImportScope(state.report?.draftPack || getSelectedDraftSummary());
       const canCreateApprovedPack = summary.pending === 0 && summary.approved > 0;
@@ -1311,26 +1342,20 @@
         ${renderReviewProgressSummary(summary)}
         ${renderImportScopeWarning(importScope, 'review')}
         ${state.errors.length ? renderIssueList('Promotion Validation Errors', state.errors) : ''}
-        <section class="teacher-content-review-empty" data-review-empty-state>
-          <h5>No pending review items.</h5>
-          <p>${canCreateApprovedPack ? 'This draft is ready to create an approved pack from approved items only.' : 'This draft has no approved items to promote yet.'}</p>
-          <div class="teacher-content-review-empty-actions">
-            ${canCreateApprovedPack ? `
-              <button type="button" class="small-button" data-promote-draft data-review-create-approved-pack ${state.promotionActionLoading ? 'disabled' : ''}>${escapeHtml(promoteLabel)}</button>
-            ` : ''}
-            <button type="button" class="small-button secondary-small" data-handoff-tab="upload">Back to Upload / Start</button>
-            <button type="button" class="small-button secondary-small" data-review-empty-tab="approvedPacks">View Approved Packs</button>
-          </div>
-        </section>
+        ${state.reviewBulkMessage ? `<p class="teacher-content-review-bulk-message" data-review-bulk-message>${escapeHtml(state.reviewBulkMessage)}</p>` : ''}
+        ${renderReviewCompletionPanel(canCreateApprovedPack, promoteLabel)}
         ${state.selectedReviewEvidenceItem ? renderReviewEvidencePanel(state.selectedReviewEvidenceItem) : ''}
         ${state.selectedReviewItem ? renderReviewDetailPanel(state.selectedReviewItem) : ''}
+        ${renderReviewActionBar([])}
       `;
     }
 
-    const groups = pending.items || {};
+    const groups = state.report?.reviewItems?.items || pending.items || {};
     const draft = state.report?.draftPack || getSelectedDraftSummary();
     const summary = getReviewProgressSummary(draft);
     const importScope = getDraftImportScope(draft);
+    const canCreateApprovedPack = summary.pending === 0 && summary.approved > 0;
+    const promoteLabel = state.promotionActionLoading ? 'Creating Approved Pack...' : 'Create Approved Pack from Approved Items';
     return `
       <div class="teacher-content-card-head">
         <div>
@@ -1342,11 +1367,14 @@
       ${renderReviewProgressSummary(summary)}
       ${renderImportScopeWarning(importScope, 'review')}
       ${state.errors.length ? renderIssueList('Review Messages', state.errors) : ''}
+      ${state.reviewBulkMessage ? `<p class="teacher-content-review-bulk-message" data-review-bulk-message>${escapeHtml(state.reviewBulkMessage)}</p>` : ''}
+      ${summary.pending === 0 ? renderReviewCompletionPanel(canCreateApprovedPack, promoteLabel) : ''}
       <div class="teacher-content-review-groups" data-review-draft-content-page>
         ${REVIEW_GROUP_ORDER.map((sectionName) => renderReviewGroup(sectionName, groups[sectionName] || [])).join('')}
       </div>
       ${state.selectedReviewEvidenceItem ? renderReviewEvidencePanel(state.selectedReviewEvidenceItem) : ''}
       ${state.selectedReviewItem ? renderReviewDetailPanel(state.selectedReviewItem) : ''}
+      ${renderReviewActionBar(getVisibleReviewItems())}
     `;
   }
 
@@ -1362,21 +1390,54 @@
           <span data-review-section-approved="${escapeAttr(sectionName)}">${formatNumber(counts.approved)} approved</span>
           <span data-review-section-rejected="${escapeAttr(sectionName)}">${formatNumber(counts.rejected)} rejected</span>
         </summary>
-        ${items.length ? items.map(renderPendingItem).join('') : '<p class="profile-empty-state">No pending items in this section.</p>'}
+          ${items.length ? items.map(renderReviewItemCard).join('') : '<p class="profile-empty-state">No draft items in this section.</p>'}
       </details>
     `;
   }
 
-  function renderPendingItem(item) {
+  function renderReviewCompletionPanel(canCreateApprovedPack, promoteLabel) {
+    return `
+      <section class="teacher-content-review-empty" data-review-empty-state>
+        <h5>No pending review items.</h5>
+        <p>${canCreateApprovedPack ? 'This draft is ready to create an approved pack from approved items only.' : 'This draft has no approved items to promote yet.'}</p>
+        <div class="teacher-content-review-empty-actions">
+          ${canCreateApprovedPack ? `
+            <button type="button" class="small-button" data-promote-draft data-review-create-approved-pack ${state.promotionActionLoading ? 'disabled' : ''}>${escapeHtml(promoteLabel)}</button>
+          ` : ''}
+          <button type="button" class="small-button secondary-small" data-handoff-tab="upload">Back to Upload / Start</button>
+          <button type="button" class="small-button secondary-small" data-review-empty-tab="approvedPacks">View Approved Packs</button>
+        </div>
+      </section>
+    `;
+  }
+
+  function renderReviewItemCard(item) {
     const confidence = formatConfidence(item.confidence);
     const wording = getDraftItemWording(item);
     const itemStatus = getDraftItemSafetyStatus(item);
+    const itemKey = reviewItemKey(item.section, item.index);
+    const selected = state.selectedReviewItemKeys.includes(itemKey);
+    const safe = isReviewItemSafeToAccept(item);
+    const editableFields = EDITABLE_FIELDS[item.section] || [];
     return `
-      <div class="teacher-content-review-item" data-review-item-card>
+      <div class="teacher-content-review-item ${selected ? 'selected' : ''} ${safe ? '' : 'unsafe'}" data-review-item-card data-review-item-key="${escapeAttr(itemKey)}" data-review-item-safe="${safe ? 'true' : 'false'}">
+        <label class="teacher-content-review-select-control" data-review-select-control>
+          <input
+            type="checkbox"
+            ${selected ? 'checked' : ''}
+            data-review-selection-checkbox
+            data-review-selection-item-key="${escapeAttr(itemKey)}"
+            data-section="${escapeAttr(item.section)}"
+            data-index="${escapeAttr(item.index)}"
+            aria-label="Select draft item for Accept Selected"
+          >
+          <span>Select draft item</span>
+        </label>
         <div class="teacher-content-review-item-main">
-          <strong data-review-item-label>${escapeHtml(item.label || 'Pending item')}</strong>
+          <strong data-review-item-label>${escapeHtml(item.label || 'Draft item')}</strong>
           <span data-review-item-category>Category: ${escapeHtml(SECTION_LABELS[item.section] || item.section || 'Not set')}</span>
           <span data-review-item-status>Validation/review status: ${escapeHtml(item.reviewStatus || 'pending')}</span>
+          <span data-review-item-standards>Standards: ${escapeHtml(formatStandardsAlignmentStatus(item))}</span>
           <span data-review-item-warning-status>Warning/repair/quarantine status: ${escapeHtml(itemStatus)}</span>
           <span data-review-item-source-file>Source file: ${escapeHtml(item.sourceFile || 'No source file')}</span>
           <span data-review-item-source-location>Source location: ${escapeHtml(item.sourceLocation || 'No source location')}</span>
@@ -1388,11 +1449,35 @@
           <button type="button" class="small-button secondary-small" data-review-item-evidence data-review-evidence data-section="${escapeAttr(item.section)}" data-index="${escapeAttr(item.index)}">View Evidence</button>
         </div>
         <div class="teacher-content-review-actions">
-          <button type="button" class="small-button secondary-small" data-review-edit data-section="${escapeAttr(item.section)}" data-index="${escapeAttr(item.index)}">View/Edit</button>
-          <button type="button" class="small-button" data-review-status="approved" data-section="${escapeAttr(item.section)}" data-index="${escapeAttr(item.index)}">Approve</button>
-          <button type="button" class="small-button secondary-small" data-review-status="rejected" data-section="${escapeAttr(item.section)}" data-index="${escapeAttr(item.index)}">Reject</button>
+          ${editableFields.length ? `<button type="button" class="small-button secondary-small" data-review-edit data-section="${escapeAttr(item.section)}" data-index="${escapeAttr(item.index)}">Edit</button>` : ''}
+          ${editableFields.length ? `<button type="button" class="small-button secondary-small" data-review-edit data-review-view-edit data-section="${escapeAttr(item.section)}" data-index="${escapeAttr(item.index)}">View/Edit</button>` : ''}
+          <button type="button" class="small-button" data-review-status="approved" data-section="${escapeAttr(item.section)}" data-index="${escapeAttr(item.index)}" ${item.reviewStatus === 'approved' ? 'disabled' : ''}>Approve</button>
+          <button type="button" class="small-button secondary-small" data-review-status="rejected" data-section="${escapeAttr(item.section)}" data-index="${escapeAttr(item.index)}" ${item.reviewStatus === 'rejected' ? 'disabled' : ''}>Reject</button>
         </div>
       </div>
+    `;
+  }
+
+  function renderReviewActionBar(items) {
+    const totalSelected = state.selectedReviewItemKeys.length;
+    const visible = Array.isArray(items) ? items : [];
+    const safeSelected = visible.filter((item) => state.selectedReviewItemKeys.includes(reviewItemKey(item.section, item.index)) && isReviewItemSafeToAccept(item)).length;
+    const safeAll = visible.filter(isReviewItemSafeToAccept).length;
+    const skippedAll = Math.max(0, visible.length - safeAll);
+    return `
+      <section class="teacher-content-review-action-bar" data-review-bottom-action-bar>
+        <div>
+          <strong data-review-selected-count>${formatNumber(totalSelected)} selected</strong>
+          <span data-review-valid-selected-count>${formatNumber(safeSelected)} valid selected</span>
+          <span data-review-valid-all-count>${formatNumber(safeAll)} valid available</span>
+          ${skippedAll ? `<small data-review-skipped-available-count>${formatNumber(skippedAll)} unsafe item${skippedAll === 1 ? '' : 's'} will be skipped.</small>` : '<small data-review-approved-pack-note>Approved packs are saved for later and are not connected to student answers yet.</small>'}
+        </div>
+        <div class="teacher-content-review-action-buttons">
+          <button type="button" class="small-button secondary-small" data-review-cancel>Cancel</button>
+          <button type="button" class="small-button" data-review-accept-selected ${state.reviewActionLoading || totalSelected === 0 ? 'disabled' : ''}>Accept Selected</button>
+          <button type="button" class="small-button" data-review-accept-all ${state.reviewActionLoading || safeAll === 0 ? 'disabled' : ''}>Accept All</button>
+        </div>
+      </section>
     `;
   }
 
@@ -1420,6 +1505,13 @@
     });
     if (Array.isArray(value)) return value.join(' ');
     return String(value || 'Draft wording not available in this report item.');
+  }
+
+  function formatStandardsAlignmentStatus(item) {
+    const status = item?.standardsStatusLabel
+      || item?.standards?.alignmentStatus
+      || 'not_aligned_yet';
+    return String(status).replace(/_/g, ' ');
   }
 
   function getDraftItemSafetyStatus(item) {
@@ -1927,7 +2019,7 @@
   }
 
   function openReviewItem(button) {
-    const item = findPendingItem(button.dataset.section, Number(button.dataset.index));
+    const item = findReviewItem(button.dataset.section, Number(button.dataset.index));
     if (!item) {
       state.errors.push('Review item is no longer pending. Refresh the draft report.');
       render();
@@ -1939,13 +2031,130 @@
     render();
   }
 
+  function updateReviewSelection(checkbox) {
+    const itemKey = checkbox.getAttribute('data-review-selection-item-key') || reviewItemKey(checkbox.dataset.section, Number(checkbox.dataset.index));
+    if (!itemKey) return;
+
+    const selected = new Set(state.selectedReviewItemKeys);
+    if (checkbox.checked) {
+      selected.add(itemKey);
+    } else {
+      selected.delete(itemKey);
+    }
+    state.selectedReviewItemKeys = Array.from(selected);
+    state.reviewBulkMessage = '';
+    render();
+  }
+
+  function cancelReviewWorkflow() {
+    state.selectedReviewItemKeys = [];
+    state.selectedReviewItem = null;
+    state.selectedReviewEvidenceItem = null;
+    state.selectedReviewItemKeys = [];
+    state.reviewBulkMessage = '';
+    state.reviewBulkMessage = 'Review canceled. Uploaded source files and draft packs were left untouched.';
+    state.activeTab = 'upload';
+    setStatus('Review canceled. Uploads and drafts were preserved.');
+    render();
+  }
+
+  async function acceptSelectedReviewItems() {
+    const items = getVisibleReviewItems();
+    const selected = items.filter((item) => state.selectedReviewItemKeys.includes(reviewItemKey(item.section, item.index)));
+    const safeItems = selected.filter(isReviewItemSafeToAccept);
+    const skipped = selected.length - safeItems.length;
+    if (!safeItems.length) {
+      state.reviewBulkMessage = selected.length
+        ? `No valid selected items were accepted. Skipped ${formatNumber(skipped)} unsafe selected item${skipped === 1 ? '' : 's'}.`
+        : 'No valid items are selected for Accept Selected.';
+      setStatus('No valid selected draft items to accept.');
+      render();
+      return;
+    }
+
+    await acceptReviewItems(safeItems, {
+      actionLabel: 'Accept Selected',
+      skipped,
+      doneMessage: `Accepted ${formatNumber(safeItems.length)} selected valid item${safeItems.length === 1 ? '' : 's'}.`
+    });
+  }
+
+  async function acceptAllReviewItems() {
+    const items = getVisibleReviewItems();
+    const safeItems = items.filter(isReviewItemSafeToAccept);
+    const skipped = items.length - safeItems.length;
+    if (!safeItems.length) {
+      state.reviewBulkMessage = `Accept All found no valid draft items. Skipped ${formatNumber(skipped)} unsafe item${skipped === 1 ? '' : 's'}.`;
+      setStatus('No valid draft items to accept.');
+      render();
+      return;
+    }
+
+    await acceptReviewItems(safeItems, {
+      actionLabel: 'Accept All',
+      skipped,
+      doneMessage: `Accepted ${formatNumber(safeItems.length)} valid draft item${safeItems.length === 1 ? '' : 's'}.`
+    });
+  }
+
+  async function acceptReviewItems(items, options = {}) {
+    if (!state.selectedDraftPackId || state.reviewActionLoading) return;
+    state.reviewActionLoading = true;
+    state.errors = [];
+    state.reviewBulkMessage = `${options.actionLabel || 'Accept'} is approving valid draft items only.`;
+    setStatus('Accepting valid draft items...');
+    render();
+
+    let accepted = 0;
+    let latestReport = null;
+    const failed = [];
+    try {
+      for (const item of items) {
+        try {
+          const payload = await fetchJson(ENDPOINTS.draftItemStatus(state.selectedDraftPackId, item.section, item.index), {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reviewStatus: 'approved' })
+          });
+          const data = unwrap(payload);
+          latestReport = data?.report || latestReport;
+          accepted += 1;
+        } catch (error) {
+          failed.push(`${SECTION_LABELS[item.section] || item.section} item ${item.index}: ${error.message || 'Route error'}`);
+        }
+      }
+
+      if (latestReport) state.report = latestReport;
+      await refreshDraftLists();
+      state.selectedReviewItemKeys = state.selectedReviewItemKeys.filter((key) => {
+        const item = findPendingItemByKey(key);
+        return item && !items.some((acceptedItem) => reviewItemKey(acceptedItem.section, acceptedItem.index) === key);
+      });
+      reconcileSelectedReviewItem();
+      const skipped = Number(options.skipped || 0);
+      const skippedText = skipped
+        ? ` Skipped ${formatNumber(skipped)} unsafe item${skipped === 1 ? '' : 's'}: rejected, repair-needed, quarantined, invalid, or failed items are not accepted.`
+        : '';
+      const failedText = failed.length ? ` ${failed.length} item${failed.length === 1 ? '' : 's'} failed to update.` : '';
+      state.reviewBulkMessage = `${options.doneMessage || `Accepted ${formatNumber(accepted)} valid draft item${accepted === 1 ? '' : 's'}.`}${skippedText}${failedText} Approved packs are saved for later and are not connected to student answers yet.`;
+      if (failed.length) state.errors.push(...failed);
+      setStatus(state.reviewBulkMessage);
+    } catch (error) {
+      state.errors.push(`${options.actionLabel || 'Accept'} failed: ${error.message || 'Route error'}`);
+      state.reviewBulkMessage = `${options.actionLabel || 'Accept'} failed before promotion. No unsafe items were approved.`;
+    } finally {
+      state.reviewActionLoading = false;
+      render();
+    }
+  }
+
   function closeReviewItem() {
     state.selectedReviewItem = null;
     render();
   }
 
   function openReviewEvidence(button) {
-    const item = findPendingItem(button.dataset.section, Number(button.dataset.index));
+    const item = findReviewItem(button.dataset.section, Number(button.dataset.index));
     if (!item) {
       state.errors.push('Review item evidence is no longer available. Refresh the draft report.');
       render();
@@ -2693,18 +2902,53 @@
 
   function reconcileSelectedReviewItem() {
     if (state.selectedReviewItem) {
-      const next = findPendingItem(state.selectedReviewItem.section, Number(state.selectedReviewItem.index));
+      const next = findReviewItem(state.selectedReviewItem.section, Number(state.selectedReviewItem.index));
       state.selectedReviewItem = next || null;
     }
     if (state.selectedReviewEvidenceItem) {
-      const nextEvidence = findPendingItem(state.selectedReviewEvidenceItem.section, Number(state.selectedReviewEvidenceItem.index));
+      const nextEvidence = findReviewItem(state.selectedReviewEvidenceItem.section, Number(state.selectedReviewEvidenceItem.index));
       state.selectedReviewEvidenceItem = nextEvidence || null;
     }
+    const visibleKeys = new Set(getVisibleReviewItems().map((item) => reviewItemKey(item.section, item.index)));
+    state.selectedReviewItemKeys = state.selectedReviewItemKeys.filter((key) => visibleKeys.has(key));
   }
 
-  function findPendingItem(section, index) {
-    const items = state.report?.pendingReview?.items?.[section] || [];
+  function findReviewItem(section, index) {
+    const items = state.report?.reviewItems?.items?.[section] || state.report?.pendingReview?.items?.[section] || [];
     return items.find((item) => Number(item.index) === Number(index)) || null;
+  }
+
+  function findPendingItemByKey(key) {
+    return getVisibleReviewItems().find((item) => reviewItemKey(item.section, item.index) === key) || null;
+  }
+
+  function getVisibleReviewItems() {
+    const groups = state.report?.reviewItems?.items || state.report?.pendingReview?.items || {};
+    return REVIEW_GROUP_ORDER.flatMap((sectionName) => Array.isArray(groups[sectionName]) ? groups[sectionName] : []);
+  }
+
+  function reviewItemKey(section, index) {
+    if (!section && !Number.isInteger(index)) return '';
+    return `${section}:${Number(index)}`;
+  }
+
+  function isReviewItemSafeToAccept(item) {
+    if (!item || item.reviewStatus !== 'pending') return false;
+    const unsafeText = [
+      item.validationStatus,
+      item.repairStatus,
+      item.quarantineStatus,
+      item.warningStatus,
+      item.extractionStatus,
+      item.modelStatus,
+      item.status,
+      ...(Array.isArray(item.validationErrors) ? item.validationErrors : []),
+      ...(Array.isArray(item.warnings) ? item.warnings : [])
+    ].filter(Boolean).join(' ').toLowerCase();
+    if (/\b(rejected|reject|repair[_ -]?needed|needs? repair|quarantine|quarantined|invalid|failed|failure|error)\b/.test(unsafeText)) {
+      return false;
+    }
+    return true;
   }
 
   function metric(label, value, dataSelector) {

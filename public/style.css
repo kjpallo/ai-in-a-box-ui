@@ -3142,13 +3142,39 @@ button:disabled {
 
 .teacher-content-review-item {
   display: grid;
-  grid-template-columns: minmax(0, 0.75fr) minmax(0, 1fr) auto;
+  grid-template-columns: minmax(120px, 0.38fr) minmax(0, 1fr) auto auto;
   gap: 10px;
   align-items: start;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
   padding: 10px;
   background: rgba(0, 0, 0, 0.16);
+}
+
+.teacher-content-review-item.selected {
+  border-color: rgba(241, 159, 76, 0.42);
+  background: rgba(241, 159, 76, 0.08);
+}
+
+.teacher-content-review-item.unsafe {
+  border-color: rgba(255, 132, 132, 0.28);
+}
+
+.teacher-content-review-select-control {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  color: #f7e6ca;
+  font-size: 0.76rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.teacher-content-review-select-control input {
+  width: 18px;
+  height: 18px;
+  accent-color: #f19f4c;
 }
 
 .teacher-content-review-item-main,
@@ -3165,6 +3191,17 @@ button:disabled {
 .teacher-content-review-item p {
   margin: 0;
   color: #e5f6f2;
+}
+
+.teacher-content-review-item [data-review-item-standards] {
+  width: fit-content;
+  border: 1px solid rgba(132, 211, 194, 0.28);
+  border-radius: 999px;
+  padding: 3px 8px;
+  color: #d8eee9;
+  background: rgba(132, 211, 194, 0.08);
+  font-size: 0.75rem;
+  font-weight: 800;
 }
 
 .teacher-content-confidence {
@@ -3192,6 +3229,53 @@ button:disabled {
 
 .teacher-content-review-actions,
 .teacher-content-review-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.teacher-content-review-bulk-message {
+  margin: 0;
+  border: 1px solid rgba(241, 159, 76, 0.25);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: #fff4df;
+  background: rgba(241, 159, 76, 0.1);
+}
+
+.teacher-content-review-action-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 19;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid rgba(241, 159, 76, 0.32);
+  border-radius: 12px;
+  padding: 12px;
+  background: linear-gradient(180deg, rgba(20, 18, 14, 0.98), rgba(6, 13, 14, 0.98));
+  box-shadow: 0 -18px 42px rgba(0, 0, 0, 0.34), 0 0 22px rgba(241, 159, 76, 0.08);
+}
+
+.teacher-content-review-action-bar > div:first-child {
+  display: grid;
+  gap: 4px;
+  min-width: 220px;
+}
+
+.teacher-content-review-action-bar strong {
+  color: #f4fffb;
+}
+
+.teacher-content-review-action-bar span,
+.teacher-content-review-action-bar small {
+  color: #d8eee9;
+}
+
+.teacher-content-review-action-buttons {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;

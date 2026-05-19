@@ -22,11 +22,75 @@ try {
   assertBlocksInvalidStandardReferenceWithBank();
   assertStrictFinalValidationBlocksInvalidApprovedOutput();
   assertPromotesApprovedOnlyPackToTempOutput();
+  assertPromotionPreservesStandardsMetadata();
+  assertPromotionNormalizesOlderApprovedItemsWithoutStandardsMetadata();
   assertPromotionPreservesRangeLimitedScopeWarning();
   assertExistingApprovedPackRequiresForce();
   assertDraftPacksAreNotModified();
 } finally {
   cleanupTempRoot();
+}
+
+function assertPromotionPreservesStandardsMetadata() {
+  const standardsMetadata = {
+    linkedStandardIds: [],
+    suggestedStandardIds: [],
+    alignmentStatus: 'not_aligned_yet',
+    alignmentSource: 'none'
+  };
+  writeDraftPack(makePack({
+    packId: 'standards-metadata-draft-pack',
+    vocabulary: [
+      {
+        ...makeVocabularyItem('standards-placeholder-term'),
+        standards: standardsMetadata
+      }
+    ],
+    concepts: [],
+    referenceFormulas: [],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+
+  const result = promoteDraftKnowledgePack('standards-metadata-draft-pack', {
+    draftPacksDir,
+    approvedPacksDir,
+    standardsBank
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  const promotedPack = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
+  assert.deepEqual(promotedPack.vocabulary[0].standards, standardsMetadata);
+}
+
+function assertPromotionNormalizesOlderApprovedItemsWithoutStandardsMetadata() {
+  const olderItem = makeVocabularyItem('older-placeholder-term');
+  delete olderItem.standards;
+  writeDraftPack(makePack({
+    packId: 'older-standards-metadata-draft-pack',
+    vocabulary: [olderItem],
+    concepts: [],
+    referenceFormulas: [],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+
+  const result = promoteDraftKnowledgePack('older-standards-metadata-draft-pack', {
+    draftPacksDir,
+    approvedPacksDir,
+    standardsBank
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  const promotedPack = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
+  assert.deepEqual(promotedPack.vocabulary[0].standards, {
+    linkedStandardIds: [],
+    suggestedStandardIds: [],
+    alignmentStatus: 'not_aligned_yet',
+    alignmentSource: 'none'
+  });
 }
 
 console.log('Draft knowledge pack promotion tests passed.');

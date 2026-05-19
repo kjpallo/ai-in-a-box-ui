@@ -78,20 +78,43 @@ function assertPendingReviewAndCounts() {
   assert.equal(report.draftPack.reviewCountsBySection.vocabulary.approved, 1);
   assert.equal(report.draftPack.reviewCountsBySection.concepts.rejected, 1);
   assert.equal(report.pendingReview.totalPending, 1);
-  assert.deepEqual(report.pendingReview.items.vocabulary[0], {
-    section: 'vocabulary',
-    index: 0,
-    label: 'net-force',
-    reviewStatus: 'pending',
-    confidence: 'medium',
-    sourceFile: 'teacher_force_notes.txt',
-    sourceLocation: 'Full Text',
-    sourceTextSnippet: 'Force is a push or pull.',
-    editableFields: {
-      studentDefinition: 'Net force is the total force on an object.',
-      teacherDefinition: 'Net force is the vector sum of forces acting on an object.',
-      misconception: 'Students may think balanced forces always mean no forces exist.'
+  assert.deepEqual(
+    {
+      section: report.pendingReview.items.vocabulary[0].section,
+      index: report.pendingReview.items.vocabulary[0].index,
+      label: report.pendingReview.items.vocabulary[0].label,
+      reviewStatus: report.pendingReview.items.vocabulary[0].reviewStatus,
+      confidence: report.pendingReview.items.vocabulary[0].confidence,
+      sourceFile: report.pendingReview.items.vocabulary[0].sourceFile,
+      sourceLocation: report.pendingReview.items.vocabulary[0].sourceLocation,
+      sourceTextSnippet: report.pendingReview.items.vocabulary[0].sourceTextSnippet,
+      editableFields: report.pendingReview.items.vocabulary[0].editableFields
+    },
+    {
+      section: 'vocabulary',
+      index: 0,
+      label: 'net-force',
+      reviewStatus: 'pending',
+      confidence: 'medium',
+      sourceFile: 'teacher_force_notes.txt',
+      sourceLocation: 'Full Text',
+      sourceTextSnippet: 'Force is a push or pull.',
+      editableFields: {
+        studentDefinition: 'Net force is the total force on an object.',
+        teacherDefinition: 'Net force is the vector sum of forces acting on an object.',
+        misconception: 'Students may think balanced forces always mean no forces exist.'
+      }
     }
+  );
+  assert.equal(report.pendingReview.items.vocabulary[0].itemId, 'net-force');
+  assert.equal(report.pendingReview.items.vocabulary[0].draftWording, 'Net force is the total force on an object.');
+  assert.equal(report.pendingReview.items.vocabulary[0].validationStatus, '');
+  assert.equal(report.pendingReview.items.vocabulary[0].standardsStatusLabel, 'not aligned yet');
+  assert.deepEqual(report.reviewItems.items.vocabulary[0].standards, {
+    linkedStandardIds: [],
+    suggestedStandardIds: [],
+    alignmentStatus: 'not_aligned_yet',
+    alignmentSource: 'none'
   });
   assert.equal(report.pendingReview.items.referenceFormulas.length, 0);
   assert.equal(report.promotionReadiness.ready, false);
