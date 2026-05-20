@@ -22,3 +22,16 @@ server.js.bak-*
 logs/
 backups/
 tmp/model-responses/
+
+# Local upload artifacts (keep folder structure via .gitkeep)
+knowledge/uploads/incoming/*
+!knowledge/uploads/incoming/.gitkeep
+knowledge/uploads/extracted/*
+!knowledge/uploads/extracted/.gitkeep
+knowledge/uploads/page-images/*
+!knowledge/uploads/page-images/.gitkeep
+knowledge/uploads/ocr/*
+!knowledge/uploads/ocr/.gitkeep
+
+# Review handoff artifacts
+review-handoff/
