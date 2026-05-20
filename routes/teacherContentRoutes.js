@@ -724,7 +724,8 @@ async function prepareReviewDraftFromUpload(uploadId, body = {}, options = {}) {
     importMode: selectedImportRequested ? 'selected' : importMode,
     importIntent,
     importSelection,
-    autoImportPlan
+    autoImportPlan,
+    adaptiveImportLoop: autoRecommendationAccepted === true && !previewOnly && !selectedImportRequested
   });
 
   if (!generation.success) {
@@ -811,7 +812,18 @@ async function prepareReviewDraftFromUpload(uploadId, body = {}, options = {}) {
       importSelection: generation.importSelection,
       importScope: generation.importScope,
       selectedImportEstimate: generation.selectedImportEstimate,
-      coverageSummary: generation.coverageReport && generation.coverageReport.coverageSummary,
+      coverageReport: generation.coverageReport || draftReport.coverageReport || null,
+      coverageSummary: generation.coverageReport && generation.coverageReport.coverageSummary
+        || draftReport.coverageReport && draftReport.coverageReport.coverageSummary
+        || null,
+      sourceManifest: generation.coverageReport && Array.isArray(generation.coverageReport.sourceManifest)
+        ? generation.coverageReport.sourceManifest
+        : draftReport.coverageReport && Array.isArray(draftReport.coverageReport.sourceManifest)
+          ? draftReport.coverageReport.sourceManifest
+          : [],
+      reviewState: generation.coverageReport && generation.coverageReport.allChunksTerminal === true
+        ? (generation.partialDraft === true ? 'partial' : 'completed')
+        : 'partial',
       timeline: generation.timeline || [],
       dashboard: getTeacherContentDashboard(options),
       drafts: listDraftPacksForReview(options).draftPacks
@@ -940,12 +952,7 @@ function hasUsableImportSelection(selection = {}) {
 
 function resolveAutoImportMode(autoImportPlan = {}) {
   if (autoImportPlan.mode === 'manual_review_needed') return '';
-  if (autoImportPlan.recommendedImportScope === 'full_document') return 'full';
-  if (autoImportPlan.recommendedImportScope === 'selected_range') return 'selected';
-  if (autoImportPlan.recommendedImportScope === 'preview_sample') {
-    return Array.isArray(autoImportPlan.batches) && autoImportPlan.batches.length ? 'selected' : '';
-  }
-  return '';
+  return 'full';
 }
 
 function makeAutoImportSelection(autoImportPlan = {}, importEstimate = {}) {
@@ -1102,6 +1109,11 @@ function makePrepareReviewFailurePayload(result = {}, context = {}) {
     invalidItems: result.invalidItems || [],
     repairNeeded: result.repairNeeded || [],
     failedBatches: result.failedBatches || [],
+    coverageReport: result.coverageReport || null,
+    sourceManifest: result.coverageReport && Array.isArray(result.coverageReport.sourceManifest)
+      ? result.coverageReport.sourceManifest
+      : [],
+    reviewState: result.coverageReport && result.coverageReport.allChunksTerminal === true ? 'partial' : 'incomplete',
     coverageSummary: result.coverageReport && result.coverageReport.coverageSummary,
     rawModelResponsePath: result.rawModelResponsePath || ''
   };

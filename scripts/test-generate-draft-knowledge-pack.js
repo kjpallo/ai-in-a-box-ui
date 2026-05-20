@@ -75,6 +75,7 @@ async function main() {
     await assertSelectedRangeCoverageKeepsQueuedChunks();
     await assertModelCallsStaySequential();
     await assertModelCrashRetriesWithSmallerChunks();
+    await assertAdaptiveLoopProcessesAllChunksToTerminalStates();
     await assertRetryFailureReportsBatchCoverage();
     await assertCodeFencedJsonCreatesDraft();
     await assertExtraTextAroundJsonCreatesDraftWhenUnambiguous();
@@ -1391,6 +1392,83 @@ async function assertModelCrashRetriesWithSmallerChunks() {
   assert.ok(result.warnings.includes('Recovered with smaller batch.'));
 }
 
+async function assertAdaptiveLoopProcessesAllChunksToTerminalStates() {
+  const extractionPath = writeTempExtraction('adaptive_loop_extraction.json', makeAdaptiveLoopExtraction());
+  const outputDraftDir = path.join(tempRoot, 'adaptive-loop-drafts');
+  const calls = [];
+  const result = await generateDraftKnowledgePack({
+    extractionJsonPath: extractionPath,
+    outputDraftDir,
+    adaptiveImportLoop: true,
+    maxBatchChunks: 1,
+    maxBatchCharacters: 350,
+    retryMaxBatchCharacters: 180,
+    modelClient: async ({ prompt }) => {
+      const text = String(prompt || '');
+      const page = text.includes('ADAPTIVE_PAGE_5_TOKEN') ? 5
+        : text.includes('ADAPTIVE_PAGE_6_TOKEN') ? 6
+        : text.includes('ADAPTIVE_PAGE_2_TOKEN') ? 2
+        : 1;
+      calls.push(page);
+      if (page === 5) {
+        throw new Error('Ollama returned HTTP 500: {"error":"model runner has unexpectedly stopped, this may be due to resource limitations"}');
+      }
+      if (page === 6) {
+        return JSON.stringify(makeGeneratedPack({
+          packId: 'generated-adaptive-loop',
+          vocabulary: [],
+          concepts: [],
+          referenceFormulas: [],
+          problemBank: [],
+          standardsMap: [],
+          smokeTests: []
+        }));
+      }
+      return JSON.stringify(makeGeneratedPack({
+        packId: 'generated-adaptive-loop',
+        vocabulary: [makeVocabularyItemForPage(page || 1)],
+        concepts: [makeConceptItemForPage(page || 1)],
+        referenceFormulas: [],
+        problemBank: [],
+        standardsMap: [],
+        smokeTests: []
+      }));
+    }
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  assert.ok(calls.includes(1));
+  assert.ok(calls.includes(2));
+  assert.ok(calls.includes(5));
+  assert.ok(calls.includes(6));
+  assert.ok(!calls.includes(3), 'empty chunk should stay skipped_empty and not run through Gemma.');
+  assert.ok(!calls.includes(4), 'needs_review chunk should remain terminal and not run through Gemma.');
+  assert.ok(result.timeline.some((event) => event.type === 'adaptive_progress_saved'));
+
+  const manifest = result.coverageReport.sourceManifest;
+  assert.equal(manifest.length, 6);
+  assert.equal(manifest[0].status, 'drafted');
+  assert.equal(manifest[1].status, 'drafted');
+  assert.equal(manifest[2].status, 'skipped_empty');
+  assert.equal(manifest[3].status, 'needs_review');
+  assert.equal(manifest[4].status, 'failed_after_retries');
+  assert.equal(manifest[5].status, 'no_items_found');
+  assert.equal(result.coverageReport.coverageSummary.totalChunks, 6);
+  assert.equal(result.coverageReport.coverageSummary.queuedChunks, 0);
+  assert.equal(result.coverageReport.coverageSummary.allChunksTerminal, true);
+  assert.equal(result.coverageReport.coverageSummary.failedChunks, 1);
+  assert.equal(result.coverageReport.coverageSummary.noItemsFoundChunks, 1);
+  assert.equal(result.coverageReport.coverageSummary.skippedEmptyChunks, 1);
+  assert.equal(result.coverageReport.coverageSummary.needsReviewChunks, 1);
+  assert.ok(result.coverageReport.failedBatches.length >= 1);
+
+  const generated = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
+  assert.ok(generated.vocabulary.some((item) => item.sourceLocation === 'Page 1'));
+  assert.ok(generated.vocabulary.length >= 1, 'earlier successful chunk results should remain saved.');
+  assert.ok(!generated.vocabulary.some((item) => item.sourceLocation === 'Page 5'));
+  assert.equal(generated.metadata.importCoverage.coverageSummary.allChunksTerminal, true);
+}
+
 async function assertRetryFailureReportsBatchCoverage() {
   const extraction = makeLargePdfExtraction({ pages: 2, charactersPerPage: 3200 });
   const failurePath = path.join(tempRoot, 'large_retry_failure_extraction.json');
@@ -2195,6 +2273,69 @@ function makeLargePdfExtraction(options = {}) {
       detectedType: 'pdf',
       characterCount: text.length,
       pageCount
+    },
+    warnings: [],
+    errors: []
+  };
+}
+
+function makeAdaptiveLoopExtraction() {
+  const sections = [
+    {
+      label: 'Page 1',
+      sourceLocation: 'Page 1',
+      pageNumber: 1,
+      text: 'Vocabulary ADAPTIVE_PAGE_1_TOKEN: energy means capacity to do work.'
+    },
+    {
+      label: 'Page 2',
+      sourceLocation: 'Page 2',
+      pageNumber: 2,
+      text: 'Concept ADAPTIVE_PAGE_2_TOKEN: kinetic energy depends on motion.'
+    },
+    {
+      label: 'Page 3',
+      sourceLocation: 'Page 3',
+      pageNumber: 3,
+      text: ''
+    },
+    {
+      label: 'Page 4',
+      sourceLocation: 'Page 4',
+      pageNumber: 4,
+      text: 'tiny'
+    },
+    {
+      label: 'Page 5',
+      sourceLocation: 'Page 5',
+      pageNumber: 5,
+      text: 'Formula section ADAPTIVE_PAGE_5_TOKEN with enough text to queue and then fail in adaptive loop.'
+    },
+    {
+      label: 'Page 6',
+      sourceLocation: 'Page 6',
+      pageNumber: 6,
+      text: 'Definitions page ADAPTIVE_PAGE_6_TOKEN that may produce no vocabulary, concept, or formula items.'
+    }
+  ];
+  const pages = sections.map((section) => ({
+    pageNumber: section.pageNumber,
+    text: section.text
+  }));
+  return {
+    success: true,
+    filePath: '/tmp/adaptive_loop_packet.pdf',
+    fileName: 'adaptive_loop_packet.pdf',
+    extension: '.pdf',
+    mimeGuess: 'application/pdf',
+    text: sections.map((section) => section.text).join('\n\n'),
+    sections,
+    pages,
+    tables: [],
+    metadata: {
+      detectedType: 'pdf',
+      characterCount: sections.reduce((sum, section) => sum + section.text.length, 0),
+      pageCount: 6
     },
     warnings: [],
     errors: []

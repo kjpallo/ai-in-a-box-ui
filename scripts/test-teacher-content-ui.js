@@ -483,9 +483,8 @@ function assertTrueTwoPageTeacherWorkflowUi() {
 
   const recommendedFunction = ui.match(/async function runRecommendedImport\(\) \{([\s\S]*?)\n  async function prepareReviewFromUpload/);
   assert.ok(recommendedFunction, 'Expected runRecommendedImport function.');
-  assert.match(recommendedFunction[1], /recommendedImportScope === 'full_document'[\s\S]*prepareReviewFromUpload\('full'/, 'Auto planner full-document plans should run without manual teacher selection.');
-  assert.match(recommendedFunction[1], /recommendedImportScope === 'selected_range'[\s\S]*prepareReviewFromUpload\('selected'/, 'Auto planner selected-range plans should run without manual teacher selection.');
-  assert.match(recommendedFunction[1], /recommendedImportScope === 'preview_sample'[\s\S]*prepareReviewFromUpload\('selected'/, 'Preview-style safe planner plans should create reviewable selected-range draft content.');
+  assert.match(recommendedFunction[1], /prepareReviewFromUpload\('full'/, 'Analyze should always run full adaptive import without asking for range/sample choices.');
+  assert.doesNotMatch(recommendedFunction[1], /prepareReviewFromUpload\('selected'/, 'Automatic Analyze should not stop on selected-range/sample checkpoints.');
 
   [
     'data-review-planner-notes',

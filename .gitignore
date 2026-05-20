@@ -35,3 +35,6 @@ knowledge/uploads/ocr/*
 
 # Review handoff artifacts
 review-handoff/
+
+# Local test/debug scratch
+/tmp/

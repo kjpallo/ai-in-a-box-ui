@@ -103,6 +103,7 @@ async function main() {
     await assertPrepareReviewNoUsablePreviewItemsReturnsStructuredRecoveryJson(handlers);
     await assertSelectedPageRangeImportWritesPartialDraft(handlers);
     await assertAutoPlanPrepareReviewWithoutManualMode(handlers);
+    await assertAnalyzeAdaptiveLoopProcessesManifestToTerminal(handlers);
     assertAutoImportPlannerSmallFileSingleBatch();
     assertAutoImportPlannerMultiPageSequentialBatches();
     assertAutoImportPlannerVeryLargeDoesNotDropTextBearingPages();
@@ -876,7 +877,7 @@ async function assertAutoPlanPrepareReviewWithoutManualMode(handlers) {
   assert.equal(response.body.data.autoImportPlan.limits.maxCharactersPerBatch, 400);
   assert.equal(response.body.data.autoImportPlan.batchCount, 4);
   assert.equal(response.body.data.importScope.scope, 'full_document');
-  assert.equal(calls.length, 4, 'accepted auto planner should use one ultra-safe chunk per Gemma call.');
+  assert.ok(calls.length > 1, 'accepted auto planner should keep looping across multiple source chunks.');
   calls.forEach((call) => {
     const sourceText = String(call.prompt || '').match(/EXTRACTED SOURCE TEXT[\s\S]*?OUTPUT JSON ONLY/)?.[0] || '';
     assert.ok(sourceText.length < 1800, 'auto Analyze Upload prompt source should stay conservatively bounded.');
@@ -885,6 +886,97 @@ async function assertAutoPlanPrepareReviewWithoutManualMode(handlers) {
   const createdPath = path.join(draftPacksDir, response.body.data.packId, 'knowledge_pack.json');
   const generated = JSON.parse(fs.readFileSync(createdPath, 'utf8'));
   assert.equal(generated.metadata.autoImportPlan.recommendedImportScope, 'full_document');
+
+  mockDraftModelClient = async () => JSON.stringify(makeGeneratedPack());
+}
+
+async function assertAnalyzeAdaptiveLoopProcessesManifestToTerminal(handlers) {
+  const uploadId = 'adaptive-loop-analyze';
+  const extraction = makeAdaptiveLoopRouteExtraction({
+    uploadId,
+    originalFileName: 'adaptive_loop_analyze.pdf'
+  });
+  fs.writeFileSync(path.join(uploadExtractedDir, `${uploadId}_extraction.json`), `${JSON.stringify(extraction, null, 2)}\n`);
+  const draftFilesBefore = snapshotFiles(draftPacksDir);
+  const calls = [];
+  mockDraftModelClient = async ({ prompt }) => {
+    const text = String(prompt || '');
+    const pageMatch = text.match(/Page\s+(\d+)/i);
+    const page = pageMatch ? Number(pageMatch[1]) : 1;
+    const marker = text.includes('ADAPTIVE_FAIL_CHUNK_TOKEN') ? 'fail'
+      : text.includes('ADAPTIVE_NO_ITEMS_CHUNK_TOKEN') ? 'no_items'
+      : 'drafted';
+    calls.push(marker);
+    if (marker === 'fail') {
+      throw new Error('Ollama returned HTTP 500: {"error":"model runner has unexpectedly stopped, this may be due to resource limitations"}');
+    }
+    if (marker === 'no_items') {
+      return JSON.stringify(makeGeneratedPack({
+        packId: 'route-adaptive-loop-draft',
+        vocabulary: [],
+        concepts: [],
+        referenceFormulas: [],
+        problemBank: [],
+        standardsMap: [],
+        smokeTests: []
+      }));
+    }
+    return JSON.stringify(makeGeneratedPack({
+      packId: 'route-adaptive-loop-draft',
+      vocabulary: [{
+        ...makeVocabularyItem(`adaptive-${page}`, 'pending'),
+        sourceLocation: `Page ${page}`,
+        sourceTextSnippet: `adaptive page ${page} source`
+      }],
+      concepts: [{
+        ...makeConceptItem(`adaptive-concept-${page}`, 'pending'),
+        sourceLocation: `Page ${page}`,
+        sourceTextSnippet: `adaptive page ${page} source`
+      }],
+      referenceFormulas: [],
+      problemBank: [],
+      standardsMap: [],
+      smokeTests: []
+    }));
+  };
+
+  const response = await request(handlers, 'POST', '/uploads/:uploadId/prepare-review', {
+    packName: 'Adaptive Loop Analyze',
+    useAutoImportPlan: true,
+    useRecommendedImportPlan: true
+  }, {
+    uploadId
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.data.importScope.scope, 'full_document');
+  assert.ok(calls.length > 1, 'adaptive loop should process multiple queued chunks.');
+  assert.equal(response.body.data.reviewState, 'partial');
+  assert.ok(response.body.data.coverageReport);
+  assert.ok(Array.isArray(response.body.data.sourceManifest));
+  assert.equal(response.body.data.coverageSummary.totalChunks, 6);
+  assert.equal(response.body.data.coverageSummary.queuedChunks, 0);
+  assert.equal(response.body.data.coverageSummary.noItemsFoundChunks, 1);
+  assert.equal(response.body.data.coverageSummary.failedChunks, 1);
+  assert.equal(response.body.data.coverageSummary.skippedEmptyChunks, 1);
+  assert.equal(response.body.data.coverageSummary.needsReviewChunks, 1);
+  assert.ok(response.body.data.failedBatches.length >= 1);
+  assert.ok(response.body.data.coverageReport.noKnowledgeChunks.includes('Page 6'));
+  assert.ok(response.body.data.timeline.some((event) => event.type === 'adaptive_progress_saved'));
+
+  const createdPath = path.join(draftPacksDir, response.body.data.packId, 'knowledge_pack.json');
+  assert.equal(fs.existsSync(createdPath), true);
+  const generated = JSON.parse(fs.readFileSync(createdPath, 'utf8'));
+  assert.equal(generated.metadata.importCoverage.coverageSummary.allChunksTerminal, true);
+  assert.equal(generated.metadata.importCoverage.coverageSummary.failedChunks, 1);
+  assert.equal(generated.metadata.importCoverage.coverageSummary.noItemsFoundChunks, 1);
+  assert.ok(generated.vocabulary.some((item) => item.sourceLocation === 'Page 1'));
+  assert.ok(generated.vocabulary.some((item) => item.sourceLocation === 'Page 2'));
+  assert.ok(!generated.vocabulary.some((item) => item.sourceLocation === 'Page 5'));
+
+  const addedDraftFiles = Object.keys(snapshotFiles(draftPacksDir)).filter((filePath) => !draftFilesBefore[filePath]);
+  assert.deepEqual(addedDraftFiles, [path.join(response.body.data.packId, 'knowledge_pack.json')]);
 
   mockDraftModelClient = async () => JSON.stringify(makeGeneratedPack());
 }
@@ -2243,6 +2335,76 @@ function makeLargePdfExtraction(overrides = {}) {
     metadata: {
       detectedType: 'pdf',
       pageCount,
+      characterCount: text.length
+    },
+    upload: {
+      uploadId,
+      originalFileName,
+      storedFileName: `${uploadId}.pdf`,
+      extractionJsonFileName: `${uploadId}_extraction.json`
+    }
+  };
+}
+
+function makeAdaptiveLoopRouteExtraction(overrides = {}) {
+  const uploadId = overrides.uploadId || 'adaptive-loop-analyze';
+  const originalFileName = overrides.originalFileName || 'adaptive_loop_analyze.pdf';
+  const sections = [
+    {
+      label: 'Page 1',
+      sourceLocation: 'Page 1',
+      pageNumber: 1,
+      text: 'Vocabulary: adaptive one means a source-supported term.'
+    },
+    {
+      label: 'Page 2',
+      sourceLocation: 'Page 2',
+      pageNumber: 2,
+      text: 'Concept: adaptive two explains source-supported meaning.'
+    },
+    {
+      label: 'Page 3',
+      sourceLocation: 'Page 3',
+      pageNumber: 3,
+      text: ''
+    },
+    {
+      label: 'Page 4',
+      sourceLocation: 'Page 4',
+      pageNumber: 4,
+      text: 'tiny'
+    },
+    {
+      label: 'Page 5',
+      sourceLocation: 'Page 5',
+      pageNumber: 5,
+      text: 'Failure page ADAPTIVE_FAIL_CHUNK_TOKEN with enough text to queue and fail after retries.'
+    },
+    {
+      label: 'Page 6',
+      sourceLocation: 'Page 6',
+      pageNumber: 6,
+      text: 'A text-bearing page ADAPTIVE_NO_ITEMS_CHUNK_TOKEN that should return JSON without core generated items.'
+    }
+  ];
+  const pages = sections.map((section) => ({
+    pageNumber: section.pageNumber,
+    text: section.text
+  }));
+  const text = sections.map((section) => section.text).join('\n\n');
+  return {
+    ...makeExtraction({
+      uploadId,
+      originalFileName,
+      text,
+      sections
+    }),
+    extension: '.pdf',
+    mimeGuess: 'application/pdf',
+    pages,
+    metadata: {
+      detectedType: 'pdf',
+      pageCount: 6,
       characterCount: text.length
     },
     upload: {

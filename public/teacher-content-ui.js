@@ -2658,31 +2658,10 @@
       render();
       return;
     }
-    if (plan.recommendedImportScope === 'full_document') {
-      return prepareReviewFromUpload('full', {
-        useAutoImportPlan: true,
-        useRecommendedImportPlan: true,
-        confirmFullImport: true
-      });
-    }
-    if (plan.recommendedImportScope === 'selected_range') {
-      return prepareReviewFromUpload('selected', makeRecommendedImportPayload(plan));
-    }
-    if (plan.recommendedImportScope === 'preview_sample') {
-      return prepareReviewFromUpload('selected', {
-        ...makeRecommendedImportPayload(plan),
-        useAutoImportPlan: true,
-        useRecommendedImportPlan: true,
-        importIntent: 'auto_safe_selected_range',
-        selectedImportPreset: 'auto_safe'
-      });
-    }
-    return prepareReviewFromUpload('selected', {
-      ...makeRecommendedImportPayload(plan),
+    return prepareReviewFromUpload('full', {
       useAutoImportPlan: true,
       useRecommendedImportPlan: true,
-      importIntent: 'auto_safe_selected_range',
-      selectedImportPreset: 'auto_safe'
+      confirmFullImport: true
     });
   }
 
@@ -3983,7 +3962,7 @@
     if (Number.isFinite(count) && count > 0) return `${formatNumber(count)} batches planned`;
     if (importMode === 'full') return 'This may take a moment';
     if (importMode === 'selected') return 'Selected range';
-    return 'Preview sample';
+    return 'Running analysis';
   }
 
   function renderImportActivityPanel() {
