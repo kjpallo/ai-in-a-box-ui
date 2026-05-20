@@ -18,6 +18,7 @@ try {
   assertBlocksPendingItems();
   assertPromotesApprovedItemsOnlyWhenRejectedItemsRemain();
   assertExcludesRepairNeededItems();
+  assertBlocksApprovedItemsWithoutSourceGrounding();
   assertBlocksInvalidSolverStatus();
   assertBlocksInvalidStandardReferenceWithBank();
   assertStrictFinalValidationBlocksInvalidApprovedOutput();
@@ -166,6 +167,43 @@ function assertExcludesRepairNeededItems() {
   const promotedPack = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
   assert.deepEqual(promotedPack.vocabulary.map((item) => item.term), ['approved-term']);
   assert.equal(JSON.stringify(promotedPack).includes('repair-needed-term'), false);
+}
+
+function assertBlocksApprovedItemsWithoutSourceGrounding() {
+  writeDraftPack(makePack({
+    packId: 'unsupported-approved-draft-pack',
+    vocabulary: [
+      {
+        ...makeVocabularyItem('unsupported-approved-term'),
+        reviewStatus: 'approved',
+        confidence: 'high',
+        repairStatus: 'repair_needed',
+        sourceGrounding: {
+          status: 'unsupported',
+          termOrTitleFound: true,
+          explanationSupported: false,
+          evidenceStrength: 0,
+          reasons: ['Generated wording was not strongly supported by the extracted source text.']
+        }
+      }
+    ],
+    concepts: [],
+    referenceFormulas: [],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+
+  const result = promoteDraftKnowledgePack('unsupported-approved-draft-pack', {
+    draftPacksDir,
+    approvedPacksDir,
+    standardsBank
+  });
+
+  assert.equal(result.success, false);
+  assert.equal(result.validationPassed, false);
+  assert.ok(result.errors.some((error) => error.includes('source-grounding')));
+  assert.equal(fs.existsSync(path.join(approvedPacksDir, 'unsupported-approved-draft-pack', 'knowledge_pack.json')), false);
 }
 
 function assertBlocksInvalidSolverStatus() {

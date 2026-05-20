@@ -51,6 +51,7 @@ async function main() {
     await assertOllamaRequestIncludesKeepAliveAndUsesTimeout();
     await assertModelCallsUseDeterministicOptions();
     await assertOllamaTimeoutReturnsUsefulError();
+    await assertModelTimeoutClassifiedAsRuntimeFailure();
     await assertValidMockCreatesDraft();
     await assertMultiChunkUploadMergesBatchDrafts();
     await assertDuplicateVocabularyAcrossChunksIsMergedWithEvidence();
@@ -67,6 +68,7 @@ async function main() {
     await assertFullImportDefaultsToAllTextBearingPages();
     await assertPptxFullImportAndPreviewUseTextBearingSlides();
     await assertPreviewBatchFailureReturnsPartialPreview();
+    await assertLaterBatchCrashWritesPartialDraft();
     await assertPreviewValidationFailureReturnsSalvagedPreview();
     await assertSelectedPageRangeProcessesOnlySelectedPages();
     await assertModelCallsStaySequential();
@@ -85,6 +87,11 @@ async function main() {
     await assertConceptTitleDerivedFromSummary();
     await assertVocabularyTermAndIdAreNormalized();
     await assertSourceLessItemsAreKeptPendingReview();
+    await assertHeadingOnlyVocabularyIsRejected();
+    await assertUnsupportedGeneratedDefinitionIsRejected();
+    await assertLowConfidenceGeneratedItemsStayPending();
+    await assertWordProblemOnlyEvidenceCannotApproveGenericVocabulary();
+    await assertReviewItemsPreferOriginalUploadedFilename();
     await assertRequiredFactFieldsAreStillRejected();
     await assertInvalidMockJsonReturnsUsefulError();
     await assertRetryInvalidJsonCanRepairDraft();
@@ -426,6 +433,23 @@ async function assertOllamaTimeoutReturnsUsefulError() {
   } finally {
     restoreHttpRequest();
   }
+}
+
+async function assertModelTimeoutClassifiedAsRuntimeFailure() {
+  const timeoutDraftDir = path.join(tempRoot, 'timeout-drafts');
+  const result = await generateDraftKnowledgePack({
+    extractionJsonPath: extractionPath,
+    outputDraftDir: timeoutDraftDir,
+    timeoutMs: 5,
+    modelClient: async () => new Promise(() => {})
+  });
+
+  assert.equal(result.success, false);
+  assert.equal(result.modelCrash, true);
+  assert.equal(result.modelTimeout, true);
+  assert.ok(result.errors.includes('Local Gemma took too long while reading this batch.'));
+  assert.ok(result.failedBatches[0].errors.includes('Local Gemma took too long while reading this batch.'));
+  assert.equal(fs.existsSync(timeoutDraftDir), false, 'Timed-out generation should not write a partial failed draft.');
 }
 
 async function assertValidMockCreatesDraft() {
@@ -1062,6 +1086,53 @@ async function assertPreviewBatchFailureReturnsPartialPreview() {
   assert.equal(fs.existsSync(outputDraftDir), false, 'partial preview must not write a final draft pack.');
 }
 
+async function assertLaterBatchCrashWritesPartialDraft() {
+  const partialPath = path.join(tempRoot, 'partial_full_import_extraction.json');
+  fs.writeFileSync(partialPath, `${JSON.stringify(makeLargePdfExtraction({ pages: 3, charactersPerPage: 700 }), null, 2)}\n`);
+  const outputDraftDir = path.join(tempRoot, 'partial-full-import-drafts');
+  let calls = 0;
+  const result = await generateDraftKnowledgePack({
+    extractionJsonPath: partialPath,
+    outputDraftDir,
+    maxBatchCharacters: 750,
+    maxBatchChunks: 1,
+    retryMaxBatchCharacters: 350,
+    modelClient: async () => {
+      calls += 1;
+      if (calls >= 3) {
+        throw new Error('Ollama returned HTTP 500: {"error":"model runner has unexpectedly stopped, this may be due to resource limitations"}');
+      }
+      return JSON.stringify(makeGeneratedPack({
+        packId: `generated-partial-full-draft-${calls}`,
+        vocabulary: [makeVocabularyItemForPage(calls)],
+        concepts: [makeConceptItemForPage(calls)],
+        referenceFormulas: [],
+        problemBank: [],
+        standardsMap: [],
+        smokeTests: []
+      }));
+    }
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  assert.equal(result.partialDraft, true);
+  assert.equal(result.failedBatches.length, 1);
+  assert.deepEqual(result.failedBatches[0].pages, [3]);
+  assert.ok(result.timeline.some((event) => event.type === 'partial_draft_ready'));
+  assert.ok(result.timeline.some((event) => event.type === 'draft_ready' && event.message === 'Partial draft ready for review'));
+  assert.equal(result.importScope.completePacketImported, false);
+
+  const generated = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
+  assert.equal(generated.metadata.partialDraft, true);
+  assert.equal(generated.metadata.partialImport.completePacketImported, false);
+  assert.deepEqual(generated.metadata.partialImport.failedPages, [3]);
+  assert.deepEqual(generated.metadata.importCoverage.failedBatches[0].pages, [3]);
+  assert.deepEqual(generated.metadata.partialImport.processedPages, [1, 2]);
+  assert.equal(generated.metadata.importCoverage.processedChunks, 2);
+  assert.ok(generated.vocabulary.some((item) => item.sourceLocation === 'Page 1'), 'successful earlier batch items should be kept.');
+  assert.ok(!generated.vocabulary.some((item) => item.sourceLocation === 'Page 3'), 'failed page items must not be promoted into the partial draft.');
+}
+
 async function assertPreviewValidationFailureReturnsSalvagedPreview() {
   const previewPath = path.join(tempRoot, 'salvaged_validation_preview_extraction.json');
   fs.writeFileSync(previewPath, `${JSON.stringify(makeLargePdfExtraction({ pages: 1, charactersPerPage: 900 }), null, 2)}\n`);
@@ -1249,6 +1320,8 @@ async function assertModelCrashRetriesWithSmallerChunks() {
   assert.ok(calls.length > 1, 'model crash should retry with smaller chunks');
   assert.ok(result.timeline.some((event) => event.type === 'batch_retry'));
   assert.ok(result.timeline.some((event) => event.type === 'batch_retry_sent'));
+  assert.ok(result.timeline.some((event) => event.type === 'batch_retry_recovered' && event.message === 'Recovered with smaller batch.'));
+  assert.ok(result.warnings.includes('Recovered with smaller batch.'));
 }
 
 async function assertRetryFailureReportsBatchCoverage() {
@@ -1267,11 +1340,17 @@ async function assertRetryFailureReportsBatchCoverage() {
   });
 
   assert.equal(result.success, false);
-  assert.ok(result.errors.some((error) => error.includes('Gemma crashed while reading batch 1')));
-  assert.ok(result.errors.some((error) => error.includes('retried with smaller chunks')));
+  assert.equal(result.modelCrash, true);
+  assert.ok(result.errors.some((error) => error.includes('Local Gemma crashed while reading batch 1')));
+  assert.ok(result.errors.some((error) => error.includes('Retry failed after a smaller batch.')));
+  assert.equal(
+    result.errors.filter((error) => error.includes('Ollama returned HTTP 500')).length,
+    1,
+    'raw Ollama failure should appear once in the backend error list'
+  );
   assert.ok(result.coverageReport.failedBatches.length >= 1);
   assert.ok(result.coverageReport.warnings.some((warning) => warning.includes('Model draft failed for batch 1')));
-  assert.ok(result.timeline.some((event) => event.type === 'error' && event.message.includes('Gemma crashed while reading batch 1')));
+  assert.ok(result.timeline.some((event) => event.type === 'error' && event.message.includes('Local Gemma crashed while reading batch 1')));
 }
 
 async function assertCodeFencedJsonCreatesDraft() {
@@ -1577,6 +1656,162 @@ async function assertSourceLessItemsAreKeptPendingReview() {
   assert.ok(generated.metadata.importNormalization.reviewNeededItems >= 1);
 }
 
+async function assertHeadingOnlyVocabularyIsRejected() {
+  const headingOnlyPath = writeTempExtraction('heading_only_energy_extraction.json', {
+    ...makeExtraction(),
+    text: 'Energy',
+    sections: [{ label: 'Page 1', sourceLocation: 'Page 1', text: 'Energy' }],
+    metadata: { detectedType: 'txt', characterCount: 6, pageCount: 1 }
+  });
+
+  const result = await generateDraftKnowledgePack({
+    extractionJsonPath: headingOnlyPath,
+    outputDraftDir: path.join(tempRoot, 'heading-only-vocab-drafts'),
+    modelClient: async () => JSON.stringify(makeGeneratedPack({
+      vocabulary: [
+        {
+          ...makeVocabularyItem(),
+          term: 'Energy',
+          studentDefinition: 'Energy is the ability to do work.',
+          teacherDefinition: 'Energy is the capacity to cause change.',
+          sourceLocation: 'Page 1',
+          sourceTextSnippet: 'Energy'
+        }
+      ],
+      concepts: [],
+      referenceFormulas: [],
+      problemBank: [],
+      standardsMap: [],
+      smokeTests: []
+    }))
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  const generated = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
+  assert.equal(generated.vocabulary[0].reviewStatus, 'rejected');
+  assert.equal(generated.vocabulary[0].confidence, 'low');
+  assert.equal(generated.vocabulary[0].repairStatus, 'repair_needed');
+  assert.equal(generated.vocabulary[0].sourceGrounding.status, 'unsupported');
+  assert.ok(generated.vocabulary[0].warnings.includes('Generated wording was not strongly supported by the extracted source text.'));
+  assert.ok(generated.vocabulary[0].warnings.includes('Only limited text was extracted from this range. Review may need OCR later.'));
+}
+
+async function assertUnsupportedGeneratedDefinitionIsRejected() {
+  const unsupportedPath = writeTempExtraction('unsupported_potential_energy_extraction.json', makeWordProblemOnlyExtraction());
+
+  const result = await generateDraftKnowledgePack({
+    extractionJsonPath: unsupportedPath,
+    outputDraftDir: path.join(tempRoot, 'unsupported-definition-drafts'),
+    modelClient: async () => JSON.stringify(makeGeneratedPack({
+      vocabulary: [makePotentialEnergyVocabularyItem()],
+      concepts: [],
+      referenceFormulas: [],
+      problemBank: [],
+      standardsMap: [],
+      smokeTests: []
+    }))
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  const generated = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
+  assert.equal(generated.vocabulary[0].term, 'Potential Energy');
+  assert.notEqual(generated.vocabulary[0].reviewStatus, 'approved');
+  assert.equal(generated.vocabulary[0].repairStatus, 'repair_needed');
+  assert.ok(['weak', 'unsupported'].includes(generated.vocabulary[0].sourceGrounding.status));
+  assert.ok(generated.vocabulary[0].warnings.includes('Generated wording was not strongly supported by the extracted source text.'));
+}
+
+async function assertLowConfidenceGeneratedItemsStayPending() {
+  const result = await generateDraftKnowledgePack({
+    extractionJsonPath: extractionPath,
+    outputDraftDir: path.join(tempRoot, 'low-confidence-source-grounded-drafts'),
+    modelClient: async () => JSON.stringify(makeGeneratedPack({
+      vocabulary: [
+        {
+          ...makeVocabularyItem(),
+          reviewStatus: 'approved',
+          confidence: 'low'
+        }
+      ],
+      concepts: [],
+      referenceFormulas: [],
+      problemBank: [],
+      standardsMap: [],
+      smokeTests: []
+    }))
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  const generated = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
+  assert.equal(generated.vocabulary[0].reviewStatus, 'pending');
+  assert.equal(generated.vocabulary[0].confidence, 'low');
+  assert.equal(generated.vocabulary[0].sourceGrounding.status, 'supported');
+}
+
+async function assertWordProblemOnlyEvidenceCannotApproveGenericVocabulary() {
+  const wordProblemPath = writeTempExtraction('word_problem_only_energy_extraction.json', makeWordProblemOnlyExtraction());
+
+  const result = await generateDraftKnowledgePack({
+    extractionJsonPath: wordProblemPath,
+    outputDraftDir: path.join(tempRoot, 'word-problem-only-vocab-drafts'),
+    modelClient: async () => JSON.stringify(makeGeneratedPack({
+      vocabulary: [
+        {
+          ...makePotentialEnergyVocabularyItem(),
+          reviewStatus: 'approved',
+          confidence: 'high'
+        }
+      ],
+      concepts: [],
+      referenceFormulas: [],
+      problemBank: [],
+      standardsMap: [],
+      smokeTests: []
+    }))
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  const generated = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
+  assert.notEqual(generated.vocabulary[0].reviewStatus, 'approved');
+  assert.equal(generated.vocabulary[0].repairStatus, 'repair_needed');
+  assert.ok(['weak', 'unsupported'].includes(generated.vocabulary[0].sourceGrounding.status));
+}
+
+async function assertReviewItemsPreferOriginalUploadedFilename() {
+  const originalNamePath = writeTempExtraction('original_filename_energy_extraction.json', {
+    ...makeExtraction(),
+    upload: {
+      uploadId: 'upload-original-name',
+      originalFileName: 'Original Energy Packet.pdf',
+      storedFileName: 'upload-original-name.pdf',
+      extractionJsonFileName: 'upload-original-name_extraction.json'
+    },
+    fileName: 'upload-original-name.pdf'
+  });
+
+  const item = {
+    ...makeVocabularyItem(),
+    sourceFile: 'upload-original-name.pdf'
+  };
+  const result = await generateDraftKnowledgePack({
+    extractionJsonPath: originalNamePath,
+    outputDraftDir: path.join(tempRoot, 'original-filename-drafts'),
+    modelClient: async () => JSON.stringify(makeGeneratedPack({
+      vocabulary: [item],
+      concepts: [],
+      referenceFormulas: [],
+      problemBank: [],
+      standardsMap: [],
+      smokeTests: []
+    }))
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  const generated = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
+  assert.equal(generated.vocabulary[0].sourceFile, 'Original Energy Packet.pdf');
+  assert.equal(generated.metadata.sourceUpload.originalFileName, 'Original Energy Packet.pdf');
+}
+
 async function assertRequiredFactFieldsAreStillRejected() {
   const outputDraftDir = path.join(tempRoot, 'missing-facts-drafts');
   const result = await generateDraftKnowledgePack({
@@ -1722,6 +1957,59 @@ function makeExtraction() {
     },
     warnings: [],
     errors: []
+  };
+}
+
+function writeTempExtraction(fileName, extraction) {
+  const filePath = path.join(tempRoot, fileName);
+  fs.writeFileSync(filePath, `${JSON.stringify(extraction, null, 2)}\n`);
+  return filePath;
+}
+
+function makeWordProblemOnlyExtraction() {
+  const text = [
+    'Potential Energy Practice',
+    'A crate is raised onto a platform. Calculate the work done by the lift.',
+    'A go-cart climbs a ramp while the motor provides constant power.'
+  ].join('\n');
+  return {
+    success: true,
+    filePath: '/tmp/potential_energy_word_problems.pdf',
+    fileName: 'potential_energy_word_problems.pdf',
+    extension: '.pdf',
+    mimeGuess: 'application/pdf',
+    text,
+    sections: [
+      {
+        label: 'Page 3',
+        sourceLocation: 'Page 3',
+        pageNumber: 3,
+        text
+      }
+    ],
+    tables: [],
+    metadata: {
+      detectedType: 'pdf',
+      characterCount: text.length,
+      pageCount: 1
+    },
+    warnings: [],
+    errors: []
+  };
+}
+
+function makePotentialEnergyVocabularyItem() {
+  return {
+    ...makeVocabularyItem(),
+    term: 'Potential Energy',
+    aliases: [],
+    studentDefinition: 'Potential energy is stored energy due to position.',
+    teacherDefinition: 'Potential energy is energy stored in an object because of position or configuration.',
+    sourceFile: 'potential_energy_word_problems.pdf',
+    sourceLocation: 'Page 3',
+    sourceTextSnippet: 'Potential Energy Practice A crate is raised onto a platform. Calculate the work done by the lift. A go-cart climbs a ramp while the motor provides constant power.',
+    reviewStatus: 'approved',
+    confidence: 'high'
   };
 }
 
@@ -1932,6 +2220,7 @@ function makeGeneratedPack(overrides = {}) {
 function makeVocabularyItemForPage(page) {
   return {
     ...makeVocabularyItem(),
+    vocabularyId: `page-${page}-term`,
     term: `page-${page}-term`,
     sourceFile: 'large_energy_packet.pdf',
     sourceLocation: `Page ${page}`,

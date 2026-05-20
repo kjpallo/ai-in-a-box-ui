@@ -28,7 +28,9 @@ const { extractTextFromFile } = require('../lib/uploads/extractTextFromFile');
 const {
   buildImportEstimate,
   generateDraftKnowledgePack,
-  identifyTextBearingPages
+  identifyTextBearingPages,
+  isModelCrashMessage,
+  isModelTimeoutMessage
 } = require('../lib/uploads/generateDraftKnowledgePack');
 const { planTeacherContentImport } = require('../lib/uploads/planTeacherContentImport');
 const {
@@ -40,6 +42,11 @@ const {
 const SAFE_PACK_ID_PATTERN = /^[a-z0-9_-]+$/;
 const SAFE_UPLOAD_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{0,127}$/;
 const DEFAULT_UPLOAD_LIMIT_BYTES = 15 * 1024 * 1024;
+const DEFAULT_PREVIEW_SELECTED_GENERATION_TIMEOUT_MS = 120000;
+const DEFAULT_FULL_GENERATION_TIMEOUT_MS = 300000;
+const AUTO_ANALYZE_MAX_BATCH_CHARACTERS = 400;
+const AUTO_ANALYZE_RETRY_MAX_BATCH_CHARACTERS = 200;
+const AUTO_ANALYZE_TIMEOUT_MS = 120000;
 
 function createTeacherContentRoutes(options = {}) {
   const router = express.Router();
@@ -125,18 +132,14 @@ function registerTeacherContentRoutes(app, options = {}) {
       const extractionTimeline = buildExtractionTimeline(uploadData);
       const extractionJsonPath = getExtractionJsonPathForUpload(uploadData.uploadId, options);
       const extraction = readJsonFile(extractionJsonPath, 'extraction JSON').value || null;
-      const importEstimate = buildImportEstimate(extraction, {
-        ...options,
-        maxBatchCharacters: positiveNumberOrUndefined(upload.fields && upload.fields.maxBatchCharacters) || options.maxBatchCharacters,
-        retryMaxBatchCharacters: positiveNumberOrUndefined(upload.fields && upload.fields.retryMaxBatchCharacters) || options.retryMaxBatchCharacters
+      const autoAnalyzeOptions = makeAutoAnalyzeGenerationOptions({
+        ...options
       });
+      const importEstimate = buildImportEstimate(extraction, autoAnalyzeOptions);
       const autoImportPlan = planTeacherContentImport({
         extraction,
         fileSizeBytes: upload.buffer.length,
-        settings: {
-          ...options,
-          maxBatchCharacters: positiveNumberOrUndefined(upload.fields && upload.fields.maxBatchCharacters) || options.maxBatchCharacters
-        },
+        settings: autoAnalyzeOptions,
         memory: options.systemMemory
       });
 
@@ -149,9 +152,7 @@ function registerTeacherContentRoutes(app, options = {}) {
           autoImportPlan,
           requiresPreview: autoImportPlan.recommendedImportScope !== 'full_document',
           nextStep: autoImportPlan.recommendedImportScope === 'full_document' ? 'generate_draft' : 'run_preview',
-          message: autoImportPlan.recommendedImportScope === 'full_document'
-            ? 'Upload extracted. Review the recommended full-document plan, then click Generate Draft.'
-            : 'Upload extracted. Review the recommended safer plan, then click Generate Draft or override it.',
+          message: 'Upload extracted. Analysis will use conservative local-model batches.',
           timeline: [
             ...extractionTimeline,
             makeTimelineEvent('import_estimate_ready', 'Import estimate ready', importEstimate),
@@ -475,7 +476,7 @@ async function storeAndExtractUpload(upload, options = {}) {
     };
   }
 
-  const detection = detectUploadFileType(originalFileName);
+  const detection = detectUploadFileType(originalFileName, { buffer: upload.buffer });
   if (!detection.supported) {
     return {
       success: false,
@@ -497,6 +498,10 @@ async function storeAndExtractUpload(upload, options = {}) {
   fs.writeFileSync(storedFilePath, upload.buffer);
 
   const extraction = await extractTextFromFile(storedFilePath);
+  const extractionWarnings = [
+    ...(detection.warnings || []),
+    ...(extraction.warnings || [])
+  ];
   const autoImportPlan = planTeacherContentImport({
     extraction,
     fileSizeBytes: upload.buffer.length,
@@ -511,7 +516,8 @@ async function storeAndExtractUpload(upload, options = {}) {
       storedFileName,
       extractionJsonFileName
     },
-    importPlan: autoImportPlan
+    importPlan: autoImportPlan,
+    warnings: extractionWarnings
   };
   fs.writeFileSync(extractionJsonPath, `${JSON.stringify(extractionWithUploadMetadata, null, 2)}\n`);
 
@@ -527,12 +533,12 @@ async function storeAndExtractUpload(upload, options = {}) {
       pageCount: Number(extraction.metadata && extraction.metadata.pageCount || 0),
       sectionsCount: extraction.sections.length,
       tablesCount: extraction.tables.length,
-      warnings: extraction.warnings || [],
+      warnings: extractionWarnings,
       errors: extraction.errors || [],
-      extraction: makeExtractionSummary(extraction),
+      extraction: makeExtractionSummary(extractionWithUploadMetadata),
       autoImportPlan
     },
-    warnings: [...(extraction.warnings || []), ...(autoImportPlan.warnings || [])],
+    warnings: [...extractionWarnings, ...(autoImportPlan.warnings || [])],
     errors: extraction.errors || []
   };
 
@@ -573,23 +579,30 @@ async function prepareReviewDraftFromUpload(uploadId, body = {}, options = {}) {
     ...options,
     maxBatchCharacters: positiveNumberOrUndefined(body.maxBatchCharacters) || options.maxBatchCharacters,
     retryMaxBatchCharacters: positiveNumberOrUndefined(body.retryMaxBatchCharacters) || options.retryMaxBatchCharacters,
+    maxBatchChunks: positiveNumberOrUndefined(body.maxBatchChunks) || options.maxBatchChunks,
     previewMaxPages: positiveNumberOrUndefined(body.previewMaxPages) || options.previewMaxPages,
     previewMaxCharacters: positiveNumberOrUndefined(body.previewMaxCharacters) || positiveNumberOrUndefined(body.maxPreviewChars) || options.previewMaxCharacters,
     previewMode: nonEmptyString(body.previewMode) ? body.previewMode.trim() : nonEmptyString(body.previewSize) ? body.previewSize.trim() : options.previewMode
   };
-  const importEstimate = buildImportEstimate(extraction, generationOptions);
+  const autoRecommendationAccepted = body.useAutoImportPlan === true || body.useRecommendedImportPlan === true;
+  const effectiveGenerationOptions = autoRecommendationAccepted
+    ? makeAutoAnalyzeGenerationOptions(generationOptions)
+    : generationOptions;
+  const importEstimate = buildImportEstimate(extraction, effectiveGenerationOptions);
   const autoImportPlan = extraction && extraction.importPlan
     ? extraction.importPlan
     : planTeacherContentImport({
       extraction,
-      settings: generationOptions,
+      settings: effectiveGenerationOptions,
       memory: options.systemMemory
     });
-  const importMode = String(body.importMode || body.mode || '').trim().toLowerCase();
+  let importMode = String(body.importMode || body.mode || '').trim().toLowerCase();
+  if (!importMode && autoRecommendationAccepted) {
+    importMode = resolveAutoImportMode(autoImportPlan);
+  }
   const previewOnly = importMode === 'preview' || body.preview === true;
   const fullImportRequested = importMode === 'full' || body.fullImport === true;
   const selectedImportRequested = importMode === 'selected' || importMode === 'range' || body.selectedImport === true;
-  const autoRecommendationAccepted = body.useAutoImportPlan === true || body.useRecommendedImportPlan === true;
   const confirmedFullImport = body.confirmFullImportText === 'CONFIRM'
     || body.fullImportConfirmation === 'CONFIRM'
     || body.confirmationText === 'CONFIRM'
@@ -632,7 +645,11 @@ async function prepareReviewDraftFromUpload(uploadId, body = {}, options = {}) {
     }, { uploadId, body, extraction, importSelection: null, importEstimate });
   }
 
-  const importSelection = (selectedImportRequested || previewOnly) ? makeRouteImportSelection(body) : null;
+  const routeImportSelection = makeRouteImportSelection(body);
+  const autoImportSelection = autoRecommendationAccepted ? makeAutoImportSelection(autoImportPlan, importEstimate) : null;
+  const importSelection = (selectedImportRequested || previewOnly)
+    ? (hasUsableImportSelection(routeImportSelection) ? routeImportSelection : autoImportSelection)
+    : null;
   if (previewOnly && !hasUsableImportSelection(importSelection)) {
     return makePrepareReviewFailurePayload({
       success: false,
@@ -677,29 +694,41 @@ async function prepareReviewDraftFromUpload(uploadId, body = {}, options = {}) {
     standardsBank: options.standardsBank,
     standardsBankPath: sanitizeStandardsBankPath(body.standardsBankPath, options),
     model: nonEmptyString(body.model) ? body.model.trim() : undefined,
-    timeoutMs: positiveNumberOrUndefined(body.timeoutMs),
+    timeoutMs: resolvePrepareReviewGenerationTimeoutMs({
+      body,
+      options,
+      previewOnly,
+      selectedImportRequested,
+      fullImportRequested,
+      autoRecommendationAccepted
+    }),
     keepAlive: nonEmptyString(body.keepAlive) ? body.keepAlive.trim() : undefined,
     retryInvalidJson: body.retryInvalidJson === true,
     packName: scopedPackName,
     modelClient: options.modelClient || options.draftModelClient,
     rawModelResponsesDir: options.rawModelResponsesDir,
-    maxBatchCharacters: generationOptions.maxBatchCharacters,
-    retryMaxBatchCharacters: generationOptions.retryMaxBatchCharacters,
+    maxBatchCharacters: effectiveGenerationOptions.maxBatchCharacters,
+    retryMaxBatchCharacters: effectiveGenerationOptions.retryMaxBatchCharacters,
     previewMaxPages: generationOptions.previewMaxPages,
     previewMaxCharacters: generationOptions.previewMaxCharacters,
     previewMode: generationOptions.previewMode,
-    maxBatchChunks: previewOnly && String(generationOptions.previewMode || '').toLowerCase().includes('ultra') ? 1 : options.maxBatchChunks,
+    maxBatchChunks: autoRecommendationAccepted || (previewOnly && String(generationOptions.previewMode || '').toLowerCase().includes('ultra')) ? 1 : effectiveGenerationOptions.maxBatchChunks,
     previewOnly,
     importMode: selectedImportRequested ? 'selected' : importMode,
     importIntent,
-    importSelection
+    importSelection,
+    autoImportPlan
   });
 
   if (!generation.success) {
-    const teacherFriendlyError = previewOnly && isNoUsablePreviewFailure(generation)
+    const teacherFriendlyError = isModelTimeoutGenerationFailure(generation)
+      ? 'Local Gemma took too long while reading this batch.'
+      : isModelCrashGenerationFailure(generation)
+      ? 'Local Gemma crashed while reading this batch.'
+      : previewOnly && isNoUsablePreviewFailure(generation)
       ? 'Gemma did not return any usable preview items from this range.'
       : firstError(generation.errors, 'Review draft preparation failed.');
-    const technicalErrors = (generation.errors || []).slice(1);
+    const technicalErrors = (generation.errors || []).filter((error) => error !== teacherFriendlyError);
     return makePrepareReviewFailurePayload({
       success: false,
       errors: generation.errors || ['Review draft preparation failed.'],
@@ -713,7 +742,9 @@ async function prepareReviewDraftFromUpload(uploadId, body = {}, options = {}) {
       rawModelResponsePath: generation.rawModelResponsePath,
       timeline: generation.timeline || [],
       coverageReport: generation.coverageReport,
-      failedBatches: generation.failedBatches || []
+      failedBatches: generation.failedBatches || [],
+      modelTimeout: generation.modelTimeout === true,
+      modelCrash: generation.modelCrash === true
     }, { uploadId, body, extraction, importSelection, importEstimate });
   }
 
@@ -759,7 +790,11 @@ async function prepareReviewDraftFromUpload(uploadId, body = {}, options = {}) {
     data: {
       packId: generation.packId,
       title: generation.title || draftReport.draftPack?.title || generation.packId,
-      message: 'Review draft prepared.',
+      message: generation.partialDraft === true
+        ? 'Some slides could not be analyzed. Review the extracted items below, then retry the failed slides later if needed.'
+        : 'Review draft prepared.',
+      partialDraft: generation.partialDraft === true,
+      failedBatches: generation.failedBatches || [],
       sourceMatch,
       draftReport,
       importEstimate,
@@ -884,12 +919,50 @@ function makeRouteImportSelection(body = {}) {
 }
 
 function hasUsableImportSelection(selection = {}) {
+  if (!selection || typeof selection !== 'object') return false;
   return Boolean(
     positiveNumberOrUndefined(selection.pageStart)
     || positiveNumberOrUndefined(selection.pageEnd)
     || positiveNumberOrUndefined(selection.chunkStart)
     || positiveNumberOrUndefined(selection.chunkEnd)
   );
+}
+
+function resolveAutoImportMode(autoImportPlan = {}) {
+  if (autoImportPlan.mode === 'manual_review_needed') return '';
+  if (autoImportPlan.recommendedImportScope === 'full_document') return 'full';
+  if (autoImportPlan.recommendedImportScope === 'selected_range') return 'selected';
+  if (autoImportPlan.recommendedImportScope === 'preview_sample') {
+    return Array.isArray(autoImportPlan.batches) && autoImportPlan.batches.length ? 'selected' : '';
+  }
+  return '';
+}
+
+function makeAutoImportSelection(autoImportPlan = {}, importEstimate = {}) {
+  const firstBatch = Array.isArray(autoImportPlan.batches) ? autoImportPlan.batches[0] : null;
+  const pageNumbers = Array.isArray(firstBatch && firstBatch.pageNumbers)
+    ? firstBatch.pageNumbers.map(Number).filter((page) => Number.isFinite(page) && page > 0)
+    : [];
+  if (pageNumbers.length) {
+    return {
+      pageStart: Math.min(...pageNumbers),
+      pageEnd: Math.max(...pageNumbers)
+    };
+  }
+  const textPages = Array.isArray(importEstimate.textBearingPages)
+    ? importEstimate.textBearingPages
+    : Array.isArray(importEstimate.pagesWithText)
+      ? importEstimate.pagesWithText
+      : [];
+  const firstTextPage = positiveNumberOrUndefined(importEstimate.firstTextPage)
+    || positiveNumberOrUndefined(textPages[0]);
+  if (firstTextPage) {
+    return {
+      pageStart: firstTextPage,
+      pageEnd: firstTextPage
+    };
+  }
+  return null;
 }
 
 function makeRouteImportSelectionLabel(selection = {}) {
@@ -997,16 +1070,22 @@ function makePrepareReviewFailurePayload(result = {}, context = {}) {
     warnings: Array.isArray(result.warnings) ? result.warnings : [],
     uploadId: context.uploadId || '',
     fileName,
+    originalFileName: fileName,
     sourceType,
+    upload: extraction && extraction.upload ? extraction.upload : null,
     importSelection,
     selectedRange: makeRouteImportSelectionLabel(importSelection),
     extractionCounts,
+    extractionMetadata: extraction && extraction.metadata ? extraction.metadata : null,
     extractionSummary: {
       uploadId: context.uploadId || '',
       fileName,
+      originalFileName: fileName,
       sourceType,
+      metadata: extraction && extraction.metadata ? extraction.metadata : null,
       ...extractionCounts
     },
+    extraction: extraction ? makeExtractionSummary(extraction) : null,
     importEstimate: result.importEstimate || context.importEstimate,
     autoImportPlan: result.autoImportPlan || context.autoImportPlan,
     validationErrors: result.validationErrors || [],
@@ -1064,6 +1143,69 @@ function isNoUsablePreviewFailure(generation = {}) {
   return Array.isArray(generation.errors)
     && generation.errors.length > 0
     && generation.errors.every((error) => /\[[0-9]+\]\./.test(String(error || '')));
+}
+
+function isModelCrashGenerationFailure(generation = {}) {
+  return generation.modelCrash === true
+    || (Array.isArray(generation.errors) && generation.errors.some((error) => isModelCrashMessage(error)))
+    || (Array.isArray(generation.failedBatches) && generation.failedBatches.some((batch) => (
+      Array.isArray(batch.errors) && batch.errors.some((error) => isModelCrashMessage(error))
+    )));
+}
+
+function isModelTimeoutGenerationFailure(generation = {}) {
+  return generation.modelTimeout === true
+    || (Array.isArray(generation.errors) && generation.errors.some((error) => isModelTimeoutMessage(error)))
+    || (Array.isArray(generation.failedBatches) && generation.failedBatches.some((batch) => (
+      Array.isArray(batch.errors) && batch.errors.some((error) => isModelTimeoutMessage(error))
+    )));
+}
+
+function resolvePrepareReviewGenerationTimeoutMs({
+  body = {},
+  options = {},
+  previewOnly = false,
+  selectedImportRequested = false,
+  autoRecommendationAccepted = false
+} = {}) {
+  const explicit = positiveNumberOrUndefined(body.timeoutMs);
+  if (explicit) return explicit;
+  if (autoRecommendationAccepted) {
+    return positiveNumberOrUndefined(options.autoAnalyzeGenerationTimeoutMs)
+      || positiveNumberOrUndefined(options.teacherContentAutoAnalyzeGenerationTimeoutMs)
+      || AUTO_ANALYZE_TIMEOUT_MS;
+  }
+  if (previewOnly || selectedImportRequested) {
+    return positiveNumberOrUndefined(options.previewGenerationTimeoutMs)
+      || positiveNumberOrUndefined(options.teacherContentPreviewGenerationTimeoutMs)
+      || positiveNumberOrUndefined(options.selectedGenerationTimeoutMs)
+      || positiveNumberOrUndefined(options.teacherContentSelectedGenerationTimeoutMs)
+      || DEFAULT_PREVIEW_SELECTED_GENERATION_TIMEOUT_MS;
+  }
+  return positiveNumberOrUndefined(options.fullGenerationTimeoutMs)
+    || positiveNumberOrUndefined(options.teacherContentFullGenerationTimeoutMs)
+    || positiveNumberOrUndefined(options.timeoutMs)
+    || DEFAULT_FULL_GENERATION_TIMEOUT_MS;
+}
+
+function makeAutoAnalyzeGenerationOptions(options = {}) {
+  const maxBatchCharacters = Math.min(
+    positiveNumberOrUndefined(options.maxBatchCharacters) || AUTO_ANALYZE_MAX_BATCH_CHARACTERS,
+    AUTO_ANALYZE_MAX_BATCH_CHARACTERS
+  );
+  const retryMaxBatchCharacters = Math.min(
+    positiveNumberOrUndefined(options.retryMaxBatchCharacters) || Math.max(1, Math.floor(maxBatchCharacters / 2)),
+    Math.max(1, Math.floor(maxBatchCharacters / 2)),
+    AUTO_ANALYZE_RETRY_MAX_BATCH_CHARACTERS
+  );
+  return {
+    ...options,
+    maxBatchCharacters,
+    retryMaxBatchCharacters,
+    maxBatchChunks: 1,
+    maxSectionsPerBatch: 1,
+    autoAnalyzeUltraSafe: true
+  };
 }
 
 function combineImportTimelines(...timelines) {

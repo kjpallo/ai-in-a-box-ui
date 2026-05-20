@@ -101,6 +101,7 @@ async function main() {
     await assertPreviewPrepareReviewRequiresRange(handlers);
     await assertPrepareReviewNoUsablePreviewItemsReturnsStructuredRecoveryJson(handlers);
     await assertSelectedPageRangeImportWritesPartialDraft(handlers);
+    await assertAutoPlanPrepareReviewWithoutManualMode(handlers);
     assertAutoImportPlannerSmallFileSingleBatch();
     assertAutoImportPlannerMultiPageSequentialBatches();
     assertAutoImportPlannerVeryLargeDoesNotDropTextBearingPages();
@@ -112,7 +113,9 @@ async function main() {
     await assertUploadAndPrepareMissingFileFailsClearly(handlers);
     await assertUploadAndPrepareMissingKnowledgeNameFailsClearly(handlers);
     await assertUploadAndPrepareModelFailureReturnsClearJson(handlers);
+    await assertLaterBatchCrashReturnsPartialReviewDraft(handlers);
     await assertUploadAndPrepareModelCrashShowsBatchSizeRecovery(handlers);
+    await assertPrepareReviewModelTimeoutPreservesPlan(handlers);
     await assertInvalidPrepareReviewUploadIdRejected(handlers);
     await assertMissingPrepareReviewExtractionFails(handlers);
     await assertPrepareReviewModelFailureDoesNotWriteDraft(handlers);
@@ -320,7 +323,7 @@ async function assertPrepareReviewEndpointSucceeds(handlers) {
   assert.equal(response.body.data.sourceMatch.draftPackId, response.body.data.packId);
   assert.equal(response.body.data.sourceMatch.draftTitle, 'Full Import: Teacher Prepared Forces');
   assert.deepEqual(response.body.data.sourceMatch.draftSourceFiles, ['teacher_prepare_review_notes.txt']);
-  assert.equal(response.body.data.sourceMatch.extractionCharacterCount, 74);
+  assert.equal(response.body.data.sourceMatch.extractionCharacterCount, 112);
   assert.equal(response.body.data.sourceMatch.chunkCount, 1);
   assert.equal(response.body.data.sourceMatch.status, 'matched');
   assert.equal(response.body.data.dashboard.draftPacks, 2);
@@ -367,9 +370,9 @@ async function assertLargeFullImportRequiresConfirmation(handlers) {
       endLine: 1
     }]
   }), null, 2)}\n`);
-  let calls = 0;
-  mockDraftModelClient = async () => {
-    calls += 1;
+  const calls = [];
+  mockDraftModelClient = async (request) => {
+    calls.push(request);
     return JSON.stringify(makeGeneratedPack());
   };
 
@@ -384,7 +387,7 @@ async function assertLargeFullImportRequiresConfirmation(handlers) {
   assert.equal(response.body.success, false);
   assert.ok(response.body.errors.some((error) => error.includes('requires typing CONFIRM')));
   assert.equal(response.body.importEstimate.isLarge, true);
-  assert.equal(calls, 0, 'large full import should not call Gemma before confirmation.');
+  assert.equal(calls.length, 0, 'large full import should not call Gemma before confirmation.');
 
   const booleanOnlyResponse = await request(handlers, 'POST', '/uploads/:uploadId/prepare-review', {
     packName: 'Large Confirm Required',
@@ -395,7 +398,7 @@ async function assertLargeFullImportRequiresConfirmation(handlers) {
   });
 
   assert.equal(booleanOnlyResponse.statusCode, 409);
-  assert.equal(calls, 0, 'large full import should require typed confirmation, not a boolean.');
+  assert.equal(calls.length, 0, 'large full import should require typed confirmation, not a boolean.');
 
   mockDraftModelClient = async () => JSON.stringify(makeGeneratedPack());
 }
@@ -409,9 +412,9 @@ async function assertPreviewPrepareReviewDoesNotWriteDraft(handlers) {
     pages: 5,
     charactersPerPage: 650
   }), null, 2)}\n`);
-  let calls = 0;
-  mockDraftModelClient = async () => {
-    calls += 1;
+  const calls = [];
+  mockDraftModelClient = async (request) => {
+    calls.push(request);
     return JSON.stringify(makeGeneratedPack());
   };
 
@@ -434,7 +437,8 @@ async function assertPreviewPrepareReviewDoesNotWriteDraft(handlers) {
   assert.deepEqual(response.body.data.importSelection.pages, [1, 2, 3]);
   assert.equal(response.body.data.inputSnapshot.modelSettings.temperature, 0);
   assert.ok(response.body.data.previewReport.processedChunkCount >= 1);
-  assert.ok(calls >= 1, 'preview should call Gemma on the sample.');
+  assert.ok(calls.length >= 1, 'preview should call Gemma on the sample.');
+  assert.equal(calls[0].timeoutMs, 120000, 'preview/selected imports should use a bounded teacher-content timeout by default.');
   assert.deepEqual(snapshotFiles(draftPacksDir), draftFilesBefore, 'preview should not write a final draft pack.');
 
   mockDraftModelClient = async () => JSON.stringify(makeGeneratedPack());
@@ -773,10 +777,10 @@ async function assertSelectedPageRangeImportWritesPartialDraft(handlers) {
     assert.ok(!prompt.includes('Route synthetic page 5'), 'selected import should not send page 5');
     return JSON.stringify(makeGeneratedPack({
       vocabulary: [{
-        term: 'selected-page-two',
+        term: 'selected-page-2',
         aliases: [],
-        studentDefinition: 'Selected page two definition.',
-        teacherDefinition: 'Selected page two teacher definition.',
+        studentDefinition: 'Selected page 2 definition.',
+        teacherDefinition: 'Selected page 2 definition.',
         misconception: '',
         standards: ['SAMPLE.PS.FORCES.1'],
         reviewStatus: 'pending',
@@ -826,6 +830,51 @@ async function assertSelectedPageRangeImportWritesPartialDraft(handlers) {
 
   const addedDraftFiles = Object.keys(snapshotFiles(draftPacksDir)).filter((filePath) => !draftFilesBefore[filePath]);
   assert.deepEqual(addedDraftFiles, [path.join(response.body.data.packId, 'knowledge_pack.json')]);
+
+  mockDraftModelClient = async () => JSON.stringify(makeGeneratedPack());
+}
+
+async function assertAutoPlanPrepareReviewWithoutManualMode(handlers) {
+  const uploadId = 'auto-plan-no-manual-mode';
+  fs.writeFileSync(path.join(uploadExtractedDir, `${uploadId}_extraction.json`), `${JSON.stringify(makeLargePdfExtraction({
+    uploadId,
+    originalFileName: 'auto_plan_teacher_packet.pdf',
+    pages: 2,
+    charactersPerPage: 700
+  }), null, 2)}\n`);
+  const calls = [];
+  mockDraftModelClient = async (request) => {
+    calls.push(request);
+    return JSON.stringify(makeGeneratedPack({
+      packId: 'auto-plan-draft',
+      title: 'Auto Plan Draft'
+    }));
+  };
+
+  const response = await request(handlers, 'POST', '/uploads/:uploadId/prepare-review', {
+    packName: 'Auto Plan Teacher Draft',
+    useAutoImportPlan: true,
+    useRecommendedImportPlan: true
+  }, {
+    uploadId
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.data.packId, 'draft-full-import-auto-plan-teacher-draft-pages-1-2-auto-plan-no-manual-mode');
+  assert.equal(response.body.data.autoImportPlan.recommendedImportScope, 'full_document');
+  assert.equal(response.body.data.autoImportPlan.limits.maxCharactersPerBatch, 400);
+  assert.equal(response.body.data.autoImportPlan.batchCount, 4);
+  assert.equal(response.body.data.importScope.scope, 'full_document');
+  assert.equal(calls.length, 4, 'accepted auto planner should use one ultra-safe chunk per Gemma call.');
+  calls.forEach((call) => {
+    const sourceText = String(call.prompt || '').match(/EXTRACTED SOURCE TEXT[\s\S]*?OUTPUT JSON ONLY/)?.[0] || '';
+    assert.ok(sourceText.length < 1800, 'auto Analyze Upload prompt source should stay conservatively bounded.');
+  });
+
+  const createdPath = path.join(draftPacksDir, response.body.data.packId, 'knowledge_pack.json');
+  const generated = JSON.parse(fs.readFileSync(createdPath, 'utf8'));
+  assert.equal(generated.metadata.autoImportPlan.recommendedImportScope, 'full_document');
 
   mockDraftModelClient = async () => JSON.stringify(makeGeneratedPack());
 }
@@ -1228,6 +1277,72 @@ async function assertUploadAndPrepareModelFailureReturnsClearJson(handlers) {
   mockDraftModelClient = async () => JSON.stringify(makeGeneratedPack());
 }
 
+async function assertLaterBatchCrashReturnsPartialReviewDraft(handlers) {
+  const uploadId = 'prepare-partial-later-crash';
+  fs.writeFileSync(path.join(uploadExtractedDir, `${uploadId}_extraction.json`), `${JSON.stringify(makeLargePdfExtraction({
+    uploadId,
+    originalFileName: 'teacher_partial_later_crash.pdf',
+    pages: 3,
+    charactersPerPage: 700
+  }), null, 2)}\n`);
+  let calls = 0;
+  mockDraftModelClient = async () => {
+    calls += 1;
+    if (calls >= 3) {
+      throw new Error('Ollama returned HTTP 500: {"error":"model runner has unexpectedly stopped, this may be due to resource limitations"}');
+    }
+    return JSON.stringify(makeGeneratedPack({
+      packId: `route-partial-later-crash-${calls}`,
+      sourceFiles: [{
+        fileName: 'teacher_partial_later_crash.pdf',
+        fileType: 'pdf',
+        reviewStatus: 'approved',
+        confidence: 'high'
+      }],
+      vocabulary: [{
+        ...makeVocabularyItem(`selected-page-${calls}`, 'approved'),
+        term: `selected-page-${calls}`,
+        sourceFile: 'teacher_partial_later_crash.pdf',
+        sourceLocation: `Page ${calls}`,
+        sourceTextSnippet: `selected-page-${calls} means Selected page ${calls} definition`
+      }],
+      concepts: [],
+      referenceFormulas: [],
+      problemBank: [],
+      standardsMap: [],
+      smokeTests: []
+    }));
+  };
+
+  const response = await request(handlers, 'POST', '/uploads/:uploadId/prepare-review', {
+    packName: 'Partial Later Crash',
+    importMode: 'full',
+    confirmFullImport: true,
+    maxBatchCharacters: 750,
+    maxBatchChunks: 1,
+    retryMaxBatchCharacters: 350
+  }, {
+    uploadId
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.data.partialDraft, true);
+  assert.equal(response.body.data.packId, 'draft-full-import-partial-later-crash-pages-1-3-prepare-partial-later-crash');
+  assert.ok(response.body.data.message.includes('Some slides could not be analyzed'));
+  assert.ok(response.body.data.failedBatches.some((batch) => Array.isArray(batch.pages) && batch.pages.includes(3)));
+  assert.ok(response.body.data.draftReport.pendingReview.totalPending > 0, 'partial success should move to Review Draft Content with cards.');
+
+  const generatedPath = path.join(draftPacksDir, response.body.data.packId, 'knowledge_pack.json');
+  const generated = JSON.parse(fs.readFileSync(generatedPath, 'utf8'));
+  assert.equal(generated.metadata.partialDraft, true);
+  assert.deepEqual(generated.metadata.partialImport.failedPages, [3]);
+  assert.ok(generated.metadata.importCoverage.failedBatches[0].pages.includes(3));
+  assert.ok(!generated.vocabulary.some((item) => item.sourceLocation === 'Page 3'), 'failed slide items must not be written into the partial draft.');
+
+  mockDraftModelClient = async () => JSON.stringify(makeGeneratedPack());
+}
+
 async function assertUploadAndPrepareModelCrashShowsBatchSizeRecovery(handlers) {
   const draftFilesBefore = snapshotFiles(draftPacksDir);
   const uploadId = 'prepare-model-crash';
@@ -1256,14 +1371,76 @@ async function assertUploadAndPrepareModelCrashShowsBatchSizeRecovery(handlers) 
 
   assert.equal(response.statusCode, 400);
   assert.equal(response.body.success, false);
-  assert.ok(response.body.errors.some((error) => error.includes('batch may be too large')));
-  assert.ok(response.body.errors.some((error) => error.includes('retried with smaller chunks')));
+  assert.equal(response.body.teacherFriendlyError, 'Local Gemma crashed while reading this batch.');
+  assert.equal(response.body.error, 'Local Gemma crashed while reading this batch.');
+  assert.ok(response.body.errors.some((error) => error.includes('Local Gemma crashed while reading batch 1')));
+  assert.ok(response.body.errors.some((error) => error.includes('Retry failed after a smaller batch.')));
+  assert.equal(
+    response.body.errors.filter((error) => error.includes('Ollama returned HTTP 500')).length,
+    1,
+    'raw Ollama crash detail should not repeat in route errors'
+  );
+  assert.ok(response.body.technicalErrors.some((error) => error.includes('Ollama returned HTTP 500')));
   assert.ok(Array.isArray(response.body.timeline));
   assert.ok(response.body.timeline.some((event) => event.type === 'batch_retry'));
   assert.ok(Array.isArray(response.body.failedBatches));
   assert.ok(response.body.failedBatches.length >= 1);
+  assert.ok(response.body.failedBatches.some((batch) => Array.isArray(batch.pages) || Array.isArray(batch.chunkLabels)), 'failed batch/page/slide details should be visible for teacher retry');
   assert.ok(response.body.coverageReport.warnings.some((warning) => warning.includes('Model draft failed for batch 1')));
   assert.deepEqual(snapshotFiles(draftPacksDir), draftFilesBefore, 'model crash failure should not write a partial draft pack');
+
+  mockDraftModelClient = async () => JSON.stringify(makeGeneratedPack());
+}
+
+async function assertPrepareReviewModelTimeoutPreservesPlan(handlers) {
+  const draftFilesBefore = snapshotFiles(draftPacksDir);
+  const uploadId = 'prepare-model-timeout';
+  const extraction = makeLargePdfExtraction({
+    uploadId,
+    originalFileName: 'teacher_model_timeout_notes.pdf',
+    pages: 3,
+    charactersPerPage: 650
+  });
+  fs.writeFileSync(path.join(uploadExtractedDir, `${uploadId}_extraction.json`), `${JSON.stringify(extraction, null, 2)}\n`);
+  mockDraftModelClient = async () => new Promise(() => {});
+
+  const response = await request(handlers, 'POST', '/uploads/:uploadId/prepare-review', {
+    packName: 'Energy Model Timeout',
+    importMode: 'preview',
+    previewOnly: true,
+    timeoutMs: 5,
+    importSelection: {
+      pageStart: 1,
+      pageEnd: 1
+    }
+  }, {
+    uploadId
+  });
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.success, false);
+  assert.equal(response.body.teacherFriendlyError, 'Local Gemma took too long while reading this batch.');
+  assert.equal(response.body.error, 'Local Gemma took too long while reading this batch.');
+  assert.equal(response.body.uploadId, uploadId);
+  assert.equal(response.body.originalFileName, 'teacher_model_timeout_notes.pdf');
+  assert.equal(response.body.modelTimeout, true);
+  assert.equal(response.body.modelCrash, true);
+  assert.ok(response.body.importEstimate);
+  assert.ok(response.body.autoImportPlan);
+  assert.ok(response.body.extraction);
+  assert.ok(response.body.extractionMetadata);
+  assert.equal(response.body.extractionSummary.originalFileName, 'teacher_model_timeout_notes.pdf');
+  assert.deepEqual(response.body.importSelection, {
+    pageStart: 1,
+    pageEnd: 1,
+    chunkStart: undefined,
+    chunkEnd: undefined
+  });
+  assert.ok(Array.isArray(response.body.timeline));
+  assert.ok(response.body.timeline.some((event) => event.type === 'error' && event.message.includes('Local Gemma took too long')));
+  assert.ok(Array.isArray(response.body.failedBatches));
+  assert.ok(response.body.failedBatches[0].errors.includes('Local Gemma took too long while reading this batch.'));
+  assert.deepEqual(snapshotFiles(draftPacksDir), draftFilesBefore, 'model timeout failure should not write a partial draft pack');
 
   mockDraftModelClient = async () => JSON.stringify(makeGeneratedPack());
 }
@@ -1992,7 +2169,7 @@ function readKnowledgePack(rootDir, packId) {
 function makeExtraction(overrides = {}) {
   const uploadId = overrides.uploadId || 'prepare-review-upload';
   const originalFileName = overrides.originalFileName || 'teacher_prepare_review_notes.txt';
-  const text = overrides.text || 'Balanced forces have a net force of zero. Unbalanced forces change motion.';
+  const text = overrides.text || 'Net force is the total force on an object. Balanced forces do not change motion. Net force is the sum of forces.';
   return {
     success: true,
     fileName: originalFileName,
@@ -2031,7 +2208,7 @@ function makeLargePdfExtraction(overrides = {}) {
     const pageNumber = index + 1;
     return {
       pageNumber,
-      text: `Route synthetic page ${pageNumber}. ${'Selected import source sentence. '.repeat(Math.ceil(charactersPerPage / 34))}`.slice(0, charactersPerPage)
+      text: `Route synthetic page ${pageNumber}. selected-page-${pageNumber} means Selected page ${pageNumber} definition. ${'Selected import source sentence. '.repeat(Math.ceil(charactersPerPage / 34))}`.slice(0, charactersPerPage)
     };
   });
   const text = pages.map((page) => page.text).join('\n\n');
@@ -2165,7 +2342,7 @@ function makeVocabularyItem(term, reviewStatus) {
     confidence: reviewStatus === 'approved' ? 'high' : 'medium',
     sourceFile: 'teacher_force_notes.txt',
     sourceLocation: 'Full Text',
-    sourceTextSnippet: 'Force is a push or pull.'
+    sourceTextSnippet: 'Net force is the total force on an object.'
   };
 }
 

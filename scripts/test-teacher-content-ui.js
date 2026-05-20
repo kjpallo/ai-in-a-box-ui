@@ -25,6 +25,8 @@ assertOverlayMarkupAndSelectors();
 assertSafeImportWorkflowUi();
 assertEndpointReferences();
 assertUploadExtractionUi();
+assertTrueTwoPageTeacherWorkflowUi();
+assertUploadProgressDisplayUi();
 assertUploadAndPrepareFormDataContract();
 assertBackendJsonErrorsAreDisplayed();
 assertPrepareReviewHandoffUi();
@@ -106,8 +108,8 @@ function assertSafeImportWorkflowUi() {
     'renderUploadSourceCard',
     'data-upload-start-page',
     'data-upload-start-planner',
-    'data-generate-draft-click-required',
-    'Gemma will not start automatically. Click Generate Draft when you are ready.',
+    'Analyze Upload',
+    'await runRecommendedImport()',
     'renderPreviewImportCard',
     'renderReviewPreviewCard',
     'renderFullImportCard',
@@ -133,6 +135,8 @@ function assertSafeImportWorkflowUi() {
     'data-preview-validation-errors',
     'data-preview-invalid-items',
     'data-preview-valid-items',
+    'data-review-failed-slides-notice',
+    'Some slides could not be analyzed. Review the extracted items below, then retry the failed slides later if needed.',
     'Repair-needed items',
     'Validation errors',
     'Valid preview items kept',
@@ -168,7 +172,7 @@ function assertSafeImportWorkflowUi() {
     'data-prepare-review-failure-message',
     'Preview failed',
     'data-preview-retry-panel',
-    'Backend details',
+    'Technical details',
     'Suggested next steps',
     'Retry Preview Draft',
     'Return to Upload / Start',
@@ -183,10 +187,11 @@ function assertSafeImportWorkflowUi() {
   const uploadSourceFunction = ui.match(/function renderUploadSourceCard\(\) \{([\s\S]*?)\n  function renderUploadStartPlanShell/);
   assert.ok(uploadSourceFunction, 'Expected renderUploadSourceCard function.');
   assert.ok(uploadSourceFunction[1].includes('Upload / Start'), 'Upload Source should render as Upload / Start.');
-  assert.ok(uploadSourceFunction[1].includes('Upload and Analyze'), 'Upload / Start should have an upload/analyze action before generation.');
-  assert.match(uploadSourceFunction[1], /renderUploadStartPlanShell/, 'Upload / Start should own the planner and advanced import shell.');
+  assert.ok(uploadSourceFunction[1].includes('Analyze Upload'), 'Upload / Start should have one Analyze Upload action.');
+  assert.match(uploadSourceFunction[1], /data-upload-technical-details[\s\S]*renderImportEstimatePanel[\s\S]*renderAutoImportPlanPanel/, 'Upload / Start should keep planner details behind collapsed Technical details.');
+  assert.doesNotMatch(uploadSourceFunction[1].split('data-upload-technical-details')[0], /renderImportEstimatePanel|renderAutoImportPlanPanel|renderPreviewSizeControls|renderSelectedImportControls/, 'Default Upload / Start should not show planner, range, or batch controls before Technical details.');
   assert.match(ui, /function renderUploadStartPlanShell/, 'Upload / Start should expose a two-page workflow shell helper.');
-  assert.match(ui, /data-upload-advanced-import-controls/, 'Manual preview/range/full controls should live in advanced Upload / Start controls.');
+  assert.match(ui, /data-upload-manual-recovery-controls/, 'Manual preview/range/full controls should live in collapsed manual recovery controls.');
 
   const previewImportFunction = ui.match(/function renderPreviewImportCard\(\) \{([\s\S]*?)\n  function renderReviewPreviewCard/);
   assert.ok(previewImportFunction, 'Expected renderPreviewImportCard function.');
@@ -271,7 +276,7 @@ function assertPromotionAction() {
     'Needs teacher review',
     'Blocked',
     'Promoted successfully',
-    'summary.pending > 0 || summary.approved < 1',
+    '!canCreateApprovedPackFromCurrentReport(summary)',
     'Create Approved Pack from Approved Items',
     'data-review-create-approved-pack',
     'data-import-scope-warning',
@@ -328,7 +333,7 @@ function assertUploadExtractionUi() {
     'data-upload-create-review',
     'data-upload-create-progress',
     'data-upload-create-stage',
-    'data-upload-advanced-details',
+    'data-upload-technical-details',
     'data-source-match-metadata',
     'data-source-match-uploaded-file',
     'data-source-match-draft-id',
@@ -339,7 +344,7 @@ function assertUploadExtractionUi() {
     'data-source-match-status',
     'data-source-match-warning',
     'Source mismatch warning',
-    'Upload and Analyze',
+    'Analyze Upload',
     'Uploading file...',
     'Extracting text...',
     'Building import estimate...',
@@ -348,10 +353,8 @@ function assertUploadExtractionUi() {
     'Estimated batches',
     'Reason:',
     'You can override this if needed.',
-    'Generate Draft',
     'data-auto-import-plan-panel',
     'data-auto-import-plan-warnings',
-    'data-upload-run-recommended-import',
     'data-import-override-controls',
     'Run Preview Draft',
     'Run Full Import',
@@ -362,7 +365,7 @@ function assertUploadExtractionUi() {
     'data-preview-deduplication-counts',
     'raw ${formatNumber(entry.stats.raw)} | duplicates ${formatNumber(entry.stats.duplicatesRemoved)} | final ${formatNumber(entry.stats.final)}',
     'Import is running, do not close this window.',
-    'Gemma Draft Activity',
+    'Analysis Activity',
     'data-import-activity-panel',
     'data-import-activity-event',
     'Operational import progress for this teacher draft.',
@@ -370,10 +373,10 @@ function assertUploadExtractionUi() {
     'Running validation',
     'Draft ready for review',
     'Review draft prepared.',
-    'Advanced details',
+    'Technical details',
     'FormData',
     "method: 'POST'",
-    'Review the recommended plan, then click Generate Draft.',
+    'Generating a draft with the safe planner settings.',
     'Preview Size',
     'Ultra-safe',
     'Page 1 only',
@@ -403,10 +406,10 @@ function assertUploadExtractionUi() {
   assert.match(ui, /function makePreviewImportPayload\(\)/, 'Run Preview Draft should build an explicit preview selection payload.');
   assert.match(ui, /function getTextBearingPages\(\)/, 'Preview UI should read text-bearing page metadata.');
   assert.match(ui, /function applyDefaultPreviewTextPage\(\)/, 'Preview UI should default to the first text-bearing page when needed.');
-  assert.match(ui, /async function runRecommendedImport\(\)/, 'Teacher UI should run the automatic recommendation as the default Generate Draft action.');
+  assert.match(ui, /async function runRecommendedImport\(\)/, 'Teacher UI should run the automatic recommendation as the default Analyze Upload action.');
   assert.match(ui, /function renderAutoImportPlanPanel\(\)/, 'Teacher UI should render the automatic import plan.');
   assert.match(ui, /function makeRecommendedImportPayload\(plan\)/, 'Teacher UI should build selected-range payloads from the recommended plan.');
-  assert.match(ui, /useAutoImportPlan:\s*true/, 'Generate Draft should mark the recommended plan as accepted.');
+  assert.match(ui, /useAutoImportPlan:\s*true/, 'Automatic analysis should mark the recommended plan as accepted.');
   assert.match(ui, /state\.uploadAutoImportPlan = data\?\.autoImportPlan/, 'Teacher UI should store the route-provided automatic import plan.');
   assert.match(ui, /state\.uploadPreviewAutoTextPage/, 'Preview UI should distinguish automatic first-text-page defaults from explicit page choices.');
   assert.match(ui, /importSelection:\s*\{\s*pageStart,\s*pageEnd/s, 'Run Preview Draft should send selected preview pages.');
@@ -419,14 +422,157 @@ function assertUploadExtractionUi() {
   assert.match(ui, /data-import-estimate-pages-with-text/, 'Import estimate should display pages with text metadata.');
   assert.match(ui, /knowledgeName: state\.uploadContentName/, 'Run Preview Draft should send the teacher knowledge name.');
   assert.match(ui, /previewOnly: importMode === 'preview'/, 'Run Preview Draft should mark previewOnly.');
-  assert.match(ui, /appendImportActivity\('error'/, 'Prepare Review failures should be appended to Gemma Draft Activity.');
+  assert.match(ui, /appendImportActivity\('error'/, 'Prepare Review failures should be appended to analysis activity.');
   assert.match(ui, /state\.uploadPrepareReviewFailedMode = importMode/, 'Prepare Review failure should keep the failing step marked failed.');
+  assert.match(ui, /state\.uploadAutoImportPlan = error\?\.data\?\.autoImportPlan \|\| state\.uploadAutoImportPlan/, 'Prepare Review failure should preserve planner state from the route or existing upload.');
   assert.match(ui, /state\.uploadPreviewComplete = !state\.uploadPreviewPartial/, 'Only successful preview responses should mark Review Preview ready.');
   const prepareReviewFunction = ui.match(/async function prepareReviewFromUpload\(importMode = 'preview', extraBody = \{\}\) \{([\s\S]*?)\n  function makeSelectedImportPayload/);
   assert.ok(prepareReviewFunction, 'Expected prepareReviewFromUpload function.');
   const prepareReviewCatch = prepareReviewFunction[1].match(/catch \(error\) \{([\s\S]*?)\n    \} finally \{/);
   assert.ok(prepareReviewCatch, 'Expected prepareReviewFromUpload catch block.');
   assert.doesNotMatch(prepareReviewCatch[1], /uploadPreviewComplete\s*=\s*true/, 'Failed Prepare Review should not mark preview ready.');
+}
+
+function assertTrueTwoPageTeacherWorkflowUi() {
+  const uploadSourceFunction = ui.match(/function renderUploadSourceCard\(\) \{([\s\S]*?)\n  function renderUploadStartPlanShell/);
+  assert.ok(uploadSourceFunction, 'Expected renderUploadSourceCard function.');
+  const defaultUploadMarkup = uploadSourceFunction[1].split('data-upload-technical-details')[0];
+  [
+    'teacherContentUploadFile',
+    'teacherContentKnowledgeName',
+    'Analyze Upload',
+    'renderUploadCreateProgress()',
+    'renderUploadProgressErrorPanel()'
+  ].forEach((marker) => {
+    assert.ok(defaultUploadMarkup.includes(marker), `Expected normal Upload / Start marker ${marker}.`);
+  });
+  [
+    'renderImportEstimatePanel',
+    'renderAutoImportPlanPanel',
+    'renderPreviewSizeControls',
+    'renderSelectedImportControls',
+    'renderWholeImportAdvanced',
+    'renderImportActivityPanel',
+    'renderUploadExtractionSummary',
+    'Preview Size',
+    'Max preview chars',
+    'Planner warnings',
+    'Available memory is low',
+    'OCR/vision',
+    'Metric',
+    'Analysis Activity',
+    'Run automatic analysis'
+  ].forEach((marker) => {
+    assert.ok(!defaultUploadMarkup.includes(marker), `Normal Upload / Start should not expose ${marker}.`);
+  });
+  [
+    'Gemma will not start automatically',
+    'Advanced import controls',
+    'Gemma Draft Activity',
+    'Generate Draft',
+    'Confirm full import'
+  ].forEach((marker) => {
+    assert.ok(!ui.includes(marker), `Teacher Content UI should not include old default-flow copy: ${marker}`);
+  });
+  assert.match(uploadSourceFunction[1], /data-upload-technical-details[\s\S]*renderUploadExtractionSummary[\s\S]*renderImportEstimatePanel[\s\S]*renderAutoImportPlanPanel/, 'Planner and extraction details should remain behind collapsed Technical details.');
+  assert.match(ui, /data-upload-manual-recovery-controls[\s\S]*<summary>Manual recovery controls<\/summary>/, 'Manual controls should be collapsed behind recovery details.');
+
+  const createReviewFunction = ui.match(/async function createReviewDraftFromUpload\(\) \{([\s\S]*?)\n  async function runPreviewImport/);
+  assert.ok(createReviewFunction, 'Expected createReviewDraftFromUpload function.');
+  assert.match(createReviewFunction[1], /fetchJson\(ENDPOINTS\.uploadAndPrepare[\s\S]*await runRecommendedImport\(\)/, 'Analyze Upload should upload, plan, then generate from the automatic plan.');
+
+  const recommendedFunction = ui.match(/async function runRecommendedImport\(\) \{([\s\S]*?)\n  async function prepareReviewFromUpload/);
+  assert.ok(recommendedFunction, 'Expected runRecommendedImport function.');
+  assert.match(recommendedFunction[1], /recommendedImportScope === 'full_document'[\s\S]*prepareReviewFromUpload\('full'/, 'Auto planner full-document plans should run without manual teacher selection.');
+  assert.match(recommendedFunction[1], /recommendedImportScope === 'selected_range'[\s\S]*prepareReviewFromUpload\('selected'/, 'Auto planner selected-range plans should run without manual teacher selection.');
+  assert.match(recommendedFunction[1], /recommendedImportScope === 'preview_sample'[\s\S]*prepareReviewFromUpload\('selected'/, 'Preview-style safe planner plans should create reviewable selected-range draft content.');
+
+  [
+    'data-review-planner-notes',
+    'Some pages had little extracted text. Image-only content may need OCR later.',
+    'data-review-planner-technical-details',
+    'data-review-source-grounding-warnings',
+    'data-review-item-source-grounding',
+    'formatSourceGroundingStatus'
+  ].forEach((marker) => {
+    assert.ok(ui.includes(marker), `Expected Review Draft Content marker ${marker}.`);
+  });
+}
+
+function assertUploadProgressDisplayUi() {
+  [
+    'uploadProgress',
+    "label: 'Ready'",
+    "setUploadProgress('Uploading'",
+    "setUploadProgress('Extracting'",
+    "setUploadProgress('Planning'",
+    "setUploadProgress('Ready to generate draft'",
+    "setUploadProgress('Generating'",
+    "setUploadProgress('Validating'",
+    "setUploadProgress('Ready for review'",
+    "setUploadProgress('Error'",
+    'Still waiting on the local model. You can stop this and try a smaller preview.',
+    'stopUploadGeneration',
+    'Generation stopped. Upload and plan were preserved.',
+    'uploadPrepareReviewAbortController',
+    'uploadPrepareReviewRequestId',
+    'data-upload-progress-display',
+    'data-upload-progress-label',
+    'data-upload-progress-percent',
+    'data-upload-progress-bar',
+    'data-upload-progress-fill',
+    'data-upload-progress-detail',
+    'data-upload-progress-error-panel',
+    'data-upload-progress-error-backend-details',
+    'data-upload-progress-error-suggestions',
+    'Local Gemma crashed while reading this batch.',
+    'Local Gemma took too long while reading this batch.',
+    'Try a smaller preview range or lower character limit.',
+    'Try a smaller preview range, lower character limit, or a lighter local model.',
+    'formatFailedBatchDetail',
+    'isModelRuntimeCrashPayload',
+    'isModelRuntimeTimeoutPayload',
+    'clearUploadProgressError()',
+    'getPlannedBatchDetail',
+    'getGenerateProgressDetail',
+    'This may take a moment',
+    'batches planned',
+    'Batch ${details.batchIndex} of ${details.totalBatches}'
+  ].forEach((marker) => {
+    assert.ok(ui.includes(marker), `Expected upload progress display marker ${marker}.`);
+  });
+
+  [
+    '.teacher-content-upload-progress.working',
+    '.teacher-content-upload-progress-bar span::after',
+    'teacher-content-progress-shimmer',
+    'animation: teacher-content-progress-shimmer 1.6s ease-in-out infinite',
+    '.teacher-content-progress-error-panel',
+    'grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr))',
+    'overflow-x: hidden'
+  ].forEach((marker) => {
+    assert.ok(style.includes(marker), `Expected upload progress style marker ${marker}.`);
+  });
+
+  assert.match(ui, /function renderUploadCreateProgress\(\)[\s\S]*data-upload-progress-display[\s\S]*data-upload-progress-bar/, 'Upload / Start should render the animated progress display.');
+  assert.match(ui, /function renderUploadProgressErrorPanel\(\)[\s\S]*if \(!error\) return ''/, 'Upload error panel should be hidden by default.');
+  assert.match(ui, /function renderUploadProgressErrorPanel\(\)[\s\S]*<details class="teacher-content-backend-details" data-upload-progress-error-backend-details>[\s\S]*<summary>Technical details<\/summary>/, 'Raw backend details should render only in a collapsed Technical details area.');
+  assert.match(ui, /function makeUploadProgressTeacherMessage\([\s\S]*Local Gemma crashed while reading this batch\./, 'Gemma crash progress errors should use short teacher-facing copy.');
+  assert.match(ui, /function makeUploadProgressTeacherMessage\([\s\S]*Local Gemma took too long while reading this batch\./, 'Gemma timeout progress errors should use short teacher-facing copy.');
+  assert.doesNotMatch(ui, /Ollama returned HTTP 500[\s\S]*Ollama returned HTTP 500/, 'Teacher UI should not hard-code repeated Ollama crash text.');
+  assert.match(ui, /setUploadProgressError\('Upload failed'[\s\S]*Upload\/extraction\/planning/, 'Upload/planning failures should route into the progress error panel.');
+  assert.match(ui, /setUploadProgressError\('Draft generation failed'[\s\S]*makePrepareReviewRecoverySuggestions/, 'Draft generation failures should route backend details and recovery suggestions into the progress error panel.');
+  assert.match(ui, /state\.selectedUploadFile[\s\S]*setUploadProgress\('Ready', '', 0, 'idle'\)[\s\S]*clearUploadProgressError\(\)/, 'New uploads should clear the progress error panel and reset to Ready.');
+  assert.match(ui, /if \(data\?\.preview\)[\s\S]*setUploadProgress\('Ready to generate draft'/, 'Manual preview override should update progress after success.');
+  assert.match(ui, /async function prepareReviewFromUpload[\s\S]*setUploadProgress\('Generating'[\s\S]*setUploadProgress\('Validating'[\s\S]*setUploadProgress\('Ready for review'/, 'Analyze Upload and selected/full imports should progress through generating, validating, and ready states.');
+  assert.match(ui, /setUploadProgress\('Error', detail, 24, 'error'\)/, 'Failure progress should reset to an error state instead of staying near complete.');
+  assert.match(ui, /data-upload-progress-failed-pages/, 'Failure progress should show a teacher-friendly failed slide/page notice.');
+  assert.match(ui, /formatFailedBatchPageNotice[\s\S]*were'\} not analyzed/, 'Failed slide/page notices should use teacher-friendly language.');
+  assert.match(ui, /async function prepareReviewFromUpload[\s\S]*waitingTooLongTimer[\s\S]*Still waiting on the local model/, 'Long-running generation should show waiting-too-long guidance.');
+  assert.match(ui, /function stopUploadGeneration\(\)[\s\S]*abort\(\)[\s\S]*Generation stopped\. Upload and plan were preserved\./, 'Stop generation helper should still preserve upload/planner state for manual recovery paths.');
+  assert.doesNotMatch(ui.match(/function renderUploadCreateProgress\(\)[\s\S]*?\n  function normalizeUploadProgress/)?.[0] || '', /data-upload-stop-generation|Stop\/Cancel Generation/, 'Normal progress display should not add a second teacher-facing Page 1 action.');
+  assert.match(ui, /function renderTabs\(\)[\s\S]*state\.uploadPrepareReviewLoading && tab\.id !== state\.activeTab \? 'disabled'/, 'Tabs should be guarded while generation is running.');
+  assert.doesNotMatch(ui.match(/function renderUploadCreateProgress\(\)[\s\S]*?\n  function normalizeUploadProgress/)?.[0] || '', /<p>/, 'Normal progress display should avoid paragraph-heavy status text.');
 }
 
 function assertUploadAndPrepareFormDataContract() {
@@ -745,9 +891,10 @@ function assertReviewPromotionButtonConditions() {
   assert.ok(reviewFunction, 'Expected renderReviewCard function.');
   assert.match(
     reviewFunction[1],
-    /canCreateApprovedPack\s*=\s*summary\.pending\s*===\s*0\s*&&\s*summary\.approved\s*>\s*0/,
-    'Review Content should show Create Approved Pack only when pending is 0 and approved is greater than 0.'
+    /canCreateApprovedPack\s*=\s*canCreateApprovedPackFromCurrentReport\(summary\)/,
+    'Review Content should show Create Approved Pack only when promotion readiness confirms valid approved/source-grounded items.'
   );
+  assert.match(ui, /function canCreateApprovedPackFromCurrentReport[\s\S]*summary\.pending === 0 && summary\.approved > 0 && readiness\.ready === true/, 'Create Approved Pack should require route promotion readiness as well as approved reviewed items.');
   assert.match(
     ui,
     /renderReviewCompletionPanel\(canCreateApprovedPack[\s\S]*data-review-create-approved-pack/,
@@ -926,7 +1073,7 @@ function assertApprovedPacksPolishUi() {
 function assertNoForbiddenUiActions() {
   assert.doesNotMatch(ui, /Ollama/i, 'Teacher Content UI should not expose forbidden generation actions.');
   assert.doesNotMatch(style, /Ollama|Gemma|ocr/i, 'Teacher Content styles should not add forbidden generation/OCR references.');
-  assert.match(ui, />\$\{state\.uploadPrepareReviewLoading \? 'Generating Draft\.\.\.' : 'Generate Draft'\}<\/button>/, 'Generate Draft should be the visible primary planner action.');
+  assert.doesNotMatch(ui, /Generating Draft|Generate Draft/, 'Teacher Content UI should not expose old manual generation copy.');
   assert.doesNotMatch(ui, /\/api\/student|\/api\/chat|\/api\/router-test/, 'Teacher Content UI should not reference student/router endpoints.');
   assert.doesNotMatch(ui, /\/api\/teacher-content\/drafts\/generate|\/api\/generate-draft|generateDraft/i, 'Teacher Content UI should not reference draft generation endpoints.');
   assert.doesNotMatch(ui, /data-upload-action|data-pack-toggle-action/, 'Teacher Content UI should not implement old placeholder upload/toggle actions.');

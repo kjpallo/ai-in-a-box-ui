@@ -30,6 +30,7 @@ async function main() {
     await assertPptxExtraction();
     await assertLegacyPptUnsupported();
     await assertPdfExtraction();
+    await assertPowerPointPdfExportWarnsAndExtractsAsPdf();
     await assertBlankPdfWarning();
     await assertUnsupportedExtension();
     await assertShortExtractionWarning();
@@ -201,6 +202,25 @@ async function assertPdfExtraction() {
   assert.equal(result.metadata.firstTextPage, 1);
   assert.deepEqual(result.metadata.textBearingPages, [1]);
   assert.deepEqual(result.metadata.pagesWithText, [1]);
+}
+
+async function assertPowerPointPdfExportWarnsAndExtractsAsPdf() {
+  const sourcePath = path.join(tempRoot, 'sample-deck.pptx.pdf');
+  fs.writeFileSync(sourcePath, makeMinimalPdf('PowerPoint export saved as a PDF.'));
+
+  const detected = detectUploadFileType(sourcePath);
+  assert.equal(detected.supported, true);
+  assert.equal(detected.type, 'pdf');
+  assert.equal(detected.extension, '.pdf');
+  assert.ok(detected.warnings.some((warning) => warning.includes('treated as a PDF because it is a PDF file')));
+
+  const result = await extractTextFromFile(sourcePath);
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  assert.equal(result.extension, '.pdf');
+  assert.equal(result.metadata.detectedType, 'pdf');
+  assert.ok(result.text.includes('PowerPoint export'));
+  assert.ok(result.warnings.some((warning) => warning.includes('Upload the original .pptx if you want slide-based extraction')));
 }
 
 async function assertBlankPdfWarning() {
