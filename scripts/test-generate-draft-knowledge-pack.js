@@ -20,7 +20,8 @@ const {
   callOllamaGenerate,
   generateDraftKnowledgePack,
   identifyTextBearingPages,
-  makeSelectedExtraction
+  makeSelectedExtraction,
+  resolveImportModel
 } = require('../lib/uploads/generateDraftKnowledgePack');
 
 const projectRoot = path.join(__dirname, '..');
@@ -45,7 +46,10 @@ async function main() {
 
   try {
     assertPromptIncludesControls();
-    assertPromptIncludesStandardsList();
+    assertPromptSizeShrankForSmallChunk();
+    assertPromptDoesNotRequireStandardsBank();
+    await assertImportModelSelectionAndFallback();
+    await assertImportModelOptionsUseLowMemoryEnv();
     await assertDefaultTimeoutAndKeepAliveReachModelClient();
     await assertCustomTimeoutAndKeepAliveReachModelClient();
     await assertOllamaRequestIncludesKeepAliveAndUsesTimeout();
@@ -80,6 +84,7 @@ async function main() {
     await assertCodeFencedJsonCreatesDraft();
     await assertExtraTextAroundJsonCreatesDraftWhenUnambiguous();
     await assertItemOnlyModelOutputGetsWrappedFromKnowledgeName();
+    await assertCompactModelOutputNormalizesToValidDraftPacket();
     await assertMissingMetadataIsNormalizedAndValidates();
     await assertMissingTopLevelArraysAreNormalizedAndValidate();
     await assertVocabularyReviewStatusIsNormalized();
@@ -184,6 +189,67 @@ async function assertItemOnlyModelOutputGetsWrappedFromKnowledgeName() {
   assert.equal(generated.metadata.packId, 'draft-energy-upload-20260516-0037');
 }
 
+async function assertCompactModelOutputNormalizesToValidDraftPacket() {
+  const compactPath = path.join(tempRoot, 'compact_output_extraction.json');
+  fs.writeFileSync(compactPath, `${JSON.stringify(makeExtraction({
+    uploadId: 'upload-compact-0001',
+    originalFileName: 'compact_source.txt'
+  }), null, 2)}\n`);
+  const compactModelOutput = {
+    vocabulary: [{
+      term: 'net force',
+      studentDefinition: 'The total force after adding forces.',
+      teacherDefinition: 'Vector sum of all forces.',
+      reviewStatus: 'pending',
+      confidence: 'medium',
+      sourceFile: 'compact_source.txt',
+      sourceLocation: 'Chunk 1',
+      sourceTextSnippet: 'Net force is the sum of all forces acting on an object.'
+    }],
+    concepts: [{
+      title: 'Balanced forces',
+      studentExplanation: 'Balanced forces do not change motion.',
+      reviewStatus: 'pending',
+      confidence: 'medium',
+      sourceFile: 'compact_source.txt',
+      sourceLocation: 'Chunk 1',
+      sourceTextSnippet: 'Balanced forces cancel each other.'
+    }],
+    referenceFormulas: [{
+      title: 'Force formula',
+      equation: 'F = m * a',
+      solverStatus: 'reference_only',
+      reviewStatus: 'pending',
+      confidence: 'medium',
+      sourceFile: 'compact_source.txt',
+      sourceLocation: 'Chunk 1',
+      sourceTextSnippet: 'F = m * a'
+    }],
+    uncertainSections: [{
+      sourceLocation: 'Chunk 1',
+      note: 'Check whether acceleration definition needs teacher wording.'
+    }]
+  };
+  const result = await generateDraftKnowledgePack({
+    extractionJsonPath: compactPath,
+    outputDraftDir: path.join(tempRoot, 'compact-output-drafts'),
+    modelClient: async () => JSON.stringify(compactModelOutput)
+  });
+  assert.equal(result.success, true, result.errors.join('\n'));
+  const generated = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
+  assert.equal(generated.vocabulary.length, 1);
+  assert.equal(generated.concepts.length, 1);
+  assert.equal(generated.referenceFormulas.length, 1);
+  assert.equal(generated.problemBank.length, 0);
+  assert.deepEqual(generated.standardsMap, []);
+  assert.equal(generated.referenceFormulas[0].solverStatus, 'reference_only');
+  assert.deepEqual(generated.referenceFormulas[0].standards, makeDefaultStandardsMetadata());
+  assert.ok(Array.isArray(generated.metadata.importUncertainSections));
+  assert.ok(generated.metadata.importUncertainSections[0].note.includes('teacher wording'));
+  const validation = validateKnowledgePack(generated);
+  assert.equal(validation.valid, true, validation.errors.join('\n'));
+}
+
 function assertRawInvalidPacketStillFailsValidator() {
   const validation = validateKnowledgePack({
     title: 'Raw Invalid Packet',
@@ -242,55 +308,127 @@ function assertPromptIncludesControls() {
     extraction: makeExtraction()
   });
 
-  assert.ok(prompt.includes('Do not invent facts.'));
-  assert.ok(prompt.includes('Do not invent standards.'));
+  assert.ok(prompt.includes('Do not invent facts, standards, smoke tests, problem bank items, or metadata.'));
+  assert.ok(prompt.includes('Standards are paused.'));
   assert.ok(prompt.includes('Use only the provided extracted text.'));
-  assert.ok(prompt.includes('Do not add outside examples, outside definitions, outside standards, or outside problem details.'));
   assert.ok(prompt.includes('solverStatus: "reference_only"'));
-  assert.ok(prompt.includes('Do not create solver code.'));
-  assert.ok(prompt.includes('Do not describe solver logic.'));
-  assert.ok(prompt.includes('Every generated vocabulary, concept, referenceFormula, and problemBank item must include sourceFile, sourceLocation, sourceTextSnippet, confidence, and reviewStatus.'));
-  assert.ok(prompt.includes('alignmentStatus: "not_aligned_yet"'));
-  assert.ok(prompt.includes('Do not auto-align generated draft items to standards yet.'));
-  assert.ok(prompt.includes('Only include vocabulary terms explicitly present in the provided source text.'));
-  assert.ok(prompt.includes('Every vocabulary sourceTextSnippet must contain the term itself or very close wording from the source.'));
-  assert.ok(prompt.includes('Formulas may be included only as referenceFormulas.'));
-  assert.ok(prompt.includes('Vocabulary = a named term, unit, variable, abbreviation, or phrase explicitly defined in the source text.'));
-  assert.ok(prompt.includes('Concept = a larger idea, relationship, category, process, or explanation supported by the source text.'));
-  assert.ok(prompt.includes('Reference formula = equation-like text, formula line, symbolic relationship, or unit relationship from the source.'));
-  assert.ok(prompt.includes('Problem bank = a worked example, practice question, exercise, or check-for-understanding prompt with an answer or expected answer from the source.'));
-  assert.ok(prompt.includes('The same phrase may appear once in vocabulary and once in concepts when the source supports both roles.'));
-  assert.ok(prompt.includes('Do not dedupe across vocabulary and concepts'));
-  assert.ok(prompt.includes('Preserve abbreviations shown in parentheses as aliases'));
-  assert.ok(prompt.includes('Treat simple singular/plural variants as the same vocabulary term'));
-  assert.ok(prompt.includes('Uploaded/reference formulas are for teacher review only and must not claim or imply built-in solver support.'));
-  assert.ok(prompt.includes('reviewStatus: "pending" and confidence: "low"'));
+  assert.ok(prompt.includes('Do not create or describe formula solver code.'));
+  assert.ok(prompt.includes('Every vocabulary/concept/referenceFormula item must include: sourceFile, sourceLocation, sourceTextSnippet, confidence, reviewStatus.'));
+  assert.ok(prompt.includes('Only include vocabulary terms explicitly present in the source text.'));
+  assert.ok(prompt.includes('Extract only these sections: vocabulary, concepts, referenceFormulas, uncertainSections.'));
+  assert.ok(prompt.includes('uncertainSections should be a short list of source areas'));
+  assert.ok(prompt.includes('The same phrase may appear in both vocabulary and concepts when source evidence supports both roles.'));
+  assert.ok(prompt.includes('Keep reviewStatus as "pending" for all generated items.'));
+  assert.ok(prompt.includes('If uncertain, use confidence "low"'));
   assert.ok(prompt.includes('Return valid JSON only.'));
   assert.ok(prompt.includes('Return one JSON object only.'));
-  assert.ok(prompt.includes('Do not use markdown.'));
-  assert.ok(prompt.includes('Do not wrap the JSON in triple backticks.'));
-  assert.ok(prompt.includes('Escape all quotation marks inside string values.'));
+  assert.ok(prompt.includes('Do not use markdown or code fences.'));
   assert.ok(prompt.includes('Do not include comments or trailing commas.'));
-  assert.ok(prompt.includes('"sourceFiles": []'));
-  assert.ok(prompt.includes('"referenceFormulas": []'));
-  assert.ok(prompt.includes('"problemBank": []'));
-  assert.ok(prompt.includes('"standardsMap": []'));
-  assert.ok(prompt.includes('"smokeTests": []'));
-  assert.ok(prompt.includes('"metadata": {}'));
-  assert.ok(prompt.includes('Vocabulary items must use this minimal object shape:'));
-  assert.ok(prompt.includes('Concept items must use this minimal object shape:'));
+  assert.ok(prompt.includes('"vocabulary": ['));
+  assert.ok(prompt.includes('"concepts": ['));
+  assert.ok(prompt.includes('"referenceFormulas": ['));
+  assert.ok(prompt.includes('"uncertainSections": ['));
+  assert.equal(prompt.includes('"problemBank": []'), false);
+  assert.equal(prompt.includes('"standardsMap": []'), false);
+  assert.equal(prompt.includes('"smokeTests": []'), false);
 }
 
-function assertPromptIncludesStandardsList() {
+function assertPromptSizeShrankForSmallChunk() {
+  const extraction = makeExtraction({
+    text: 'Force equals mass times acceleration. F = m * a.',
+    sections: [{
+      label: 'Chunk 1',
+      sourceLocation: 'Chunk 1',
+      pageNumber: 1,
+      chunkIndex: 1,
+      text: 'Force equals mass times acceleration. F = m * a.'
+    }]
+  });
   const prompt = buildKnowledgePackPrompt({
+    extraction
+  });
+  const bytes = Buffer.byteLength(prompt, 'utf8');
+  assert.ok(bytes < 9000, `Expected compact prompt under 9000 bytes, got ${bytes}.`);
+}
+
+function assertPromptDoesNotRequireStandardsBank() {
+  const promptWithout = buildKnowledgePackPrompt({
+    extraction: makeExtraction()
+  });
+  const promptWith = buildKnowledgePackPrompt({
     extraction: makeExtraction(),
     standardsBank: makeStandardsBank()
   });
 
-  assert.ok(prompt.includes('Available standards bank:'));
-  assert.ok(prompt.includes('SAMPLE.PS.FORCES.1'));
-  assert.ok(prompt.includes('You may only use standardIds from the available standards bank above in standardsMap entries.'));
-  assert.ok(prompt.includes('Keep generated item standards metadata empty and not_aligned_yet in this phase.'));
+  assert.ok(promptWithout.includes('Standards are paused.'));
+  assert.ok(promptWith.includes('Standards are paused.'));
+  assert.equal(promptWith.includes('Available standards bank:'), false);
+}
+
+async function assertImportModelSelectionAndFallback() {
+  const previousImportModel = process.env.OLLAMA_IMPORT_MODEL;
+  const previousModel = process.env.OLLAMA_MODEL;
+  process.env.OLLAMA_MODEL = 'student-runtime-model';
+  process.env.OLLAMA_IMPORT_MODEL = 'teacher-import-model';
+  try {
+    assert.equal(resolveImportModel({}), 'teacher-import-model');
+    const calls = [];
+    const withImportModel = await generateDraftKnowledgePack({
+      extractionJsonPath: extractionPath,
+      outputDraftDir: path.join(tempRoot, 'import-model-selection-drafts'),
+      modelClient: async (request) => {
+        calls.push(request);
+        return JSON.stringify(makeGeneratedPack({ packId: 'generated-import-model-selection-draft' }));
+      }
+    });
+    assert.equal(withImportModel.success, true, withImportModel.errors.join('\n'));
+    assert.equal(calls[0].model, 'teacher-import-model');
+
+    delete process.env.OLLAMA_IMPORT_MODEL;
+    assert.equal(resolveImportModel({}), 'student-runtime-model');
+    const fallbackCalls = [];
+    const withFallbackModel = await generateDraftKnowledgePack({
+      extractionJsonPath: extractionPath,
+      outputDraftDir: path.join(tempRoot, 'import-model-fallback-drafts'),
+      modelClient: async (request) => {
+        fallbackCalls.push(request);
+        return JSON.stringify(makeGeneratedPack({ packId: 'generated-import-model-fallback-draft' }));
+      }
+    });
+    assert.equal(withFallbackModel.success, true, withFallbackModel.errors.join('\n'));
+    assert.equal(fallbackCalls[0].model, 'student-runtime-model');
+
+    assert.equal(resolveImportModel({ model: 'explicit-override' }), 'explicit-override');
+  } finally {
+    restoreEnvVar('OLLAMA_IMPORT_MODEL', previousImportModel);
+    restoreEnvVar('OLLAMA_MODEL', previousModel);
+  }
+}
+
+async function assertImportModelOptionsUseLowMemoryEnv() {
+  const prevCtx = process.env.OLLAMA_IMPORT_NUM_CTX;
+  const prevPredict = process.env.OLLAMA_IMPORT_NUM_PREDICT;
+  process.env.OLLAMA_IMPORT_NUM_CTX = '512';
+  process.env.OLLAMA_IMPORT_NUM_PREDICT = '128';
+  try {
+    const calls = [];
+    const result = await generateDraftKnowledgePack({
+      extractionJsonPath: extractionPath,
+      outputDraftDir: path.join(tempRoot, 'import-low-memory-options-drafts'),
+      modelClient: async (request) => {
+        calls.push(request);
+        return JSON.stringify(makeGeneratedPack({ packId: 'generated-import-low-memory-options-draft' }));
+      }
+    });
+    assert.equal(result.success, true, result.errors.join('\n'));
+    assert.equal(calls[0].options.num_ctx, 512);
+    assert.equal(calls[0].options.num_predict, 128);
+    assert.equal(result.inputSnapshot.modelSettings.num_ctx, 512);
+    assert.equal(result.inputSnapshot.modelSettings.num_predict, 128);
+  } finally {
+    restoreEnvVar('OLLAMA_IMPORT_NUM_CTX', prevCtx);
+    restoreEnvVar('OLLAMA_IMPORT_NUM_PREDICT', prevPredict);
+  }
 }
 
 async function assertDefaultTimeoutAndKeepAliveReachModelClient() {
@@ -401,7 +539,7 @@ async function assertModelCallsUseDeterministicOptions() {
     top_k: 40
   });
   assert.equal(result.inputSnapshot.modelSettings.temperature, 0);
-  assert.equal(result.inputSnapshot.promptVersion, 'teacher-content-draft-v2');
+  assert.equal(result.inputSnapshot.promptVersion, 'teacher-content-draft-v3-compact');
   assert.ok(result.inputSnapshot.chunkTextHashes[0].hash);
 }
 
@@ -829,7 +967,7 @@ async function assertLargePdfSplitsIntoPageChunksAndBatches() {
     maxBatchChunks: 2,
     modelClient: async ({ prompt }) => {
       calls.push(prompt);
-      const pageMatch = prompt.match(/Page (\d+)/);
+      const pageMatch = prompt.match(/"label":\s*"Page (\d+)"/) || prompt.match(/Page (\d+)/);
       const page = pageMatch ? Number(pageMatch[1]) : calls.length;
       return JSON.stringify(makeGeneratedPack({
         packId: 'generated-large-pdf-draft',
@@ -2009,8 +2147,9 @@ async function assertRetryInvalidJsonCanRepairDraft() {
   assert.equal(result.success, true, result.errors.join('\n'));
   assert.equal(result.packId, 'generated-retry-draft');
   assert.equal(calls.length, 2);
-  assert.ok(calls[1].includes('Convert the following attempted response into valid JSON matching the required schema.'));
+  assert.ok(calls[1].includes('Convert the following attempted response into valid JSON.'));
   assert.ok(calls[1].includes('Return JSON only. Do not add new facts.'));
+  assert.ok(calls[1].includes('"uncertainSections":[]'));
 }
 
 async function assertInvalidStandardsAreRejected() {
@@ -2656,6 +2795,14 @@ function makeStandardsBank() {
     ],
     metadata: {}
   };
+}
+
+function restoreEnvVar(name, previousValue) {
+  if (previousValue === undefined) {
+    delete process.env[name];
+    return;
+  }
+  process.env[name] = previousValue;
 }
 
 function cleanupTempRoot() {

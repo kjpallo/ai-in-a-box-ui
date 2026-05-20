@@ -24,7 +24,7 @@ async function main() {
   const inputPath = path.resolve(args.input);
   const standardsBankPath = args.standardsBank ? path.resolve(args.standardsBank) : undefined;
   const outputDraftDir = args.out ? path.resolve(args.out) : undefined;
-  const model = args.model || process.env.OLLAMA_MODEL || DEFAULT_MODEL;
+  const model = args.model || process.env.OLLAMA_IMPORT_MODEL || process.env.OLLAMA_MODEL || DEFAULT_MODEL;
   const timeoutMs = args.timeoutMs || DEFAULT_OLLAMA_TIMEOUT_MS;
   const keepAlive = args.keepAlive || DEFAULT_OLLAMA_KEEP_ALIVE;
 

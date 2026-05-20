@@ -901,7 +901,7 @@ async function assertAnalyzeAdaptiveLoopProcessesManifestToTerminal(handlers) {
   const calls = [];
   mockDraftModelClient = async ({ prompt }) => {
     const text = String(prompt || '');
-    const pageMatch = text.match(/Page\s+(\d+)/i);
+    const pageMatch = text.match(/"label":\s*"Page\s+(\d+)"/i) || text.match(/Page\s+(\d+)/i);
     const page = pageMatch ? Number(pageMatch[1]) : 1;
     const marker = text.includes('ADAPTIVE_FAIL_CHUNK_TOKEN') ? 'fail'
       : text.includes('ADAPTIVE_NO_ITEMS_CHUNK_TOKEN') ? 'no_items'
