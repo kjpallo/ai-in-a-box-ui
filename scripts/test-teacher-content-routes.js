@@ -334,6 +334,11 @@ async function assertPrepareReviewEndpointSucceeds(handlers) {
   assert.equal(response.body.data.importScope.completePacketImported, true);
   assert.equal(response.body.data.draftReport.coverageReport.totalChunks, 1);
   assert.equal(response.body.data.draftReport.coverageReport.processedChunks, 1);
+  assert.equal(response.body.data.draftReport.coverageSummary.totalChunks, 1);
+  assert.equal(response.body.data.draftReport.coverageSummary.draftedChunks, 1);
+  assert.equal(response.body.data.draftReport.coverageSummary.queuedChunks, 0);
+  assert.equal(response.body.data.coverageSummary.totalChunks, 1);
+  assert.equal(response.body.data.coverageSummary.draftedChunks, 1);
   assert.ok(response.body.data.timeline.some((event) => event.message === 'Building draft packet wrapper'));
   assert.ok(response.body.data.timeline.some((event) => event.message === 'Draft ready for review'));
   assert.equal(calls.length, 1);
@@ -438,6 +443,7 @@ async function assertPreviewPrepareReviewDoesNotWriteDraft(handlers) {
   assert.deepEqual(response.body.data.importSelection.pages, [1, 2, 3]);
   assert.equal(response.body.data.inputSnapshot.modelSettings.temperature, 0);
   assert.ok(response.body.data.previewReport.processedChunkCount >= 1);
+  assert.ok(response.body.data.coverageSummary.totalChunks >= response.body.data.previewReport.processedChunkCount);
   assert.ok(calls.length >= 1, 'preview should call Gemma on the sample.');
   assert.equal(calls[0].timeoutMs, 120000, 'preview/selected imports should use a bounded teacher-content timeout by default.');
   assert.deepEqual(snapshotFiles(draftPacksDir), draftFilesBefore, 'preview should not write a final draft pack.');
@@ -813,6 +819,8 @@ async function assertSelectedPageRangeImportWritesPartialDraft(handlers) {
   assert.equal(response.body.data.importScope.scope, 'selected_range');
   assert.equal(response.body.data.importScope.rangeLimited, true);
   assert.equal(response.body.data.importSelection.completePacketImported, false);
+  assert.equal(response.body.data.coverageSummary.totalChunks, 6);
+  assert.equal(response.body.data.coverageSummary.queuedChunks, 3);
   assert.ok(response.body.data.selectedImportEstimate.characterCount < response.body.data.importEstimate.characterCount);
   assert.ok(response.body.data.timeline.some((event) => event.type === 'import_selection_ready'));
   assert.ok(calls.length >= 1, 'selected import should call Gemma for selected range.');
@@ -825,7 +833,8 @@ async function assertSelectedPageRangeImportWritesPartialDraft(handlers) {
   assert.equal(generated.metadata.importScope.warning, 'This draft covers only Pages 2-4. It does not mark the whole packet imported.');
   assert.equal(generated.metadata.partialImport.completePacketImported, false);
   assert.equal(generated.metadata.partialImport.originalPageCount, 6);
-  assert.equal(generated.metadata.importCoverage.totalPages, 3);
+  assert.equal(generated.metadata.importCoverage.totalPages, 6);
+  assert.equal(generated.metadata.importCoverage.coverageSummary.queuedChunks, 3);
   assert.equal(generated.vocabulary[0].reviewStatus, 'pending');
   assert.equal(generated.vocabulary[0].sourceLocation, 'Pages 2-4');
 
@@ -1043,6 +1052,9 @@ async function assertSuccessfulTxtUploadExtraction(handlers) {
   assert.equal(extractionJson.success, true);
   assert.equal(extractionJson.upload.originalFileName, 'teacher_force_notes.txt');
   assert.ok(extractionJson.text.includes('Unbalanced forces'));
+  assert.equal(Array.isArray(extractionJson.sourceManifest), true);
+  assert.equal(extractionJson.sourceManifest.length, 1);
+  assert.equal(extractionJson.sourceManifest[0].status, 'queued');
 
   assert.deepEqual(snapshotFiles(draftPacksDir), draftFilesBefore, 'upload extraction should not create or modify draft packs');
   assert.deepEqual(snapshotFiles(realApprovedPacksDir), approvedFilesBefore, 'upload extraction should not modify real approved packs');

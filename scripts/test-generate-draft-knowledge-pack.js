@@ -54,6 +54,7 @@ async function main() {
     await assertModelTimeoutClassifiedAsRuntimeFailure();
     await assertValidMockCreatesDraft();
     await assertMultiChunkUploadMergesBatchDrafts();
+    await assertEmptyChunksStayTrackedInManifest();
     await assertDuplicateVocabularyAcrossChunksIsMergedWithEvidence();
     await assertSingularPluralVocabularyDuplicatesMergeWithAliases();
     await assertParentheticalAbbreviationsBecomeAliases();
@@ -71,6 +72,7 @@ async function main() {
     await assertLaterBatchCrashWritesPartialDraft();
     await assertPreviewValidationFailureReturnsSalvagedPreview();
     await assertSelectedPageRangeProcessesOnlySelectedPages();
+    await assertSelectedRangeCoverageKeepsQueuedChunks();
     await assertModelCallsStaySequential();
     await assertModelCrashRetriesWithSmallerChunks();
     await assertRetryFailureReportsBatchCoverage();
@@ -525,6 +527,9 @@ async function assertMultiChunkUploadMergesBatchDrafts() {
   assert.equal(result.coverageReport.processedChunks, 3);
   assert.equal(result.coverageReport.chunksWithDraftItems, 3);
   assert.equal(result.coverageReport.itemCounts.vocabulary, 3);
+  assert.equal(result.coverageReport.sourceManifest.length, 3);
+  assert.deepEqual(result.coverageReport.sourceManifest.map((entry) => entry.chunkIndex), [1, 2, 3]);
+  assert.equal(result.coverageReport.coverageSummary.draftedChunks, 3);
 
   const generated = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
   assert.equal(generated.vocabulary.length, 3);
@@ -534,6 +539,34 @@ async function assertMultiChunkUploadMergesBatchDrafts() {
   assert.equal(generated.metadata.importCoverage.processedChunks, 3);
   assert.equal(generated.vocabulary[1].sourceLocation, 'Chunk 2');
   assert.equal(generated.problemBank[2].sourceTextSnippet, 'Chunk 3 includes a practice prompt.');
+}
+
+async function assertEmptyChunksStayTrackedInManifest() {
+  const manifestPath = path.join(tempRoot, 'empty_chunk_manifest_extraction.json');
+  fs.writeFileSync(manifestPath, `${JSON.stringify(makeExtractionWithEmptyChunk(), null, 2)}\n`);
+
+  const result = await generateDraftKnowledgePack({
+    extractionJsonPath: manifestPath,
+    outputDraftDir: path.join(tempRoot, 'empty-chunk-manifest-drafts'),
+    modelClient: async () => JSON.stringify(makeGeneratedPack({
+      packId: 'generated-empty-chunk-manifest',
+      vocabulary: [makeVocabularyItemForChunk(1)],
+      concepts: [makeConceptItemForChunk(1)],
+      referenceFormulas: [],
+      problemBank: [],
+      standardsMap: [],
+      smokeTests: []
+    }))
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  assert.equal(result.coverageReport.totalChunks, 2);
+  assert.equal(result.coverageReport.coverageSummary.skippedEmptyChunks, 1);
+  assert.equal(result.coverageReport.coverageSummary.draftedChunks, 1);
+  assert.equal(result.coverageReport.coverageSummary.queuedChunks, 0);
+  assert.equal(result.coverageReport.sourceManifest.length, 2);
+  assert.equal(result.coverageReport.sourceManifest[0].status, 'drafted');
+  assert.equal(result.coverageReport.sourceManifest[1].status, 'skipped_empty');
 }
 
 async function assertDuplicateVocabularyAcrossChunksIsMergedWithEvidence() {
@@ -1128,7 +1161,8 @@ async function assertLaterBatchCrashWritesPartialDraft() {
   assert.deepEqual(generated.metadata.partialImport.failedPages, [3]);
   assert.deepEqual(generated.metadata.importCoverage.failedBatches[0].pages, [3]);
   assert.deepEqual(generated.metadata.partialImport.processedPages, [1, 2]);
-  assert.equal(generated.metadata.importCoverage.processedChunks, 2);
+  assert.equal(generated.metadata.importCoverage.processedChunks, 3);
+  assert.equal(generated.metadata.importCoverage.coverageSummary.failedChunks, 1);
   assert.ok(generated.vocabulary.some((item) => item.sourceLocation === 'Page 1'), 'successful earlier batch items should be kept.');
   assert.ok(!generated.vocabulary.some((item) => item.sourceLocation === 'Page 3'), 'failed page items must not be promoted into the partial draft.');
 }
@@ -1258,8 +1292,41 @@ async function assertSelectedPageRangeProcessesOnlySelectedPages() {
   assert.equal(generated.metadata.importSelection.label, 'Pages 2-4');
   assert.equal(generated.metadata.importScope.scope, 'selected_range');
   assert.equal(generated.metadata.importScope.warning, 'This draft covers only Pages 2-4. It does not mark the whole packet imported.');
-  assert.equal(generated.metadata.importCoverage.totalPages, 3);
+  assert.equal(generated.metadata.importCoverage.totalPages, 6);
+  assert.equal(generated.metadata.importCoverage.coverageSummary.queuedChunks, 3);
+  assert.equal(generated.metadata.importCoverage.coverageSummary.draftedChunks, 1);
   assert.equal(generated.vocabulary[0].sourceLocation, 'Page 2');
+}
+
+async function assertSelectedRangeCoverageKeepsQueuedChunks() {
+  const selectedPath = path.join(tempRoot, 'selected_range_manifest_extraction.json');
+  const extraction = makeLargePdfExtraction({ pages: 5, charactersPerPage: 650 });
+  fs.writeFileSync(selectedPath, `${JSON.stringify(extraction, null, 2)}\n`);
+
+  const result = await generateDraftKnowledgePack({
+    extractionJsonPath: selectedPath,
+    outputDraftDir: path.join(tempRoot, 'selected-range-manifest-drafts'),
+    importMode: 'selected',
+    importSelection: {
+      pageStart: 2,
+      pageEnd: 3
+    },
+    modelClient: async () => JSON.stringify(makeGeneratedPack({
+      packId: 'generated-selected-range-manifest',
+      vocabulary: [makeVocabularyItemForPage(2)],
+      concepts: [],
+      referenceFormulas: [],
+      problemBank: [],
+      standardsMap: [],
+      smokeTests: []
+    }))
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  assert.equal(result.coverageReport.coverageSummary.totalChunks, 5);
+  assert.equal(result.coverageReport.coverageSummary.queuedChunks, 3);
+  assert.ok(result.coverageReport.sourceManifest.some((entry) => entry.chunkIndex === 1 && entry.status === 'queued'));
+  assert.ok(result.coverageReport.sourceManifest.some((entry) => entry.chunkIndex === 2 && entry.status === 'drafted'));
 }
 
 async function assertModelCallsStaySequential() {
@@ -2047,6 +2114,49 @@ function makeMultiChunkExtraction() {
       detectedType: 'txt',
       characterCount: 176,
       pageCount: 3
+    },
+    warnings: [],
+    errors: []
+  };
+}
+
+function makeExtractionWithEmptyChunk() {
+  return {
+    success: true,
+    filePath: '/tmp/empty_chunk_packet.pdf',
+    fileName: 'empty_chunk_packet.pdf',
+    extension: '.pdf',
+    mimeGuess: 'application/pdf',
+    text: 'Page 1 has extractable vocabulary text.',
+    sections: [
+      {
+        label: 'Page 1',
+        sourceLocation: 'Page 1',
+        pageNumber: 1,
+        text: 'Page 1 has extractable vocabulary text.'
+      },
+      {
+        label: 'Page 2',
+        sourceLocation: 'Page 2',
+        pageNumber: 2,
+        text: ''
+      }
+    ],
+    pages: [
+      {
+        pageNumber: 1,
+        text: 'Page 1 has extractable vocabulary text.'
+      },
+      {
+        pageNumber: 2,
+        text: ''
+      }
+    ],
+    tables: [],
+    metadata: {
+      detectedType: 'pdf',
+      characterCount: 37,
+      pageCount: 2
     },
     warnings: [],
     errors: []

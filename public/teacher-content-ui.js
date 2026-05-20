@@ -4352,6 +4352,7 @@
   function renderCoverageReport(coverage) {
     if (!coverage) return '';
     const itemCounts = coverage.itemCounts || {};
+    const summary = coverage.coverageSummary || {};
     return `
       <section class="teacher-content-counts" data-import-coverage-report>
         <h5>Coverage report</h5>
@@ -4361,6 +4362,13 @@
           ${countPill('Processed chunks', coverage.processedChunks, 'data-import-coverage-processed-chunks')}
           ${countPill('Chunks with items', coverage.chunksWithDraftItems, 'data-import-coverage-chunks-with-items')}
           ${countPill('Chunks without items', coverage.chunksWithNoExtractedKnowledge, 'data-import-coverage-empty-chunks')}
+          ${countPill('Queued chunks', summary.queuedChunks, 'data-import-coverage-queued-chunks')}
+          ${countPill('Drafted chunks', summary.draftedChunks, 'data-import-coverage-drafted-chunks')}
+          ${countPill('Skipped empty', summary.skippedEmptyChunks, 'data-import-coverage-skipped-empty-chunks')}
+          ${countPill('No items found', summary.noItemsFoundChunks, 'data-import-coverage-no-items-found-chunks')}
+          ${countPill('Needs review', summary.needsReviewChunks, 'data-import-coverage-needs-review-chunks')}
+          ${countPill('Failed chunks', summary.failedChunks, 'data-import-coverage-failed-chunks')}
+          ${countPill('Total source chars', summary.totalSourceChars, 'data-import-coverage-total-source-chars')}
         </div>
         ${renderCounts('Draft item counts by section', itemCounts)}
         ${renderChipList('Sections detected', coverage.sectionsDetected || [], 'data-import-coverage-sections-detected')}

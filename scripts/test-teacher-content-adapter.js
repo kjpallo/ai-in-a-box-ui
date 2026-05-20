@@ -158,6 +158,9 @@ function assertDraftPackReport() {
   assert.equal(report.sourceExtraction.fileName, 'teacher_force_notes.txt');
   assert.equal(report.coverageReport.totalChunks, 1);
   assert.equal(report.coverageReport.processedChunks, 1);
+  assert.equal(report.coverageSummary.totalChunks, 1);
+  assert.equal(report.coverageSummary.draftedChunks, 1);
+  assert.equal(report.coverageSummary.queuedChunks, 0);
   assert.equal(report.draftPack.packId, 'teacher-content-draft');
   assert.equal(report.pendingReview.totalPending, 1);
   assert.equal(report.pendingReview.items.vocabulary[0].label, 'net-force');

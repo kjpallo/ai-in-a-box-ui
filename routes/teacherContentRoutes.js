@@ -25,6 +25,7 @@ const {
 const { REVIEW_STATUSES } = require('../lib/knowledge/packSchema');
 const { detectUploadFileType, supportedExtensions } = require('../lib/uploads/detectUploadFileType');
 const { extractTextFromFile } = require('../lib/uploads/extractTextFromFile');
+const { makeSourceManifestFromExtraction } = require('../lib/uploads/sourceManifest');
 const {
   buildImportEstimate,
   generateDraftKnowledgePack,
@@ -508,6 +509,7 @@ async function storeAndExtractUpload(upload, options = {}) {
     settings: options,
     memory: options.systemMemory
   });
+  const sourceManifest = makeSourceManifestFromExtraction(extraction);
   const extractionWithUploadMetadata = {
     ...extraction,
     upload: {
@@ -516,6 +518,7 @@ async function storeAndExtractUpload(upload, options = {}) {
       storedFileName,
       extractionJsonFileName
     },
+    sourceManifest,
     importPlan: autoImportPlan,
     warnings: extractionWarnings
   };
@@ -533,6 +536,7 @@ async function storeAndExtractUpload(upload, options = {}) {
       pageCount: Number(extraction.metadata && extraction.metadata.pageCount || 0),
       sectionsCount: extraction.sections.length,
       tablesCount: extraction.tables.length,
+      sourceManifest,
       warnings: extractionWarnings,
       errors: extraction.errors || [],
       extraction: makeExtractionSummary(extractionWithUploadMetadata),
@@ -772,6 +776,7 @@ async function prepareReviewDraftFromUpload(uploadId, body = {}, options = {}) {
         previewReport: makePreviewReportSummary(generation.previewReport),
         timeline: generation.timeline || [],
         coverageReport: generation.coverageReport,
+        coverageSummary: generation.coverageReport && generation.coverageReport.coverageSummary,
         failedBatches: generation.failedBatches || [],
         invalidItems: generation.invalidItems || [],
         repairNeeded: generation.repairNeeded || [],
@@ -806,6 +811,7 @@ async function prepareReviewDraftFromUpload(uploadId, body = {}, options = {}) {
       importSelection: generation.importSelection,
       importScope: generation.importScope,
       selectedImportEstimate: generation.selectedImportEstimate,
+      coverageSummary: generation.coverageReport && generation.coverageReport.coverageSummary,
       timeline: generation.timeline || [],
       dashboard: getTeacherContentDashboard(options),
       drafts: listDraftPacksForReview(options).draftPacks
@@ -878,6 +884,7 @@ function makePreviewReportSummary(previewReport = {}) {
     inputSnapshot: previewReport.inputSnapshot || null,
     importScope: previewReport.importScope || pack.metadata && pack.metadata.importScope || null,
     coverageReport: previewReport.coverageReport,
+    coverageSummary: previewReport.coverageReport && previewReport.coverageReport.coverageSummary,
     failedBatches: previewReport.failedBatches || [],
     invalidItems: previewReport.invalidItems || [],
     repairNeeded: previewReport.repairNeeded || [],
@@ -1095,6 +1102,7 @@ function makePrepareReviewFailurePayload(result = {}, context = {}) {
     invalidItems: result.invalidItems || [],
     repairNeeded: result.repairNeeded || [],
     failedBatches: result.failedBatches || [],
+    coverageSummary: result.coverageReport && result.coverageReport.coverageSummary,
     rawModelResponsePath: result.rawModelResponsePath || ''
   };
 }
@@ -1276,6 +1284,11 @@ function isPathInside(filePath, rootDir) {
 }
 
 function makeExtractionSummary(extraction) {
+  const sourceManifest = Array.isArray(extraction.sourceManifest)
+    ? extraction.sourceManifest
+    : Array.isArray(extraction.metadata && extraction.metadata.sourceManifest)
+      ? extraction.metadata.sourceManifest
+      : [];
   return {
     success: extraction.success === true,
     fileName: extraction.fileName || '',
@@ -1286,6 +1299,7 @@ function makeExtractionSummary(extraction) {
     pageCount: Number(extraction.metadata && extraction.metadata.pageCount || 0),
     sectionsCount: extraction.sections.length,
     tablesCount: extraction.tables.length,
+    sourceManifest,
     warnings: extraction.warnings || [],
     errors: extraction.errors || []
   };
