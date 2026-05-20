@@ -25,6 +25,7 @@ fs.mkdirSync(approvedPacksDir, { recursive: true });
 fs.mkdirSync(deletedApprovedPacksDir, { recursive: true });
 fs.mkdirSync(uploadIncomingDir, { recursive: true });
 fs.mkdirSync(uploadExtractedDir, { recursive: true });
+fs.mkdirSync(rawModelResponsesDir, { recursive: true });
 fs.mkdirSync(standardsBanksDir, { recursive: true });
 
 const approvedPacksBefore = snapshotFiles(realApprovedPacksDir);

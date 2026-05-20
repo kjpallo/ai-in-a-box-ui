@@ -565,6 +565,9 @@ function getUploadExtractedDir(options = {}) {
 }
 
 async function prepareReviewDraftFromUpload(uploadId, body = {}, options = {}) {
+  if (nonEmptyString(options.rawModelResponsesDir)) {
+    fs.mkdirSync(path.resolve(options.rawModelResponsesDir), { recursive: true });
+  }
   const extractionJsonPath = getExtractionJsonPathForUpload(uploadId, options);
   if (!fs.existsSync(extractionJsonPath)) {
     return makePrepareReviewFailurePayload({

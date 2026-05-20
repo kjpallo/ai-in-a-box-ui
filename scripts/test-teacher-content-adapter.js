@@ -117,6 +117,19 @@ function assertDraftReviewList() {
     totalApproved: 5,
     totalRejected: 1,
     validationPassed: true,
+    importScope: {
+      scope: 'full_document',
+      scopeLabel: 'Full Import',
+      sampleOnly: false,
+      rangeLimited: false,
+      completePacketImported: true,
+      pageRangeLabel: '',
+      chunkRangeLabel: '',
+      rangeLabel: '',
+      warning: ''
+    },
+    sampleOnly: false,
+    rangeLimited: false,
     sourcePath: path.join(draftPacksDir, 'teacher-content-draft', 'knowledge_pack.json')
   });
 }
