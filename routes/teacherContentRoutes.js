@@ -42,6 +42,17 @@ const {
 
 const SAFE_PACK_ID_PATTERN = /^[a-z0-9_-]+$/;
 const SAFE_UPLOAD_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{0,127}$/;
+const IMPORT_PROFILE_VALUES = new Set([
+  'general',
+  'physical_science',
+  'biology',
+  'chemistry',
+  'earth_space_science',
+  'math',
+  'english_reading',
+  'history_social_studies',
+  'procedures_class_info'
+]);
 const DEFAULT_UPLOAD_LIMIT_BYTES = 15 * 1024 * 1024;
 const DEFAULT_PREVIEW_SELECTED_GENERATION_TIMEOUT_MS = 120000;
 const DEFAULT_FULL_GENERATION_TIMEOUT_MS = 300000;
@@ -620,20 +631,8 @@ async function prepareReviewDraftFromUpload(uploadId, body = {}, options = {}) {
     return makePrepareReviewFailurePayload({
       success: false,
       statusCode: 409,
-      errors: ['Run preview first, import a selected page range, request a confirmed full import, or accept the automatic import recommendation.'],
+      errors: ['Select Analyze Upload or choose a specific import action before preparing the review draft.'],
       warnings: [],
-      importEstimate,
-      autoImportPlan,
-      timeline: [makeTimelineEvent('import_estimate_ready', 'Import estimate ready', importEstimate)]
-    }, { uploadId, body, extraction, importSelection: null, importEstimate });
-  }
-
-  if (fullImportRequested && importEstimate.hardStop) {
-    return makePrepareReviewFailurePayload({
-      success: false,
-      statusCode: 413,
-      errors: [importEstimate.hardStopMessage || 'This upload is large. Run preview first or lower batch size.'],
-      warnings: importEstimate.hardStopReasons || [],
       importEstimate,
       autoImportPlan,
       timeline: [makeTimelineEvent('import_estimate_ready', 'Import estimate ready', importEstimate)]
@@ -722,6 +721,7 @@ async function prepareReviewDraftFromUpload(uploadId, body = {}, options = {}) {
     maxBatchChunks: autoRecommendationAccepted || (previewOnly && String(generationOptions.previewMode || '').toLowerCase().includes('ultra')) ? 1 : effectiveGenerationOptions.maxBatchChunks,
     previewOnly,
     importMode: selectedImportRequested ? 'selected' : importMode,
+    importProfile: normalizeImportProfile(body.importProfile),
     importIntent,
     importSelection,
     autoImportPlan,
@@ -743,6 +743,9 @@ async function prepareReviewDraftFromUpload(uploadId, body = {}, options = {}) {
       teacherFriendlyError,
       technicalErrors,
       warnings: generation.warnings || [],
+      validationErrors: generation.validationErrors || generation.errors || [],
+      invalidItems: generation.invalidItems || [],
+      repairNeeded: generation.repairNeeded || generation.invalidItems || [],
       autoImportPlan,
       importEstimate,
       selectedImportEstimate: generation.selectedImportEstimate,
@@ -831,6 +834,12 @@ async function prepareReviewDraftFromUpload(uploadId, body = {}, options = {}) {
     errors: [],
     warnings: generation.warnings || []
   };
+}
+
+function normalizeImportProfile(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  if (IMPORT_PROFILE_VALUES.has(raw)) return raw;
+  return 'general';
 }
 
 function buildExtractionTimeline(uploadData = {}) {
@@ -995,7 +1004,8 @@ function makeRouteImportSelectionLabel(selection = {}) {
 }
 
 function makeScopedRoutePackName(packName, details = {}) {
-  const baseName = nonEmptyString(packName) ? packName.trim() : 'Teacher Upload';
+  if (nonEmptyString(packName)) return packName.trim();
+  const baseName = 'Teacher Upload';
   const importIntent = String(details.importIntent || '').trim().toLowerCase();
   const scopeLabel = details.previewOnly || importIntent === 'preview_range' || importIntent === 'preview'
     ? 'Preview Sample'

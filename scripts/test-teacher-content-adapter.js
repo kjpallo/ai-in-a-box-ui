@@ -58,6 +58,8 @@ try {
   assertDraftReviewList();
   assertFixturePacksRequireExplicitOption();
   assertDraftPackReport();
+  assertDraftPackReportWithStoredCoverageAndNullExtraction();
+  assertDraftPackReportKeepsRowsWhenCoverageBuildFails();
   assertApprovedPackSummary();
   assertInvalidPacksAreErrors();
   assertRealApprovedPacksAreNotModified();
@@ -168,6 +170,68 @@ function assertDraftPackReport() {
   assert.ok(report.promotionReadiness.blockedReasons.includes('pending items remain'));
   assert.equal(report.promotionReadiness.blockedReasons.includes('rejected items remain'), false);
   assert.deepEqual(report.indexPreview.vocabularyKeys, ['balanced-force']);
+}
+
+function assertDraftPackReportWithStoredCoverageAndNullExtraction() {
+  const packId = 'teacher-content-null-pages-report-pack';
+  writeKnowledgePack(draftPacksDir, makePack({
+    packId,
+    vocabulary: [
+      makeVocabularyItem('alpha-force', 'needs_review'),
+      makeVocabularyItem('beta-force', 'pending')
+    ],
+    concepts: [
+      makeConceptItem('alpha-concept', 'needs_review')
+    ],
+    referenceFormulas: [],
+    metadata: {
+      createdBy: 'test-suite',
+      createdAt: '2026-05-14T00:00:00.000Z',
+      importCoverage: {
+        sourceManifest: [],
+        coverageSummary: {}
+      }
+    }
+  }));
+
+  try {
+    const report = getDraftPackReport(packId, {
+      draftPacksDir,
+      approvedPacksDir,
+      standardsBank
+    });
+    assert.equal(report.success, true);
+    assert.equal(report.reviewItems.items.vocabulary.length, 2);
+    assert.equal(report.reviewItems.items.concepts.length, 1);
+    assert.equal(report.pendingReview.totalPending, 3, 'pending + needs_review should be counted for review');
+    assert.equal(Array.isArray(report.technicalErrors), true);
+  } finally {
+    fs.rmSync(path.join(draftPacksDir, packId), { recursive: true, force: true });
+  }
+}
+
+function assertDraftPackReportKeepsRowsWhenCoverageBuildFails() {
+  const extraction = {
+    success: true,
+    fileName: 'teacher_force_notes.txt',
+    metadata: { detectedType: 'txt', pageCount: 1 },
+    sections: [],
+    get sourceManifest() {
+      throw new Error('synthetic coverage failure');
+    }
+  };
+
+  const report = getDraftPackReport('teacher-content-draft', {
+    draftPacksDir,
+    approvedPacksDir,
+    standardsBank,
+    extraction
+  });
+
+  assert.equal(report.success, true);
+  assert.equal(report.reviewItems.items.vocabulary.length, 2, 'row items should remain visible even if coverage report fails');
+  assert.equal(report.reviewItems.items.concepts.length, 1);
+  assert.ok(Array.isArray(report.technicalErrors) && report.technicalErrors.some((error) => error.includes('Import coverage report failed to load')));
 }
 
 function assertApprovedPackSummary() {
@@ -373,19 +437,23 @@ function makeSmokeTest(reviewStatus) {
   };
 }
 
-function makeExtraction() {
+function makeExtraction(overrides = {}) {
   const text = 'Force is a push or pull.\nBalanced forces do not change motion.';
+  const metadata = {
+    detectedType: 'txt',
+    characterCount: text.length,
+    ...(overrides.metadata || {})
+  };
   return {
     success: true,
-    fileName: 'teacher_force_notes.txt',
-    extension: 'txt',
-    text,
-    metadata: {
-      detectedType: 'txt',
-      characterCount: text.length
-    },
-    warnings: [],
-    errors: []
+    fileName: overrides.fileName || 'teacher_force_notes.txt',
+    extension: overrides.extension || 'txt',
+    text: overrides.text || text,
+    metadata,
+    pages: overrides.pages,
+    sections: overrides.sections,
+    warnings: Array.isArray(overrides.warnings) ? overrides.warnings : [],
+    errors: Array.isArray(overrides.errors) ? overrides.errors : []
   };
 }
 

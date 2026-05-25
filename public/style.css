@@ -2077,6 +2077,14 @@ button:disabled {
 
 .teacher-content-entry-card .small-button {
   width: max-content;
+  border: 1px solid rgba(126, 233, 255, 0.55);
+  background: linear-gradient(135deg, rgba(13, 53, 62, 0.92), rgba(9, 31, 35, 0.94));
+  box-shadow: 0 0 0 1px rgba(102, 247, 209, 0.28), 0 8px 24px rgba(0, 0, 0, 0.32);
+}
+
+.teacher-content-entry-card .small-button:hover {
+  border-color: rgba(102, 247, 209, 0.88);
+  box-shadow: 0 0 0 1px rgba(102, 247, 209, 0.48), 0 0 28px rgba(102, 247, 209, 0.22);
 }
 
 .teacher-content-overlay[hidden] {
@@ -2203,7 +2211,14 @@ button:disabled {
 .teacher-content-draft-picker {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
+}
+
+.teacher-content-draft-picker small {
+  flex-basis: 100%;
+  color: #9fc8c4;
+  font-size: 0.72rem;
 }
 
 .teacher-content-draft-picker select,
@@ -2276,6 +2291,84 @@ button:disabled {
   font-weight: 900;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+.teacher-content-review-bulk-summary {
+  margin: 10px 0 14px;
+  padding: 10px 12px;
+  border: 1px solid rgba(102, 247, 209, 0.24);
+  border-radius: 10px;
+  background: rgba(102, 247, 209, 0.07);
+}
+
+.teacher-content-review-bulk-summary p {
+  margin: 0;
+}
+
+.teacher-content-review-bulk-summary-label {
+  margin-top: 8px;
+  color: #b7d1cf;
+  font-size: 0.76rem;
+}
+
+.teacher-content-review-bulk-summary-list {
+  margin: 6px 0 0;
+  padding-left: 16px;
+  color: #effff8;
+}
+
+.teacher-content-review-bulk-summary-list li {
+  margin: 2px 0;
+}
+
+.teacher-content-review-pack-card {
+  width: 100%;
+  text-align: left;
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(126, 233, 255, 0.28);
+  background: rgba(5, 17, 20, 0.72);
+  color: #def8f3;
+}
+
+.teacher-content-review-pack-card span {
+  color: #9dd3cf;
+  text-transform: capitalize;
+}
+
+.teacher-content-review-pack-card small {
+  color: #80b5b0;
+}
+
+.teacher-content-review-pack-card.active {
+  border-color: rgba(102, 247, 209, 0.9);
+  box-shadow: 0 0 0 1px rgba(102, 247, 209, 0.4), 0 0 20px rgba(102, 247, 209, 0.16);
+}
+
+.teacher-content-validation-note {
+  color: #9fffd8;
+  font-weight: 700;
+}
+
+.teacher-content-required-glow {
+  animation: teacher-content-required-glow 1.3s ease-in-out infinite;
+}
+
+@keyframes teacher-content-required-glow {
+  0% {
+    border-color: rgba(102, 247, 209, 0.78);
+    box-shadow: 0 0 0 1px rgba(102, 247, 209, 0.38), 0 0 16px rgba(102, 247, 209, 0.28);
+  }
+  50% {
+    border-color: rgba(126, 233, 255, 0.95);
+    box-shadow: 0 0 0 1px rgba(126, 233, 255, 0.45), 0 0 24px rgba(126, 233, 255, 0.32);
+  }
+  100% {
+    border-color: rgba(102, 247, 209, 0.78);
+    box-shadow: 0 0 0 1px rgba(102, 247, 209, 0.38), 0 0 16px rgba(102, 247, 209, 0.28);
+  }
 }
 
 .teacher-content-tab.active {
@@ -3235,6 +3328,163 @@ button:disabled {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.teacher-content-review-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.teacher-content-review-filter {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid rgba(132, 211, 194, 0.25);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.2);
+  color: #d8eee9;
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.teacher-content-review-filter.active {
+  border-color: rgba(102, 247, 209, 0.55);
+  background: rgba(102, 247, 209, 0.16);
+  color: #f1fff9;
+}
+
+.teacher-content-review-needs-review {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(255, 205, 87, 0.32);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: rgba(255, 205, 87, 0.08);
+}
+
+.teacher-content-review-needs-review p {
+  margin: 0;
+  color: #fff3ce;
+}
+
+.teacher-content-review-needs-review ul {
+  margin: 0;
+  padding-left: 18px;
+  color: #ffe9bb;
+}
+
+.teacher-content-review-table-shell {
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.teacher-content-review-table-head,
+.teacher-content-review-table-row {
+  display: grid;
+  grid-template-columns: minmax(108px, 0.56fr) minmax(120px, 0.65fr) minmax(140px, 0.8fr) minmax(260px, 2fr) minmax(130px, 0.7fr) minmax(80px, 0.44fr);
+  gap: 10px;
+  align-items: start;
+  padding: 10px;
+}
+
+.teacher-content-review-table-head {
+  border-bottom: 1px solid rgba(102, 247, 209, 0.14);
+  background: rgba(102, 247, 209, 0.06);
+}
+
+.teacher-content-review-table-head span {
+  color: #d9fff3;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.teacher-content-review-table-body {
+  max-height: min(42vh, 430px);
+  overflow: auto;
+}
+
+.teacher-content-review-table-row {
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.teacher-content-review-table-row.selected {
+  background: rgba(241, 159, 76, 0.08);
+}
+
+.teacher-content-review-table-row.unsafe {
+  background: rgba(255, 132, 132, 0.05);
+}
+
+.teacher-content-review-table-row strong,
+.teacher-content-review-table-row span,
+.teacher-content-review-table-row p {
+  margin: 0;
+  color: #e7f8f3;
+  overflow-wrap: anywhere;
+}
+
+.teacher-content-review-wording {
+  display: grid;
+  gap: 6px;
+}
+
+.teacher-content-review-source-details summary {
+  width: fit-content;
+  color: #9fead7;
+  font-size: 0.72rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.teacher-content-review-source-details p {
+  margin: 4px 0 0;
+  color: #d8eee9;
+  font-size: 0.78rem;
+}
+
+.teacher-content-review-row-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.teacher-content-review-advanced-details {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.teacher-content-review-advanced-details summary {
+  color: #aeece0;
+  cursor: pointer;
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.teacher-content-review-advanced-details pre {
+  margin: 8px 0 0;
+  max-height: 160px;
+  overflow: auto;
+  padding: 8px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.24);
+  color: #daefea;
+  font-size: 0.72rem;
+}
+
+.teacher-content-review-done {
+  display: grid;
+  gap: 8px;
+}
+
+.teacher-content-review-done p {
+  margin: 0;
+  color: #e7f8f3;
+  font-size: 0.96rem;
 }
 
 .teacher-content-review-item {
@@ -4771,8 +5021,13 @@ button:disabled {
   .teacher-content-selected-draft,
   .teacher-content-promotion-panel,
   .teacher-content-review-item,
+  .teacher-content-review-table-row,
   .voice-content-row {
     grid-template-columns: 1fr;
+  }
+
+  .teacher-content-review-table-head {
+    display: none;
   }
 
   .header-right,

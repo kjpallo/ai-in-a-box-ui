@@ -90,9 +90,15 @@ async function main() {
     await assertStandardsBankDetailEndpoint(handlers);
     await assertInvalidStandardsBankIdRejected(handlers);
     await assertDraftReportEndpoint(handlers);
+    await assertDraftReportNeedsReviewItemsAreIncluded(handlers);
+    await assertDraftReportIncludesSalvageWarningsForAdvancedDetails(handlers);
+    await assertDraftReportWithStoredCoverageAndMissingExtractionPages(handlers);
+    await assertDraftReportPreservesStoredProcessedChunkCount(handlers);
+    await assertDraftReportSuppressesPausedStandardsWarnings(handlers);
     await assertDraftReportWithStandardsBankEndpoint(handlers);
     await assertMissingDraftReportStandardsBankEndpoint(handlers);
     await assertPrepareReviewEndpointSucceeds(handlers);
+    await assertPrepareReviewImportProfileSelection(handlers);
     await assertLargeFullImportRequiresConfirmation(handlers);
     await assertPreviewPrepareReviewDoesNotWriteDraft(handlers);
     await assertPreviewEmptyFirstPageReturnsTextPageRecovery(handlers);
@@ -103,17 +109,26 @@ async function main() {
     await assertPrepareReviewNoUsablePreviewItemsReturnsStructuredRecoveryJson(handlers);
     await assertSelectedPageRangeImportWritesPartialDraft(handlers);
     await assertAutoPlanPrepareReviewWithoutManualMode(handlers);
+    await assertLargeAnalyzeUploadAvoidsPreviewHardStop(handlers);
+    await assertAutoPreviewOnlyPlanStillRunsAdaptiveAnalyze(handlers);
     await assertAnalyzeAdaptiveLoopProcessesManifestToTerminal(handlers);
     assertAutoImportPlannerSmallFileSingleBatch();
     assertAutoImportPlannerMultiPageSequentialBatches();
     assertAutoImportPlannerVeryLargeDoesNotDropTextBearingPages();
     assertAutoImportPlannerNoTextManualReview();
-    assertAutoImportPlannerLowMemorySaferDefault();
+    assertAutoImportPlannerLowMemoryUsesAutomaticSmallerChunks();
     assertAutoImportPlannerImageOnlyWarning();
     await assertUploadAndPrepareEndpointSucceeds(handlers);
     await assertUploadAndPreparePdfWithKnowledgeNameSucceeds(handlers);
     await assertUploadAndPrepareMissingFileFailsClearly(handlers);
     await assertUploadAndPrepareMissingKnowledgeNameFailsClearly(handlers);
+    await assertBulkQueueSingleFileStillWorks(handlers);
+    await assertBulkQueueMultiFileCreatesSeparateDrafts(handlers);
+    await assertBulkQueueProcessesFilesSequentially(handlers);
+    await assertBulkQueueFailureDoesNotStopLaterFiles(handlers);
+    await assertBulkQueueCancelRemainingMarksUnprocessedCanceled(handlers);
+    await assertBulkQueuePackNamesDoNotCollide(handlers);
+    await assertBulkQueueFormulasRemainReferenceOnly(handlers);
     await assertUploadAndPrepareModelFailureReturnsClearJson(handlers);
     await assertLaterBatchCrashReturnsPartialReviewDraft(handlers);
     await assertUploadAndPrepareModelCrashShowsBatchSizeRecovery(handlers);
@@ -131,6 +146,7 @@ async function main() {
     await assertPromoteOverwritesWithForce(handlers);
     await assertInvalidPromotePathTraversalRejected(handlers);
     await assertApproveDraftItemEndpoint(handlers);
+    await assertApproveNeedsReviewLowConfidenceItemEndpoint(handlers);
     await assertRejectDraftItemEndpoint(handlers);
     await assertEditDraftItemEndpoint(handlers);
     await assertDisallowedEditFails(handlers);
@@ -202,6 +218,178 @@ async function assertDraftReportEndpoint(handlers) {
   assert.equal(response.body.data.pendingReview.totalPending, 1);
   assert.equal(response.body.data.promotionReadiness.ready, false);
   assert.ok(response.body.data.promotionReadiness.blockedReasons.includes('pending items remain'));
+}
+
+async function assertDraftReportNeedsReviewItemsAreIncluded(handlers) {
+  const packId = 'route-needs-review-pack';
+  writeKnowledgePack(draftPacksDir, makePack({
+    packId,
+    vocabulary: [makeVocabularyItem('unbalanced-force', 'needs_review')],
+    concepts: [],
+    referenceFormulas: [],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+
+  try {
+    const response = await request(handlers, 'GET', '/drafts/:packId/report', {}, { packId });
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.body.success, true);
+    assert.equal(response.body.data.pendingReview.totalPending, 1);
+    assert.equal(response.body.data.pendingReview.items.vocabulary[0].reviewStatus, 'needs_review');
+  } finally {
+    fs.rmSync(path.join(draftPacksDir, packId), { recursive: true, force: true });
+  }
+}
+
+async function assertDraftReportIncludesSalvageWarningsForAdvancedDetails(handlers) {
+  const packId = 'route-salvage-report-pack';
+  writeKnowledgePack(draftPacksDir, makePack({
+    packId,
+    vocabulary: [makeVocabularyItem('route-salvage-term', 'pending')],
+    concepts: [],
+    referenceFormulas: [],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: [],
+    metadata: {
+      createdBy: 'test-suite',
+      createdAt: '2026-05-14T00:00:00.000Z',
+      importWarnings: [
+        'Removed invalid generated item vocabulary[2]: Missing required term and no usable title/label/name was available.'
+      ],
+      invalidGeneratedItems: [
+        {
+          section: 'vocabulary',
+          index: 2,
+          requiredField: 'term',
+          reason: 'Missing required term and no usable title/label/name was available.'
+        }
+      ]
+    }
+  }));
+
+  try {
+    const response = await request(handlers, 'GET', '/drafts/:packId/report', {}, { packId });
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.body.success, true);
+    assert.equal(response.body.data.reviewItems.items.vocabulary.length, 1, 'valid salvage rows should still render in page 2 review data.');
+    assert.ok(response.body.data.warnings.some((warning) => warning.includes('Removed invalid generated item vocabulary[2]')));
+    assert.ok(response.body.data.technicalErrors.some((detail) => detail.includes('Removed vocabulary[2] during draft salvage')));
+  } finally {
+    fs.rmSync(path.join(draftPacksDir, packId), { recursive: true, force: true });
+  }
+}
+
+async function assertDraftReportWithStoredCoverageAndMissingExtractionPages(handlers) {
+  const packId = 'route-null-pages-report-pack';
+  writeKnowledgePack(draftPacksDir, makePack({
+    packId,
+    vocabulary: [
+      makeVocabularyItem('route-alpha', 'needs_review'),
+      makeVocabularyItem('route-beta', 'needs_review')
+    ],
+    concepts: [
+      makeConceptItem('route-concept-alpha', 'needs_review')
+    ],
+    referenceFormulas: [],
+    metadata: {
+      createdBy: 'test-suite',
+      createdAt: '2026-05-14T00:00:00.000Z',
+      importCoverage: {
+        sourceManifest: [],
+        coverageSummary: {},
+        pages: null
+      }
+    }
+  }));
+
+  try {
+    const response = await request(handlers, 'GET', '/drafts/:packId/report', {}, { packId });
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.body.success, true);
+    assert.equal(response.body.data.reviewItems.items.vocabulary.length, 2);
+    assert.equal(response.body.data.reviewItems.items.concepts.length, 1);
+    assert.equal(response.body.data.pendingReview.totalPending, 3, 'needs_review should stay reviewable');
+    assert.equal(Array.isArray(response.body.data.draftPacketItems.vocabulary), true);
+    assert.equal(response.body.data.draftPacketItems.vocabulary.length, 2);
+    assert.equal(response.body.data.draftPacketItems.concepts.length, 1);
+    assert.equal(response.body.data.draftPacketItems.referenceFormulas.length, 0);
+  } finally {
+    fs.rmSync(path.join(draftPacksDir, packId), { recursive: true, force: true });
+  }
+}
+
+async function assertDraftReportPreservesStoredProcessedChunkCount(handlers) {
+  const packId = 'route-coverage-processed-chunks-pack';
+  writeKnowledgePack(draftPacksDir, makePack({
+    packId,
+    vocabulary: [makeVocabularyItem('coverage-term', 'needs_review')],
+    concepts: [],
+    referenceFormulas: [],
+    metadata: {
+      createdBy: 'test-suite',
+      createdAt: '2026-05-14T00:00:00.000Z',
+      importCoverage: {
+        totalPages: 12,
+        totalChunks: 12,
+        processedPages: 12,
+        processedChunks: 12,
+        sourceManifest: Array.from({ length: 12 }, (_, index) => ({
+          chunkId: `chunk-${index + 1}`,
+          sourceFile: 'electricity_magnetism_packet.pdf',
+          sourceLocation: `Page ${index + 1}`,
+          chunkIndex: index + 1,
+          charCount: 200,
+          status: 'drafted'
+        })),
+        coverageSummary: {
+          totalChunks: 12,
+          queuedChunks: 0,
+          draftedChunks: 12,
+          skippedEmptyChunks: 0,
+          noItemsFoundChunks: 0,
+          needsReviewChunks: 0,
+          failedChunks: 0,
+          totalSourceChars: 2400,
+          completedChunks: 12,
+          allChunksTerminal: true
+        }
+      }
+    }
+  }));
+
+  try {
+    const response = await request(handlers, 'GET', '/drafts/:packId/report', {}, { packId });
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.body.success, true);
+    assert.equal(response.body.data.coverageReport.processedChunks, 12);
+    assert.equal(response.body.data.coverageReport.totalChunks, 12);
+    assert.equal(response.body.data.coverageSummary.totalChunks, 12);
+  } finally {
+    fs.rmSync(path.join(draftPacksDir, packId), { recursive: true, force: true });
+  }
+}
+
+async function assertDraftReportSuppressesPausedStandardsWarnings(handlers) {
+  const packId = 'route-paused-standards-pack';
+  writeKnowledgePack(draftPacksDir, makePack({
+    packId,
+    standardsMap: [],
+    smokeTests: []
+  }));
+
+  try {
+    const response = await request(handlers, 'GET', '/drafts/:packId/report', {}, { packId });
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.body.success, true);
+    const warnings = Array.isArray(response.body.data.warnings) ? response.body.data.warnings : [];
+    assert.equal(warnings.some((warning) => /standardsmap is empty/i.test(String(warning))), false);
+    assert.equal(warnings.some((warning) => /smoketests is empty/i.test(String(warning))), false);
+  } finally {
+    fs.rmSync(path.join(draftPacksDir, packId), { recursive: true, force: true });
+  }
 }
 
 async function assertStandardsBankListEndpoint(handlers) {
@@ -318,12 +506,12 @@ async function assertPrepareReviewEndpointSucceeds(handlers) {
 
   assert.equal(response.statusCode, 200);
   assert.equal(response.body.success, true);
-  assert.equal(response.body.data.packId, 'draft-full-import-teacher-prepared-forces-prepare-review-upload');
-  assert.equal(response.body.data.title, 'Full Import: Teacher Prepared Forces');
+  assert.equal(response.body.data.packId, 'draft-teacher-prepared-forces-prepare-review-upload');
+  assert.equal(response.body.data.title, 'Teacher Prepared Forces');
   assert.equal(response.body.data.message, 'Review draft prepared.');
   assert.equal(response.body.data.sourceMatch.uploadedFileName, 'teacher_prepare_review_notes.txt');
   assert.equal(response.body.data.sourceMatch.draftPackId, response.body.data.packId);
-  assert.equal(response.body.data.sourceMatch.draftTitle, 'Full Import: Teacher Prepared Forces');
+  assert.equal(response.body.data.sourceMatch.draftTitle, 'Teacher Prepared Forces');
   assert.deepEqual(response.body.data.sourceMatch.draftSourceFiles, ['teacher_prepare_review_notes.txt']);
   assert.equal(response.body.data.sourceMatch.extractionCharacterCount, 112);
   assert.equal(response.body.data.sourceMatch.chunkCount, 1);
@@ -351,17 +539,64 @@ async function assertPrepareReviewEndpointSucceeds(handlers) {
   assert.equal(fs.existsSync(createdPath), true, 'Prepare Review should write only to the configured draft-packs dir.');
   const generated = JSON.parse(fs.readFileSync(createdPath, 'utf8'));
   assert.equal(generated.packId, response.body.data.packId);
-  assert.equal(generated.title, 'Full Import: Teacher Prepared Forces');
+  assert.equal(generated.title, 'Teacher Prepared Forces');
   assert.equal(generated.metadata.importScope.scope, 'full_document');
-  assert.equal(generated.vocabulary[0].reviewStatus, 'pending');
-  assert.equal(generated.concepts[0].reviewStatus, 'pending');
-  assert.equal(generated.problemBank[0].reviewStatus, 'pending');
+  assert.equal(generated.metadata.importProfile, 'general');
+  assert.ok(['pending', 'needs_review'].includes(generated.vocabulary[0].reviewStatus));
+  assert.ok(['pending', 'needs_review'].includes(generated.concepts[0].reviewStatus));
+  assert.ok(['pending', 'needs_review'].includes(generated.problemBank[0].reviewStatus));
   assert.equal(generated.referenceFormulas[0].solverStatus, 'reference_only');
-  assert.equal(generated.referenceFormulas[0].reviewStatus, 'pending');
+  assert.ok(['pending', 'needs_review'].includes(generated.referenceFormulas[0].reviewStatus));
 
   const addedDraftFiles = Object.keys(snapshotFiles(draftPacksDir)).filter((filePath) => !draftFilesBefore[filePath]);
   assert.deepEqual(addedDraftFiles, [path.join(response.body.data.packId, 'knowledge_pack.json')]);
   assert.deepEqual(snapshotFiles(realApprovedPacksDir), approvedFilesBefore, 'Prepare Review should not modify real approved packs.');
+}
+
+async function assertPrepareReviewImportProfileSelection(handlers) {
+  const uploadId = 'prepare-review-import-profile';
+  const extractionPath = path.join(uploadExtractedDir, `${uploadId}_extraction.json`);
+  fs.writeFileSync(extractionPath, `${JSON.stringify(makeExtraction({
+    uploadId,
+    originalFileName: 'physical_science_teacher_notes.txt'
+  }), null, 2)}\n`);
+
+  const response = await request(handlers, 'POST', '/uploads/:uploadId/prepare-review', {
+    packName: 'Physical Science Notes',
+    importMode: 'full',
+    confirmFullImport: true,
+    importProfile: 'physical_science'
+  }, {
+    uploadId
+  });
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.success, true);
+  const createdPath = path.join(draftPacksDir, response.body.data.packId, 'knowledge_pack.json');
+  const generated = JSON.parse(fs.readFileSync(createdPath, 'utf8'));
+  assert.equal(generated.metadata.importProfile, 'physical_science');
+  assert.equal(generated.metadata.sourceUpload.importProfile, 'physical_science');
+
+  const futureProfileUploadId = 'prepare-review-future-import-profile';
+  const futureProfileExtractionPath = path.join(uploadExtractedDir, `${futureProfileUploadId}_extraction.json`);
+  fs.writeFileSync(futureProfileExtractionPath, `${JSON.stringify(makeExtraction({
+    uploadId: futureProfileUploadId,
+    originalFileName: 'math_teacher_notes.txt'
+  }), null, 2)}\n`);
+
+  const futureProfileResponse = await request(handlers, 'POST', '/uploads/:uploadId/prepare-review', {
+    packName: 'Math Notes',
+    importMode: 'full',
+    confirmFullImport: true,
+    importProfile: 'math'
+  }, {
+    uploadId: futureProfileUploadId
+  });
+  assert.equal(futureProfileResponse.statusCode, 200);
+  assert.equal(futureProfileResponse.body.success, true);
+  const futureProfilePath = path.join(draftPacksDir, futureProfileResponse.body.data.packId, 'knowledge_pack.json');
+  const futureProfileGenerated = JSON.parse(fs.readFileSync(futureProfilePath, 'utf8'));
+  assert.equal(futureProfileGenerated.metadata.importProfile, 'math');
+  assert.equal(futureProfileGenerated.metadata.sourceUpload.importProfile, 'math');
 }
 
 async function assertLargeFullImportRequiresConfirmation(handlers) {
@@ -575,7 +810,12 @@ async function assertPreviewValidationFailureReturnsHttp200PartialPreview(handle
     referenceFormulas: [
       {
         ...makeReferenceFormula('bad-formula', 'pending'),
-        equation: ''
+        equation: '',
+        formula: '',
+        expression: '',
+        formulaText: '',
+        sourceTextSnippet: '',
+        sourceSnippet: ''
       }
     ],
     problemBank: [],
@@ -601,17 +841,30 @@ async function assertPreviewValidationFailureReturnsHttp200PartialPreview(handle
   assert.equal(response.statusCode, 200);
   assert.equal(response.body.success, true);
   assert.equal(response.body.data.preview, true);
-  assert.equal(response.body.data.partialPreview, true);
-  assert.equal(response.body.data.validationPassed, false);
-  assert.equal(response.body.data.previewReport.partialPreview, true);
-  assert.equal(response.body.data.previewReport.validationPassed, false);
+  assert.equal(response.body.data.partialPreview, false);
+  assert.equal(response.body.data.validationPassed, true);
+  assert.equal(response.body.data.previewReport.partialPreview, false);
+  assert.equal(response.body.data.previewReport.validationPassed, true);
   assert.equal(response.body.data.previewReport.pack.vocabulary.length, 1);
   assert.equal(response.body.data.previewReport.pack.referenceFormulas.length, 0);
-  assert.ok(response.body.data.previewReport.invalidItems.some((entry) => entry.section === 'referenceFormulas'));
-  assert.ok(response.body.data.previewReport.validationErrors.includes('referenceFormulas[0].equation must be a non-empty string.'));
-  assert.ok(response.body.data.timeline.some((event) => event.type === 'preview_invalid_items_quarantined'));
+  assert.ok(response.body.data.timeline.some((event) => event.type === 'normalization_complete'));
   assert.deepEqual(snapshotFiles(draftPacksDir), draftFilesBefore, 'salvaged preview should not write a final draft pack.');
 
+  mockDraftModelClient = async () => JSON.stringify(makeGeneratedPack({
+    packId: 'route-salvage-selected-pack',
+    vocabulary: [makeVocabularyItem('selected-valid', 'pending')],
+    concepts: [],
+    referenceFormulas: [
+      {
+        ...makeReferenceFormula('selected-recoverable', 'pending'),
+        equation: '',
+        formula: 'F = m * a'
+      }
+    ],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
   const selectedDraftFilesBefore = snapshotFiles(draftPacksDir);
   const selectedResponse = await request(handlers, 'POST', '/uploads/:uploadId/prepare-review', {
     packName: 'Salvage Preview Selected',
@@ -625,10 +878,14 @@ async function assertPreviewValidationFailureReturnsHttp200PartialPreview(handle
     uploadId
   });
 
-  assert.equal(selectedResponse.statusCode, 400);
-  assert.equal(selectedResponse.body.success, false);
-  assert.ok(selectedResponse.body.errors.includes('referenceFormulas[0].equation must be a non-empty string.'));
-  assert.deepEqual(snapshotFiles(draftPacksDir), selectedDraftFilesBefore, 'selected import should stay strict and never write quarantined preview items to a draft.');
+  assert.equal(selectedResponse.statusCode, 200);
+  assert.equal(selectedResponse.body.success, true);
+  assert.equal(selectedResponse.body.data.partialDraft, false);
+  assert.ok(selectedResponse.body.data.packId);
+  assert.equal(selectedResponse.body.data.draftReport.draftPacketItems.vocabulary.length, 1);
+  assert.equal(selectedResponse.body.data.draftReport.draftPacketItems.referenceFormulas.length, 1, 'recoverable formula rows should be salvaged for selected/full draft imports.');
+  const selectedDraftFilesAfter = snapshotFiles(draftPacksDir);
+  assert.notDeepEqual(selectedDraftFilesAfter, selectedDraftFilesBefore, 'selected import should write salvaged draft rows.');
 
   mockDraftModelClient = async () => JSON.stringify(makeGeneratedPack());
 }
@@ -763,8 +1020,10 @@ async function assertPrepareReviewNoUsablePreviewItemsReturnsStructuredRecoveryJ
   assert.equal(response.body.extractionCounts.pageCount, 12);
   assert.equal(response.body.extractionCounts.chunkCount, 12);
   assert.ok(response.body.extractionCounts.characterCount > 2000);
-  assert.ok(response.body.errors.includes('referenceFormulas[0].equation must be a non-empty string.'));
+  assert.ok(response.body.errors[0].includes('No usable preview items'));
+  assert.ok(response.body.errors.some((error) => error.includes('Removed referenceFormulas[0] during draft salvage')));
   assert.ok(Array.isArray(response.body.invalidItems));
+  assert.equal(response.body.invalidItems.length, 1);
 
   mockDraftModelClient = async () => JSON.stringify(makeGeneratedPack());
 }
@@ -836,7 +1095,7 @@ async function assertSelectedPageRangeImportWritesPartialDraft(handlers) {
   assert.equal(generated.metadata.partialImport.originalPageCount, 6);
   assert.equal(generated.metadata.importCoverage.totalPages, 6);
   assert.equal(generated.metadata.importCoverage.coverageSummary.queuedChunks, 3);
-  assert.equal(generated.vocabulary[0].reviewStatus, 'pending');
+  assert.ok(['pending', 'needs_review'].includes(generated.vocabulary[0].reviewStatus));
   assert.equal(generated.vocabulary[0].sourceLocation, 'Pages 2-4');
 
   const addedDraftFiles = Object.keys(snapshotFiles(draftPacksDir)).filter((filePath) => !draftFilesBefore[filePath]);
@@ -872,7 +1131,7 @@ async function assertAutoPlanPrepareReviewWithoutManualMode(handlers) {
 
   assert.equal(response.statusCode, 200);
   assert.equal(response.body.success, true);
-  assert.equal(response.body.data.packId, 'draft-full-import-auto-plan-teacher-draft-pages-1-2-auto-plan-no-manual-mode');
+  assert.equal(response.body.data.packId, 'draft-auto-plan-teacher-draft-auto-plan-no-manual-mode');
   assert.equal(response.body.data.autoImportPlan.recommendedImportScope, 'full_document');
   assert.equal(response.body.data.autoImportPlan.limits.maxCharactersPerBatch, 400);
   assert.equal(response.body.data.autoImportPlan.batchCount, 4);
@@ -890,13 +1149,133 @@ async function assertAutoPlanPrepareReviewWithoutManualMode(handlers) {
   mockDraftModelClient = async () => JSON.stringify(makeGeneratedPack());
 }
 
+async function assertLargeAnalyzeUploadAvoidsPreviewHardStop(handlers) {
+  const uploadId = 'analyze-large-upload';
+  fs.writeFileSync(path.join(uploadExtractedDir, `${uploadId}_extraction.json`), `${JSON.stringify(makeLargePdfExtraction({
+    uploadId,
+    originalFileName: 'large_teacher_text_pdf.pdf',
+    pages: 12,
+    charactersPerPage: 686
+  }), null, 2)}\n`);
+  const calls = [];
+  mockDraftModelClient = async ({ prompt }) => {
+    calls.push(prompt);
+    const pageMatch = String(prompt || '').match(/Page\s+(\d+)/i);
+    const page = pageMatch ? Number(pageMatch[1]) : calls.length;
+    return JSON.stringify(makeGeneratedPack({
+      packId: 'analyze-large-upload-draft',
+      vocabulary: [{
+        ...makeVocabularyItem(`large-upload-${page}`, 'pending'),
+        sourceLocation: `Page ${page}`,
+        sourceTextSnippet: `large upload page ${page}`
+      }],
+      concepts: [],
+      referenceFormulas: [],
+      problemBank: [],
+      standardsMap: [],
+      smokeTests: []
+    }));
+  };
+
+  const response = await request(handlers, 'POST', '/uploads/:uploadId/prepare-review', {
+    packName: 'Large Analyze Upload',
+    useAutoImportPlan: true,
+    useRecommendedImportPlan: true
+  }, {
+    uploadId
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.data.importScope.scope, 'full_document');
+  assert.ok(calls.length > 1, 'large analyze should run sequential adaptive chunks, not stop before drafting.');
+  assert.ok(response.body.data.timeline.some((event) => event.type === 'adaptive_progress_saved'));
+  assert.equal(response.body.data.coverageSummary.totalChunks, 12);
+  assert.equal(response.body.data.coverageSummary.queuedChunks, 0);
+  assert.equal(response.body.data.coverageSummary.allChunksTerminal, true);
+  assert.ok(['partial', 'completed'].includes(response.body.data.reviewState));
+  assert.ok(!JSON.stringify(response.body).includes('Run preview first or lower batch size'));
+
+  mockDraftModelClient = async () => JSON.stringify(makeGeneratedPack());
+}
+
+async function assertAutoPreviewOnlyPlanStillRunsAdaptiveAnalyze(handlers) {
+  const uploadId = 'auto-preview-only-plan-analyze';
+  const extraction = makeLargePdfExtraction({
+    uploadId,
+    originalFileName: 'auto_preview_only_plan.pdf',
+    pages: 12,
+    charactersPerPage: 686
+  });
+  extraction.importPlan = {
+    mode: 'auto_preview_only',
+    recommendedImportScope: 'preview_sample',
+    batchStrategy: 'preview_then_continue',
+    batchCount: 1,
+    batches: [{
+      batchIndex: 1,
+      sourceLocations: ['Page 1'],
+      pageNumbers: [1],
+      estimatedCharacters: 686,
+      estimatedTokens: 229
+    }],
+    limits: {
+      maxCharactersPerBatch: 686,
+      maxEstimatedTokensPerBatch: 229,
+      memory: { availableMemoryMb: 256 }
+    },
+    warnings: ['Available memory is low (256 MB).'],
+    reason: 'Legacy preview-only planner recommendation.',
+    extractionSummary: {
+      pageSlideSheetCount: 12,
+      textBearingPageSlideSheetCount: 12,
+      characterCount: 8232,
+      largestSectionCharacters: 686,
+      estimatedTokens: 2744,
+      firstTextBearingPageSlideSheet: 1
+    }
+  };
+  writeExtractionFixture(uploadId, extraction);
+
+  const calls = [];
+  mockDraftModelClient = async ({ prompt }) => {
+    calls.push(prompt);
+    return JSON.stringify(makeGeneratedPack({
+      packId: 'auto-preview-only-adaptive',
+      vocabulary: [makeVocabularyItem(`auto-preview-${calls.length}`, 'pending')],
+      concepts: [],
+      referenceFormulas: [],
+      problemBank: [],
+      standardsMap: [],
+      smokeTests: []
+    }));
+  };
+
+  const response = await request(handlers, 'POST', '/uploads/:uploadId/prepare-review', {
+    packName: 'Auto Preview Plan Analyze',
+    useAutoImportPlan: true,
+    useRecommendedImportPlan: true
+  }, {
+    uploadId
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.data.autoImportPlan.mode, 'auto_preview_only');
+  assert.equal(response.body.data.importScope.scope, 'full_document');
+  assert.ok(calls.length > 1, 'Analyze should still use adaptive full import even when legacy planner mode is auto_preview_only.');
+  assert.ok(response.body.data.timeline.some((event) => event.type === 'adaptive_progress_saved'));
+
+  mockDraftModelClient = async () => JSON.stringify(makeGeneratedPack());
+}
+
 async function assertAnalyzeAdaptiveLoopProcessesManifestToTerminal(handlers) {
   const uploadId = 'adaptive-loop-analyze';
   const extraction = makeAdaptiveLoopRouteExtraction({
     uploadId,
     originalFileName: 'adaptive_loop_analyze.pdf'
   });
-  fs.writeFileSync(path.join(uploadExtractedDir, `${uploadId}_extraction.json`), `${JSON.stringify(extraction, null, 2)}\n`);
+  writeExtractionFixture(uploadId, extraction);
   const draftFilesBefore = snapshotFiles(draftPacksDir);
   const calls = [];
   mockDraftModelClient = async ({ prompt }) => {
@@ -962,6 +1341,7 @@ async function assertAnalyzeAdaptiveLoopProcessesManifestToTerminal(handlers) {
   assert.equal(response.body.data.coverageSummary.skippedEmptyChunks, 1);
   assert.equal(response.body.data.coverageSummary.needsReviewChunks, 1);
   assert.ok(response.body.data.failedBatches.length >= 1);
+  assert.ok(response.body.data.coverageReport.warnings.some((warning) => warning.includes('1 section failed after retry')));
   assert.ok(response.body.data.coverageReport.noKnowledgeChunks.includes('Page 6'));
   assert.ok(response.body.data.timeline.some((event) => event.type === 'adaptive_progress_saved'));
 
@@ -1039,17 +1419,18 @@ function assertAutoImportPlannerNoTextManualReview() {
   assert.ok(plan.warnings.some((warning) => /OCR\/vision is not part of this phase/i.test(warning)));
 }
 
-function assertAutoImportPlannerLowMemorySaferDefault() {
+function assertAutoImportPlannerLowMemoryUsesAutomaticSmallerChunks() {
   const plan = planTeacherContentImport({
     extraction: makePlannerExtraction(['A'.repeat(1500), 'B'.repeat(1500)]),
     settings: { maxBatchCharacters: 1600 },
     memory: makePlannerMemory(512, 8192)
   });
 
-  assert.equal(plan.mode, 'auto_preview_only');
-  assert.equal(plan.recommendedImportScope, 'preview_sample');
-  assert.equal(plan.batchStrategy, 'preview_then_continue');
-  assert.equal(plan.batchCount, 1);
+  assert.equal(plan.mode, 'auto_full');
+  assert.equal(plan.recommendedImportScope, 'full_document');
+  assert.equal(plan.batchStrategy, 'sequential_batches');
+  assert.ok(plan.batchCount >= 2);
+  assert.ok(plan.limits.maxCharactersPerBatch < 1600);
   assert.ok(plan.warnings.some((warning) => /Available memory is low/i.test(warning)));
 }
 
@@ -1354,6 +1735,236 @@ async function assertUploadAndPrepareMissingKnowledgeNameFailsClearly(handlers) 
   assert.deepEqual(snapshotFiles(uploadExtractedDir), extractedBefore, 'missing knowledge name should not extract the upload');
 }
 
+async function assertBulkQueueSingleFileStillWorks(handlers) {
+  mockDraftModelClient = async () => JSON.stringify(makeGeneratedPack());
+  const queue = await runSyntheticBulkUploadQueue(handlers, [
+    {
+      fileName: 'bulk_single_teacher_notes.txt',
+      contentType: 'text/plain',
+      content: 'BULK_QUEUE_FILE_1 single file import.'
+    }
+  ]);
+  assert.equal(queue.items.length, 1);
+  assert.equal(queue.items[0].status, 'draft_ready');
+  assert.ok(queue.items[0].packId);
+}
+
+async function assertBulkQueueMultiFileCreatesSeparateDrafts(handlers) {
+  mockDraftModelClient = async ({ prompt }) => JSON.stringify(makeGeneratedPack({
+    vocabulary: [makeVocabularyItem(String(prompt || '').includes('BULK_QUEUE_FILE_2') ? 'bulk-two' : 'bulk-one', 'pending')]
+  }));
+  const queue = await runSyntheticBulkUploadQueue(handlers, [
+    {
+      fileName: 'bulk_queue_file_one.txt',
+      contentType: 'text/plain',
+      content: 'BULK_QUEUE_FILE_1 first file.'
+    },
+    {
+      fileName: 'bulk_queue_file_two.txt',
+      contentType: 'text/plain',
+      content: 'BULK_QUEUE_FILE_2 second file.'
+    }
+  ]);
+  assert.equal(queue.items.length, 2);
+  assert.equal(queue.items[0].status, 'draft_ready');
+  assert.equal(queue.items[1].status, 'draft_ready');
+  assert.ok(queue.items[0].packId);
+  assert.ok(queue.items[1].packId);
+  assert.notEqual(queue.items[0].packId, queue.items[1].packId, 'each bulk file should create a separate draft pack');
+}
+
+async function assertBulkQueueProcessesFilesSequentially(handlers) {
+  const order = [];
+  mockDraftModelClient = async ({ prompt }) => {
+    if (String(prompt || '').includes('BULK_QUEUE_SEQ_1')) order.push('first');
+    if (String(prompt || '').includes('BULK_QUEUE_SEQ_2')) order.push('second');
+    return JSON.stringify(makeGeneratedPack());
+  };
+  const queue = await runSyntheticBulkUploadQueue(handlers, [
+    {
+      fileName: 'bulk_queue_seq_one.txt',
+      contentType: 'text/plain',
+      content: 'BULK_QUEUE_SEQ_1 sequential first.'
+    },
+    {
+      fileName: 'bulk_queue_seq_two.txt',
+      contentType: 'text/plain',
+      content: 'BULK_QUEUE_SEQ_2 sequential second.'
+    }
+  ]);
+  assert.equal(queue.items[0].status, 'draft_ready');
+  assert.equal(queue.items[1].status, 'draft_ready');
+  assert.deepEqual(order.slice(0, 2), ['first', 'second'], 'bulk queue should process one file at a time in order');
+}
+
+async function assertBulkQueueFailureDoesNotStopLaterFiles(handlers) {
+  mockDraftModelClient = async ({ prompt }) => {
+    const text = String(prompt || '');
+    if (text.includes('BULK_QUEUE_FAIL_TOKEN')) {
+      throw new Error('Ollama returned HTTP 500: {"error":"model runner has unexpectedly stopped, this may be due to resource limitations"}');
+    }
+    return JSON.stringify(makeGeneratedPack());
+  };
+  const queue = await runSyntheticBulkUploadQueue(handlers, [
+    {
+      fileName: 'bulk_queue_fail_first.txt',
+      contentType: 'text/plain',
+      content: 'BULK_QUEUE_FAIL_TOKEN fail this file.'
+    },
+    {
+      fileName: 'bulk_queue_after_failure.txt',
+      contentType: 'text/plain',
+      content: 'BULK_QUEUE_FILE_AFTER_FAILURE continue.'
+    }
+  ]);
+  assert.equal(queue.items[0].status, 'failed');
+  assert.equal(queue.items[1].status, 'draft_ready', 'a failed file should not block later queued files');
+}
+
+async function assertBulkQueueCancelRemainingMarksUnprocessedCanceled(handlers) {
+  mockDraftModelClient = async () => JSON.stringify(makeGeneratedPack());
+  const reliableContent = 'Net force is the total force on an object. Balanced forces do not change motion.';
+  const queue = await runSyntheticBulkUploadQueue(handlers, [
+    {
+      fileName: 'bulk_queue_cancel_one.txt',
+      contentType: 'text/plain',
+      content: `BULK_CANCEL_ONE ${reliableContent}`
+    },
+    {
+      fileName: 'bulk_queue_cancel_two.txt',
+      contentType: 'text/plain',
+      content: `BULK_CANCEL_TWO ${reliableContent}`
+    },
+    {
+      fileName: 'bulk_queue_cancel_three.txt',
+      contentType: 'text/plain',
+      content: `BULK_CANCEL_THREE ${reliableContent}`
+    }
+  ], {
+    cancelAfterIndex: 0
+  });
+  assert.equal(queue.items[0].status, 'draft_ready');
+  assert.equal(queue.items[1].status, 'canceled');
+  assert.equal(queue.items[2].status, 'canceled');
+}
+
+async function assertBulkQueuePackNamesDoNotCollide(handlers) {
+  mockDraftModelClient = async () => JSON.stringify(makeGeneratedPack());
+  const reliableContent = 'Net force is the total force on an object. Balanced forces do not change motion.';
+  const queue = await runSyntheticBulkUploadQueue(handlers, [
+    {
+      fileName: 'physics notes.txt',
+      contentType: 'text/plain',
+      content: `PHYSICS_NOTES_ONE ${reliableContent}`
+    },
+    {
+      fileName: 'physics-notes.txt',
+      contentType: 'text/plain',
+      content: `PHYSICS_NOTES_TWO ${reliableContent}`
+    }
+  ]);
+  assert.equal(queue.items[0].status, 'draft_ready');
+  assert.equal(queue.items[1].status, 'draft_ready');
+  assert.notEqual(queue.items[0].packId, queue.items[1].packId, 'similar file names should still generate distinct draft IDs');
+}
+
+async function assertBulkQueueFormulasRemainReferenceOnly(handlers) {
+  mockDraftModelClient = async () => JSON.stringify(makeGeneratedPack({
+    referenceFormulas: [
+      {
+        ...makeReferenceFormula('bulk-queue-formula', 'pending'),
+        solverStatus: 'science_formula_rules'
+      }
+    ]
+  }));
+  const queue = await runSyntheticBulkUploadQueue(handlers, [
+    {
+      fileName: 'bulk_formula_reference_only.txt',
+      contentType: 'text/plain',
+      content: 'BULK_FORMULA_REFERENCE_ONLY'
+    }
+  ]);
+  assert.equal(queue.items[0].status, 'draft_ready');
+  const generated = readKnowledgePack(draftPacksDir, queue.items[0].packId);
+  assert.equal(generated.referenceFormulas[0].solverStatus, 'reference_only');
+}
+
+async function runSyntheticBulkUploadQueue(handlers, files, options = {}) {
+  const queueItems = files.map((file, index) => ({
+    fileName: file.fileName,
+    proposedPackName: file.knowledgeName || makeContentNameFromTestFileName(file.fileName, index + 1),
+    status: 'waiting',
+    uploadId: '',
+    packId: '',
+    error: ''
+  }));
+  let cancelRemaining = false;
+
+  for (let index = 0; index < queueItems.length; index += 1) {
+    const item = queueItems[index];
+    if (cancelRemaining) {
+      item.status = 'canceled';
+      continue;
+    }
+
+    item.status = 'extracting';
+    const uploadResponse = await requestMultipart(handlers, '/uploads/upload-and-prepare', {
+      fileName: files[index].fileName,
+      contentType: files[index].contentType,
+      content: files[index].content,
+      fields: {
+        knowledgeName: item.proposedPackName
+      }
+    });
+
+    if (uploadResponse.statusCode !== 200 || uploadResponse.body.success !== true) {
+      item.status = 'failed';
+      item.error = (uploadResponse.body.errors || [uploadResponse.body.error || 'Extraction failed'])[0];
+      if (options.cancelAfterIndex === index) cancelRemaining = true;
+      continue;
+    }
+
+    const uploadId = uploadResponse.body.data.upload.uploadId;
+    item.uploadId = uploadId;
+    item.status = 'processing';
+
+    const prepareResponse = await request(handlers, 'POST', '/uploads/:uploadId/prepare-review', {
+      packName: item.proposedPackName,
+      knowledgeName: item.proposedPackName,
+      importMode: 'full',
+      confirmFullImport: true,
+      useAutoImportPlan: true,
+      useRecommendedImportPlan: true
+    }, {
+      uploadId
+    });
+
+    if (prepareResponse.statusCode === 200 && prepareResponse.body.success === true) {
+      item.status = 'draft_ready';
+      item.packId = prepareResponse.body.data.packId;
+    } else {
+      item.status = 'failed';
+      item.error = (prepareResponse.body.errors || [prepareResponse.body.error || 'Draft generation failed'])[0];
+    }
+
+    if (options.cancelAfterIndex === index) {
+      cancelRemaining = true;
+    }
+  }
+
+  return { items: queueItems };
+}
+
+function makeContentNameFromTestFileName(fileName, fallbackIndex) {
+  const name = String(fileName || '')
+    .replace(/^.*[\\/]/, '')
+    .replace(/\.[^.]+$/, '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return name || `Queue File ${fallbackIndex}`;
+}
+
 async function assertUploadAndPrepareModelFailureReturnsClearJson(handlers) {
   const draftFilesBefore = snapshotFiles(draftPacksDir);
   const uploadId = 'prepare-model-failure';
@@ -1433,7 +2044,7 @@ async function assertLaterBatchCrashReturnsPartialReviewDraft(handlers) {
   assert.equal(response.statusCode, 200);
   assert.equal(response.body.success, true);
   assert.equal(response.body.data.partialDraft, true);
-  assert.equal(response.body.data.packId, 'draft-full-import-partial-later-crash-pages-1-3-prepare-partial-later-crash');
+  assert.equal(response.body.data.packId, 'draft-partial-later-crash-prepare-partial-later-crash');
   assert.ok(response.body.data.message.includes('Some slides could not be analyzed'));
   assert.ok(response.body.data.failedBatches.some((batch) => Array.isArray(batch.pages) && batch.pages.includes(3)));
   assert.ok(response.body.data.draftReport.pendingReview.totalPending > 0, 'partial success should move to Review Draft Content with cards.');
@@ -1997,6 +2608,41 @@ async function assertApproveDraftItemEndpoint(handlers) {
   assert.equal(response.body.data.report.draftPack.reviewCountsBySection.vocabulary.approved, 2);
 }
 
+async function assertApproveNeedsReviewLowConfidenceItemEndpoint(handlers) {
+  const packId = 'route-needs-review-approve-pack';
+  writeKnowledgePack(draftPacksDir, makePack({
+    packId,
+    vocabulary: [
+      {
+        ...makeVocabularyItem('needs-review-term', 'needs_review'),
+        confidence: 'low',
+        sourceGrounding: { status: 'weak', termOrTitleFound: true, explanationSupported: false }
+      }
+    ],
+    concepts: [],
+    referenceFormulas: [],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+
+  try {
+    const response = await request(handlers, 'PATCH', '/drafts/:packId/items/:section/:index/status', {
+      reviewStatus: 'approved'
+    }, {
+      packId,
+      section: 'vocabulary',
+      index: '0'
+    });
+
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.body.success, true);
+    assert.equal(readKnowledgePack(draftPacksDir, packId).vocabulary[0].reviewStatus, 'approved');
+  } finally {
+    fs.rmSync(path.join(draftPacksDir, packId), { recursive: true, force: true });
+  }
+}
+
 async function assertRejectDraftItemEndpoint(handlers) {
   const response = await request(handlers, 'PATCH', '/drafts/:packId/items/:section/:index/status', {
     reviewStatus: 'rejected'
@@ -2265,6 +2911,14 @@ function writeStandardsBank(rootDir, bank) {
   fs.mkdirSync(bankDir, { recursive: true });
   fs.writeFileSync(bankPath, `${JSON.stringify(bank, null, 2)}\n`);
   return bankPath;
+}
+
+function writeExtractionFixture(uploadId, extraction) {
+  fs.mkdirSync(uploadExtractedDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(uploadExtractedDir, `${uploadId}_extraction.json`),
+    `${JSON.stringify(extraction, null, 2)}\n`
+  );
 }
 
 function readKnowledgePack(rootDir, packId) {

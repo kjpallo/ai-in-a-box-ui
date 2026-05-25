@@ -162,9 +162,9 @@
 
             <section class="teacher-profile-card teacher-content-entry-card">
               <span class="profile-status-pill">Teacher Content</span>
-              <h4>Create New Knowledge</h4>
-              <p>Manage uploaded knowledge, standards, drafts, and approved packs.</p>
-              <button type="button" id="openTeacherContentOverlay" class="small-button">Open Teacher Content</button>
+              <h4>Build Knowledge Packs</h4>
+              <p>Upload class notes for review</p>
+              <button type="button" id="openTeacherContentOverlay" class="small-button">Build Knowledge Packs</button>
               <span id="teacherContentEntryStatus" class="profile-control-status">Read-only Phase 7A shell.</span>
             </section>
 

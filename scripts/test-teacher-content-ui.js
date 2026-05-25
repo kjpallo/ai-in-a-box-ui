@@ -4,1143 +4,364 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
 const projectRoot = path.join(__dirname, '..');
-const bladePath = path.join(projectRoot, 'public', 'blade-ui.js');
 const uiPath = path.join(projectRoot, 'public', 'teacher-content-ui.js');
-const apiClientPath = path.join(projectRoot, 'public', 'api-client.js');
 const stylePath = path.join(projectRoot, 'public', 'style.css');
-const indexPath = path.join(projectRoot, 'public', 'index.html');
+const bladeUiPath = path.join(projectRoot, 'public', 'blade-ui.js');
 const packagePath = path.join(projectRoot, 'package.json');
 
-const routerStudentFilesBefore = snapshotRouterAndStudentFiles();
-
-const blade = read(bladePath);
 const ui = read(uiPath);
-const apiClient = read(apiClientPath);
 const style = read(stylePath);
-const index = read(indexPath);
+const bladeUi = read(bladeUiPath);
 const pkg = JSON.parse(read(packagePath));
 
-assertTeacherProfileEntry();
-assertOverlayMarkupAndSelectors();
-assertSafeImportWorkflowUi();
-assertEndpointReferences();
-assertUploadExtractionUi();
-assertTrueTwoPageTeacherWorkflowUi();
-assertUploadProgressDisplayUi();
-assertUploadAndPrepareFormDataContract();
-assertBackendJsonErrorsAreDisplayed();
-assertPrepareReviewHandoffUi();
-assertSelectedDraftAndProgressUi();
-assertStandardsTabWorkflowUi();
-assertReviewCardPolishUi();
-assertReviewPromotionButtonConditions();
-assertImportReportPolishUi();
-assertApprovedPacksPolishUi();
-assertReviewActions();
-assertPromotionAction();
-assertDisabledPlaceholders();
-assertNoForbiddenUiActions();
+assertPageFlow();
+assertUploadPage();
+assertBulkUploadQueuePage();
+assertBulkQueueNamingRules();
+assertReviewListTableLayout();
+assertReviewBulkPackSummary();
+assertReviewControlsAndSelectionBehavior();
+assertFallbackRowsFromDraftPacketArrays();
+assertNeedsReviewIsReviewableAndSelectable();
+assertNeedsReviewCopyIsNotUnsafe();
+assertSummaryAndEmptyMessageUseDraftArrays();
+assertFailedSectionMessaging();
+assertTechnicalReportErrorsStayInAdvancedDetails();
+assertPrimaryFlowDoesNotShowManualPreviewOrBatchSizeInstructions();
+assertReviewCanceledMessageClearsOnSuccessfulDraftLoad();
+assertAcceptBehavior();
+assertCollapsedDetails();
+assertPausedStandardsWarningsAreDeemphasized();
+assertDonePage();
+assertTeacherContentEntryPointVisible();
 assertPackageScript();
-assertNoRouterOrStudentFilesChanged();
-assertTeacherContentRouteTestsStillPass();
+assertTeacherContentAdapterAndRouteTestsStillPass();
 
 console.log('Teacher content UI tests passed.');
 
-function assertTeacherProfileEntry() {
-  assert.match(blade, /teacher-content-entry-card/, 'Teacher Content entry card should exist in teacher profile blade.');
-  assert.match(blade, /openTeacherContentOverlay/, 'Teacher Content open button should exist.');
-  assert.match(blade, /Create New Knowledge/, 'Teacher Content card should include Create New Knowledge copy.');
-  assert.match(blade, /Manage uploaded knowledge, standards, drafts, and approved packs/, 'Teacher Content card should explain its scope.');
-  assert.match(index, /teacher-content-ui\.js/, 'Teacher Content UI script should be loaded by index.html.');
-}
-
-function assertOverlayMarkupAndSelectors() {
-  [
-    'teacherContentOverlay',
-    'teacher-content-scrim',
-    'teacher-content-blade',
-    'teacherContentClose',
-    'teacherContentTabs',
-    'teacherContentDeck',
-    'teacherContentBack',
-    'teacherContentNext',
-    'teacherContentDraftSelect',
-    'teacher-content-card',
-    'teacher-content-tab',
-    'teacher-content-tab-index',
-    'teacher-content-tab-copy',
-    'teacher-content-preview-card',
-    'renderDeckPreviewCard',
-    'data-review-evidence',
-    'data-review-evidence-card',
-    'data-review-evidence-close'
-  ].forEach((selector) => {
-    assert.ok(ui.includes(selector) || style.includes(selector), `Expected selector or hook ${selector}.`);
-  });
-
-  ['Upload / Start', 'Review Draft Content', 'Knowledge Packs'].forEach((label) => {
-    assert.ok(ui.includes(label), `Expected tab/card label ${label}.`);
-  });
-  assert.doesNotMatch(ui.match(/const TABS = \[[\s\S]*?\n  \];/)?.[0] || '', /Preview Import|Review Preview|Full Import|Define Knowledge Pack|Assign Standards|Import Report \/ Audit/, 'Teacher Content deck should expose only Upload / Start, Review Draft Content, and Knowledge Packs.');
-
-  [
-    '--deck-offset',
-    '--deck-distance',
-    'teacher-content-card.preview',
-    'aria-hidden="${isActive ? \'false\' : \'true\'}"'
-  ].forEach((marker) => {
-    assert.ok(ui.includes(marker) || style.includes(marker), `Expected card-deck visual marker ${marker}.`);
-  });
-}
-
-function assertSafeImportWorkflowUi() {
+function assertPageFlow() {
   const tabsBlock = ui.match(/const TABS = \[([\s\S]*?)\n  \];/);
-  assert.ok(tabsBlock, 'Expected TABS block.');
-  [
-    "id: 'upload', label: 'Upload / Start'",
-    "id: 'review', label: 'Review Draft Content'",
-    "id: 'approvedPacks', label: 'Knowledge Packs'"
-  ].forEach((marker) => {
-    assert.ok(tabsBlock[1].includes(marker), `Expected safe import tab marker ${marker}.`);
-  });
-
-  [
-    'renderUploadSourceCard',
-    'data-upload-start-page',
-    'data-upload-start-planner',
-    'Analyze Upload',
-    'await runRecommendedImport()',
-    'renderPreviewImportCard',
-    'renderReviewPreviewCard',
-    'renderFullImportCard',
-    "state.activeTab = 'upload'",
-    "state.activeTab = 'review'",
-    'ESTIMATE READY',
-    'PREVIEW READY',
-    'PENDING REVIEW',
-    'No preview yet. Run Preview Draft first.',
-    'Run Preview Draft first.',
-    'Gemma has not run yet.',
-    'Gemma returned draft items, but validation found fields that need repair.',
-    'Gemma returned draft items. Charlemagne normalized IDs/titles and kept items pending review.',
-    'getPreviewImportNote',
-    "entry.type === 'batch_received'",
-    "entry.type === 'normalization_complete'",
-    'Normalized concept IDs',
-    'Normalized concept titles',
-    'Review-needed items',
-    'Preview Draft uses a small sample',
-    'PARTIAL PREVIEW',
-    'data-preview-repair-needed',
-    'data-preview-validation-errors',
-    'data-preview-invalid-items',
-    'data-preview-valid-items',
-    'data-review-failed-slides-notice',
-    'Some slides could not be analyzed. Review the extracted items below, then retry the failed slides later if needed.',
-    'Repair-needed items',
-    'Validation errors',
-    'Valid preview items kept',
-    'PREVIEW READY',
-    'Import is running, do not close this window.'
-  ].forEach((marker) => {
-    assert.ok(ui.includes(marker), `Expected safe import workflow marker ${marker}.`);
-  });
-
-  [
-    'Import Selected Pages/Sections',
-    'data-selected-import-panel',
-    'data-selected-import-recommendation',
-    'Full Document Import defaults to all text-bearing pages from the upload, not the preview page.',
-    'For large packets, selected range import remains available when you intentionally want only part of the document.',
-    'Import first 3 pages',
-    'Import next 3 pages',
-    'Import first detected section',
-    'Import page range',
-    'teacherContentSelectedPageStart',
-    'teacherContentSelectedPageEnd',
-    'data-selected-import-partial-note',
-    'Rerun preview range as strict draft',
-    'data-full-import-advanced',
-    'Full document import confirmation',
-    'teacherContentFullImportConfirm',
-    'Type CONFIRM',
-    'Run Full Document Import',
-    'data-full-import-failure-message',
-    'Full import failed',
-    'data-full-import-technical-details',
-    'data-full-import-failed-batches',
-    'data-prepare-review-failure-message',
-    'Preview failed',
-    'data-preview-retry-panel',
-    'Technical details',
-    'Suggested next steps',
-    'Retry Preview Draft',
-    'Return to Upload / Start',
-    'Gemma did not return any usable preview items from this range.',
-    'If the selected text is short or mostly a title page, try pages 2-4 or increase max preview chars.',
-    'Selected pages:',
-    'Selected chunks:'
-  ].forEach((marker) => {
-    assert.ok(ui.includes(marker), `Expected selected import / gated full import marker ${marker}.`);
-  });
-
-  const uploadSourceFunction = ui.match(/function renderUploadSourceCard\(\) \{([\s\S]*?)\n  function renderUploadStartPlanShell/);
-  assert.ok(uploadSourceFunction, 'Expected renderUploadSourceCard function.');
-  assert.ok(uploadSourceFunction[1].includes('Upload / Start'), 'Upload Source should render as Upload / Start.');
-  assert.ok(uploadSourceFunction[1].includes('Analyze Upload'), 'Upload / Start should have one Analyze Upload action.');
-  assert.match(uploadSourceFunction[1], /data-upload-technical-details[\s\S]*renderImportEstimatePanel[\s\S]*renderAutoImportPlanPanel/, 'Upload / Start should keep planner details behind collapsed Technical details.');
-  assert.doesNotMatch(uploadSourceFunction[1].split('data-upload-technical-details')[0], /renderImportEstimatePanel|renderAutoImportPlanPanel|renderPreviewSizeControls|renderSelectedImportControls/, 'Default Upload / Start should not show planner, range, or batch controls before Technical details.');
-  assert.match(ui, /function renderUploadStartPlanShell/, 'Upload / Start should expose a two-page workflow shell helper.');
-  assert.match(ui, /data-upload-manual-recovery-controls/, 'Manual preview/range/full controls should live in collapsed manual recovery controls.');
-
-  const previewImportFunction = ui.match(/function renderPreviewImportCard\(\) \{([\s\S]*?)\n  function renderReviewPreviewCard/);
-  assert.ok(previewImportFunction, 'Expected renderPreviewImportCard function.');
-  assert.match(previewImportFunction[1], /renderImportEstimatePanel\(\)/, 'Preview Import should show the import estimate.');
-  assert.match(previewImportFunction[1], /data-upload-run-preview/, 'Preview Import should expose Run Preview Draft.');
-  assert.match(previewImportFunction[1], /data-upload-run-full-import[\s\S]*?disabled/, 'Preview Import should keep Full Import secondary/disabled until preview succeeds.');
-
-  const reviewPreviewFunction = ui.match(/function renderReviewPreviewCard\(\) \{([\s\S]*?)\n  function renderFullImportCard/);
-  assert.ok(reviewPreviewFunction, 'Expected renderReviewPreviewCard function.');
-  assert.match(reviewPreviewFunction[1], /renderPreviewReportPanel\(\)/, 'Review Preview should show preview report output.');
-  assert.match(reviewPreviewFunction[1], /renderPrepareReviewFailurePanel\('preview'\)/, 'Review Preview should show preview failures with backend details.');
-  assert.match(reviewPreviewFunction[1], /data-selected-import-preset="preview"/, 'Review Preview should allow importing the preview range as a draft.');
-  assert.doesNotMatch(reviewPreviewFunction[1], /Import valid preview items as partial draft/, 'Review Preview should not imply selected import saves already-salvaged preview items.');
-
-  const fullImportFunction = ui.match(/function renderFullImportCard\(\) \{([\s\S]*?)\n  function renderStandardsCard/);
-  assert.ok(fullImportFunction, 'Expected renderFullImportCard function.');
-  assert.match(fullImportFunction[1], /renderPrepareReviewFailurePanel\('full'\)/, 'Full Import card should show clear failure details.');
-  assert.match(fullImportFunction[1], /renderSelectedImportControls/, 'Full Import card should recommend selected imports.');
-  assert.match(fullImportFunction[1], /renderWholeImportAdvanced/, 'Whole full import should live behind advanced disclosure.');
-
-  assert.match(ui, /data-upload-run-full-import/, 'Full import override should remain available.');
-  assert.match(fullImportFunction[1], /canRunFullImport[\s\S]*?state\.uploadPreviewComplete/, 'Full Import should require a successful preview.');
-
-  assert.equal((ui.match(/overload local Gemma/g) || []).length, 1, 'Local Gemma range warning copy should appear once.');
+  assert.ok(tabsBlock, 'Expected TABS definition.');
+  assert.match(tabsBlock[1], /id: 'upload', label: 'Upload \/ Start'/, 'Page 1 should be Upload / Start.');
+  assert.match(tabsBlock[1], /id: 'review', label: 'Review Draft Content'/, 'Page 2 should be Review Draft Content.');
+  assert.match(tabsBlock[1], /id: 'complete', label: 'Done'/, 'Page 3 should be Done.');
+  assert.doesNotMatch(tabsBlock[1], /approvedPacks|Knowledge Packs/, 'Page 3 should not be the old Knowledge Packs blade.');
 }
 
-function assertEndpointReferences() {
-  const expectedEndpoints = [
-    '/api/teacher-content/dashboard',
-    '/api/teacher-content/uploads/extract',
-    '/api/teacher-content/uploads/upload-and-prepare',
-    '/api/teacher-content/uploads/${encodeURIComponent(uploadId)}/prepare-review',
-    '/api/teacher-content/uploads/history',
-    '/api/teacher-content/drafts',
-    '/api/teacher-content/drafts/${encodeURIComponent(packId)}/report${query}',
-    '/api/teacher-content/standards-banks',
-    '/api/teacher-content/standards-banks/${encodeURIComponent(standardsBankId)}',
-    '/api/teacher-content/drafts/${encodeURIComponent(packId)}/promote',
-    '/api/teacher-content/drafts/${encodeURIComponent(packId)}/items/${encodeURIComponent(section)}/${encodeURIComponent(index)}',
-    '/api/teacher-content/drafts/${encodeURIComponent(packId)}/items/${encodeURIComponent(section)}/${encodeURIComponent(index)}/status',
-    '/api/teacher-content/approved',
-    '/api/teacher-content/approved/${encodeURIComponent(packId)}/activation',
-    '/api/teacher-content/approved/${encodeURIComponent(packId)}'
-  ];
-
-  expectedEndpoints.forEach((endpoint) => {
-    assert.ok(ui.includes(endpoint), `Expected endpoint reference ${endpoint}.`);
+function assertUploadPage() {
+  const uploadCard = ui.match(/function renderUploadSourceCard\(\) \{([\s\S]*?)\n  function renderUploadStartPlanShell/);
+  assert.ok(uploadCard, 'Expected renderUploadSourceCard function.');
+  assert.match(uploadCard[1], /teacherContentUploadFile/, 'Upload page should include upload input.');
+  assert.match(uploadCard[1], /teacherContentKnowledgeName/, 'Upload page should include knowledge packet name field.');
+  assert.match(uploadCard[1], /teacherContentImportProfile/, 'Upload page should include import profile selector.');
+  assert.match(uploadCard[1], /Choose import profile\.\.\./, 'Upload page should require selecting an import profile.');
+  assert.match(ui, /Physical Science/, 'Upload page should include Physical Science profile option.');
+  [
+    'General',
+    'Physical Science',
+    'Biology',
+    'Chemistry',
+    'Earth and Space Science',
+    'Math',
+    'English / Reading',
+    'History / Social Studies',
+    'Procedures / Class Info'
+  ].forEach((label) => {
+    assert.match(ui, new RegExp(label.replaceAll('/', '\\/')), `Upload page should include ${label} profile option.`);
   });
-
-  const endpointBlock = ui.match(/const ENDPOINTS = \{([\s\S]*?)\n  \};/);
-  assert.ok(endpointBlock, 'Expected ENDPOINTS block in Teacher Content UI.');
-  const endpointKeys = Array.from(endpointBlock[1].matchAll(/^\s+([a-zA-Z0-9_]+):/gm), (match) => match[1]);
-  assert.deepEqual(
-    endpointKeys.sort(),
-    [
-      'approved',
-      'approvedActivation',
-      'approvedBulkDelete',
-      'approvedDelete',
-      'dashboard',
-      'draftItem',
-      'draftItemStatus',
-      'draftReport',
-      'drafts',
-      'promoteDraft',
-      'standardsBank',
-      'standardsBanks',
-      'uploadAndPrepare',
-      'uploadExtract',
-      'uploadHistory',
-      'uploadPrepareReview'
-    ].sort(),
-    'Teacher Content UI should keep endpoint helpers limited to teacher content read/review/promotion routes.'
-  );
+  assert.match(uploadCard[1], /Analyze Upload/, 'Upload page should include Analyze Upload action.');
+  assert.match(uploadCard[1], /const canAttemptCreateReview = state\.selectedUploadFiles\.length > 0 && !uploadBusy;/, 'Analyze button should stay clickable after file selection so missing-profile validation can glow.');
+  assert.match(uploadCard[1], /teacher-content-required-glow/, 'Upload page should apply glow class when import profile is missing.');
+  assert.match(uploadCard[1], /data-upload-import-profile-validation/, 'Upload page should show import-profile validation copy.');
+  assert.match(ui, /if \(!state\.uploadImportProfile\) \{[\s\S]*Select an import profile before analyzing the upload\./, 'Analyze should be blocked when no import profile is selected.');
+  assert.match(ui, /data-upload-create-progress/, 'Upload page should include simple progress UI.');
+  assert.match(ui, /importProfile:\s*normalizeImportProfileForPayload\(state\.uploadImportProfile\)/, 'Prepare-review payload should include explicit importProfile.');
+  assert.match(ui, /function normalizeImportProfileForPayload\(value\)/, 'Import profile helper should keep room for future profiles.');
 }
 
-function assertPromotionAction() {
-  [
-    'data-promote-draft',
-    'promotionReadiness',
-    'Ready to promote',
-    'Needs teacher review',
-    'Blocked',
-    'Promoted successfully',
-    '!canCreateApprovedPackFromCurrentReport(summary)',
-    'Create Approved Pack from Approved Items',
-    'data-review-create-approved-pack',
-    'data-import-scope-warning',
-    'Run Full Document Import before approving this as your main pack.',
-    "method: 'POST'",
-    'Promotion copies reviewed draft content into approved knowledge packs.',
-    'It will not change student answering yet.'
-  ].forEach((marker) => {
-    assert.ok(ui.includes(marker), `Expected promotion marker ${marker}.`);
-  });
-
-  assert.equal((ui.match(/data-promote-draft/g) || []).length, 3, 'Promote hook should remain limited to one event handler, one Review Content button, and one Import Report button.');
-  assert.ok(
-    ui.indexOf('function renderImportReportCard') < ui.lastIndexOf('data-promote-draft'),
-    'Promote button should remain in the Import Report card.'
-  );
-}
-
-function assertReviewActions() {
-  [
-    'data-review-edit',
-    'data-review-status="approved"',
-    'data-review-status="rejected"',
-    'data-review-detail',
-    'data-review-field',
-    'data-review-save',
-    'data-review-close',
-    "method: 'PATCH'"
-  ].forEach((marker) => {
-    assert.ok(ui.includes(marker), `Expected review action marker ${marker}.`);
-  });
-}
-
-function assertDisabledPlaceholders() {
-  const disabledCount = (ui.match(/disabled/g) || []).length;
-  assert.ok(disabledCount >= 5, 'Expected disabled placeholder controls.');
-  [
-    'data-standards-bank-select',
-    'data-coming-soon="standards-upload"',
-    'data-coming-soon="standards-replace"'
-  ].forEach((marker) => {
-    assert.ok(ui.includes(marker), `Expected placeholder marker ${marker}.`);
-  });
-}
-
-function assertUploadExtractionUi() {
-  [
-    'teacherContentUploadFile',
-    'type="file"',
-    'accept=".txt,.csv,.json,.docx,.xlsx,.pptx,.pdf"',
-    'data-upload-file-input',
-    'data-upload-browse',
-    'data-upload-content-name',
-    'data-upload-create-review',
-    'data-upload-create-progress',
-    'data-upload-create-stage',
-    'data-upload-technical-details',
-    'data-source-match-metadata',
-    'data-source-match-uploaded-file',
-    'data-source-match-draft-id',
-    'data-source-match-draft-title',
-    'data-source-match-draft-source-files',
-    'data-source-match-character-count',
-    'data-source-match-page-chunk-count',
-    'data-source-match-status',
-    'data-source-match-warning',
-    'Source mismatch warning',
-    'Analyze Upload',
-    'Uploading file...',
-    'Extracting text...',
-    'Building import estimate...',
-    'Import Estimate',
-    'Recommended: Full document import',
-    'Estimated batches',
-    'Reason:',
-    'You can override this if needed.',
-    'data-auto-import-plan-panel',
-    'data-auto-import-plan-warnings',
-    'data-import-override-controls',
-    'Run Preview Draft',
-    'Run Full Import',
-    'Preview Draft',
-    'Temporary sample only. No final approved pack was created.',
-    'data-preview-scope',
-    'Sample draft',
-    'data-preview-deduplication-counts',
-    'raw ${formatNumber(entry.stats.raw)} | duplicates ${formatNumber(entry.stats.duplicatesRemoved)} | final ${formatNumber(entry.stats.final)}',
-    'Import is running, do not close this window.',
-    'Analysis Activity',
-    'data-import-activity-panel',
-    'data-import-activity-event',
-    'Operational import progress for this teacher draft.',
-    'Building draft packet wrapper',
-    'Running validation',
-    'Draft ready for review',
-    'Review draft prepared.',
-    'Technical details',
-    'FormData',
-    "method: 'POST'",
-    'Generating a draft with the safe planner settings.',
-    'Preview Size',
-    'Ultra-safe',
-    'Page 1 only',
-    'Next page',
-    'Custom page range - more demanding',
-    'Partial preview created. Some pages/chunks failed.',
-    'Original filename',
-    'File type',
-    'Pages/slides/sheets found',
-    'Text-bearing pages/slides/sheets',
-    'First text-bearing page/slide/sheet',
-    'Planner reason',
-    'Planner warnings',
-    'Extraction status',
-    'Character count',
-    'Sections Found',
-    'Tables Found',
-    'Warnings',
-    'Errors'
-  ].forEach((marker) => {
-    assert.ok(ui.includes(marker), `Expected upload extraction UI marker ${marker}.`);
-  });
-
-  assert.doesNotMatch(ui, /data-upload-extract|data-upload-prepare-review/, 'Upload card should expose one teacher-facing create action.');
-  assert.doesNotMatch(ui, /chain-of-thought|hidden reasoning|Gemma's thoughts|Gemma’s thoughts/i, 'Import activity should not claim to show hidden reasoning.');
-  assert.equal((ui.match(/data-upload-create-review/g) || []).length, 2, 'Upload/analyze hook should be one handler and one button.');
-  assert.match(ui, /function makePreviewImportPayload\(\)/, 'Run Preview Draft should build an explicit preview selection payload.');
-  assert.match(ui, /function getTextBearingPages\(\)/, 'Preview UI should read text-bearing page metadata.');
-  assert.match(ui, /function applyDefaultPreviewTextPage\(\)/, 'Preview UI should default to the first text-bearing page when needed.');
-  assert.match(ui, /async function runRecommendedImport\(\)/, 'Teacher UI should run the automatic recommendation as the default Analyze Upload action.');
-  assert.match(ui, /function renderAutoImportPlanPanel\(\)/, 'Teacher UI should render the automatic import plan.');
-  assert.match(ui, /function makeRecommendedImportPayload\(plan\)/, 'Teacher UI should build selected-range payloads from the recommended plan.');
-  assert.match(ui, /useAutoImportPlan:\s*true/, 'Automatic analysis should mark the recommended plan as accepted.');
-  assert.match(ui, /state\.uploadAutoImportPlan = data\?\.autoImportPlan/, 'Teacher UI should store the route-provided automatic import plan.');
-  assert.match(ui, /state\.uploadPreviewAutoTextPage/, 'Preview UI should distinguish automatic first-text-page defaults from explicit page choices.');
-  assert.match(ui, /importSelection:\s*\{\s*pageStart,\s*pageEnd/s, 'Run Preview Draft should send selected preview pages.');
-  assert.match(ui, /previewMaxPages:\s*size === 'range'[\s\S]*?: 1/, 'Run Preview Draft should default to one preview page outside custom ranges.');
-  assert.match(ui, /previewMode:\s*size === 'ultraSafe' \? 'ultra-safe'/, 'Run Preview Draft should send ultra-safe preview mode.');
-  assert.match(ui, /previewMaxCharacters:\s*maxChars/, 'Run Preview Draft should send the preview character limit.');
-  assert.match(ui, /data-use-first-text-page/, 'Preview UI should expose a Use first text page action.');
-  assert.match(ui, /Page 1 has no extractable text\. Try Page/, 'Preview UI should explain empty Page 1 recovery.');
-  assert.match(ui, /data-import-estimate-first-text-page/, 'Import estimate should display first text page metadata.');
-  assert.match(ui, /data-import-estimate-pages-with-text/, 'Import estimate should display pages with text metadata.');
-  assert.match(ui, /knowledgeName: state\.uploadContentName/, 'Run Preview Draft should send the teacher knowledge name.');
-  assert.match(ui, /previewOnly: importMode === 'preview'/, 'Run Preview Draft should mark previewOnly.');
-  assert.match(ui, /appendImportActivity\('error'/, 'Prepare Review failures should be appended to analysis activity.');
-  assert.match(ui, /state\.uploadPrepareReviewFailedMode = importMode/, 'Prepare Review failure should keep the failing step marked failed.');
-  assert.match(ui, /state\.uploadAutoImportPlan = error\?\.data\?\.autoImportPlan \|\| state\.uploadAutoImportPlan/, 'Prepare Review failure should preserve planner state from the route or existing upload.');
-  assert.match(ui, /state\.uploadPreviewComplete = !state\.uploadPreviewPartial/, 'Only successful preview responses should mark Review Preview ready.');
-  const prepareReviewFunction = ui.match(/async function prepareReviewFromUpload\(importMode = 'preview', extraBody = \{\}\) \{([\s\S]*?)\n  function makeSelectedImportPayload/);
-  assert.ok(prepareReviewFunction, 'Expected prepareReviewFromUpload function.');
-  const prepareReviewCatch = prepareReviewFunction[1].match(/catch \(error\) \{([\s\S]*?)\n    \} finally \{/);
-  assert.ok(prepareReviewCatch, 'Expected prepareReviewFromUpload catch block.');
-  assert.doesNotMatch(prepareReviewCatch[1], /uploadPreviewComplete\s*=\s*true/, 'Failed Prepare Review should not mark preview ready.');
-}
-
-function assertTrueTwoPageTeacherWorkflowUi() {
-  const uploadSourceFunction = ui.match(/function renderUploadSourceCard\(\) \{([\s\S]*?)\n  function renderUploadStartPlanShell/);
-  assert.ok(uploadSourceFunction, 'Expected renderUploadSourceCard function.');
-  const defaultUploadMarkup = uploadSourceFunction[1].split('data-upload-technical-details')[0];
-  [
-    'teacherContentUploadFile',
-    'teacherContentKnowledgeName',
-    'Analyze Upload',
-    'renderUploadCreateProgress()',
-    'renderUploadProgressErrorPanel()'
-  ].forEach((marker) => {
-    assert.ok(defaultUploadMarkup.includes(marker), `Expected normal Upload / Start marker ${marker}.`);
-  });
-  [
-    'renderImportEstimatePanel',
-    'renderAutoImportPlanPanel',
-    'renderPreviewSizeControls',
-    'renderSelectedImportControls',
-    'renderWholeImportAdvanced',
-    'renderImportActivityPanel',
-    'renderUploadExtractionSummary',
-    'Preview Size',
-    'Max preview chars',
-    'Planner warnings',
-    'Available memory is low',
-    'OCR/vision',
-    'Metric',
-    'Analysis Activity',
-    'Run automatic analysis'
-  ].forEach((marker) => {
-    assert.ok(!defaultUploadMarkup.includes(marker), `Normal Upload / Start should not expose ${marker}.`);
-  });
-  [
-    'Gemma will not start automatically',
-    'Advanced import controls',
-    'Gemma Draft Activity',
-    'Generate Draft',
-    'Confirm full import'
-  ].forEach((marker) => {
-    assert.ok(!ui.includes(marker), `Teacher Content UI should not include old default-flow copy: ${marker}`);
-  });
-  assert.match(uploadSourceFunction[1], /data-upload-technical-details[\s\S]*renderUploadExtractionSummary[\s\S]*renderImportEstimatePanel[\s\S]*renderAutoImportPlanPanel/, 'Planner and extraction details should remain behind collapsed Technical details.');
-  assert.match(ui, /data-upload-manual-recovery-controls[\s\S]*<summary>Manual recovery controls<\/summary>/, 'Manual controls should be collapsed behind recovery details.');
-
-  const createReviewFunction = ui.match(/async function createReviewDraftFromUpload\(\) \{([\s\S]*?)\n  async function runPreviewImport/);
-  assert.ok(createReviewFunction, 'Expected createReviewDraftFromUpload function.');
-  assert.match(createReviewFunction[1], /fetchJson\(ENDPOINTS\.uploadAndPrepare[\s\S]*await runRecommendedImport\(\)/, 'Analyze Upload should upload, plan, then generate from the automatic plan.');
-
-  const recommendedFunction = ui.match(/async function runRecommendedImport\(\) \{([\s\S]*?)\n  async function prepareReviewFromUpload/);
-  assert.ok(recommendedFunction, 'Expected runRecommendedImport function.');
-  assert.match(recommendedFunction[1], /prepareReviewFromUpload\('full'/, 'Analyze should always run full adaptive import without asking for range/sample choices.');
-  assert.doesNotMatch(recommendedFunction[1], /prepareReviewFromUpload\('selected'/, 'Automatic Analyze should not stop on selected-range/sample checkpoints.');
-
-  [
-    'data-review-planner-notes',
-    'Some pages had little extracted text. Image-only content may need OCR later.',
-    'data-review-planner-technical-details',
-    'data-review-source-grounding-warnings',
-    'data-review-item-source-grounding',
-    'formatSourceGroundingStatus'
-  ].forEach((marker) => {
-    assert.ok(ui.includes(marker), `Expected Review Draft Content marker ${marker}.`);
-  });
-}
-
-function assertUploadProgressDisplayUi() {
-  [
-    'uploadProgress',
-    "label: 'Ready'",
-    "setUploadProgress('Uploading'",
-    "setUploadProgress('Extracting'",
-    "setUploadProgress('Planning'",
-    "setUploadProgress('Ready to generate draft'",
-    "setUploadProgress('Generating'",
-    "setUploadProgress('Validating'",
-    "setUploadProgress('Ready for review'",
-    "setUploadProgress('Error'",
-    'Still waiting on the local model. You can stop this and try a smaller preview.',
-    'stopUploadGeneration',
-    'Generation stopped. Upload and plan were preserved.',
-    'uploadPrepareReviewAbortController',
-    'uploadPrepareReviewRequestId',
-    'data-upload-progress-display',
-    'data-upload-progress-label',
-    'data-upload-progress-percent',
-    'data-upload-progress-bar',
-    'data-upload-progress-fill',
-    'data-upload-progress-detail',
-    'data-upload-progress-error-panel',
-    'data-upload-progress-error-backend-details',
-    'data-upload-progress-error-suggestions',
-    'Local Gemma crashed while reading this batch.',
-    'Local Gemma took too long while reading this batch.',
-    'Try a smaller preview range or lower character limit.',
-    'Try a smaller preview range, lower character limit, or a lighter local model.',
-    'formatFailedBatchDetail',
-    'isModelRuntimeCrashPayload',
-    'isModelRuntimeTimeoutPayload',
-    'clearUploadProgressError()',
-    'getPlannedBatchDetail',
-    'getGenerateProgressDetail',
-    'This may take a moment',
-    'batches planned',
-    'Batch ${details.batchIndex} of ${details.totalBatches}'
-  ].forEach((marker) => {
-    assert.ok(ui.includes(marker), `Expected upload progress display marker ${marker}.`);
-  });
-
-  [
-    '.teacher-content-upload-progress.working',
-    '.teacher-content-upload-progress-bar span::after',
-    'teacher-content-progress-shimmer',
-    'animation: teacher-content-progress-shimmer 1.6s ease-in-out infinite',
-    '.teacher-content-progress-error-panel',
-    'grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr))',
-    'overflow-x: hidden'
-  ].forEach((marker) => {
-    assert.ok(style.includes(marker), `Expected upload progress style marker ${marker}.`);
-  });
-
-  assert.match(ui, /function renderUploadCreateProgress\(\)[\s\S]*data-upload-progress-display[\s\S]*data-upload-progress-bar/, 'Upload / Start should render the animated progress display.');
-  assert.match(ui, /function renderUploadProgressErrorPanel\(\)[\s\S]*if \(!error\) return ''/, 'Upload error panel should be hidden by default.');
-  assert.match(ui, /function renderUploadProgressErrorPanel\(\)[\s\S]*<details class="teacher-content-backend-details" data-upload-progress-error-backend-details>[\s\S]*<summary>Technical details<\/summary>/, 'Raw backend details should render only in a collapsed Technical details area.');
-  assert.match(ui, /function makeUploadProgressTeacherMessage\([\s\S]*Local Gemma crashed while reading this batch\./, 'Gemma crash progress errors should use short teacher-facing copy.');
-  assert.match(ui, /function makeUploadProgressTeacherMessage\([\s\S]*Local Gemma took too long while reading this batch\./, 'Gemma timeout progress errors should use short teacher-facing copy.');
-  assert.doesNotMatch(ui, /Ollama returned HTTP 500[\s\S]*Ollama returned HTTP 500/, 'Teacher UI should not hard-code repeated Ollama crash text.');
-  assert.match(ui, /setUploadProgressError\('Upload failed'[\s\S]*Upload\/extraction\/planning/, 'Upload/planning failures should route into the progress error panel.');
-  assert.match(ui, /setUploadProgressError\('Draft generation failed'[\s\S]*makePrepareReviewRecoverySuggestions/, 'Draft generation failures should route backend details and recovery suggestions into the progress error panel.');
-  assert.match(ui, /state\.selectedUploadFile[\s\S]*setUploadProgress\('Ready', '', 0, 'idle'\)[\s\S]*clearUploadProgressError\(\)/, 'New uploads should clear the progress error panel and reset to Ready.');
-  assert.match(ui, /if \(data\?\.preview\)[\s\S]*setUploadProgress\('Ready to generate draft'/, 'Manual preview override should update progress after success.');
-  assert.match(ui, /async function prepareReviewFromUpload[\s\S]*setUploadProgress\('Generating'[\s\S]*setUploadProgress\('Validating'[\s\S]*setUploadProgress\('Ready for review'/, 'Analyze Upload and selected/full imports should progress through generating, validating, and ready states.');
-  assert.match(ui, /setUploadProgress\('Error', detail, 24, 'error'\)/, 'Failure progress should reset to an error state instead of staying near complete.');
-  assert.match(ui, /data-upload-progress-failed-pages/, 'Failure progress should show a teacher-friendly failed slide/page notice.');
-  assert.match(ui, /formatFailedBatchPageNotice[\s\S]*were'\} not analyzed/, 'Failed slide/page notices should use teacher-friendly language.');
-  assert.match(ui, /async function prepareReviewFromUpload[\s\S]*waitingTooLongTimer[\s\S]*Still waiting on the local model/, 'Long-running generation should show waiting-too-long guidance.');
-  assert.match(ui, /function stopUploadGeneration\(\)[\s\S]*abort\(\)[\s\S]*Generation stopped\. Upload and plan were preserved\./, 'Stop generation helper should still preserve upload/planner state for manual recovery paths.');
-  assert.doesNotMatch(ui.match(/function renderUploadCreateProgress\(\)[\s\S]*?\n  function normalizeUploadProgress/)?.[0] || '', /data-upload-stop-generation|Stop\/Cancel Generation/, 'Normal progress display should not add a second teacher-facing Page 1 action.');
-  assert.match(ui, /function renderTabs\(\)[\s\S]*state\.uploadPrepareReviewLoading && tab\.id !== state\.activeTab \? 'disabled'/, 'Tabs should be guarded while generation is running.');
-  assert.doesNotMatch(ui.match(/function renderUploadCreateProgress\(\)[\s\S]*?\n  function normalizeUploadProgress/)?.[0] || '', /<p>/, 'Normal progress display should avoid paragraph-heavy status text.');
-}
-
-function assertUploadAndPrepareFormDataContract() {
-  const createReviewFunction = ui.match(/async function createReviewDraftFromUpload\(\) \{([\s\S]*?)\n  async function runPreviewImport/);
-  assert.ok(createReviewFunction, 'Expected createReviewDraftFromUpload function.');
-  assert.ok(
-    createReviewFunction[1].includes("formData.append('sourceFile', state.selectedUploadFile)"),
-    'Create Review Draft should send the source file under the route upload field.'
-  );
-  assert.ok(
-    createReviewFunction[1].includes("formData.append('knowledgeName', state.uploadContentName || makeContentNameFromFileName(state.selectedUploadFile.name || ''))"),
-    'Create Review Draft should send the teacher-entered name as knowledgeName.'
-  );
-  assert.doesNotMatch(
-    createReviewFunction[1],
-    /formData\.append\('packName'/,
-    'Create Review Draft should not send the old packName field from the one-button upload form.'
-  );
-}
-
-function assertBackendJsonErrorsAreDisplayed() {
-  [
-    'data.error',
-    'data.message',
-    'Array.isArray(data.errors) && data.errors.length > 0 ? data.errors.join',
-    'data.details',
-    'error.errors = Array.isArray(data.errors) ? data.errors : []'
-  ].forEach((marker) => {
-    assert.ok(apiClient.includes(marker), `Expected API client to preserve backend JSON error marker ${marker}.`);
-  });
-  assert.ok(apiClient.includes('error.timeline = Array.isArray(data.timeline) ? data.timeline : []'));
-  assert.ok(apiClient.includes('error.data = data'));
-
-  assert.ok(
-    ui.includes("state.uploadCreateReviewError = error.message || 'Create Review Draft failed.'"),
-    'Teacher Content upload failure should render the backend error message surfaced by the API client.'
-  );
-  [
-    'error?.data?.validationErrors',
-    'error?.data?.invalidItems',
-    'error?.data?.repairNeeded',
-    'error?.data?.failedBatches',
-    'error?.data?.rawModelResponsePath',
-    'error?.data?.extractionCounts',
-    'data-prepare-review-backend-details',
-    'data-prepare-review-retry-guidance',
-    'data-prepare-review-repair-details'
-  ].forEach((marker) => {
-    assert.ok(ui.includes(marker), `Expected prepare-review 400 recovery marker ${marker}.`);
-  });
-}
-
-function assertPrepareReviewHandoffUi() {
-  [
-    'data-prepare-review-handoff',
-    'Review draft prepared.',
-    'Next step: review pending items before this knowledge can go live.',
-    'Draft packs are not live until approved and promoted.',
-    'Review draft prepared, but the latest report could not be refreshed.',
-    'data-handoff-tab="review"',
-    'Go to Review',
-    'Review Draft Content',
-    'state.selectedDraftPackId = data.packId',
-    'await refreshDraftLists()',
-    "state.activeTab = 'review'",
-    'state.latestPrepareReviewSourceMatch'
-  ].forEach((marker) => {
-    assert.ok(ui.includes(marker), `Expected Prepare Review handoff marker ${marker}.`);
-  });
-}
-
-function assertSelectedDraftAndProgressUi() {
-  [
-    'data-selected-draft-summary',
-    'data-selected-draft-title',
-    'data-selected-draft-pack-id',
-    'data-selected-draft-import-scope',
-    'data-selected-draft-pending',
-    'data-selected-draft-validation',
-    'data-review-progress-summary',
-    'data-review-progress-pending',
-    'data-review-progress-approved',
-    'data-review-progress-rejected',
-    'data-review-progress-total',
-    'data-review-progress-percent',
-    'Review progress',
-    'Pending Items',
-    'Approved Items',
-    'Rejected Items',
-    'Total Reviewable Items',
-    'No draft pack is selected yet. Create Review Draft from an upload or choose a draft pack to see its review summary.',
-    'No draft report selected. Create Review Draft from an upload or choose a draft pack to see whether it is ready to promote.'
-  ].forEach((marker) => {
-    assert.ok(ui.includes(marker), `Expected selected draft/progress marker ${marker}.`);
-  });
-}
-
-function assertStandardsTabWorkflowUi() {
-  [
-    'Standards',
-    'Connect this knowledge pack to the standards students are expected to learn.',
-    'data-standards-map-count',
-    'data-standards-id-count',
-    'data-standards-missing-count',
-    'data-standards-unknown-count',
-    'teacherContentStandardsBankSelect',
-    'Select Saved Standards Set',
-    'data-standards-bank-select',
-    '/api/teacher-content/standards-banks',
-    'standardsBankId=${encodeURIComponent(standardsBankId)}',
-    'No saved standards sets found. Standards upload will be added later.',
-    'data-selected-standards-bank-summary',
-    'data-selected-standards-bank-title',
-    'data-selected-standards-bank-id',
-    'data-selected-standards-bank-subject',
-    'data-selected-standards-bank-grade',
-    'data-selected-standards-bank-jurisdiction',
-    'data-selected-standards-bank-count',
-    'data-selected-standards-bank-validation',
-    'No saved standards set selected. Draft standard IDs are shown without saved-bank enrichment.',
-    'Selected standards set failed to load',
-    'data-standard-id-list',
-    'data-standard-card',
-    'data-standard-card-id',
-    'data-standard-id',
-    'data-standard-code',
-    'data-standard-title',
-    'data-standard-description',
-    'data-standard-official-text',
-    'data-standard-student-friendly-text',
-    'data-standard-strand',
-    'data-standard-topic',
-    'data-standard-keywords',
-    'data-standard-bank-match',
-    'data-standard-confidence',
-    'data-standard-vocabulary',
-    'data-standard-concepts',
-    'data-standard-review-status',
-    'teacherContentStandardsSearch',
-    'Search standards in this set',
-    'data-standards-search',
-    'teacherContentStandardsStrandFilter',
-    'data-standards-strand-filter',
-    'teacherContentStandardsTopicFilter',
-    'data-standards-topic-filter',
-    'teacherContentStandardsMatchFilter',
-    'Draft match status',
-    'data-standards-match-filter',
-    'Used in this draft',
-    'All standards',
-    'Default view: Used in this draft',
-    'data-standards-default-used',
-    'Not used in this draft',
-    'Unknown in selected bank / unmatched',
-    'data-standards-filter-controls',
-    'data-standard-match-status',
-    'data-standard-detail-panel',
-    'data-standard-detail-id',
-    'data-standard-detail-code',
-    'data-standard-detail-title',
-    'data-standard-detail-official-text',
-    'data-standard-detail-student-friendly-text',
-    'data-standard-detail-strand',
-    'data-standard-detail-topic',
-    'data-standard-detail-keywords',
-    'data-standard-detail-vocabulary',
-    'data-standard-detail-concepts',
-    'data-standard-detail-confidence',
-    'data-standard-detail-review-status',
-    'No draft selected. Create Review Draft from an upload or choose a draft pack to see its standards alignment.',
-    'No standardsMap entries or standard IDs were found for this draft.',
-    'Selected standards set has no standards to preview.',
-    'No standards match search/filter.',
-    'Selected draft standard IDs are unknown in this bank.',
-    'Standards bank not loaded. Existing draft IDs are shown without bank details.',
-    'Unknown standards found',
-    'Upload standards file',
-    'Replace standard - coming soon',
-    'Edit standard',
-    'Vocab',
-    'Content/Concept',
-    'Source',
-    'data-standards-placeholder-controls',
-    'data-coming-soon="standards-upload"',
-    'data-coming-soon="standards-replace"',
-    'data-coming-soon="standards-edit"',
-    'data-coming-soon="standards-vocab"',
-    'data-coming-soon="standards-content-concept"',
-    'data-coming-soon="standards-source"'
-  ].forEach((marker) => {
-    assert.ok(ui.includes(marker), `Expected Standards tab workflow marker ${marker}.`);
-  });
-
-  [
-    /data-coming-soon="standards-upload"[\s\S]*?disabled|disabled[\s\S]*?data-coming-soon="standards-upload"/,
-    /data-coming-soon="standards-replace"[\s\S]*?disabled|disabled[\s\S]*?data-coming-soon="standards-replace"/,
-    /data-coming-soon="standards-edit"[\s\S]*?disabled|disabled[\s\S]*?data-coming-soon="standards-edit"/,
-    /data-coming-soon="standards-vocab"[\s\S]*?disabled|disabled[\s\S]*?data-coming-soon="standards-vocab"/,
-    /data-coming-soon="standards-content-concept"[\s\S]*?disabled|disabled[\s\S]*?data-coming-soon="standards-content-concept"/,
-    /data-coming-soon="standards-source"[\s\S]*?disabled|disabled[\s\S]*?data-coming-soon="standards-source"/
-  ].forEach((pattern) => {
-    assert.match(ui, pattern, `Expected disabled placeholder control matching ${pattern}.`);
-  });
-
-  assert.match(ui, /id="teacherContentStandardsBankSelect"[\s\S]*?data-standards-bank-select/, 'Saved standards selector should be real and enabled when not loading.');
-  assert.doesNotMatch(ui, /data-coming-soon="standards-select"/, 'Saved standards selector should no longer be a disabled placeholder.');
-  assert.doesNotMatch(ui, /standardsUpload|uploadStandards|data-standards-upload-action|\/api\/teacher-content\/standards-upload|\/api\/teacher-content\/standards-banks\/upload/i, 'Standards upload POST should remain absent.');
-  assert.doesNotMatch(ui, /standardsBankUpload|postStandardsBank|createStandardsBank/i, 'Standards upload POST helpers should remain absent.');
-}
-
-function assertReviewCardPolishUi() {
-  [
-    'Review Draft Content',
-    'Review generated draft content in one scrollable page.',
-    'data-review-draft-content-page',
-    'data-review-section=',
-    'vocabulary',
-    'concepts',
-    'referenceFormulas',
-    'problemBank',
-    'examples',
-    'misconceptions',
-    'standardsMap',
-    'smokeTests',
-    'Vocabulary',
-    'Concepts',
-    'Reference formulas',
-    'Problem-bank items',
-    'Examples',
-    'Misconceptions',
-    'Standards suggestions',
-    'Warnings / needs repair',
-    'data-review-section-count',
-    'data-review-section-pending',
-    'data-review-section-approved',
-    'data-review-section-rejected',
-    'No draft items in this section.',
-    'data-review-item-card',
-    'data-review-selection-checkbox',
-    'data-review-selection-item-key',
-    'data-review-select-control',
-    'Select draft item',
-    'data-review-item-label',
-    'data-review-item-category',
-    'data-review-item-wording',
-    'data-review-item-confidence',
-    'data-review-item-standards',
-    'Standards: ${escapeHtml(formatStandardsAlignmentStatus(item))}',
-    'formatStandardsAlignmentStatus',
-    'not_aligned_yet',
-    'data-review-item-source-file',
-    'data-review-item-source-location',
-    'data-review-item-snippet',
-    'data-review-item-warning-status',
-    'data-review-item-evidence',
-    'View Evidence',
-    'High confidence',
-    'Medium confidence',
-    'Low confidence',
-    'No pending review items.',
-    'This draft is ready to create an approved pack from approved items only.',
-    'This draft has no approved items to promote yet.',
-    'Promotion Validation Errors',
-    'data-review-create-approved-pack',
-    'Create Approved Pack from Approved Items',
-    'data-review-empty-state',
-    'data-review-empty-tab="approvedPacks"',
-    'View Approved Packs',
-    'Source evidence',
-    'Editable fields',
-    'Edit',
-    'Save changes',
-    'Approve item',
-    'Reject item',
-    'Cancel',
-    'data-review-bottom-action-bar',
-    'data-review-cancel',
-    'data-review-accept-selected',
-    'data-review-accept-all',
-    'Accept Selected',
-    'Accept All',
-    'selectedReviewItemKeys',
-    'reviewBulkMessage',
-    'cancelReviewWorkflow',
-    'acceptSelectedReviewItems',
-    'acceptAllReviewItems',
-    'isReviewItemSafeToAccept',
-    'No valid items are selected for Accept Selected.',
-    'Skipped ${formatNumber(skipped)} unsafe',
-    'Approved packs are saved for later and are not connected to student answers yet.',
-    'Review canceled. Uploaded source files and draft packs were left untouched.'
-  ].forEach((marker) => {
-    assert.ok(ui.includes(marker), `Expected review polish marker ${marker}.`);
-  });
-
-  assert.ok(
-    ui.includes('data-review-selection-checkbox') && ui.includes('data-approved-pack-activation-checkbox'),
-    'Review selection checkboxes and Knowledge Pack activation checkboxes should have distinct hooks.'
-  );
-  assert.notEqual(
-    ui.indexOf('data-review-selection-checkbox'),
-    ui.indexOf('data-approved-pack-activation-checkbox'),
-    'Review selection checkbox markup should be distinct from activation checkbox markup.'
-  );
-  assert.ok(style.includes('.teacher-content-review-select-control'), 'Review selection checkbox should have distinct styling.');
-  assert.ok(style.includes('accent-color: #f19f4c'), 'Review selection checkbox should use a distinct accent color.');
-  assert.ok(style.includes('.teacher-content-review-action-bar'), 'Review bottom action bar should be styled.');
-  assert.match(ui, /reviewStatus:\s*'approved'/, 'Accept Selected/All should approve via the existing draft review status route.');
-  assert.match(ui, /rejected\|reject\|repair\[_ -\]\?needed\|needs\? repair\|quarantine\|quarantined\|invalid\|failed\|failure\|error/, 'Accept Selected/All should skip unsafe item statuses.');
-  assert.match(ui, /ENDPOINTS\.draftItemStatus/, 'Bulk accept should use the existing draft item status endpoint.');
-  assert.doesNotMatch(ui, /data-review-selection-checkbox[\s\S]{0,220}data-approved-pack-activation-toggle/, 'Review selection checkboxes should not reuse activation checkbox hooks.');
-}
-
-function assertReviewPromotionButtonConditions() {
-  const reviewFunction = ui.match(/function renderReviewCard\(\) \{([\s\S]*?)\n  function renderReviewGroup/);
-  assert.ok(reviewFunction, 'Expected renderReviewCard function.');
-  assert.match(
-    reviewFunction[1],
-    /canCreateApprovedPack\s*=\s*canCreateApprovedPackFromCurrentReport\(summary\)/,
-    'Review Content should show Create Approved Pack only when promotion readiness confirms valid approved/source-grounded items.'
-  );
-  assert.match(ui, /function canCreateApprovedPackFromCurrentReport[\s\S]*summary\.pending === 0 && summary\.approved > 0 && readiness\.ready === true/, 'Create Approved Pack should require route promotion readiness as well as approved reviewed items.');
+function assertBulkUploadQueuePage() {
+  assert.match(ui, /type="file"[\s\S]*multiple/, 'Upload input should allow selecting multiple files.');
+  assert.match(ui, /data-upload-folder-input/, 'Upload page should include folder-capable upload input.');
+  assert.match(ui, /data-upload-browse-folder/, 'Upload page should include Upload Folder action.');
+  assert.match(ui, /function renderUploadQueueList\(\)/, 'Upload page should render a queue list for bulk files.');
+  assert.match(ui, /data-upload-queue/, 'Bulk queue container should be present.');
+  assert.match(ui, /data-upload-queue-file/, 'Queue rows should show file names.');
+  assert.match(ui, /data-upload-queue-pack-name/, 'Queue rows should show proposed pack names.');
+  assert.match(ui, /data-upload-queue-status-label/, 'Queue rows should show status labels.');
+  assert.match(ui, /data-upload-queue-visibility/, 'Queue should show visible-row count and scroll hint copy.');
+  assert.match(ui, /draft ready/, 'Queue status should include draft ready.');
+  assert.match(ui, /waiting/, 'Queue status should include waiting.');
+  assert.match(ui, /extracting/, 'Queue status should include extracting.');
+  assert.match(ui, /processing/, 'Queue status should include processing.');
+  assert.match(ui, /failed/, 'Queue status should include failed.');
+  assert.match(ui, /canceled/, 'Queue status should include canceled.');
+  assert.match(ui, /data-upload-cancel-remaining/, 'Upload page should include cancel remaining action.');
+  assert.match(ui, /function cancelRemainingUploadQueue\(\)/, 'Upload queue should implement cancel-remaining behavior.');
+  assert.match(ui, /for \(let index = 0; index < queue\.length; index \+= 1\) \{[\s\S]*await processUploadQueueItem\(queueItem, index, queueTotal, completedPackIds\);/, 'Upload queue should continue processing files sequentially.');
   assert.match(
     ui,
-    /renderReviewCompletionPanel\(canCreateApprovedPack[\s\S]*data-review-create-approved-pack/,
-    'Review Content promotion button should be conditional.'
+    /const singleDefaultName = files\.length === 1 && files\[0\][\s\S]*state\.uploadContentName = singleDefaultName;[\s\S]*state\.uploadQueue = buildUploadQueueFromFiles\(files, singleDefaultName\);/,
+    'Selected-file handler should compute single-file default name before queue build to avoid stale queue names.'
+  );
+  assert.match(
+    ui,
+    /state\.uploadQueue\.length === 1[\s\S]*proposedPackName: state\.uploadContentName \|\| state\.uploadQueue\[0\]\.proposedPackName/,
+    'Editing Knowledge Pack Name should continue updating the single queue item.'
+  );
+  assert.match(ui, /Pack names default from folder and file names when available\./, 'Teacher copy should describe folder-aware default naming.');
+  assert.match(ui, /Folder path data was not available from this browser, so pack names used file names only\./, 'Upload queue should explain when browser folder-path metadata is unavailable.');
+}
+
+function assertBulkQueueNamingRules() {
+  const queueBuilder = compileUiFunction('buildUploadQueueFromFiles', ['titleCase', 'makeContentNameFromFileName', 'buildDefaultPackNameFromFile', 'extractNearestMeaningfulParentFolder', 'makeQueuePackNamesCollisionSafe']);
+  const namingFromFile = compileUiFunction('buildDefaultPackNameFromFile', ['titleCase', 'makeContentNameFromFileName', 'extractNearestMeaningfulParentFolder']);
+
+  const noPathQueue = queueBuilder([
+    { name: 'Energy.pptx' },
+    { name: 'Moon Notes.pdf' }
+  ]);
+  assert.equal(noPathQueue[0].proposedPackName, 'Energy', 'Multi-file upload without folder path should use file-name pack names.');
+  assert.equal(noPathQueue[1].proposedPackName, 'Moon Notes', 'File-name naming should remain unchanged when no folder path exists.');
+
+  const folderPathQueue = queueBuilder([
+    { name: 'Energy.pptx', webkitRelativePath: 'Science/Energy.pptx' },
+    { name: 'Moon Notes.pdf', webkitRelativePath: 'Science/Moon Notes.pdf' }
+  ]);
+  assert.equal(folderPathQueue[0].proposedPackName, 'Science - Energy', 'Folder path should default to "Folder - File Name".');
+  assert.equal(folderPathQueue[1].proposedPackName, 'Science - Moon Notes', 'Folder path should use clean file names without extensions.');
+
+  const nestedPathQueue = queueBuilder([
+    { name: 'Energy.pptx', webkitRelativePath: 'Charlemagne Tests/Science/Energy.pptx' }
+  ]);
+  assert.equal(nestedPathQueue[0].proposedPackName, 'Science - Energy', 'Nested folder path should use nearest meaningful parent folder.');
+  assert.equal(namingFromFile({ name: 'Energy.pptx', webkitRelativePath: 'Charlemagne Tests/Science/Energy.pptx' }), 'Science - Energy', 'Single-file naming should match queue naming helper.');
+  assert.equal(
+    namingFromFile({ name: 'Energy.pptx', relativePath: 'Charlemagne Tests/Science/Energy.pptx' }),
+    'Science - Energy',
+    'Single-file naming should support relativePath fallback for non-browser adapters/tests.'
+  );
+
+  const duplicateQueue = queueBuilder([
+    { name: 'Energy.pptx', webkitRelativePath: 'Science/Energy.pptx' },
+    { name: 'Energy.pptx', webkitRelativePath: 'Science/Energy.pptx' }
+  ]);
+  assert.equal(duplicateQueue[0].proposedPackName, 'Science - Energy', 'First duplicate should keep base name.');
+  assert.equal(duplicateQueue[1].proposedPackName, 'Science - Energy (2)', 'Duplicate names should remain collision-safe.');
+  assert.equal(duplicateQueue.length, 2, 'Each uploaded file should remain one separate queue item.');
+
+  const staleSingleNameQueue = queueBuilder(
+    [{ name: 'New File.pptx', webkitRelativePath: 'Science/New File.pptx' }],
+    'Old Proposed Name'
+  );
+  assert.equal(
+    staleSingleNameQueue[0].proposedPackName,
+    'Old Proposed Name',
+    'Single-file queue respects an explicit singleName override; selected-file handler must pass freshly computed defaults.'
   );
 }
 
-function assertImportReportPolishUi() {
-  [
-    'Import Report',
-    'This report checks whether the reviewed draft is ready to become an approved knowledge pack.',
-    'data-import-report-readiness-status',
-    'data-import-report-readiness-card',
-    'Needs teacher review',
-    'Ready to promote',
-    'Blocked',
-    'Promoted successfully',
-    'Promotion copies reviewed draft content into approved knowledge packs.',
-    'It will not change student answering yet.',
-    'data-import-report-blocked-reasons',
-    'data-import-report-blocked-reason',
-    'Blocked reasons',
-    'data-import-report-review-summary',
-    'data-import-report-pending',
-    'data-import-report-approved',
-    'data-import-report-rejected',
-    'data-import-report-total-reviewable',
-    'Pending',
-    'Approved',
-    'Rejected',
-    'Total reviewable',
-    'data-import-report-validation-summary',
-    'data-import-report-extraction',
-    'data-import-report-validation',
-    'data-import-report-warnings',
-    'data-import-report-errors',
-    'data-import-coverage-report',
-    'data-import-coverage-total-pages',
-    'data-import-coverage-total-chunks',
-    'data-import-coverage-processed-chunks',
-    'data-import-coverage-chunks-with-items',
-    'data-import-coverage-empty-chunks',
-    'data-import-coverage-sections-detected',
-    'data-import-coverage-empty-chunk-list',
-    'data-import-coverage-failed-batches',
-    'Failed model batches',
-    'Retry limit:',
-    'Coverage report',
-    'Draft item counts by section',
-    'Chunks with no extracted knowledge',
-    'Extraction',
-    'Draft validation',
-    'Warnings',
-    'Errors',
-    'Passed',
-    'Failed',
-    'Unknown',
-    'No draft report selected. Create Review Draft from an upload or choose a draft pack to see whether it is ready to promote.',
-    'Report failed to load or is still unavailable. Refresh the selected draft before promoting.',
-    'Draft not ready. Finish teacher review before promoting.'
-  ].forEach((marker) => {
-    assert.ok(ui.includes(marker), `Expected Import Report polish marker ${marker}.`);
-  });
+function assertReviewListTableLayout() {
+  const reviewCard = ui.match(/function renderReviewCard\(\) \{([\s\S]*?)\n  function renderReviewDoneCard/);
+  assert.ok(reviewCard, 'Expected renderReviewCard function.');
+
+  assert.match(reviewCard[1], /Review Knowledge Packet/, 'Page 2 should show Review Knowledge Packet heading.');
+  assert.match(reviewCard[1], /data-review-summary-line/, 'Page 2 should show compact summary line.');
+  assert.match(ui, /data-review-filter-tabs/, 'Page 2 should expose simple filter chips/tabs.');
+  assert.match(reviewCard[1], /renderReviewTable\(filteredItems\)/, 'Page 2 should render list/table rows immediately.');
+  assert.match(ui, /No draft items were created from this upload\./, 'Page 2 should show a clear no-draft-items message when none were generated.');
+  assert.match(ui, /section\$\{summaryCount === 1 \? '' : 's'\} could not be processed\. You can still review and accept the items that were created\./, 'Page 2 should show simple teacher-facing failed-section copy.');
+
+  assert.match(ui, /function renderReviewTable\(/, 'Table/list renderer should exist.');
+  assert.match(ui, /data-review-table-row/, 'Each review item should render as a table/list row marker.');
+  assert.match(ui, /teacher-content-review-table-row/, 'Row styling should use list/table rows.');
+
+  assert.doesNotMatch(reviewCard[1], /renderReviewGroup\(/, 'Page 2 should not render large section card groups by default.');
 }
 
-function assertApprovedPacksPolishUi() {
-  [
-    'Knowledge Packs',
-    'Dedicated management blade for approved packs and uploaded source history.',
-    'data-knowledge-packs-blade',
-    'data-approved-pack-card',
-    'data-approved-pack-title',
-    'data-approved-pack-pack-id',
-    'data-approved-pack-metadata',
-    'data-approved-pack-status',
-    'data-approved-pack-subject',
-    'data-approved-pack-grade-level',
-    'data-approved-pack-version',
-    'data-approved-pack-validation-status',
-    'data-approved-pack-import-scope',
-    'data-approved-pack-source-range',
-    'data-approved-pack-source-file-names',
-    'data-approved-pack-created-date',
-    'data-approved-pack-updated-date',
-    'data-approved-pack-vocabulary-count',
-    'data-approved-pack-concept-count',
-    'data-approved-pack-reference-formula-count',
-    'data-approved-pack-problem-bank-count',
-    'data-approved-pack-standards-count',
-    'data-approved-pack-smoke-test-count',
-    'data-approved-pack-indexed-total',
-    'data-approved-pack-activation-toggle',
-    'data-approved-pack-toggle-action',
-    'data-approved-pack-activation-checkbox',
-    'data-approved-pack-activation-status',
-    'data-approved-pack-activation-status-meta',
-    'data-approved-pack-activation-badge',
-    'data-approved-pack-activation-note',
-    'data-approved-pack-activation-message',
-    'data-approved-pack-delete-action',
-    'data-approved-pack-delete-message',
-    'data-approved-pack-select-checkbox',
-    'data-approved-pack-select-for-delete',
-    'data-approved-pack-bulk-delete-panel',
-    'data-approved-pack-bulk-delete-action',
-    'data-approved-pack-bulk-delete-message',
-    'data-approved-pack-selected-count',
-    'data-approved-pack-view-edit-action',
-    'data-approved-searchable-summary',
-    'data-approved-searchable-vocabulary-terms',
-    'data-approved-searchable-concepts',
-    'data-approved-searchable-problem-questions',
-    'data-approved-searchable-standards',
-    'Searchable vocabulary terms',
-    'Searchable concepts',
-    'Searchable problem questions',
-    'Searchable standards',
-    'Saving activation setting...',
-    'Activation setting saved',
-    'Enable for future student router use',
-    'Enabled',
-    'Disabled',
-    'Delete Pack',
-    'Delete selected knowledge packs',
-    'Selected for deletion',
-    'Select approved pack for deletion',
-    'Selection checkboxes only choose approved packs to archive. Activation checkboxes only save future router activation settings.',
-    'Deleting selected approved packs...',
-    'Type DELETE to archive these approved knowledge packs:',
-    'Deleting approved pack...',
-    'Type DELETE',
-    'Uploaded source files and draft packs will not be deleted.',
-    "method: 'DELETE'",
-    'Saved for later. Not connected to student answers yet.',
-    'data-approved-pack-sample-badge',
-    'data-approved-pack-range-limited',
-    'data-no-approved-packs-empty-state',
-    'No approved knowledge packs yet.',
-    'Review imported draft content before creating approved packs.',
-    'data-approved-empty-tab="review"',
-    'View Review Draft Content',
-    'View / Edit Pack',
-    'Uploaded Sources',
-    'Upload History',
-    'data-uploaded-sources-history',
-    'data-upload-history-blade',
-    'data-uploaded-source-card',
-    'data-uploaded-source-original-filename',
-    'data-uploaded-source-upload-id',
-    'data-uploaded-source-file-type',
-    'data-uploaded-source-extracted-count',
-    'data-uploaded-source-text-bearing-count',
-    'data-uploaded-source-first-text-bearing',
-    'data-uploaded-source-draft-exists',
-    'data-uploaded-source-approved-exists',
-    'data-uploaded-source-draft-packs',
-    'data-uploaded-source-approved-packs',
-    'data-uploaded-source-warnings',
-    'data-no-uploaded-sources-empty-state',
-    'Draft pack exists',
-    'Approved pack exists',
-    'Source files, draft packs, and approved packs are preserved.',
-    'formatDate'
-  ].forEach((marker) => {
-    assert.ok(ui.includes(marker), `Expected Approved Packs polish marker ${marker}.`);
-  });
-
-  assert.doesNotMatch(ui, /data-approved-pack-switch-placeholder/, 'Approved pack switch should no longer be a disabled placeholder.');
-  assert.ok(ui.includes("method: 'PATCH'"), 'Approved pack activation should save with PATCH.');
-  assert.ok(ui.includes('approvedActivation'), 'Approved pack activation endpoint helper should exist.');
-  assert.ok(ui.includes('approvedDelete'), 'Approved pack delete endpoint helper should exist.');
-  assert.ok(ui.includes('approvedBulkDelete'), 'Approved pack bulk delete endpoint helper should exist.');
-  assert.match(ui, /window\.prompt/, 'Approved pack delete should require typed confirmation in the UI.');
+function assertReviewBulkPackSummary() {
+  assert.match(ui, /Use this Draft dropdown to switch review packs\./, 'Draft selector should explain that it switches between draft packs.');
+  assert.match(ui, /function renderBulkReviewSummary\(\)/, 'Review page should define a dedicated bulk-summary renderer.');
+  assert.match(ui, /data-review-bulk-summary/, 'Review page should render a bulk-summary panel when multiple files create multiple packs.');
+  assert.match(ui, /Reviewing .* draft packs\. Use the pack list to switch packs\./, 'Bulk summary should explain queue position and pack-list switching.');
+  assert.match(ui, /data-review-bulk-summary-list/, 'Bulk summary should show a compact list of created draft pack names.');
+  assert.match(ui, /data-review-pack-select/, 'Bulk summary should expose clickable draft-pack queue cards.');
+  assert.match(ui, /function buildReviewQueuePacks\(\)/, 'Review queue should be built from draft/queue metadata.');
+  assert.match(ui, /needs review|partially reviewed|accepted|empty|failed/, 'Queue should label pack review status.');
+  assert.match(ui, /renderReviewTable\(filteredItems\)/, 'Review page should still render only selected-draft rows.');
 }
 
-function assertNoForbiddenUiActions() {
-  assert.doesNotMatch(ui, /Ollama/i, 'Teacher Content UI should not expose forbidden generation actions.');
-  assert.doesNotMatch(style, /Ollama|Gemma|ocr/i, 'Teacher Content styles should not add forbidden generation/OCR references.');
-  assert.doesNotMatch(ui, /Generating Draft|Generate Draft/, 'Teacher Content UI should not expose old manual generation copy.');
-  assert.doesNotMatch(ui, /\/api\/student|\/api\/chat|\/api\/router-test/, 'Teacher Content UI should not reference student/router endpoints.');
-  assert.doesNotMatch(ui, /\/api\/teacher-content\/drafts\/generate|\/api\/generate-draft|generateDraft/i, 'Teacher Content UI should not reference draft generation endpoints.');
-  assert.doesNotMatch(ui, /data-upload-action|data-pack-toggle-action/, 'Teacher Content UI should not implement old placeholder upload/toggle actions.');
-  assert.equal((ui.match(/data-promote-draft/g) || []).length, 3, 'Promotion should remain limited to Review Content and Import Report action wiring.');
-  assert.ok(ui.includes('data-approved-pack-toggle-action'), 'Approved-pack switches should be real activation controls.');
+function assertReviewControlsAndSelectionBehavior() {
+  assert.match(ui, /data-review-selection-checkbox/, 'Each review row should have a checkbox.');
+  assert.match(ui, /data-review-select-all/, 'Page 2 should include Select All control.');
+  assert.match(ui, /data-review-accept-selected/, 'Page 2 should include Accept Selected control.');
+  assert.match(ui, /data-review-accept-all/, 'Page 2 should include Accept All control.');
+  assert.match(ui, /data-review-cancel/, 'Page 2 should include Cancel control.');
+
+  const selectAll = ui.match(/function toggleSelectAllVisibleReviewItems\(\) \{([\s\S]*?)\n  function formatReviewTypeStatus/);
+  assert.ok(selectAll, 'Expected toggleSelectAllVisibleReviewItems function.');
+  assert.match(selectAll[1], /getFilteredReviewItems\(getVisibleReviewItems\(\)\)/, 'Select All should target visible/reviewable rows.');
+  assert.match(selectAll[1], /keys\.forEach/, 'Select All should iterate all visible item keys.');
+}
+
+function assertFallbackRowsFromDraftPacketArrays() {
+  assert.match(ui, /function getReviewItemGroups\(\)/, 'UI should define a shared review-row group resolver.');
+  assert.match(ui, /buildFallbackReviewGroupsFromDraftPacket\(state\.report\?\.draftPacketItems \|\| \{\}\)/, 'UI should fallback to draft packet arrays when report metadata groups are missing.');
+  assert.match(ui, /REVIEW_PRIMARY_DRAFT_SECTIONS = \[[\s\S]*'vocabulary'[\s\S]*'concepts'[\s\S]*'referenceFormulas'[\s\S]*\]/, 'Fallback rows should be sourced from vocabulary/concepts/referenceFormulas arrays.');
+}
+
+function assertNeedsReviewIsReviewableAndSelectable() {
+  assert.match(ui, /function getItemReviewWorkflowStatus\(item\)/, 'UI should resolve review workflow status from reviewStatus\\/status fields.');
+  assert.match(ui, /function isItemNeedingTeacherReview\(item\) \{\s*return isPendingReviewStatus\(getItemReviewWorkflowStatus\(item\)\);\s*\}/, 'Reviewable-row checks should use shared status normalization.');
+  assert.match(ui, /function isPendingReviewStatus\(reviewStatus\) \{[\s\S]*normalized === 'pending'[\s\S]*normalized === 'needs_review'[\s\S]*normalized === 'needs-review'/, 'pending and needs_review status variants should be reviewable.');
+  assert.match(ui, /if \(filterId === 'needsReview'\) \{\s*return isItemNeedingTeacherReview\(item\);\s*\}/, 'Needs Review filter should use the same reviewable-status rule as row counting.');
+  assert.match(ui, /function getVisibleReviewItems\(\) \{[\s\S]*\.filter\(\(item\) => isItemNeedingTeacherReview\(item\)\)/, 'Visible review rows should include pending\\/needs_review items consistently.');
+  assert.match(ui, /function isReviewItemSafeToAccept\(item\) \{[\s\S]*!isItemNeedingTeacherReview\(item\)/, 'needs_review rows should remain valid/selectable in action bar counts.');
+  assert.match(ui, /function hasMissingRequiredReviewFields\(item\)/, 'review acceptance should only skip rows missing required fields.');
+}
+
+function assertNeedsReviewCopyIsNotUnsafe() {
+  assert.match(ui, /unreviewable item/, 'UI copy should describe blocked rows as unreviewable.');
+  assert.doesNotMatch(ui, /unsafe selected item/, 'UI copy should avoid calling normal needs_review rows unsafe.');
+  assert.match(ui, /repair-failed, or missing-required-field/, 'Skip reasons should match true invalid\\/quarantine\\/repair-failed cases.');
+  assert.match(ui, /function countFailedAfterRetrySections\(coverage = \{\}\)/, 'Failed-after-retry summary should be derived from coverage summary/sourceManifest.');
+}
+
+function assertSummaryAndEmptyMessageUseDraftArrays() {
+  assert.match(ui, /function hasAnyPrimaryDraftItems\(\)/, 'UI should explicitly check draft packet arrays before showing no-draft copy.');
+  assert.match(ui, /if \(state\.reviewListFilter === 'all' && !hasAnyPrimaryDraftItems\(\)\)/, 'No-draft message should only appear when primary arrays are truly empty.');
+  assert.match(ui, /All items in this draft have already been reviewed\./, 'When no pending rows remain, Page 2 should show a current-draft completion message.');
+  assert.match(ui, /draft items found • .* need review/, 'Summary line should report item counts needing review.');
+  assert.match(ui, /const processedChunks = Number\(coverage\.processedChunks \|\| 0\);[\s\S]*if \(processedChunks > 0\) return processedChunks;/, 'Sections checked should reflect processed chunks/pages when coverage metadata is present.');
+}
+
+function assertFailedSectionMessaging() {
+  const summaryRenderer = ui.match(/function renderReviewNeedsReviewSummary\(draft = \{\}\) \{([\s\S]*?)\n  function renderReviewTable/);
+  assert.ok(summaryRenderer, 'Expected renderReviewNeedsReviewSummary function.');
+  assert.match(summaryRenderer[1], /buildTeacherFriendlyFailedSections\(coverage\)/, 'Main failed-section box should use teacher-friendly failed section summaries.');
+  assert.match(summaryRenderer[1], /section\.sourceLocation\)\}: \$\{escapeHtml\(section\.reason\)\}/, 'Main failed-section list should only show source location and short reason.');
+  assert.doesNotMatch(summaryRenderer[1], /Backend error JSON/, 'Main failed-section box should not show backend JSON errors.');
+  assert.doesNotMatch(summaryRenderer[1], /rawModelResponsePath/, 'Main failed-section box should not show raw model response paths.');
+  assert.doesNotMatch(summaryRenderer[1], /formatFailedBatchDetail/, 'Main failed-section box should not render technical failed-batch details directly.');
+
+  assert.match(ui, /function summarizeTeacherFailedSectionReason\(errors\)/, 'Failed section reason should be translated to short teacher-friendly copy.');
+  assert.match(ui, /The local model returned incomplete output\./, 'Teacher-friendly fallback reason should be available for incomplete local-model output.');
+}
+
+function assertTechnicalReportErrorsStayInAdvancedDetails() {
+  assert.match(ui, /state\.report\?\.technicalErrors/, 'Report technical errors should be captured for Advanced details.');
+  assert.match(ui, /state\.report\?\.errors/, 'Report route errors should be shown under Advanced details.');
+  assert.match(ui, /renderIssueList\('Technical warnings', technicalWarnings\)/, 'Technical issues should remain in Advanced details.');
+}
+
+function assertPrimaryFlowDoesNotShowManualPreviewOrBatchSizeInstructions() {
+  assert.doesNotMatch(ui, /Run preview first/i, 'Primary teacher flow should not require running preview first.');
+  assert.doesNotMatch(ui, /lower batch size/i, 'Primary teacher flow should not ask teachers to lower batch size.');
+  assert.doesNotMatch(ui, /Adjust the preview page range/i, 'Primary teacher flow should not direct manual preview range tuning.');
+}
+
+function assertReviewCanceledMessageClearsOnSuccessfulDraftLoad() {
+  assert.match(ui, /function clearStaleReviewCanceledMessage\(\)/, 'UI should define a stale cancel-message cleaner.');
+  assert.match(ui, /function clearDraftScopedReviewUiState\(\)/, 'UI should define draft-scoped review-state reset helper.');
+  assert.match(ui, /clearDraftScopedReviewUiState\(\);[\s\S]*await loadSelectedDraftReport\(\);/, 'Draft switching should clear stale draft-scoped review messages before loading next report.');
+  assert.match(ui, /clearDraftScopedReviewUiState\(\);[\s\S]*setStatus\('Loading selected draft report\.\.\.'\);/, 'Draft report reload should clear stale draft-scoped state and set a neutral loading status.');
+  assert.match(ui, /clearStaleReviewCanceledMessage\(\);[\s\S]*reconcileSelectedReviewItem\(\)/, 'Successful draft report loads should clear stale cancel copy.');
+}
+
+function assertAcceptBehavior() {
+  const acceptSelected = ui.match(/async function acceptSelectedReviewItems\(\) \{([\s\S]*?)\n  async function acceptAllReviewItems/);
+  assert.ok(acceptSelected, 'Expected acceptSelectedReviewItems function.');
+  assert.match(acceptSelected[1], /state\.selectedReviewItemKeys\.includes/, 'Accept Selected should only use checked rows.');
+
+  const acceptAll = ui.match(/async function acceptAllReviewItems\(\) \{([\s\S]*?)\n  async function acceptReviewItems/);
+  assert.ok(acceptAll, 'Expected acceptAllReviewItems function.');
+  assert.match(acceptAll[1], /const items = getVisibleReviewItems\(\)/, 'Accept All should use all generated reviewable rows.');
+  assert.match(ui, /moveToNextDraftNeedingReview/, 'Accept actions should auto-advance to the next draft pack needing review.');
+}
+
+function assertCollapsedDetails() {
+  assert.match(ui, /<details class="teacher-content-review-advanced-details" data-review-advanced-details>/, 'Technical details should be collapsed behind Advanced details.');
+  assert.match(ui, /<summary>Advanced details<\/summary>/, 'Advanced details summary should be explicit.');
+  assert.match(ui, /renderIssueList\('Technical warnings', technicalWarnings\)/, 'Technical warnings should be moved under Advanced details.');
+
+  const rowRenderer = ui.match(/function renderReviewTableRow\(item\) \{([\s\S]*?)\n  function renderReviewAdvancedDetails/);
+  assert.ok(rowRenderer, 'Expected renderReviewTableRow function.');
+  assert.match(rowRenderer[1], /<details class="teacher-content-review-source-details" data-review-source-details>/, 'Source snippet should be collapsed by default.');
+  assert.match(rowRenderer[1], /<summary>Show source<\/summary>/, 'Source snippet should use Show source toggle.');
+}
+
+function assertPausedStandardsWarningsAreDeemphasized() {
+  assert.match(ui, /PAUSED_STANDARDS_WARNING_PATTERNS/, 'UI should define paused-standards warning filters.');
+  assert.match(ui, /function isPausedStandardsWarning\(/, 'UI should filter paused-standards warning clutter.');
+  assert.doesNotMatch(ui, /state\.errors\.push\(`Warning:/, 'Warnings should not be pushed into the main warning\\/error banner list.');
+}
+
+function assertDonePage() {
+  const doneCard = ui.match(/function renderReviewDoneCard\(\) \{([\s\S]*?)\n  function renderReviewSummaryLine/);
+  assert.ok(doneCard, 'Expected renderReviewDoneCard function.');
+  assert.match(doneCard[1], /Congratulations, your knowledge packet is ready\./, 'Page 3 should contain completion message.');
+  assert.match(doneCard[1], /Click X to exit\./, 'Page 3 should contain close instruction.');
+  assert.match(doneCard[1], /data-knowledge-pack-manager/, 'Done page should include a Knowledge Pack Manager blade.');
+  assert.match(doneCard[1], /renderApprovedPacksCard\(\)/, 'Done page should surface approved pack activation/deletion controls.');
+
+  assert.doesNotMatch(doneCard[1], /data-review-table-row|data-review-selection-checkbox|data-review-selection-item-key|Accept Selected|Accept All/, 'Page 3 should not contain review rows or selection controls.');
+
+  const acceptReview = ui.match(/async function acceptReviewItems\(items, options = \{\}\) \{([\s\S]*?)\n  function closeReviewItem/);
+  assert.ok(acceptReview, 'Expected acceptReviewItems function.');
+  assert.match(acceptReview[1], /moveToNextDraftNeedingReview/, 'Successful accept should try to move to next pending draft before Done.');
+}
+
+function assertTeacherContentEntryPointVisible() {
+  assert.match(bladeUi, /Build Knowledge Packs/, 'Teacher-content entry label should be visible and direct.');
+  assert.match(bladeUi, /Upload class notes for review/, 'Teacher-content entry should include clear subtext.');
+  assert.match(style, /\.teacher-content-entry-card \.small-button \{[\s\S]*border:/, 'Teacher-content entry CTA should be visible without hover.');
+  assert.match(style, /\.teacher-content-required-glow/, 'Neon glow class should exist for import-profile validation.');
 }
 
 function assertPackageScript() {
   assert.equal(pkg.scripts['test:teacher-content-ui'], 'node scripts/test-teacher-content-ui.js');
 }
 
-function assertNoRouterOrStudentFilesChanged() {
-  assert.deepEqual(
-    snapshotRouterAndStudentFiles(),
-    routerStudentFilesBefore,
-    'teacher content UI tests should not change router/student files'
-  );
-}
-
-function assertTeacherContentRouteTestsStillPass() {
-  const result = spawnSync(process.execPath, [path.join(projectRoot, 'scripts', 'test-teacher-content-routes.js')], {
+function assertTeacherContentAdapterAndRouteTestsStillPass() {
+  const adapter = spawnSync(process.execPath, [path.join(projectRoot, 'scripts', 'test-teacher-content-adapter.js')], {
     cwd: projectRoot,
     encoding: 'utf8'
   });
+  assert.equal(adapter.status, 0, `teacher-content adapter tests should pass.\nstdout:\n${adapter.stdout}\nstderr:\n${adapter.stderr}`);
 
-  assert.equal(
-    result.status,
-    0,
-    `teacher-content route tests should pass.\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`
-  );
+  const routes = spawnSync(process.execPath, [path.join(projectRoot, 'scripts', 'test-teacher-content-routes.js')], {
+    cwd: projectRoot,
+    encoding: 'utf8'
+  });
+  assert.equal(routes.status, 0, `teacher-content route tests should pass.\nstdout:\n${routes.stdout}\nstderr:\n${routes.stderr}`);
 }
 
 function read(filePath) {
   return fs.readFileSync(filePath, 'utf8');
 }
 
-function snapshotRouterAndStudentFiles() {
-  const files = walkFiles(projectRoot).filter((filePath) => {
-    const relativePath = path.relative(projectRoot, filePath);
-    return relativePath.startsWith('lib/router/')
-      || relativePath === 'lib/questionRouter.js'
-      || relativePath.startsWith('routes/student')
-      || relativePath === 'lib/server/questionAnswerService.js';
-  });
-
-  const snapshot = {};
-  files.forEach((filePath) => {
-    const stat = fs.statSync(filePath);
-    snapshot[path.relative(projectRoot, filePath)] = {
-      size: stat.size,
-      mtimeMs: stat.mtimeMs
-    };
-  });
-  return snapshot;
+function compileUiFunction(functionName, dependencyNames = []) {
+  const source = extractFunctionSource(ui, functionName);
+  const dependencySources = dependencyNames.map((name) => extractFunctionSource(ui, name)).join('\n');
+  const factory = new Function(`\n${dependencySources}\n${source}\nreturn ${functionName};\n`);
+  return factory();
 }
 
-function walkFiles(rootDir) {
-  if (!fs.existsSync(rootDir)) return [];
-
-  const results = [];
-  fs.readdirSync(rootDir, { withFileTypes: true }).forEach((entry) => {
-    const entryPath = path.join(rootDir, entry.name);
-    if (entry.name === 'node_modules' || entry.name === '.git') return;
-    if (entry.isDirectory()) {
-      results.push(...walkFiles(entryPath));
-    } else if (entry.isFile()) {
-      results.push(entryPath);
+function extractFunctionSource(source, functionName) {
+  const startToken = `function ${functionName}(`;
+  const start = source.indexOf(startToken);
+  assert.ok(start >= 0, `Expected function ${functionName} in teacher-content-ui.js.`);
+  let braceIndex = source.indexOf('{', start);
+  assert.ok(braceIndex >= 0, `Expected opening brace for ${functionName}.`);
+  let depth = 0;
+  for (let index = braceIndex; index < source.length; index += 1) {
+    const char = source[index];
+    if (char === '{') depth += 1;
+    if (char === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        return source.slice(start, index + 1);
+      }
     }
-  });
-  return results.sort();
+  }
+  throw new Error(`Unable to extract function ${functionName}.`);
 }
