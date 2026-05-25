@@ -99,6 +99,16 @@ npm run test:all
 npm run check:cleanup
 ```
 
+## Safe review handoff zip
+
+Use the safe export command below to create a timestamped review zip in `~/Downloads`:
+
+```bash
+npm run review:zip
+```
+
+This command includes app/source review files and excludes local secrets/artifacts such as `.env*`, `logs/`, `node_modules/`, uploaded source caches, model response temp files, and other token/secret/auth-named files. It also runs a suspicious-path check and fails if any risky path is still present.
+
 ## Before running on the Pi
 
 Start the app, then check local system health:

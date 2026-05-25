@@ -35,7 +35,8 @@
     "audit:motion-force-overlap": "node scripts/audit-motion-force-overlap.js",
     "audit:standards-metadata": "node scripts/audit-standards-metadata.js",
     "test:all": "npm test && npm run test:bank",
-    "check:cleanup": "node scripts/project-cleanup-check.js"
+    "check:cleanup": "node scripts/project-cleanup-check.js",
+    "review:zip": "bash scripts/create-review-zip.sh"
   },
   "dependencies": {
     "@xmldom/xmldom": "^0.8.13",
