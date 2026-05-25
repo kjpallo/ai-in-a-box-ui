@@ -491,6 +491,13 @@
         return;
       }
 
+      const draftDelete = event.target.closest('[data-draft-pack-delete-action]');
+      if (draftDelete) {
+        event.preventDefault();
+        setStatus('Draft delete is not available in this view. Drafts stay available for review.');
+        return;
+      }
+
       const approvedEmptyNav = event.target.closest('[data-approved-empty-tab]');
       if (approvedEmptyNav) {
         event.preventDefault();
@@ -964,28 +971,27 @@
   function renderKnowledgeManager() {
     const manager = byId('teacherContentKnowledgeManager');
     if (!manager) return;
-    const draftCount = state.dashboard?.draftPacks ?? state.drafts.length;
-    const approvedCount = state.dashboard?.approvedPacks ?? state.approved.length;
+    const hasPacks = state.approved.length || state.drafts.length;
     manager.innerHTML = `
       <div class="teacher-content-card-head">
         <div>
-          <h4>Knowledge Packs</h4>
-          <p>Upload class notes, slides, readings, and review them before student use.</p>
+          <h4>Saved Knowledge Packs</h4>
+          <p>Toggle which packs can be used for student answers, or edit/delete packs.</p>
         </div>
-        <span class="teacher-content-pill ${approvedCount > 0 ? 'ready' : 'muted'}">${approvedCount > 0 ? 'Saved packs available' : 'No approved packs'}</span>
       </div>
-      <section class="teacher-content-manager-counts" data-knowledge-pack-manager-summary>
-        <span class="teacher-content-pill muted" data-manager-draft-count>${formatNumber(draftCount)} draft pack${Number(draftCount) === 1 ? '' : 's'}</span>
-        <span class="teacher-content-pill ${approvedCount > 0 ? 'ready' : 'muted'}" data-manager-approved-count>${formatNumber(approvedCount)} approved pack${Number(approvedCount) === 1 ? '' : 's'}</span>
-      </section>
-      <label class="teacher-content-draft-picker" for="teacherContentDraftSelect">
-        <span>Draft review pack</span>
-        <select id="teacherContentDraftSelect"></select>
-        <small data-draft-picker-help>Use this Draft dropdown to switch review packs.</small>
-      </label>
-      ${renderDraftPacksCard()}
-      ${renderApprovedPacksCard()}
+      ${hasPacks ? `<div class="teacher-content-simple-pack-list" data-knowledge-pack-list>${renderSimpleKnowledgePackRows()}</div>` : `
+        <section class="teacher-content-approved-empty" data-no-approved-packs-empty-state data-knowledge-packs-blade>
+          <strong>No knowledge packs yet.</strong>
+          <p>Use Build Knowledge Pack to upload and review content first.</p>
+        </section>
+      `}
     `;
+  }
+
+  function renderSimpleKnowledgePackRows() {
+    const approvedRows = state.approved.map((pack) => renderApprovedPack(pack));
+    const draftRows = state.drafts.map((draft) => renderDraftPack(draft));
+    return [...approvedRows, ...draftRows].join('');
   }
 
   function renderDeckPreviewCard(tab, index) {
@@ -2461,136 +2467,59 @@
   function renderDraftPack(draft) {
     const packId = String(draft?.packId || '');
     const title = draft?.title || packId || 'Draft pack';
-    const summary = summarizeDraftReviewCounts(draft || {});
-    const itemCount = getDraftItemCount(draft || {});
-    const reviewedCount = summary.approved + summary.rejected;
-    const reviewStatus = summary.pending > 0
-      ? `${formatNumber(summary.pending)} pending`
-      : reviewedCount > 0
-        ? 'Reviewed'
-        : 'Needs review';
     return `
-      <section class="teacher-content-approved-pack teacher-content-draft-pack" data-draft-pack-card>
-        <div class="teacher-content-approved-head">
-          <div>
-            <strong data-draft-pack-title>${escapeHtml(title)}</strong>
-            <span data-draft-pack-pack-id>${escapeHtml(packId || 'No pack ID')}</span>
-          </div>
-          <div class="teacher-content-approved-actions">
-            <button type="button" class="small-button secondary-small" data-draft-pack-view-edit-action data-draft-pack-id="${escapeAttr(packId)}">View / Edit Pack</button>
-          </div>
+      <section class="teacher-content-simple-pack-row teacher-content-draft-pack" data-draft-pack-card data-knowledge-pack-row>
+        <div class="teacher-content-simple-pack-title">
+          <strong data-draft-pack-title>${escapeHtml(title)}</strong>
+          <span class="teacher-content-pill muted" data-draft-pack-badge>Draft</span>
         </div>
-        <div class="teacher-content-approved-badges">
-          <span>Draft</span>
-          <span>${escapeHtml(reviewStatus)}</span>
-          <span>${escapeHtml(`${formatNumber(itemCount)} item${Number(itemCount) === 1 ? '' : 's'}`)}</span>
+        <div class="teacher-content-simple-pack-toggle">
+          <label class="teacher-content-checkbox-control">
+            <input type="checkbox" disabled>
+            <span>Approve before enabling</span>
+          </label>
+        </div>
+        <div class="teacher-content-simple-pack-actions">
+          <button type="button" class="small-button secondary-small" data-draft-pack-view-edit-action data-draft-pack-id="${escapeAttr(packId)}">Edit</button>
+          <button type="button" class="small-button danger-small" data-draft-pack-delete-action disabled title="Draft archive is not available in this view yet.">Delete</button>
         </div>
       </section>
     `;
   }
 
   function renderApprovedPack(pack) {
-    const counts = pack.itemCounts || {};
-    const indexed = pack.indexedCounts || {};
-    const searchable = pack.searchableCounts || indexed;
-    const indexedTotal = Object.values(indexed).reduce((sum, value) => sum + Number(value || 0), 0);
     const packId = pack.packId || '';
     const activationEnabled = pack.activationEnabled === true;
     const activationSaving = state.approvedActivationSaving[packId] === true;
-    const activationMessage = state.approvedActivationMessages[packId] || '';
     const deleteSaving = state.approvedDeleteSaving[packId] === true;
-    const deleteMessage = state.approvedDeleteMessages[packId] || '';
-    const selectedForDeletion = state.selectedApprovedPackIds.includes(packId);
     const activationLabel = activationSaving
       ? 'Saving...'
       : (activationEnabled ? 'Enabled for student answers' : 'Disabled for student answers');
-    const importScope = pack.importScope || {};
-    const scopeLabel = formatImportScopeLabel(importScope);
-    const sourceNames = Array.isArray(pack.sourceFileNames) ? pack.sourceFileNames : [];
     return `
-      <section class="teacher-content-approved-pack" data-approved-pack-card>
-        <div class="teacher-content-approved-head">
-          <div>
-            <label class="teacher-content-checkbox-control teacher-content-approved-select-control">
-              <input
-                type="checkbox"
-                ${selectedForDeletion ? 'checked' : ''}
-                ${!packId || state.approvedBulkDeleteSaving ? 'disabled' : ''}
-                data-approved-pack-select-checkbox
-                data-approved-pack-select-for-delete
-                data-approved-pack-id="${escapeAttr(packId)}"
-              >
-              <span>Select approved pack for deletion</span>
-            </label>
-            <strong data-approved-pack-title>${escapeHtml(pack.title || pack.packId || 'Approved pack')}</strong>
-            <span data-approved-pack-pack-id>${escapeHtml(pack.packId || 'No pack ID')}</span>
-          </div>
-          <div class="teacher-content-approved-actions">
-            <button type="button" class="small-button secondary-small" data-approved-pack-view-edit-action data-approved-pack-id="${escapeAttr(packId)}">View / Edit Pack</button>
-            <button type="button" class="small-button danger-small" ${deleteSaving || !packId ? 'disabled' : ''} data-approved-pack-delete-action data-approved-pack-id="${escapeAttr(packId)}" data-approved-pack-title-confirm="${escapeAttr(pack.title || pack.packId || '')}">
-              ${deleteSaving ? 'Deleting...' : 'Delete Pack'}
-            </button>
-          </div>
-          <div class="teacher-content-switch-block">
-            <label class="teacher-content-checkbox-control">
-              <input
-                type="checkbox"
-                ${activationEnabled ? 'checked' : ''}
-                ${activationSaving || !packId ? 'disabled' : ''}
-                data-approved-pack-toggle-action
-                data-approved-pack-id="${escapeAttr(packId)}"
-                data-approved-pack-activation-toggle
-                data-approved-pack-activation-checkbox
-              >
-              <span>${escapeHtml(activationEnabled ? 'Enabled for student answers' : 'Disabled for student answers')}</span>
-            </label>
-            <small data-approved-pack-activation-status>${escapeHtml(activationLabel)}</small>
-          </div>
+      <section class="teacher-content-simple-pack-row" data-approved-pack-card data-knowledge-pack-row>
+        <div class="teacher-content-simple-pack-title">
+          <strong data-approved-pack-title>${escapeHtml(pack.title || pack.packId || 'Approved pack')}</strong>
         </div>
-        <div class="teacher-content-approved-badges">
-          <span>Approved</span>
-          <span>${escapeHtml(scopeLabel || 'Full Import')}</span>
-          ${pack.sampleOnly || importScope.sampleOnly ? '<span data-approved-pack-sample-badge>Sample / preview range only</span>' : ''}
-          ${pack.rangeLimited || importScope.rangeLimited ? '<span data-approved-pack-range-limited>Range-limited</span>' : ''}
-          <span data-approved-pack-activation-badge>${activationEnabled ? 'Enabled' : 'Disabled'}</span>
+        <div class="teacher-content-simple-pack-toggle">
+          <label class="teacher-content-checkbox-control">
+            <input
+              type="checkbox"
+              ${activationEnabled ? 'checked' : ''}
+              ${activationSaving || !packId ? 'disabled' : ''}
+              data-approved-pack-toggle-action
+              data-approved-pack-id="${escapeAttr(packId)}"
+              data-approved-pack-activation-checkbox
+            >
+            <span>${escapeHtml(activationEnabled ? 'Enabled for student answers' : 'Disabled for student answers')}</span>
+          </label>
+          <small data-approved-pack-activation-status>${escapeHtml(activationLabel)}</small>
         </div>
-        <p class="teacher-content-approved-activation-note" data-approved-pack-activation-note>
-          Saved for later. Not connected to student answers yet.
-        </p>
-        ${renderImportScopeWarning(importScope, 'approved-pack')}
-        <p class="teacher-content-approved-activation-message" data-approved-pack-activation-message>${escapeHtml(activationMessage)}</p>
-        <p class="teacher-content-approved-delete-message" data-approved-pack-delete-message>${escapeHtml(deleteMessage)}</p>
-        <div class="teacher-content-approved-meta" data-approved-pack-metadata>
-          ${metadataPill('Status', pack.status || 'Approved', 'data-approved-pack-status')}
-          ${metadataPill('Subject', pack.subject || 'Not set', 'data-approved-pack-subject')}
-          ${metadataPill('Grade level', pack.gradeLevel || 'Not set', 'data-approved-pack-grade-level')}
-          ${metadataPill('Version', pack.version || 'Not set', 'data-approved-pack-version')}
-          ${metadataPill('Validation status', pack.validationStatus || pack.validation || 'Not available', 'data-approved-pack-validation-status')}
-          ${metadataPill('Import scope', scopeLabel || 'Full Import', 'data-approved-pack-import-scope')}
-          ${metadataPill('Source / range', pack.sourceSummary || 'Not set', 'data-approved-pack-source-range')}
-          ${metadataPill('Created', formatDate(pack.createdAt) || 'Not available', 'data-approved-pack-created-date')}
-          ${metadataPill('Updated', formatDate(pack.updatedAt) || 'Not available', 'data-approved-pack-updated-date')}
-          ${metadataPill('Activation status', activationEnabled ? 'Enabled' : 'Disabled', 'data-approved-pack-activation-status-meta')}
+        <div class="teacher-content-simple-pack-actions">
+          <button type="button" class="small-button secondary-small" data-approved-pack-view-edit-action data-approved-pack-id="${escapeAttr(packId)}">Edit</button>
+          <button type="button" class="small-button danger-small" ${deleteSaving || !packId ? 'disabled' : ''} data-approved-pack-delete-action data-approved-pack-id="${escapeAttr(packId)}" data-approved-pack-title-confirm="${escapeAttr(pack.title || pack.packId || '')}">
+            ${deleteSaving ? 'Deleting...' : 'Delete'}
+          </button>
         </div>
-        ${renderChipList('Source file names', sourceNames, 'data-approved-pack-source-file-names')}
-        <div class="teacher-content-count-strip">
-          ${countPill('Vocabulary count', counts.vocabulary, 'data-approved-pack-vocabulary-count')}
-          ${countPill('Concept count', counts.concepts, 'data-approved-pack-concept-count')}
-          ${countPill('Reference formula count', counts.referenceFormulas, 'data-approved-pack-reference-formula-count')}
-          ${countPill('Problem bank count', counts.problemBank, 'data-approved-pack-problem-bank-count')}
-          ${countPill('Standards count', counts.standardsMap, 'data-approved-pack-standards-count')}
-          ${countPill('Smoke test count', counts.smokeTests, 'data-approved-pack-smoke-test-count')}
-          ${countPill('Indexed total', indexedTotal, 'data-approved-pack-indexed-total')}
-        </div>
-        <details class="teacher-content-approved-details" data-approved-pack-details data-approved-pack-id="${escapeAttr(packId)}">
-          <summary>View / Edit Pack</summary>
-          <div class="teacher-content-count-strip">
-            ${countPill('Searchable vocabulary terms', searchable.vocabularyTerms, 'data-approved-pack-searchable-vocabulary-terms')}
-            ${countPill('Searchable concepts', searchable.concepts, 'data-approved-pack-searchable-concepts')}
-            ${countPill('Searchable problem questions', searchable.problemQuestions, 'data-approved-pack-searchable-problem-questions')}
-            ${countPill('Searchable standards', searchable.standards, 'data-approved-pack-searchable-standards')}
-          </div>
-        </details>
       </section>
     `;
   }
@@ -4021,8 +3950,16 @@
 
   function toggleApprovedPackDetails(button) {
     const packId = button.getAttribute('data-approved-pack-id') || '';
-    const details = document.querySelector(`[data-approved-pack-details][data-approved-pack-id="${cssEscape(packId)}"]`);
-    if (details) details.open = !details.open;
+    if (!packId) return;
+    const matchingDraft = state.drafts.find((draft) => String(draft?.packId || '') === packId);
+    if (matchingDraft) {
+      openDraftPackForReview(packId);
+      return;
+    }
+    openOverlay().then(() => {
+      setStatus('This approved pack is view-only here. Edit draft content before approval.');
+      render();
+    });
   }
 
   function applyApprovedSummary(data) {
@@ -5440,11 +5377,11 @@
 
   function focusKnowledgeManager() {
     closeOverlay();
-    window.Charlemagne?.blades?.open?.('modes', { sound: false });
+    window.Charlemagne?.blades?.open?.('ai-improvement', { sound: false });
     const manager = byId('teacherContentKnowledgeManager');
     if (!manager) return;
     manager.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    const preferredFocus = manager.querySelector('[data-approved-pack-view-edit-action]') || manager.querySelector('#teacherContentDraftSelect');
+    const preferredFocus = manager.querySelector('[data-approved-pack-view-edit-action]') || manager.querySelector('[data-draft-pack-view-edit-action]');
     preferredFocus?.focus();
     setStatus('Viewing saved knowledge packs.');
   }

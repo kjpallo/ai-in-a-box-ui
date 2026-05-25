@@ -56,38 +56,22 @@
     },
     {
       id: 'ai-improvement',
-      label: 'AI Improvement',
-      short: 'AI IMPROVEMENT',
+      label: 'Knowledge',
+      short: 'KNOWLEDGE',
       icon: 'AI',
       body: `
-        <section class="ai-improvement-panel ai-improvement-shell" aria-label="AI Improvement problem review">
-          <div class="ai-improvement-summary ai-improvement-toolbar">
-            <div class="ai-summary-card">
-              <span>Open Problems</span>
-              <strong id="aiOpenProblems">0</strong>
-            </div>
-            <div class="ai-summary-card">
-              <span>Resolved Problems</span>
-              <strong id="aiResolvedProblems">0</strong>
-            </div>
-            <div class="ai-summary-card">
-              <span>Ignored Problems</span>
-              <strong id="aiIgnoredProblems">0</strong>
-            </div>
-            <div class="ai-summary-card">
-              <span>Total Problems</span>
-              <strong id="aiTotalProblems">0</strong>
-            </div>
+        <section class="teacher-content-entry-card teacher-content-blade-panel" aria-label="Knowledge">
+          <div class="teacher-content-entry-head">
+            <span class="profile-status-pill">Teacher Content</span>
+            <h3>Knowledge</h3>
+            <p>Upload class notes, slides, readings, and review them before student use.</p>
           </div>
-
-          <div class="ai-improvement-actions">
-            <button type="button" id="aiRefreshProblems" class="small-button">Refresh Problems</button>
-            <button type="button" id="aiCopyGeneralPrompt" class="small-button secondary-small">Copy General Fix Prompt</button>
+          <div class="teacher-content-entry-actions">
+            <button type="button" id="openTeacherContentOverlay" class="small-button">Build Knowledge Pack</button>
+            <span id="teacherContentEntryStatus" class="profile-control-status">Loading saved knowledge packs...</span>
           </div>
-
-          <p id="aiImprovementStatus" class="ai-improvement-status">Ready.</p>
-          <div id="aiProblemList" class="ai-problem-list">
-            <p class="history-empty">No AI improvement problems logged yet.</p>
+          <div id="teacherContentKnowledgeManager" class="teacher-content-knowledge-manager-shell teacher-content-blade-manager-shell" data-main-knowledge-pack-manager>
+            <p class="profile-empty-state">Loading saved knowledge packs...</p>
           </div>
         </section>
       `
@@ -158,21 +142,6 @@
                   <p class="profile-empty-state">No anonymous hubs yet.</p>
                 </div>
               </div>
-            </section>
-
-            <section class="teacher-profile-card teacher-content-entry-card">
-              <div class="teacher-content-entry-head">
-                <span class="profile-status-pill">Teacher Content</span>
-                <h4>Knowledge Packs</h4>
-                <p>Upload class notes, slides, readings, and review them before student use.</p>
-              </div>
-              <div class="teacher-content-entry-actions">
-                <button type="button" id="openTeacherContentOverlay" class="small-button">Build Knowledge Pack</button>
-                <span id="teacherContentEntryStatus" class="profile-control-status">Loading saved knowledge packs...</span>
-              </div>
-              <section id="teacherContentKnowledgeManager" class="teacher-content-knowledge-manager-shell teacher-content-profile-manager-shell" data-main-knowledge-pack-manager>
-                <p class="profile-empty-state">Loading saved knowledge packs...</p>
-              </section>
             </section>
 
             <section class="teacher-profile-card student-controls-card">

@@ -100,24 +100,23 @@ function assertSavedPackManagerNotInModal() {
 function assertSavedPackManagementOnMainBlade() {
   const manager = ui.match(/function renderKnowledgeManager\(\) \{([\s\S]*?)\n  function renderDeckPreviewCard/);
   assert.ok(manager, 'Expected renderKnowledgeManager function.');
-  assert.match(manager[1], /<h4>Knowledge Packs<\/h4>/, 'Main blade should include a Knowledge Packs heading.');
-  assert.match(manager[1], /Upload class notes, slides, readings, and review them before student use\./, 'Main blade should include teacher-friendly knowledge-pack description.');
+  assert.match(manager[1], /<h4>Saved Knowledge Packs<\/h4>/, 'Knowledge blade should include a Saved Knowledge Packs heading.');
+  assert.match(manager[1], /Toggle which packs can be used for student answers, or edit\/delete packs\./, 'Knowledge blade should include teacher-friendly saved-pack copy.');
   assert.match(manager[1], /data-main-knowledge-pack-manager|teacherContentKnowledgeManager/, 'Main blade should include a dedicated saved-pack manager container.');
-  assert.match(manager[1], /data-manager-draft-count/, 'Main blade should show draft-pack count.');
-  assert.match(manager[1], /data-manager-approved-count/, 'Main blade should show approved-pack count.');
-  assert.match(manager[1], /teacherContentDraftSelect/, 'Main blade should include draft dropdown for selecting review pack.');
-  assert.match(manager[1], /renderDraftPacksCard\(\)/, 'Main blade should render draft packs by name.');
-  assert.match(manager[1], /renderApprovedPacksCard\(\)/, 'Main blade should render approved-pack management controls.');
-  assert.match(ui, /data-draft-pack-list/, 'Main blade should include draft pack list container.');
+  assert.match(manager[1], /data-knowledge-pack-list/, 'Knowledge blade should include simple saved-pack list container.');
+  assert.match(manager[1], /renderSimpleKnowledgePackRows\(\)/, 'Knowledge blade should render simplified rows.');
+  assert.match(ui, /function renderSimpleKnowledgePackRows\(\)/, 'UI should define simplified saved-pack row renderer.');
   assert.match(ui, /data-draft-pack-card/, 'Main blade should render draft pack cards.');
   assert.match(ui, /data-draft-pack-title/, 'Draft pack cards should render actual pack names.');
-  assert.match(ui, /data-draft-pack-view-edit-action/, 'Draft pack cards should include View\\/Edit control.');
+  assert.match(ui, /data-draft-pack-view-edit-action/, 'Draft pack cards should include Edit control.');
+  assert.match(ui, /data-draft-pack-delete-action/, 'Draft pack cards should include Delete control.');
   assert.match(ui, /data-approved-pack-title/, 'Approved pack cards should render actual pack names.');
-  assert.match(ui, /data-approved-pack-select-checkbox/, 'Approved pack cards should include deletion checkboxes.');
   assert.match(ui, /data-approved-pack-activation-checkbox/, 'Approved pack cards should include enable\\/disable toggles.');
   assert.match(ui, /Enabled for student answers|Disabled for student answers/, 'Approved-pack toggles should clearly label student-answer enable state.');
-  assert.match(ui, /View \/ Edit Pack/, 'Approved-pack management should still include View\\/Edit action.');
-  assert.match(ui, /Delete Pack|Delete selected knowledge packs/, 'Approved-pack management should still include delete/archive actions.');
+  assert.match(ui, /Approve before enabling/, 'Draft rows should show approve-before-enable guidance.');
+  assert.match(ui, /data-approved-pack-view-edit-action/, 'Approved-pack rows should include Edit action.');
+  assert.match(ui, /data-approved-pack-delete-action/, 'Approved-pack rows should include Delete action.');
+  assert.doesNotMatch(ui, /data-approved-pack-pack-id|data-approved-pack-metadata|data-approved-pack-source-file-names/, 'Simplified list should not include long metadata fields.');
 }
 
 function assertBulkUploadQueuePage() {
@@ -220,7 +219,6 @@ function assertReviewListTableLayout() {
 }
 
 function assertReviewBulkPackSummary() {
-  assert.match(ui, /Use this Draft dropdown to switch review packs\./, 'Draft selector should explain that it switches between draft packs.');
   assert.match(ui, /function renderBulkReviewSummary\(\)/, 'Review page should define a dedicated bulk-summary renderer.');
   assert.match(ui, /data-review-bulk-summary/, 'Review page should render a bulk-summary panel when multiple files create multiple packs.');
   assert.match(ui, /Reviewing .* draft packs\. Use the pack list to switch packs\./, 'Bulk summary should explain queue position and pack-list switching.');
@@ -352,10 +350,14 @@ function assertDonePage() {
 }
 
 function assertTeacherContentEntryPointVisible() {
-  assert.match(bladeUi, /Knowledge Packs/, 'Teacher-content entry label should be visible and direct.');
+  assert.match(bladeUi, /label: 'Knowledge'/, 'AI Improvement tab should be renamed to user-facing Knowledge.');
+  assert.match(bladeUi, /short: 'KNOWLEDGE'/, 'Knowledge blade short label should match navigation copy.');
+  assert.match(bladeUi, /<h3>Knowledge<\/h3>/, 'Knowledge blade should include Knowledge heading.');
   assert.match(bladeUi, /Build Knowledge Pack/, 'Teacher-content entry should include a clear create button.');
   assert.match(bladeUi, /Upload class notes, slides, readings, and review them before student use\./, 'Teacher-content entry should include clear subtext.');
-  assert.match(bladeUi, /data-main-knowledge-pack-manager/, 'Teacher Profile blade should include the saved knowledge-pack manager shell.');
+  assert.match(bladeUi, /data-main-knowledge-pack-manager/, 'Knowledge blade should include the saved knowledge-pack manager shell.');
+  assert.doesNotMatch(bladeUi, /label: 'Teacher Profile'[\s\S]*data-main-knowledge-pack-manager/, 'Teacher Profile blade should no longer include saved-pack management shell.');
+  assert.match(ui, /window\.Charlemagne\?\.blades\?\.open\?\.\('ai-improvement'/, 'Done-page navigation should open the Knowledge blade id.');
   assert.match(style, /\.teacher-content-entry-card \.small-button \{[\s\S]*border:/, 'Teacher-content entry CTA should be visible without hover.');
   assert.match(style, /\.teacher-content-required-glow/, 'Neon glow class should exist for import-profile validation.');
 }
