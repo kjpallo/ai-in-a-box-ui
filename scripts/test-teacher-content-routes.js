@@ -4,6 +4,7 @@ const path = require('node:path');
 
 const { registerTeacherContentRoutes } = require('../routes/teacherContentRoutes');
 const { planTeacherContentImport } = require('../lib/uploads/planTeacherContentImport');
+const { loadApprovedKnowledgePacks } = require('../lib/knowledge/loadApprovedKnowledgePacks');
 
 const projectRoot = path.join(__dirname, '..');
 const tempRoot = path.join(projectRoot, 'tmp', 'test-teacher-content-routes');
@@ -91,6 +92,7 @@ async function main() {
     await assertInvalidStandardsBankIdRejected(handlers);
     await assertDraftReportEndpoint(handlers);
     await assertDraftReportNeedsReviewItemsAreIncluded(handlers);
+    await assertDraftReportIncludesApprovedItemsBlockingPromotion(handlers);
     await assertDraftReportIncludesSalvageWarningsForAdvancedDetails(handlers);
     await assertDraftReportWithStoredCoverageAndMissingExtractionPages(handlers);
     await assertDraftReportPreservesStoredProcessedChunkCount(handlers);
@@ -138,6 +140,7 @@ async function main() {
     await assertPrepareReviewModelFailureDoesNotWriteDraft(handlers);
     await assertPromoteDraftEndpointSucceeds(handlers);
     await assertPromoteBlocksPendingItems(handlers);
+    await assertExistingDraftBlockersCanBeRejectedAndPromoted(handlers);
     await assertPromoteExcludesRejectedItems(handlers);
     await assertPromoteExcludesRepairNeededItems(handlers);
     await assertPromoteBlocksInvalidFormulaSolverStatus(handlers);
@@ -149,6 +152,10 @@ async function main() {
     await assertApproveNeedsReviewLowConfidenceItemEndpoint(handlers);
     await assertRejectDraftItemEndpoint(handlers);
     await assertEditDraftItemEndpoint(handlers);
+    await assertApproveDraftItemWithInlineEdits(handlers);
+    await assertApproveDraftItemResolvesStableItemRefWhenIndexStale(handlers);
+    await assertTeacherEditClearsLowConfidencePromotionBlock(handlers);
+    await assertTeacherEditStillBlockedWhenRequiredFieldsRemainMissing(handlers);
     await assertDisallowedEditFails(handlers);
     await assertInvalidPatchPathTraversalRejected(handlers);
     await assertInvalidSectionRejected(handlers);
@@ -238,6 +245,42 @@ async function assertDraftReportNeedsReviewItemsAreIncluded(handlers) {
     assert.equal(response.body.success, true);
     assert.equal(response.body.data.pendingReview.totalPending, 1);
     assert.equal(response.body.data.pendingReview.items.vocabulary[0].reviewStatus, 'needs_review');
+  } finally {
+    fs.rmSync(path.join(draftPacksDir, packId), { recursive: true, force: true });
+  }
+}
+
+async function assertDraftReportIncludesApprovedItemsBlockingPromotion(handlers) {
+  const packId = 'route-approved-blocked-pack';
+  writeKnowledgePack(draftPacksDir, makePack({
+    packId,
+    vocabulary: [
+      {
+        ...makeVocabularyItem('blocked-approved-term', 'approved'),
+        confidence: 'low',
+        sourceGrounding: {
+          status: 'unsupported',
+          termOrTitleFound: false,
+          explanationSupported: false
+        }
+      },
+      makeVocabularyItem('ready-approved-term', 'approved')
+    ],
+    concepts: [],
+    referenceFormulas: [],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+
+  try {
+    const response = await request(handlers, 'GET', '/drafts/:packId/report', {}, { packId });
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.body.success, true);
+    assert.equal(response.body.data.pendingReview.totalPending, 0);
+    assert.equal(response.body.data.reviewItems.items.vocabulary.some((item) => item.reviewStatus === 'approved'), true, 'report should include approved rows so UI can resolve promotion blockers.');
+    assert.equal(response.body.data.promotionReadiness.ready, false);
+    assert.ok(response.body.data.promotionReadiness.blockedReasons.some((reason) => reason.includes('source-grounding')));
   } finally {
     fs.rmSync(path.join(draftPacksDir, packId), { recursive: true, force: true });
   }
@@ -2447,7 +2490,10 @@ async function assertPromoteDraftEndpointSucceeds(handlers) {
   assert.equal(response.body.data.packId, 'route-promote-ready-pack');
   assert.equal(response.body.data.message, 'Draft promoted to approved knowledge pack.');
   assert.equal(response.body.data.approved.packId, 'route-promote-ready-pack');
-  assert.equal(response.body.data.dashboard.approvedPacks, 2);
+  assert.equal(response.body.data.approved.activationEnabled, false, 'newly approved packs should stay disabled until explicitly enabled.');
+  assert.equal(response.body.data.approved.activationStatus, 'disabled');
+  assert.equal(response.body.data.approvedSummary.approvedPacks.find((pack) => pack.packId === 'route-promote-ready-pack').activationEnabled, false);
+  assert.ok(response.body.data.dashboard.approvedPacks >= 1, 'dashboard should report at least one approved pack after promotion.');
   assert.ok(response.body.data.outputPath.startsWith(approvedPacksDir));
   assert.equal(fs.existsSync(path.join(approvedPacksDir, 'route-promote-ready-pack', 'knowledge_pack.json')), true);
 }
@@ -2468,6 +2514,84 @@ async function assertPromoteBlocksPendingItems(handlers) {
   assert.equal(response.body.promotionReadiness.ready, false);
   assert.ok(response.body.promotionReadiness.blockedReasons.includes('pending items remain'));
   assert.equal(fs.existsSync(path.join(approvedPacksDir, 'route-promote-pending-pack', 'knowledge_pack.json')), false);
+}
+
+async function assertExistingDraftBlockersCanBeRejectedAndPromoted(handlers) {
+  const packId = 'route-existing-blockers-promote-pack';
+  writeKnowledgePack(draftPacksDir, makePack({
+    packId,
+    title: 'Route Existing Blockers Promote Pack',
+    vocabulary: [
+      {
+        ...makeVocabularyItem('blocked-approved-term', 'approved'),
+        confidence: 'low',
+        sourceGrounding: {
+          status: 'unsupported',
+          termOrTitleFound: false,
+          explanationSupported: false
+        }
+      },
+      makeVocabularyItem('valid-approved-term', 'approved')
+    ],
+    concepts: [],
+    referenceFormulas: [],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+
+  const beforeDashboard = await request(handlers, 'GET', '/dashboard');
+  const beforeDraftCount = beforeDashboard.body.data.draftPacks;
+  const beforeApprovedCount = beforeDashboard.body.data.approvedPacks;
+
+  const report = await request(handlers, 'GET', '/drafts/:packId/report', {}, { packId });
+  assert.equal(report.statusCode, 200);
+  assert.equal(report.body.data.pendingReview.totalPending, 0);
+  assert.equal(report.body.data.reviewItems.items.vocabulary.length, 2);
+  assert.equal(report.body.data.reviewItems.items.vocabulary[0].reviewStatus, 'approved');
+  assert.equal(report.body.data.promotionReadiness.ready, false);
+  assert.equal(report.body.data.promotionReadiness.blockerSummary.totalItems, 1);
+  assert.equal(report.body.data.promotionReadiness.blockerSummary.categories.some((entry) => entry.category === 'missing required source information'), true);
+
+  const blockedPromotion = await request(handlers, 'POST', '/drafts/:packId/promote', {}, { packId });
+  assert.equal(blockedPromotion.statusCode, 400);
+  assert.equal(blockedPromotion.body.success, false);
+  assert.match(blockedPromotion.body.message, /1 item is blocking approval/);
+  assert.ok(blockedPromotion.body.promotionReadiness.blockerSummary.message.includes('missing required source information'));
+
+  const reject = await request(handlers, 'PATCH', '/drafts/:packId/items/:section/:index/status', {
+    reviewStatus: 'rejected'
+  }, {
+    packId,
+    section: 'vocabulary',
+    index: '0'
+  });
+  assert.equal(reject.statusCode, 200);
+  assert.equal(reject.body.success, true);
+  assert.equal(reject.body.data.report.draftPack.reviewCounts.rejected, 1);
+
+  const promotion = await request(handlers, 'POST', '/drafts/:packId/promote', {}, { packId });
+  assert.equal(promotion.statusCode, 200);
+  assert.equal(promotion.body.success, true);
+  assert.equal(promotion.body.data.approved.packId, packId);
+  assert.equal(promotion.body.data.approved.activationEnabled, false);
+  assert.equal(promotion.body.data.approved.activationStatus, 'disabled');
+  assert.equal(promotion.body.data.approvedSummary.approvedPacks.some((pack) => pack.packId === packId), true);
+  assert.equal(promotion.body.data.dashboard.draftPacks, beforeDraftCount - 1, 'visible draft count should decrease after approval.');
+  assert.equal(promotion.body.data.dashboard.approvedPacks, beforeApprovedCount + 1, 'approved count should increase after approval.');
+
+  const promotedPack = JSON.parse(fs.readFileSync(path.join(approvedPacksDir, packId, 'knowledge_pack.json'), 'utf8'));
+  assert.deepEqual(promotedPack.vocabulary.map((item) => item.term), ['valid-approved-term']);
+  assert.equal(JSON.stringify(promotedPack).includes('blocked-approved-term'), false);
+
+  const approvedLoad = loadApprovedKnowledgePacks({
+    approvedPacksDir,
+    validationOptions: { standardsBank, standardsPaused: true }
+  });
+  assert.equal(approvedLoad.packs.some((record) => record.packId === packId), true, 'approved loader should see the newly approved pack.');
+
+  const drafts = await request(handlers, 'GET', '/drafts');
+  assert.equal(drafts.body.data.draftPacks.some((pack) => pack.packId === packId), false, 'Knowledge blade draft list should no longer include the approved pack.');
 }
 
 async function assertPromoteExcludesRejectedItems(handlers) {
@@ -2604,6 +2728,11 @@ async function assertApproveDraftItemEndpoint(handlers) {
   assert.equal(response.statusCode, 200);
   assert.equal(response.body.success, true);
   assert.equal(response.body.data.update.after, 'approved');
+  assert.equal(response.body.data.debug.routeHandler, 'PATCH /drafts/:packId/items/:section/:index/status');
+  assert.equal(response.body.data.debug.request.reviewStatus, 'approved');
+  assert.equal(response.body.data.debug.afterSnapshot.success, true);
+  assert.equal(response.body.data.debug.afterSnapshot.item.reviewStatus, 'approved');
+  assert.equal(response.body.data.debug.afterSnapshot.item.teacherVerified, true);
   assert.equal(readKnowledgePack(draftPacksDir, 'route-draft-pack').vocabulary[0].reviewStatus, 'approved');
   assert.equal(response.body.data.report.draftPack.reviewCountsBySection.vocabulary.approved, 2);
 }
@@ -2673,6 +2802,261 @@ async function assertEditDraftItemEndpoint(handlers) {
   assert.equal(pack.vocabulary[0].studentDefinition, 'Updated draft-only student definition.');
   assert.equal(pack.vocabulary[0].sourceFile, 'teacher_force_notes.txt');
   assert.equal(response.body.data.report.draftPack.packId, 'route-draft-pack');
+}
+
+async function assertApproveDraftItemWithInlineEdits(handlers) {
+  const packId = 'route-inline-approve-edits-pack';
+  writeKnowledgePack(draftPacksDir, makePack({
+    packId,
+    vocabulary: [
+      {
+        ...makeVocabularyItem('inline-approve-edit-term', 'approved'),
+        confidence: 'low',
+        studentDefinition: 'Original stale wording.',
+        sourceGrounding: { status: 'supported', termOrTitleFound: true, explanationSupported: true }
+      }
+    ],
+    concepts: [],
+    referenceFormulas: [],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+
+  try {
+    const beforeReport = await request(handlers, 'GET', '/drafts/:packId/report', {}, { packId });
+    assert.equal(beforeReport.statusCode, 200);
+    assert.equal(beforeReport.body.data.promotionReadiness.ready, false);
+    assert.ok(beforeReport.body.data.promotionReadiness.blockedReasons.some((reason) => reason.includes('low confidence')));
+
+    const approve = await request(handlers, 'PATCH', '/drafts/:packId/items/:section/:index/status', {
+      reviewStatus: 'approved',
+      edits: [
+        {
+          field: 'studentDefinition',
+          value: 'Teacher-edited wording approved from one click.'
+        }
+      ]
+    }, {
+      packId,
+      section: 'vocabulary',
+      index: '0'
+    });
+
+    assert.equal(approve.statusCode, 200);
+    assert.equal(approve.body.success, true);
+    assert.equal(approve.body.data.report.draftPacketItems.vocabulary[0].studentDefinition, 'Teacher-edited wording approved from one click.');
+    assert.ok(Array.isArray(approve.body.data.update.editedFields));
+    assert.ok(approve.body.data.update.editedFields.includes('studentDefinition'));
+    assert.equal(approve.body.data.debug.request.reviewStatus, 'approved');
+    assert.equal(approve.body.data.debug.request.edits[0].field, 'studentDefinition');
+    assert.equal(approve.body.data.debug.afterSnapshot.item.studentDefinition, 'Teacher-edited wording approved from one click.');
+    assert.equal(approve.body.data.debug.afterSnapshot.item.manuallyEdited, true);
+    assert.equal(approve.body.data.debug.refreshedItem.teacherVerified, true);
+
+    const editedDraft = readKnowledgePack(draftPacksDir, packId);
+    assert.equal(editedDraft.vocabulary[0].studentDefinition, 'Teacher-edited wording approved from one click.');
+    assert.equal(editedDraft.vocabulary[0].teacherVerified, true);
+    assert.equal(editedDraft.vocabulary[0].manuallyEdited, true);
+    assert.equal(editedDraft.vocabulary[0].reviewStatus, 'approved');
+    assert.equal(editedDraft.vocabulary[0].confidenceOverride, 'teacher_verified');
+
+    const afterReport = await request(handlers, 'GET', '/drafts/:packId/report', {}, { packId });
+    assert.equal(afterReport.statusCode, 200);
+    assert.equal(afterReport.body.data.promotionReadiness.ready, true);
+    assert.equal(afterReport.body.data.promotionReadiness.blockedReasons.some((reason) => reason.includes('low confidence')), false);
+    assert.equal(afterReport.body.data.draftPacketItems.vocabulary[0].studentDefinition, 'Teacher-edited wording approved from one click.');
+
+    const promotion = await request(handlers, 'POST', '/drafts/:packId/promote', {}, { packId });
+    assert.equal(promotion.statusCode, 200);
+    assert.equal(promotion.body.success, true);
+    assert.equal(promotion.body.data.approved.activationEnabled, false);
+    const promotedPack = readKnowledgePack(approvedPacksDir, packId);
+    assert.equal(promotedPack.vocabulary[0].studentDefinition, 'Teacher-edited wording approved from one click.');
+  } finally {
+    fs.rmSync(path.join(draftPacksDir, packId), { recursive: true, force: true });
+    fs.rmSync(path.join(approvedPacksDir, packId), { recursive: true, force: true });
+  }
+}
+
+async function assertApproveDraftItemResolvesStableItemRefWhenIndexStale(handlers) {
+  const packId = 'route-stable-item-ref-pack';
+  writeKnowledgePack(draftPacksDir, makePack({
+    packId,
+    vocabulary: [
+      {
+        ...makeVocabularyItem('stale-index-first-term', 'pending'),
+        sourceLocation: 'Page 1',
+        sourceTextSnippet: 'First row source snippet.'
+      },
+      {
+        ...makeVocabularyItem('stable-target-term', 'pending'),
+        sourceLocation: 'Page 2',
+        sourceTextSnippet: 'Second row source snippet.'
+      }
+    ],
+    concepts: [],
+    referenceFormulas: [],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+
+  try {
+    const approve = await request(handlers, 'PATCH', '/drafts/:packId/items/:section/:index/status', {
+      reviewStatus: 'approved',
+      edits: [
+        {
+          field: 'studentDefinition',
+          value: 'Stable-item-ref teacher wording.'
+        }
+      ],
+      itemRef: {
+        itemId: 'stable-target-term',
+        sourceFile: 'teacher_force_notes.txt',
+        sourceLocation: 'Page 2'
+      }
+    }, {
+      packId,
+      section: 'vocabulary',
+      index: '0'
+    });
+
+    assert.equal(approve.statusCode, 200);
+    assert.equal(approve.body.success, true);
+    assert.equal(approve.body.data.debug.request.requestedIndex, 0);
+    assert.equal(approve.body.data.debug.request.index, 1);
+    assert.equal(approve.body.data.debug.request.resolvedTarget.resolvedBy, 'itemRef');
+    assert.equal(approve.body.data.debug.afterSnapshot.item.term, 'stable-target-term');
+    assert.equal(approve.body.data.debug.afterSnapshot.item.reviewStatus, 'approved');
+    assert.equal(approve.body.data.debug.afterSnapshot.item.studentDefinition, 'Stable-item-ref teacher wording.');
+
+    const editedDraft = readKnowledgePack(draftPacksDir, packId);
+    assert.equal(editedDraft.vocabulary[0].term, 'stale-index-first-term');
+    assert.equal(editedDraft.vocabulary[0].reviewStatus, 'pending');
+    assert.equal(editedDraft.vocabulary[1].term, 'stable-target-term');
+    assert.equal(editedDraft.vocabulary[1].reviewStatus, 'approved');
+    assert.equal(editedDraft.vocabulary[1].studentDefinition, 'Stable-item-ref teacher wording.');
+    assert.equal(editedDraft.vocabulary[1].teacherVerified, true);
+    assert.equal(editedDraft.vocabulary[1].manuallyEdited, true);
+  } finally {
+    fs.rmSync(path.join(draftPacksDir, packId), { recursive: true, force: true });
+    fs.rmSync(path.join(approvedPacksDir, packId), { recursive: true, force: true });
+  }
+}
+
+async function assertTeacherEditClearsLowConfidencePromotionBlock(handlers) {
+  const packId = 'route-teacher-edit-low-confidence-pack';
+  writeKnowledgePack(draftPacksDir, makePack({
+    packId,
+    vocabulary: [
+      {
+        ...makeVocabularyItem('teacher-edit-low-confidence-term', 'approved'),
+        confidence: 'low',
+        studentDefinition: 'Original blocked wording.',
+        sourceGrounding: { status: 'supported', termOrTitleFound: true, explanationSupported: true }
+      }
+    ],
+    concepts: [],
+    referenceFormulas: [],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+
+  try {
+    const beforeReport = await request(handlers, 'GET', '/drafts/:packId/report', {}, { packId });
+    assert.equal(beforeReport.statusCode, 200);
+    assert.equal(beforeReport.body.data.promotionReadiness.ready, false);
+    assert.ok(beforeReport.body.data.promotionReadiness.blockedReasons.some((reason) => reason.includes('low confidence')));
+
+    const edit = await request(handlers, 'PATCH', '/drafts/:packId/items/:section/:index', {
+      field: 'studentDefinition',
+      value: 'Teacher-edited approved wording.'
+    }, {
+      packId,
+      section: 'vocabulary',
+      index: '0'
+    });
+
+    assert.equal(edit.statusCode, 200);
+    assert.equal(edit.body.success, true);
+    assert.equal(edit.body.data.report.draftPacketItems.vocabulary[0].studentDefinition, 'Teacher-edited approved wording.');
+    const editedDraft = readKnowledgePack(draftPacksDir, packId);
+    assert.equal(editedDraft.vocabulary[0].teacherVerified, true);
+    assert.equal(editedDraft.vocabulary[0].manuallyEdited, true);
+
+    const afterReport = await request(handlers, 'GET', '/drafts/:packId/report', {}, { packId });
+    assert.equal(afterReport.statusCode, 200);
+    assert.equal(afterReport.body.data.promotionReadiness.ready, true);
+    assert.equal(afterReport.body.data.promotionReadiness.blockedReasons.some((reason) => reason.includes('low confidence')), false);
+
+    const promotion = await request(handlers, 'POST', '/drafts/:packId/promote', {}, { packId });
+    assert.equal(promotion.statusCode, 200);
+    assert.equal(promotion.body.success, true);
+    assert.equal(promotion.body.data.approved.activationEnabled, false);
+    const promotedPack = readKnowledgePack(approvedPacksDir, packId);
+    assert.equal(promotedPack.vocabulary[0].studentDefinition, 'Teacher-edited approved wording.');
+  } finally {
+    fs.rmSync(path.join(draftPacksDir, packId), { recursive: true, force: true });
+    fs.rmSync(path.join(approvedPacksDir, packId), { recursive: true, force: true });
+  }
+}
+
+async function assertTeacherEditStillBlockedWhenRequiredFieldsRemainMissing(handlers) {
+  const packId = 'route-teacher-edit-missing-required-pack';
+  writeKnowledgePack(draftPacksDir, makePack({
+    packId,
+    vocabulary: [
+      {
+        ...makeVocabularyItem('teacher-edit-missing-source-term', 'approved'),
+        confidence: 'medium',
+        sourceTextSnippet: '',
+        sourceGrounding: { status: 'supported', termOrTitleFound: true, explanationSupported: true }
+      }
+    ],
+    concepts: [],
+    referenceFormulas: [],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+
+  try {
+    const approve = await request(handlers, 'PATCH', '/drafts/:packId/items/:section/:index/status', {
+      reviewStatus: 'approved',
+      edits: [
+        {
+          field: 'studentDefinition',
+          value: 'Teacher edited wording but required source text is still missing.'
+        }
+      ]
+    }, {
+      packId,
+      section: 'vocabulary',
+      index: '0'
+    });
+
+    assert.equal(approve.statusCode, 400);
+    assert.equal(approve.body.success, false);
+    assert.ok(approve.body.errors.some((error) => error.includes('sourceTextSnippet')));
+    assert.equal(approve.body.debug.routeHandler, 'PATCH /drafts/:packId/items/:section/:index/status');
+    assert.equal(approve.body.debug.request.reviewStatus, 'approved');
+    assert.equal(approve.body.debug.afterSnapshot.item.sourceTextSnippetLength, 0);
+
+    const report = await request(handlers, 'GET', '/drafts/:packId/report', {}, { packId });
+    assert.equal(report.statusCode, 200);
+    assert.equal(report.body.data.promotionReadiness.ready, false);
+
+    const promotion = await request(handlers, 'POST', '/drafts/:packId/promote', {}, { packId });
+    assert.equal(promotion.statusCode, 400);
+    assert.equal(promotion.body.success, false);
+    assert.ok(Array.isArray(promotion.body.promotionReadiness.blockedReasons));
+    assert.ok(promotion.body.promotionReadiness.blockedReasons.some((reason) => /source|required|ground/i.test(reason)));
+  } finally {
+    fs.rmSync(path.join(draftPacksDir, packId), { recursive: true, force: true });
+    fs.rmSync(path.join(approvedPacksDir, packId), { recursive: true, force: true });
+  }
 }
 
 async function assertDisallowedEditFails(handlers) {

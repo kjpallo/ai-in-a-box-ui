@@ -25,7 +25,10 @@ assertReviewBulkPackSummary();
 assertReviewControlsAndSelectionBehavior();
 assertFallbackRowsFromDraftPacketArrays();
 assertNeedsReviewIsReviewableAndSelectable();
+assertManualEditSaveFeedbackAndRefresh();
+assertEditModeHidesBulkOverlaysAndShowsInlineStatus();
 assertNeedsReviewCopyIsNotUnsafe();
+assertBlockingApprovalWorkflow();
 assertSummaryAndEmptyMessageUseDraftArrays();
 assertFailedSectionMessaging();
 assertTechnicalReportErrorsStayInAdvancedDetails();
@@ -101,19 +104,23 @@ function assertSavedPackManagementOnMainBlade() {
   const manager = ui.match(/function renderKnowledgeManager\(\) \{([\s\S]*?)\n  function renderDeckPreviewCard/);
   assert.ok(manager, 'Expected renderKnowledgeManager function.');
   assert.match(manager[1], /<h4>Saved Knowledge Packs<\/h4>/, 'Knowledge blade should include a Saved Knowledge Packs heading.');
-  assert.match(manager[1], /Toggle which packs can be used for student answers, or edit\/delete packs\./, 'Knowledge blade should include teacher-friendly saved-pack copy.');
+  assert.match(manager[1], /Draft packs need review and approval first\. Approved packs can be enabled for student answers here\./, 'Knowledge blade should explain Draft vs Approved workflow.');
   assert.match(manager[1], /data-main-knowledge-pack-manager|teacherContentKnowledgeManager/, 'Main blade should include a dedicated saved-pack manager container.');
   assert.match(manager[1], /data-knowledge-pack-list/, 'Knowledge blade should include simple saved-pack list container.');
   assert.match(manager[1], /renderSimpleKnowledgePackRows\(\)/, 'Knowledge blade should render simplified rows.');
   assert.match(ui, /function renderSimpleKnowledgePackRows\(\)/, 'UI should define simplified saved-pack row renderer.');
+  assert.match(ui, /function getVisibleDraftPacks\(\)/, 'Draft rows should be filtered to hide already-approved duplicates.');
+  assert.match(ui, /state\.drafts\.filter\(\(draft\) => !isDraftPackApproved\(draft\?\.packId\)\)/, 'Main list should exclude draft rows for already-approved pack IDs.');
   assert.match(ui, /data-draft-pack-card/, 'Main blade should render draft pack cards.');
   assert.match(ui, /data-draft-pack-title/, 'Draft pack cards should render actual pack names.');
-  assert.match(ui, /data-draft-pack-view-edit-action/, 'Draft pack cards should include Edit control.');
+  assert.match(ui, /data-draft-pack-view-edit-action/, 'Draft pack cards should include review/approve control.');
+  assert.match(ui, /Review \/ Approve|Continue Review/, 'Draft pack cards should expose clear review/approval actions.');
   assert.match(ui, /data-draft-pack-delete-action/, 'Draft pack cards should include Delete control.');
   assert.match(ui, /data-approved-pack-title/, 'Approved pack cards should render actual pack names.');
   assert.match(ui, /data-approved-pack-activation-checkbox/, 'Approved pack cards should include enable\\/disable toggles.');
-  assert.match(ui, /Enabled for student answers|Disabled for student answers/, 'Approved-pack toggles should clearly label student-answer enable state.');
-  assert.match(ui, /Approve before enabling/, 'Draft rows should show approve-before-enable guidance.');
+  assert.match(ui, /Enable for student answers/, 'Approved-pack rows should expose enable control wording.');
+  assert.match(ui, /Enabled|Disabled/, 'Approved-pack rows should label enabled\\/disabled state.');
+  assert.match(ui, /Enable for student answers appears after approval\./, 'Draft rows should not present a live enable toggle before approval.');
   assert.match(ui, /data-approved-pack-view-edit-action/, 'Approved-pack rows should include Edit action.');
   assert.match(ui, /data-approved-pack-delete-action/, 'Approved-pack rows should include Delete action.');
   assert.doesNotMatch(ui, /data-approved-pack-pack-id|data-approved-pack-metadata|data-approved-pack-source-file-names/, 'Simplified list should not include long metadata fields.');
@@ -221,7 +228,9 @@ function assertReviewListTableLayout() {
 function assertReviewBulkPackSummary() {
   assert.match(ui, /function renderBulkReviewSummary\(\)/, 'Review page should define a dedicated bulk-summary renderer.');
   assert.match(ui, /data-review-bulk-summary/, 'Review page should render a bulk-summary panel when multiple files create multiple packs.');
+  assert.match(ui, /if \(queuePacks\.length <= 1\) return '';/, 'Bulk summary should stay hidden for single-pack review sessions.');
   assert.match(ui, /Reviewing .* draft packs\. Use the pack list to switch packs\./, 'Bulk summary should explain queue position and pack-list switching.');
+  assert.match(ui, /data-review-bulk-summary-details/, 'Bulk summary should collapse the queue list behind a compact details toggle.');
   assert.match(ui, /data-review-bulk-summary-list/, 'Bulk summary should show a compact list of created draft pack names.');
   assert.match(ui, /data-review-pack-select/, 'Bulk summary should expose clickable draft-pack queue cards.');
   assert.match(ui, /function buildReviewQueuePacks\(\)/, 'Review queue should be built from draft/queue metadata.');
@@ -250,25 +259,97 @@ function assertFallbackRowsFromDraftPacketArrays() {
 
 function assertNeedsReviewIsReviewableAndSelectable() {
   assert.match(ui, /function getItemReviewWorkflowStatus\(item\)/, 'UI should resolve review workflow status from reviewStatus\\/status fields.');
-  assert.match(ui, /function isItemNeedingTeacherReview\(item\) \{\s*return isPendingReviewStatus\(getItemReviewWorkflowStatus\(item\)\);\s*\}/, 'Reviewable-row checks should use shared status normalization.');
+  assert.match(ui, /function getReviewItemPromotionBlockers\(item\)/, 'UI should expose promotion blockers for already-approved rows.');
+  assert.match(ui, /function isItemNeedingTeacherReview\(item\) \{[\s\S]*isPendingReviewStatus\(status\)[\s\S]*status === 'approved' && getReviewItemPromotionBlockers\(item\)\.length > 0/, 'Reviewable-row checks should include pending rows and approved rows that still block promotion.');
   assert.match(ui, /function isPendingReviewStatus\(reviewStatus\) \{[\s\S]*normalized === 'pending'[\s\S]*normalized === 'needs_review'[\s\S]*normalized === 'needs-review'/, 'pending and needs_review status variants should be reviewable.');
   assert.match(ui, /if \(filterId === 'needsReview'\) \{\s*return isItemNeedingTeacherReview\(item\);\s*\}/, 'Needs Review filter should use the same reviewable-status rule as row counting.');
-  assert.match(ui, /function getVisibleReviewItems\(\) \{[\s\S]*\.filter\(\(item\) => isItemNeedingTeacherReview\(item\)\)/, 'Visible review rows should include pending\\/needs_review items consistently.');
-  assert.match(ui, /function isReviewItemSafeToAccept\(item\) \{[\s\S]*!isItemNeedingTeacherReview\(item\)/, 'needs_review rows should remain valid/selectable in action bar counts.');
+  assert.match(ui, /function getVisibleReviewItems\(\) \{[\s\S]*\.filter\(\(item\) => isItemNeedingTeacherReview\(item\)\)/, 'Visible review rows should include pending and blocked-approved items consistently.');
+  assert.match(ui, /function isReviewItemSafeToAccept\(item\) \{[\s\S]*isPendingReviewStatus\(reviewStatus\)/, 'Accept-all safety checks should only auto-approve pending rows.');
+  assert.match(ui, /getReviewItemPromotionBlockers\(\{ \.\.\.item, reviewStatus: 'approved' \}\)/, 'Accept-all safety checks should skip rows that would still fail promotion.');
   assert.match(ui, /function hasMissingRequiredReviewFields\(item\)/, 'review acceptance should only skip rows missing required fields.');
 }
 
+function assertManualEditSaveFeedbackAndRefresh() {
+  assert.match(ui, /async function refreshSelectedDraftReportFromBackend\(\)/, 'UI should define an explicit backend refresh helper after save.');
+  assert.match(ui, /body: JSON\.stringify\(\{[\s\S]*reviewStatus: 'approved',[\s\S]*edits: changed,[\s\S]*itemRef,[\s\S]*debugContext:/, 'Approve item should submit current edited fields and stable item identity in the same approval action.');
+  assert.match(ui, /await refreshSelectedDraftReportFromBackend\(\);/, 'Approve item should refresh the selected draft report from backend.');
+  assert.match(ui, /Approved revised item:/, 'UI should show teacher-visible success copy after edit-and-approve.');
+  assert.match(ui, /Still blocked:/, 'UI should explain exact blocker copy when approval cannot be completed.');
+  assert.match(ui, /function buildReviewItemRef\(item\)/, 'Approve path should build a stable item identity payload.');
+  assert.doesNotMatch(ui, /data-review-save/, 'Edit modal should not require a separate Save changes button.');
+  assert.match(ui, /function hasTeacherLowConfidenceOverride\(item\)/, 'UI should only clear low-confidence blockers when teacher review markers are present.');
+  assert.match(ui, /if \(reviewStatus === 'approved' && detailPanel\)/, 'Visible Approve item action inside edit form should always use save+approve flow.');
+  assert.match(ui, /appendReviewDebugEvent\('review-status-button-click'/, 'UI should emit click-path debug output for real browser verification.');
+}
+
+function assertEditModeHidesBulkOverlaysAndShowsInlineStatus() {
+  const reviewCard = ui.match(/function renderReviewCard\(\) \{([\s\S]*?)\n  function renderReviewDoneCard/);
+  assert.ok(reviewCard, 'Expected renderReviewCard function.');
+  assert.match(reviewCard[1], /const isEditingReviewItem = Boolean\(state\.selectedReviewItem\);/, 'Review page should detect open edit state.');
+  assert.match(reviewCard[1], /const bulkReviewSummary = isEditingReviewItem \? '' : renderBulkReviewSummary\(\);/, 'Bulk queue summary should be hidden while an edit form is open.');
+  assert.match(reviewCard[1], /isEditingReviewItem \? '' : renderReviewActionBar\(filteredItems\)/, 'Bulk action bar should be hidden while an edit form is open.');
+  assert.match(ui, /data-review-item-inline-message/, 'Rows should show inline blocker copy.');
+  assert.match(ui, /data-review-detail-inline-message/, 'Edit panel should show inline blocker copy.');
+  assert.match(ui, /function formatReviewItemStatusLabel\(item\)/, 'UI should compute per-row teacher-facing status labels.');
+  assert.match(style, /\.teacher-content-review-action-bar \{[\s\S]*position: static;/, 'Bulk approval panel should no longer float over edit fields.');
+  assert.match(style, /\.teacher-content-review-detail \{[\s\S]*position: static;/, 'Edit form should no longer float over other controls.');
+  assert.match(style, /\.teacher-content-review-inline-message/, 'Inline blocker message styling should exist.');
+}
+
 function assertNeedsReviewCopyIsNotUnsafe() {
-  assert.match(ui, /unreviewable item/, 'UI copy should describe blocked rows as unreviewable.');
+  assert.match(ui, /need edit or rejection before approval/, 'UI copy should describe blocked rows as requiring edit or rejection.');
   assert.doesNotMatch(ui, /unsafe selected item/, 'UI copy should avoid calling normal needs_review rows unsafe.');
   assert.match(ui, /repair-failed, or missing-required-field/, 'Skip reasons should match true invalid\\/quarantine\\/repair-failed cases.');
   assert.match(ui, /function countFailedAfterRetrySections\(coverage = \{\}\)/, 'Failed-after-retry summary should be derived from coverage summary/sourceManifest.');
 }
 
+function assertBlockingApprovalWorkflow() {
+  const actionBar = ui.match(/function renderReviewActionBar\(items\) \{([\s\S]*?)\n  function getDraftItemWording/);
+  assert.ok(actionBar, 'Expected renderReviewActionBar function.');
+  assert.match(actionBar[1], /const hasValidPendingItems = safeAll > 0;/, 'Bulk controls should explicitly detect when no valid pending items are available.');
+  assert.match(actionBar[1], /safeSelected === 0/, 'Accept Selected should become unavailable when selected rows contain zero valid pending items.');
+  assert.match(actionBar[1], /data-review-accept-selected-disabled-reason/, 'Action bar should explain why Accept Selected is disabled.');
+  assert.match(actionBar[1], /data-review-exclude-selected-flagged/, 'Action bar should expose a bulk exclusion action for selected flagged blockers.');
+  assert.match(actionBar[1], /Exclude Selected Flagged Items/, 'Bulk selected-blocker exclusion should be clearly labeled.');
+  assert.match(actionBar[1], /data-review-reject-blockers-promote/, 'Action bar should expose a flagged-item exclusion plus approval path.');
+  assert.match(actionBar[1], /Approve Reviewed Valid Items/, 'Bulk approval should use clearer reviewed-valid-items wording.');
+  assert.match(actionBar[1], /data-review-no-valid-pending-note/, 'Action bar should show direct guidance when no valid pending items remain.');
+  assert.match(actionBar[1], /No pending valid items are available\. Edit flagged items or approve valid reviewed items only\./, 'No-valid-pending guidance should match teacher-facing copy.');
+  assert.match(actionBar[1], /hasValidPendingItems \? `<button type="button" class="small-button secondary-small" data-review-select-all>/, 'Select All should be hidden when there are zero valid pending items.');
+  assert.match(actionBar[1], /hasValidPendingItems \? `<button type="button" class="small-button" data-review-accept-selected/, 'Accept Selected should be hidden when there are zero valid pending items.');
+  assert.match(actionBar[1], /hasValidPendingItems \? `<button type="button" class="small-button" data-review-accept-all/, 'Accept All should be hidden when there are zero valid pending items.');
+  assert.match(actionBar[1], /valid pending available for Accept Selected/, 'Accept-selected summary should clarify this count only applies to pending rows.');
+  assert.match(actionBar[1], /data-review-flagged-selected-count/, 'Action bar should summarize selected flagged items directly.');
+  assert.match(actionBar[1], /These cannot be accepted\. Edit or exclude them\./, 'Action bar should explain flagged selected rows cannot be accepted.');
+  assert.match(actionBar[1], /data-review-valid-reviewed-ready-note/, 'Action bar should show when valid reviewed items are ready to approve.');
+  assert.match(actionBar[1], /data-review-no-valid-reviewed-note/, 'Action bar should show when no valid reviewed items are available.');
+  assert.match(actionBar[1], /No valid reviewed items are available to approve\./, 'Approval-disabled copy should clearly explain when no valid reviewed content remains.');
+  assert.match(actionBar[1], /data-review-flagged-exclusion-note/, 'Action bar should explain flagged items will be excluded before approval.');
+  assert.match(actionBar[1], /flagged item[\s\S]*will be excluded[\s\S]*Only valid reviewed items will be saved in the approved pack/, 'Flagged-item helper should explain only valid reviewed items are saved.');
+  assert.match(actionBar[1], /pendingRows\.length === 0 && approvedPromotableCount > 0/, 'Reject-blockers approval should require pending review to be complete and approved content to remain.');
+  assert.doesNotMatch(actionBar[1], /valid available/, 'Action bar should avoid ambiguous "valid available" copy.');
+
+  const rowRenderer = ui.match(/function renderReviewTableRow\(item\) \{([\s\S]*?)\n  function renderReviewAdvancedDetails/);
+  assert.ok(rowRenderer, 'Expected renderReviewTableRow function.');
+  assert.match(rowRenderer[1], /summarizeReviewItemActionNeeded\(item\)/, 'Rows should show an action-needed reason for promotion blockers.');
+  assert.match(rowRenderer[1], /Reject \/ Exclude/, 'Rows should expose Reject / Exclude for promotion blockers.');
+  assert.match(rowRenderer[1], /Fix Required Fields/, 'Rows should label required-field repair actions clearly.');
+
+  assert.match(ui, /function explainDisabledAcceptSelected\(\)/, 'Disabled Accept Selected should have a direct explanatory handler.');
+  assert.match(ui, /function excludeSelectedFlaggedReviewItems\(\)/, 'UI should provide bulk exclusion for selected flagged blockers.');
+  assert.match(ui, /selected\.filter\(isReviewItemBlockingPromotion\)/, 'Selected-blocker exclusion should only reject flagged blocking items.');
+  assert.match(ui, /function rejectBlockingItemsAndPromote\(\)/, 'UI should provide a safe flagged-items-excluded approval workflow.');
+  assert.match(ui, /reviewStatus: 'rejected'/, 'Flagged-items approval workflow should exclude blockers by marking them rejected.');
+  assert.match(ui, /itemRef: buildReviewItemRef\(item\)/, 'Bulk review actions should include stable item identity in route payloads.');
+  assert.match(ui, /requestDraftPromotion\(draftPackIdAtStart, \{ force: false \}\)/, 'Flagged-items approval workflow should promote only after excluding blockers.');
+  assert.match(ui, /Disabled for student answers until you enable it from the Knowledge blade/, 'Approved pack should stay disabled for student answers by default.');
+  assert.match(ui, /formatPromotionFailureMessage/, 'Promotion failures should be translated into exact next-step copy.');
+}
+
 function assertSummaryAndEmptyMessageUseDraftArrays() {
   assert.match(ui, /function hasAnyPrimaryDraftItems\(\)/, 'UI should explicitly check draft packet arrays before showing no-draft copy.');
   assert.match(ui, /if \(state\.reviewListFilter === 'all' && !hasAnyPrimaryDraftItems\(\)\)/, 'No-draft message should only appear when primary arrays are truly empty.');
-  assert.match(ui, /All items in this draft have already been reviewed\./, 'When no pending rows remain, Page 2 should show a current-draft completion message.');
+  assert.match(ui, /summary\.pending === 0 && totalReviewableCount > 0 && allItems\.length === 0/, 'Reviewed copy should appear only when there are no pending and no promotion-blocking rows left.');
   assert.match(ui, /draft items found • .* need review/, 'Summary line should report item counts needing review.');
   assert.match(ui, /const processedChunks = Number\(coverage\.processedChunks \|\| 0\);[\s\S]*if \(processedChunks > 0\) return processedChunks;/, 'Sections checked should reflect processed chunks/pages when coverage metadata is present.');
 }
@@ -314,7 +395,16 @@ function assertAcceptBehavior() {
   const acceptAll = ui.match(/async function acceptAllReviewItems\(\) \{([\s\S]*?)\n  async function acceptReviewItems/);
   assert.ok(acceptAll, 'Expected acceptAllReviewItems function.');
   assert.match(acceptAll[1], /const items = getVisibleReviewItems\(\)/, 'Accept All should use all generated reviewable rows.');
+  assert.match(acceptAll[1], /autoPromoteAfterAccept:\s*true/, 'Accept All should request final approval/promotion after accepting valid items.');
+  const acceptReview = ui.match(/async function acceptReviewItems\(items, options = \{\}\) \{([\s\S]*?)\n  function closeReviewItem/);
+  assert.ok(acceptReview, 'Expected acceptReviewItems function.');
+  assert.match(acceptReview[1], /requestDraftPromotion\(draftPackIdAtStart, \{ force: false \}\)/, 'Accept flow should attempt promotion when requested.');
+  assert.match(acceptReview[1], /hasAutoPromotionFailure/, 'Accept flow should track promotion failures explicitly.');
+  assert.match(acceptReview[1], /!\s*hasAutoPromotionFailure/, 'Accept flow should avoid auto-advancing away when promotion fails.');
+  assert.match(acceptReview[1], /Resolve blocked review items, then click Approve Pack\./, 'Accept flow should give clear next-step copy when promotion is blocked.');
+  assert.match(acceptReview[1], /refreshTeacherContentSummaries\(\)/, 'Successful auto-promotion should refresh draft\\/approved counts.');
   assert.match(ui, /moveToNextDraftNeedingReview/, 'Accept actions should auto-advance to the next draft pack needing review.');
+  assert.match(ui, /Knowledge pack approved\./, 'Accept flow should report explicit approval status when promotion succeeds.');
 }
 
 function assertCollapsedDetails() {
@@ -337,8 +427,10 @@ function assertPausedStandardsWarningsAreDeemphasized() {
 function assertDonePage() {
   const doneCard = ui.match(/function renderReviewDoneCard\(\) \{([\s\S]*?)\n  function renderReviewSummaryLine/);
   assert.ok(doneCard, 'Expected renderReviewDoneCard function.');
-  assert.match(doneCard[1], /Import review is complete for this draft session\./, 'Page 3 should contain completion message.');
+  assert.match(doneCard[1], /Knowledge pack approved\.|Import review is complete for this draft session\./, 'Page 3 should explain whether the draft is approved or only reviewed.');
   assert.match(doneCard[1], /data-review-done-pack-name/, 'Page 3 should show the saved pack name.');
+  assert.match(doneCard[1], /Enable it for student answers from the Knowledge blade|This draft is still in review until you approve it\./, 'Done page should explain activation safety and next approval step.');
+  assert.match(doneCard[1], /Approve Pack/, 'Done page should expose an approval action when review is complete but not yet approved.');
   assert.match(doneCard[1], /Manage Knowledge Packs/, 'Page 3 should include a link/button to open saved-pack management.');
   assert.doesNotMatch(doneCard[1], /data-knowledge-pack-manager|renderApprovedPacksCard\(\)/, 'Done page should not render full saved-pack management cards.');
 

@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const {
+  applyDraftItemReviewDecision,
   editDraftItemField,
   listReviewableDraftItems,
   updateDraftItemReviewStatus
@@ -28,6 +29,10 @@ try {
   assertRefusesInvalidIndex();
   assertRefusesInvalidReviewStatus();
   assertPreservesReferenceFormulaSolverStatus();
+  assertManualApproveMarksTeacherVerified();
+  assertManualEditMarksTeacherVerified();
+  assertApproveDecisionAppliesEditsAtomically();
+  assertSourceTrackingEditsCanRepairMissingFields();
   assertPreservesSourceTracking();
   assertValidationFailurePreventsSave();
   assertApprovedPacksAreNotModified();
@@ -163,6 +168,124 @@ function assertPreservesReferenceFormulaSolverStatus() {
 
   assert.equal(result.success, true, result.errors.join('\n'));
   assert.equal(readDraftPack('formula-solver-status-draft-pack').referenceFormulas[0].solverStatus, 'reference_only');
+}
+
+function assertManualApproveMarksTeacherVerified() {
+  writeDraftPack(makePack({
+    packId: 'manual-approve-low-confidence-draft-pack',
+    vocabulary: [
+      {
+        ...makeVocabularyItem('manual-approve-low-confidence-term'),
+        confidence: 'low'
+      }
+    ]
+  }));
+
+  const result = updateDraftItemReviewStatus('manual-approve-low-confidence-draft-pack', 'vocabulary', 0, 'approved', { draftPacksDir });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  const approved = readDraftPack('manual-approve-low-confidence-draft-pack').vocabulary[0];
+  assert.equal(approved.reviewStatus, 'approved');
+  assert.equal(approved.teacherReviewed, true);
+  assert.equal(approved.teacherVerified, true);
+  assert.equal(approved.teacherApproved, true);
+  assert.equal(approved.confidenceOverride, 'teacher_verified');
+}
+
+function assertManualEditMarksTeacherVerified() {
+  writeDraftPack(makePack({
+    packId: 'manual-edit-low-confidence-draft-pack',
+    vocabulary: [
+      {
+        ...makeVocabularyItem('manual-edit-low-confidence-term'),
+        confidence: 'low'
+      }
+    ]
+  }));
+
+  const result = editDraftItemField(
+    'manual-edit-low-confidence-draft-pack',
+    'vocabulary',
+    0,
+    'studentDefinition',
+    'Teacher edited draft definition.',
+    { draftPacksDir }
+  );
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  const edited = readDraftPack('manual-edit-low-confidence-draft-pack').vocabulary[0];
+  assert.equal(edited.teacherReviewed, true);
+  assert.equal(edited.teacherVerified, true);
+  assert.equal(edited.manuallyEdited, true);
+  assert.equal(edited.confidenceOverride, 'teacher_verified');
+}
+
+function assertApproveDecisionAppliesEditsAtomically() {
+  writeDraftPack(makePack({
+    packId: 'review-decision-inline-edit-draft-pack',
+    vocabulary: [
+      {
+        ...makeVocabularyItem('review-decision-inline-edit-term', 'approved'),
+        confidence: 'low',
+        studentDefinition: 'Original definition before inline approve.'
+      }
+    ],
+    concepts: [],
+    referenceFormulas: [],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+
+  const result = applyDraftItemReviewDecision(
+    'review-decision-inline-edit-draft-pack',
+    'vocabulary',
+    0,
+    {
+      reviewStatus: 'approved',
+      edits: [
+        {
+          field: 'studentDefinition',
+          value: 'Edited during approve click.'
+        }
+      ]
+    },
+    { draftPacksDir }
+  );
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  assert.ok(Array.isArray(result.editedFields));
+  assert.ok(result.editedFields.includes('studentDefinition'));
+  const edited = readDraftPack('review-decision-inline-edit-draft-pack').vocabulary[0];
+  assert.equal(edited.studentDefinition, 'Edited during approve click.');
+  assert.equal(edited.reviewStatus, 'approved');
+  assert.equal(edited.teacherVerified, true);
+  assert.equal(edited.manuallyEdited, true);
+  assert.equal(edited.confidenceOverride, 'teacher_verified');
+}
+
+function assertSourceTrackingEditsCanRepairMissingFields() {
+  writeDraftPack(makePack({
+    packId: 'repair-source-tracking-draft-pack',
+    vocabulary: [
+      {
+        ...makeVocabularyItem('repair-source-tracking-term'),
+        sourceTextSnippet: ''
+      }
+    ]
+  }));
+
+  const result = editDraftItemField(
+    'repair-source-tracking-draft-pack',
+    'vocabulary',
+    0,
+    'sourceTextSnippet',
+    'Recovered source snippet for teacher review.',
+    { draftPacksDir }
+  );
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  assert.equal(readDraftPack('repair-source-tracking-draft-pack').vocabulary[0].sourceTextSnippet, 'Recovered source snippet for teacher review.');
 }
 
 function assertPreservesSourceTracking() {

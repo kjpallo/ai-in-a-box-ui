@@ -19,9 +19,11 @@ const { promoteDraftKnowledgePack } = require('../lib/knowledge/promoteDraftKnow
 const {
   REVIEWABLE_SECTIONS,
   SAFE_EDIT_FIELDS,
+  applyDraftItemReviewDecision,
   editDraftItemField,
   updateDraftItemReviewStatus
 } = require('../lib/knowledge/reviewDraftKnowledgePack');
+const { DEFAULT_DRAFT_PACKS_DIR } = require('../lib/knowledge/loadDraftKnowledgePacks');
 const { REVIEW_STATUSES } = require('../lib/knowledge/packSchema');
 const { detectUploadFileType, supportedExtensions } = require('../lib/uploads/detectUploadFileType');
 const { extractTextFromFile } = require('../lib/uploads/extractTextFromFile');
@@ -260,14 +262,75 @@ function registerTeacherContentRoutes(app, options = {}) {
     }
 
     try {
-      const update = updateDraftItemReviewStatus(
-        validation.packId,
-        validation.section,
-        validation.index,
-        reviewStatus,
+      const debugContext = req.body && typeof req.body.debugContext === 'object' && !Array.isArray(req.body.debugContext)
+        ? req.body.debugContext
+        : {};
+      const itemRef = extractDraftItemRef(req.body && req.body.itemRef);
+      const target = resolveDraftItemMutationTarget({
+        packId: validation.packId,
+        section: validation.section,
+        requestedIndex: validation.index,
+        itemRef,
         options
-      );
-      return sendDraftMutationResponse(res, update, validation.packId, options);
+      });
+      if (!target.success) {
+        return res.status(target.statusCode || 409).json({
+          success: false,
+          errors: target.errors || ['Draft item target could not be resolved.'],
+          warnings: target.warnings || [],
+          debug: {
+            routeHandler: 'PATCH /drafts/:packId/items/:section/:index/status',
+            request: {
+              packId: validation.packId,
+              section: validation.section,
+              requestedIndex: validation.index,
+              reviewStatus,
+              itemRef,
+              debugContext
+            },
+            resolvedTarget: target
+          }
+        });
+      }
+      const beforeSnapshot = readDraftItemSnapshot(validation.packId, validation.section, target.index, options);
+      const edits = Array.isArray(req.body && req.body.edits)
+        ? req.body.edits
+        : [];
+      const update = edits.length > 0
+        ? applyDraftItemReviewDecision(
+          validation.packId,
+          validation.section,
+          target.index,
+          {
+            reviewStatus,
+            edits
+          },
+          options
+        )
+        : updateDraftItemReviewStatus(
+          validation.packId,
+          validation.section,
+          target.index,
+          reviewStatus,
+          options
+        );
+      const afterSnapshot = readDraftItemSnapshot(validation.packId, validation.section, target.index, options);
+      return sendDraftMutationResponse(res, update, validation.packId, options, {
+        routeHandler: 'PATCH /drafts/:packId/items/:section/:index/status',
+        request: {
+          packId: validation.packId,
+          section: validation.section,
+          index: target.index,
+          requestedIndex: validation.index,
+          reviewStatus,
+          edits,
+          itemRef,
+          resolvedTarget: target,
+          debugContext
+        },
+        beforeSnapshot,
+        afterSnapshot
+      });
     } catch (error) {
       return sendRouteError(res, error);
     }
@@ -289,15 +352,63 @@ function registerTeacherContentRoutes(app, options = {}) {
     }
 
     try {
+      const debugContext = req.body && typeof req.body.debugContext === 'object' && !Array.isArray(req.body.debugContext)
+        ? req.body.debugContext
+        : {};
+      const itemRef = extractDraftItemRef(req.body && req.body.itemRef);
+      const target = resolveDraftItemMutationTarget({
+        packId: validation.packId,
+        section: validation.section,
+        requestedIndex: validation.index,
+        itemRef,
+        options
+      });
+      if (!target.success) {
+        return res.status(target.statusCode || 409).json({
+          success: false,
+          errors: target.errors || ['Draft item target could not be resolved.'],
+          warnings: target.warnings || [],
+          debug: {
+            routeHandler: 'PATCH /drafts/:packId/items/:section/:index',
+            request: {
+              packId: validation.packId,
+              section: validation.section,
+              requestedIndex: validation.index,
+              field,
+              value: req.body && Object.prototype.hasOwnProperty.call(req.body, 'value') ? req.body.value : '',
+              itemRef,
+              debugContext
+            },
+            resolvedTarget: target
+          }
+        });
+      }
+      const beforeSnapshot = readDraftItemSnapshot(validation.packId, validation.section, target.index, options);
       const update = editDraftItemField(
         validation.packId,
         validation.section,
-        validation.index,
+        target.index,
         field,
         req.body && Object.prototype.hasOwnProperty.call(req.body, 'value') ? req.body.value : '',
         options
       );
-      return sendDraftMutationResponse(res, update, validation.packId, options);
+      const afterSnapshot = readDraftItemSnapshot(validation.packId, validation.section, target.index, options);
+      return sendDraftMutationResponse(res, update, validation.packId, options, {
+        routeHandler: 'PATCH /drafts/:packId/items/:section/:index',
+        request: {
+          packId: validation.packId,
+          section: validation.section,
+          index: target.index,
+          requestedIndex: validation.index,
+          field,
+          value: req.body && Object.prototype.hasOwnProperty.call(req.body, 'value') ? req.body.value : '',
+          itemRef,
+          resolvedTarget: target,
+          debugContext
+        },
+        beforeSnapshot,
+        afterSnapshot
+      });
     } catch (error) {
       return sendRouteError(res, error);
     }
@@ -323,14 +434,19 @@ function registerTeacherContentRoutes(app, options = {}) {
         const missingDraft = (promotion.errors || []).some((error) => String(error).includes('No draft knowledge pack found'));
         return res.status(missingDraft ? 404 : 400).json({
           success: false,
+          message: report && report.promotionReadiness && report.promotionReadiness.blockerSummary && report.promotionReadiness.blockerSummary.message
+            ? report.promotionReadiness.blockerSummary.message
+            : 'Draft promotion failed.',
           errors: promotion.errors || ['Draft promotion failed.'],
           warnings: promotion.warnings || [],
-          promotionReadiness: report && report.promotionReadiness ? report.promotionReadiness : undefined
+          promotionReadiness: report && report.promotionReadiness ? report.promotionReadiness : undefined,
+          debug: buildPromotionDebugPayload(packId, options, report, promotion)
         });
       }
 
       const approvedSummary = listApprovedPacksSummary(options);
       const approved = approvedSummary.approvedPacks.find((pack) => pack.packId === promotion.packId) || null;
+      const refreshedReport = getDraftPackReport(packId, options);
 
       return res.json({
         success: true,
@@ -340,8 +456,9 @@ function registerTeacherContentRoutes(app, options = {}) {
           outputPath: promotion.outputPath,
           approved,
           dashboard: getTeacherContentDashboard(options),
-          report: getDraftPackReport(packId, options),
-          approvedSummary
+          report: refreshedReport,
+          approvedSummary,
+          debug: buildPromotionDebugPayload(packId, options, refreshedReport, promotion)
         },
         warnings: promotion.warnings || [],
         errors: []
@@ -1569,7 +1686,133 @@ function validateDraftItemRouteParams(params = {}) {
   };
 }
 
-function sendDraftMutationResponse(res, update, packId, options) {
+function extractDraftItemRef(input) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
+  const itemId = String(input.itemId || '').trim();
+  const sourceFile = String(input.sourceFile || '').trim();
+  const sourceLocation = String(input.sourceLocation || '').trim();
+  if (!itemId && !sourceFile && !sourceLocation) return null;
+  return { itemId, sourceFile, sourceLocation };
+}
+
+function resolveDraftItemMutationTarget({ packId, section, requestedIndex, itemRef, options = {} }) {
+  const parsedIndex = Number(requestedIndex);
+  const fallback = {
+    success: true,
+    index: parsedIndex,
+    requestedIndex: parsedIndex,
+    resolvedBy: 'index'
+  };
+  if (!itemRef) return fallback;
+
+  const draft = loadDraftPackJsonForRoute(packId, options);
+  if (!draft.success) {
+    return {
+      success: false,
+      statusCode: 404,
+      errors: draft.errors || ['Draft pack could not be loaded for item resolution.']
+    };
+  }
+
+  const items = Array.isArray(draft.pack && draft.pack[section]) ? draft.pack[section] : [];
+  if (!items.length) {
+    return {
+      success: false,
+      statusCode: 400,
+      errors: [`No items found in section ${section}.`]
+    };
+  }
+
+  if (Number.isInteger(parsedIndex) && parsedIndex >= 0 && parsedIndex < items.length && draftItemMatchesRef(items[parsedIndex], itemRef)) {
+    return {
+      success: true,
+      index: parsedIndex,
+      requestedIndex: parsedIndex,
+      resolvedBy: 'index_and_itemRef'
+    };
+  }
+
+  const matchedIndices = items
+    .map((item, index) => (draftItemMatchesRef(item, itemRef) ? index : -1))
+    .filter((index) => index >= 0);
+  if (matchedIndices.length === 1) {
+    return {
+      success: true,
+      index: matchedIndices[0],
+      requestedIndex: parsedIndex,
+      resolvedBy: 'itemRef'
+    };
+  }
+  if (matchedIndices.length > 1) {
+    return {
+      success: false,
+      statusCode: 409,
+      errors: ['Multiple draft items matched this edit request. Reopen the row and try again so the latest item identity is used.'],
+      matchedIndices
+    };
+  }
+  return {
+    success: false,
+    statusCode: 409,
+    errors: ['The selected draft item changed after refresh. Reopen the row and try again.'],
+    requestedIndex: parsedIndex
+  };
+}
+
+function loadDraftPackJsonForRoute(packId, options = {}) {
+  const draftPackPath = resolveDraftPackJsonPath(packId, options);
+  const readResult = readJsonFile(draftPackPath, `draft pack ${packId}`);
+  if (!readResult.success) {
+    return {
+      success: false,
+      draftPackPath,
+      errors: readResult.errors || ['Draft pack could not be read.']
+    };
+  }
+  return {
+    success: true,
+    draftPackPath,
+    pack: readResult.value
+  };
+}
+
+function draftItemMatchesRef(item, itemRef) {
+  if (!item || typeof item !== 'object' || Array.isArray(item)) return false;
+  const hasItemId = nonEmptyString(itemRef && itemRef.itemId);
+  const hasSourceFile = nonEmptyString(itemRef && itemRef.sourceFile);
+  const hasSourceLocation = nonEmptyString(itemRef && itemRef.sourceLocation);
+
+  const itemIdMatches = !hasItemId || normalizeComparableString(draftItemIdentity(item)) === normalizeComparableString(itemRef.itemId);
+  const sourceFileMatches = !hasSourceFile || normalizeComparableString(item.sourceFile) === normalizeComparableString(itemRef.sourceFile);
+  const sourceLocationMatches = !hasSourceLocation || normalizeComparableString(item.sourceLocation) === normalizeComparableString(itemRef.sourceLocation);
+  if (hasItemId && (hasSourceFile || hasSourceLocation)) {
+    return itemIdMatches && sourceFileMatches && sourceLocationMatches;
+  }
+  if (hasItemId) return itemIdMatches;
+  return sourceFileMatches && sourceLocationMatches;
+}
+
+function draftItemIdentity(item) {
+  if (!item || typeof item !== 'object' || Array.isArray(item)) return '';
+  return firstNonEmptyString(
+    item.itemId,
+    item.term,
+    item.title,
+    item.question,
+    item.equation,
+    item.standardId,
+    item.conceptId,
+    item.formulaId,
+    item.problemId
+  );
+}
+
+function normalizeComparableString(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function sendDraftMutationResponse(res, update, packId, options, debugContext = {}) {
+  const debug = buildDraftMutationDebugPayload(update, packId, options, debugContext);
   if (!update.success) {
     const status = (update.errors || []).some((error) => String(error).includes('No draft knowledge pack found'))
       ? 404
@@ -1577,7 +1820,8 @@ function sendDraftMutationResponse(res, update, packId, options) {
     return res.status(status).json({
       success: false,
       errors: update.errors || ['Draft item update failed.'],
-      warnings: update.warnings || []
+      warnings: update.warnings || [],
+      debug
     });
   }
 
@@ -1586,11 +1830,202 @@ function sendDraftMutationResponse(res, update, packId, options) {
     success: true,
     data: {
       update,
-      report
+      report,
+      debug: {
+        ...debug,
+        refreshedItem: summarizeReportItem(report, debugContext.request && debugContext.request.section, debugContext.request && debugContext.request.index),
+        remainingBlockers: summarizeRemainingBlockers(report)
+      }
     },
     errors: [],
     warnings: report.warnings || []
   });
+}
+
+function buildDraftMutationDebugPayload(update, packId, options, debugContext = {}) {
+  const request = debugContext.request && typeof debugContext.request === 'object' ? debugContext.request : {};
+  const beforeSnapshot = debugContext.beforeSnapshot || null;
+  const afterSnapshot = debugContext.afterSnapshot || null;
+  const draftPackPath = update && update.draftPackPath ? update.draftPackPath : resolveDraftPackJsonPath(packId, options);
+  const fileStats = safeFileStats(draftPackPath);
+
+  return {
+    routeHandler: debugContext.routeHandler || '',
+    request,
+    draftPackPath,
+    updateSummary: summarizeDraftMutationUpdate(update),
+    beforeSnapshot,
+    afterSnapshot,
+    savedPath: update && update.savedPath ? update.savedPath : null,
+    diskState: {
+      exists: fileStats.exists,
+      mtimeMs: fileStats.mtimeMs
+    }
+  };
+}
+
+function summarizeDraftMutationUpdate(update = {}) {
+  return {
+    success: update.success === true,
+    action: update.action || '',
+    changedField: update.changedField || '',
+    editedFields: Array.isArray(update.editedFields) ? update.editedFields : [],
+    before: Object.prototype.hasOwnProperty.call(update, 'before') ? update.before : undefined,
+    after: Object.prototype.hasOwnProperty.call(update, 'after') ? update.after : undefined,
+    validationPassed: update.validationPassed === true,
+    errors: Array.isArray(update.errors) ? update.errors : [],
+    warnings: Array.isArray(update.warnings) ? update.warnings : []
+  };
+}
+
+function summarizeRemainingBlockers(report = {}) {
+  const readiness = report && report.promotionReadiness && typeof report.promotionReadiness === 'object'
+    ? report.promotionReadiness
+    : {};
+  const blockedReasons = Array.isArray(readiness.blockedReasons) ? readiness.blockedReasons : [];
+  const blockerSummary = readiness.blockerSummary && typeof readiness.blockerSummary === 'object'
+    ? readiness.blockerSummary
+    : null;
+  return {
+    ready: readiness.ready === true,
+    blockedReasons,
+    blockerSummary: blockerSummary && typeof blockerSummary.message === 'string'
+      ? blockerSummary.message
+      : ''
+  };
+}
+
+function summarizeReportItem(report, section, index) {
+  if (!report || !section || !Number.isInteger(Number(index))) return null;
+  const groups = report.reviewItems && report.reviewItems.items && typeof report.reviewItems.items === 'object'
+    ? report.reviewItems.items
+    : {};
+  const row = Array.isArray(groups[section])
+    ? groups[section].find((item) => Number(item && item.index) === Number(index))
+    : null;
+  if (!row || typeof row !== 'object') return null;
+  return {
+    section,
+    index: Number(index),
+    itemId: row.itemId || row.term || row.title || row.standardId || '',
+    reviewStatus: row.reviewStatus || '',
+    teacherReviewed: row.teacherReviewed === true,
+    teacherVerified: row.teacherVerified === true,
+    manuallyEdited: row.manuallyEdited === true,
+    confidenceOverride: row.confidenceOverride || '',
+    sourceFile: row.sourceFile || '',
+    sourceLocation: row.sourceLocation || '',
+    sourceTextSnippetLength: String(row.sourceTextSnippet || '').trim().length
+  };
+}
+
+function readDraftItemSnapshot(packId, section, index, options = {}) {
+  const draftPackPath = resolveDraftPackJsonPath(packId, options);
+  const readResult = readJsonFile(draftPackPath, `draft pack ${packId}`);
+  if (!readResult.success || !readResult.value) {
+    return {
+      success: false,
+      draftPackPath,
+      errors: readResult.errors || ['Draft pack could not be read.']
+    };
+  }
+
+  const sectionItems = Array.isArray(readResult.value[section]) ? readResult.value[section] : [];
+  const row = sectionItems[Number(index)];
+  if (!row || typeof row !== 'object') {
+    return {
+      success: false,
+      draftPackPath,
+      errors: [`No item found at ${section}[${index}].`]
+    };
+  }
+
+  return {
+    success: true,
+    draftPackPath,
+    item: summarizeDraftFileItem(section, Number(index), row)
+  };
+}
+
+function summarizeDraftFileItem(section, index, item = {}) {
+  return {
+    section,
+    index,
+    itemId: item.itemId || item.term || item.title || item.standardId || '',
+    reviewStatus: item.reviewStatus || '',
+    teacherReviewed: item.teacherReviewed === true,
+    teacherVerified: item.teacherVerified === true,
+    manuallyEdited: item.manuallyEdited === true,
+    teacherApproved: item.teacherApproved === true,
+    confidence: item.confidence || '',
+    confidenceOverride: item.confidenceOverride || '',
+    term: item.term || '',
+    title: item.title || '',
+    studentDefinition: item.studentDefinition || '',
+    studentExplanation: item.studentExplanation || '',
+    equation: item.equation || '',
+    question: item.question || '',
+    expectedAnswer: item.expectedAnswer || '',
+    standardId: item.standardId || '',
+    sourceFile: item.sourceFile || '',
+    sourceLocation: item.sourceLocation || '',
+    sourceTextSnippetLength: String(item.sourceTextSnippet || '').trim().length,
+    missingRequiredFields: summarizeMissingRequiredFields(item)
+  };
+}
+
+function summarizeMissingRequiredFields(item = {}) {
+  const missing = [];
+  if (!nonEmptyString(item.sourceFile)) missing.push('sourceFile');
+  if (!nonEmptyString(item.sourceLocation)) missing.push('sourceLocation');
+  if (!nonEmptyString(item.sourceTextSnippet)) missing.push('sourceTextSnippet');
+  const hasIdentifier = nonEmptyString(item.term)
+    || nonEmptyString(item.title)
+    || nonEmptyString(item.question)
+    || nonEmptyString(item.equation)
+    || nonEmptyString(item.standardId);
+  if (!hasIdentifier) missing.push('identifier');
+  return missing;
+}
+
+function resolveDraftPackJsonPath(packId, options = {}) {
+  const draftRoot = path.resolve(options.draftPacksDir || DEFAULT_DRAFT_PACKS_DIR);
+  return path.resolve(draftRoot, packId, 'knowledge_pack.json');
+}
+
+function safeFileStats(filePath) {
+  try {
+    const stats = fs.statSync(filePath);
+    return {
+      exists: true,
+      mtimeMs: Number(stats.mtimeMs || 0)
+    };
+  } catch (_error) {
+    return {
+      exists: false,
+      mtimeMs: 0
+    };
+  }
+}
+
+function buildPromotionDebugPayload(packId, options, report, promotion = {}) {
+  const draftPackPath = resolveDraftPackJsonPath(packId, options);
+  const draftFileStats = safeFileStats(draftPackPath);
+  const draftSnapshot = readDraftItemSnapshot(packId, 'vocabulary', 0, options);
+  const reportReady = report && report.promotionReadiness && report.promotionReadiness.ready === true;
+  const blockedReasons = report && report.promotionReadiness && Array.isArray(report.promotionReadiness.blockedReasons)
+    ? report.promotionReadiness.blockedReasons
+    : [];
+  return {
+    packId,
+    promotionSuccess: promotion.success === true,
+    draftPackPath,
+    draftFileMtimeMs: draftFileStats.mtimeMs,
+    draftSnapshotPreview: draftSnapshot.success ? draftSnapshot.item : null,
+    promotionReadinessReady: reportReady,
+    blockedReasons,
+    promotionOutputPath: promotion.outputPath || null
+  };
 }
 
 module.exports = {

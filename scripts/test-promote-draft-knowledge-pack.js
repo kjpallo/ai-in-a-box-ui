@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const { promoteDraftKnowledgePack } = require('../lib/knowledge/promoteDraftKnowledgePack');
+const { editDraftItemField } = require('../lib/knowledge/reviewDraftKnowledgePack');
 
 const projectRoot = path.join(__dirname, '..');
 const tempRoot = path.join(projectRoot, 'tmp', 'test-promote-draft-pack');
@@ -19,6 +20,8 @@ try {
   assertPromotesApprovedItemsOnlyWhenRejectedItemsRemain();
   assertExcludesRepairNeededItems();
   assertBlocksApprovedItemsWithoutSourceGrounding();
+  assertBlocksLowConfidenceItemsWithoutTeacherReview();
+  assertTeacherEditedLowConfidenceItemPromotesWithEditedWording();
   assertBlocksInvalidSolverStatus();
   assertBlocksInvalidStandardReferenceWithBank();
   assertStrictFinalValidationBlocksInvalidApprovedOutput();
@@ -206,6 +209,79 @@ function assertBlocksApprovedItemsWithoutSourceGrounding() {
   assert.equal(fs.existsSync(path.join(approvedPacksDir, 'unsupported-approved-draft-pack', 'knowledge_pack.json')), false);
 }
 
+function assertBlocksLowConfidenceItemsWithoutTeacherReview() {
+  writeDraftPack(makePack({
+    packId: 'low-confidence-unreviewed-draft-pack',
+    vocabulary: [
+      {
+        ...makeVocabularyItem('low-confidence-unreviewed-term'),
+        confidence: 'low'
+      }
+    ],
+    concepts: [],
+    referenceFormulas: [],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+
+  const result = promoteDraftKnowledgePack('low-confidence-unreviewed-draft-pack', {
+    draftPacksDir,
+    approvedPacksDir,
+    standardsBank
+  });
+
+  assert.equal(result.success, false);
+  assert.equal(result.validationPassed, false);
+  assert.ok(result.errors.some((error) => error.includes('low confidence')));
+  assert.equal(fs.existsSync(path.join(approvedPacksDir, 'low-confidence-unreviewed-draft-pack', 'knowledge_pack.json')), false);
+}
+
+function assertTeacherEditedLowConfidenceItemPromotesWithEditedWording() {
+  writeDraftPack(makePack({
+    packId: 'low-confidence-teacher-reviewed-draft-pack',
+    vocabulary: [
+      {
+        ...makeVocabularyItem('low-confidence-teacher-reviewed-term'),
+        confidence: 'low',
+        studentDefinition: 'Original low-confidence wording.'
+      }
+    ],
+    concepts: [],
+    referenceFormulas: [],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+
+  const edit = editDraftItemField(
+    'low-confidence-teacher-reviewed-draft-pack',
+    'vocabulary',
+    0,
+    'studentDefinition',
+    'Teacher-edited wording that should be promoted.',
+    { draftPacksDir }
+  );
+  assert.equal(edit.success, true, edit.errors.join('\n'));
+
+  const editedDraft = readDraftPack('low-confidence-teacher-reviewed-draft-pack');
+  assert.equal(editedDraft.vocabulary[0].studentDefinition, 'Teacher-edited wording that should be promoted.');
+  assert.equal(editedDraft.vocabulary[0].teacherVerified, true);
+  assert.equal(editedDraft.vocabulary[0].manuallyEdited, true);
+  assert.equal(editedDraft.vocabulary[0].confidenceOverride, 'teacher_verified');
+
+  const result = promoteDraftKnowledgePack('low-confidence-teacher-reviewed-draft-pack', {
+    draftPacksDir,
+    approvedPacksDir,
+    standardsBank
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  const promotedPack = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
+  assert.equal(promotedPack.vocabulary.length, 1);
+  assert.equal(promotedPack.vocabulary[0].studentDefinition, 'Teacher-edited wording that should be promoted.');
+}
+
 function assertBlocksInvalidSolverStatus() {
   writeDraftPack(makePack({
     packId: 'solver-status-draft-pack',
@@ -381,6 +457,10 @@ function writeDraftPack(pack) {
   fs.mkdirSync(packDir, { recursive: true });
   fs.writeFileSync(packPath, `${JSON.stringify(pack, null, 2)}\n`);
   return packPath;
+}
+
+function readDraftPack(packId) {
+  return JSON.parse(fs.readFileSync(path.join(draftPacksDir, packId, 'knowledge_pack.json'), 'utf8'));
 }
 
 function makePack(overrides = {}) {
