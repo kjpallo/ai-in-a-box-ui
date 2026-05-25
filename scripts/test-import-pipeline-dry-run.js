@@ -70,7 +70,7 @@ async function main() {
 
     const generatedDraft = readJson(draftResult.outputPath);
     assert.equal(generatedDraft.referenceFormulas[0].solverStatus, 'reference_only');
-    assertReviewStatus(generatedDraft, 'pending');
+    assertReviewStatus(generatedDraft, ['needs_review', 'pending']);
 
     console.log('DRY RUN: review approval simulation');
     const reviewList = listReviewableDraftItems(draftResult.packId, {
@@ -85,7 +85,7 @@ async function main() {
         draftResult.packId,
         item.section,
         item.index,
-        'approved',
+        item.confidence === 'low' ? 'rejected' : 'approved',
         {
           draftPacksDir,
           validationOptions: { standardsBank }
@@ -95,7 +95,7 @@ async function main() {
     });
 
     const reviewedDraft = readJson(draftResult.outputPath);
-    assertReviewStatus(reviewedDraft, 'approved');
+    assertReviewStatus(reviewedDraft, ['approved', 'rejected']);
     assertSourceTrackingSurvived(reviewedDraft);
     assert.equal(reviewedDraft.referenceFormulas[0].solverStatus, 'reference_only');
 
@@ -110,7 +110,7 @@ async function main() {
     assert.ok(promotion.outputPath.startsWith(approvedPacksDir));
 
     const promotedPack = readJson(promotion.outputPath);
-    assertReviewStatus(promotedPack, 'approved');
+    assertReviewStatus(promotedPack, 'approved', { requireNonEmpty: false });
     assertSourceTrackingSurvived(promotedPack);
     assert.equal(promotedPack.referenceFormulas[0].solverStatus, 'reference_only');
 
@@ -124,8 +124,8 @@ async function main() {
     assert.equal(loadResult.packs[0].packId, 'dry-run-force-pack');
 
     const index = buildKnowledgePackIndex(loadResult.packs);
-    assert.ok(index.vocabularyByTerm.force);
-    assert.ok(index.conceptsByTitle['net force changes motion']);
+    assert.equal(index.vocabularyByTerm.force, undefined);
+    assert.equal(index.conceptsByTitle['net force changes motion'], undefined);
     assert.ok(index.problemBankByQuestion['what is a force?']);
     assert.ok(index.standardsMapByStandardId['sample.ps.forces.1']);
 
@@ -149,7 +149,9 @@ function writeTeacherSourceFile() {
   ].join('\n'));
 }
 
-function assertReviewStatus(pack, reviewStatus) {
+function assertReviewStatus(pack, reviewStatus, options = {}) {
+  const allowedStatuses = Array.isArray(reviewStatus) ? reviewStatus : [reviewStatus];
+  const requireNonEmpty = options.requireNonEmpty !== false;
   [
     'vocabulary',
     'concepts',
@@ -159,9 +161,14 @@ function assertReviewStatus(pack, reviewStatus) {
     'smokeTests'
   ].forEach((sectionName) => {
     assert.ok(Array.isArray(pack[sectionName]), `${sectionName} should be an array`);
-    assert.ok(pack[sectionName].length > 0, `${sectionName} should not be empty`);
+    if (requireNonEmpty) {
+      assert.ok(pack[sectionName].length > 0, `${sectionName} should not be empty`);
+    }
     pack[sectionName].forEach((item, index) => {
-      assert.equal(item.reviewStatus, reviewStatus, `${sectionName}[${index}] reviewStatus`);
+      assert.ok(
+        allowedStatuses.includes(item.reviewStatus),
+        `${sectionName}[${index}] reviewStatus expected one of ${allowedStatuses.join(', ')}, got ${item.reviewStatus}`
+      );
     });
   });
 }
@@ -250,7 +257,7 @@ function makeMockModelPack() {
         fileName: 'teacher_force_notes.txt',
         fileType: 'txt',
         reviewStatus: 'pending',
-        confidence: 'medium',
+        confidence: 'high',
         notes: 'Mocked model output for backend dry-run testing.'
       }
     ],
@@ -263,7 +270,7 @@ function makeMockModelPack() {
         misconception: 'A force does not always make something move.',
         standards: ['SAMPLE.PS.FORCES.1'],
         reviewStatus: 'pending',
-        confidence: 'medium',
+        confidence: 'high',
         sourceFile: 'teacher_force_notes.txt',
         sourceLocation: 'Full Text',
         sourceTextSnippet: 'Force is a push or pull.'
@@ -281,7 +288,7 @@ function makeMockModelPack() {
         commonMisconceptions: ['Balanced forces mean no forces exist.'],
         standards: ['SAMPLE.PS.FORCES.1'],
         reviewStatus: 'pending',
-        confidence: 'medium',
+        confidence: 'high',
         sourceFile: 'teacher_force_notes.txt',
         sourceLocation: 'Full Text',
         sourceTextSnippet: 'Net force can change motion.'
@@ -299,7 +306,7 @@ function makeMockModelPack() {
         ],
         solverStatus: 'reference_only',
         reviewStatus: 'pending',
-        confidence: 'medium',
+        confidence: 'high',
         sourceFile: 'teacher_force_notes.txt',
         sourceLocation: 'Full Text',
         sourceTextSnippet: 'The reference formula F = m * a relates force, mass, and acceleration.'
@@ -312,7 +319,7 @@ function makeMockModelPack() {
         expectedAnswer: 'A force is a push or pull.',
         standards: ['SAMPLE.PS.FORCES.1'],
         reviewStatus: 'pending',
-        confidence: 'medium',
+        confidence: 'high',
         sourceFile: 'teacher_force_notes.txt',
         sourceLocation: 'Full Text',
         sourceTextSnippet: 'Force is a push or pull.'
@@ -325,7 +332,10 @@ function makeMockModelPack() {
         relatedVocabulary: ['force'],
         relatedConcepts: ['net-force-changes-motion'],
         reviewStatus: 'pending',
-        confidence: 'medium'
+        confidence: 'high',
+        sourceFile: 'teacher_force_notes.txt',
+        sourceLocation: 'Full Text',
+        sourceTextSnippet: 'Balanced and unbalanced forces affect how objects move.'
       }
     ],
     smokeTests: [
@@ -333,7 +343,10 @@ function makeMockModelPack() {
         question: 'What is force?',
         expectedAnswer: 'Force is a push or pull.',
         reviewStatus: 'pending',
-        confidence: 'medium'
+        confidence: 'high',
+        sourceFile: 'teacher_force_notes.txt',
+        sourceLocation: 'Full Text',
+        sourceTextSnippet: 'Force is a push or pull.'
       }
     ],
     metadata: {

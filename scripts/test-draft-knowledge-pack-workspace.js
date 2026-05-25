@@ -10,12 +10,21 @@ const projectRoot = path.join(__dirname, '..');
 const exampleDraftPacksDir = path.join(projectRoot, 'knowledge', 'draft-packs');
 
 const loadedExample = loadDraftKnowledgePacks({
-  draftPacksDir: exampleDraftPacksDir
+  draftPacksDir: exampleDraftPacksDir,
+  includeExamples: true
 });
 assert.equal(loadedExample.errors.length, 0, loadedExample.errors.map((error) => error.errors.join('\n')).join('\n'));
 assert.ok(
   loadedExample.packs.some((record) => record.packId === 'draft-sample-physical-science'),
   'example draft pack should load'
+);
+const defaultLoadedExample = loadDraftKnowledgePacks({
+  draftPacksDir: exampleDraftPacksDir
+});
+assert.equal(
+  defaultLoadedExample.packs.some((record) => record.packId === 'draft-sample-physical-science'),
+  false,
+  'example draft pack should stay ignored by default'
 );
 
 const exampleRecord = loadedExample.packs.find((record) => record.packId === 'draft-sample-physical-science');

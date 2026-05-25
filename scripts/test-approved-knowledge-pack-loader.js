@@ -10,12 +10,21 @@ const projectRoot = path.join(__dirname, '..');
 const exampleApprovedPacksDir = path.join(projectRoot, 'knowledge', 'approved-packs');
 
 const loadedExample = loadApprovedKnowledgePacks({
-  approvedPacksDir: exampleApprovedPacksDir
+  approvedPacksDir: exampleApprovedPacksDir,
+  includeExamples: true
 });
 assert.equal(loadedExample.errors.length, 0, loadedExample.errors.map((error) => error.errors.join('\n')).join('\n'));
 assert.ok(
   loadedExample.packs.some((record) => record.packId === 'sample-physical-science'),
   'example approved pack should load'
+);
+const defaultLoadedExample = loadApprovedKnowledgePacks({
+  approvedPacksDir: exampleApprovedPacksDir
+});
+assert.equal(
+  defaultLoadedExample.packs.some((record) => record.packId === 'sample-physical-science'),
+  false,
+  'example approved pack should stay ignored by default'
 );
 
 const exampleRecord = loadedExample.packs.find((record) => record.packId === 'sample-physical-science');
