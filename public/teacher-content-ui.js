@@ -98,6 +98,8 @@
   const state = {
     initialized: false,
     loadedOnce: false,
+    loadPromise: null,
+    managerObserver: null,
     loading: false,
     activeTab: 'upload',
     selectedDraftPackId: '',
@@ -239,7 +241,6 @@
 
         <nav id="teacherContentTabs" class="teacher-content-tabs" aria-label="Teacher Content cards"></nav>
         <div id="teacherContentDeck" class="teacher-content-deck"></div>
-        <section id="teacherContentKnowledgeManager" class="teacher-content-knowledge-manager-shell" data-main-knowledge-pack-manager></section>
 
         <div class="teacher-content-footer">
           <button type="button" id="teacherContentBack" class="small-button secondary-small">Back</button>
@@ -259,7 +260,9 @@
     state.initialized = true;
     buildOverlay();
     bindEvents();
+    watchForManagerShell();
     render();
+    loadTeacherContent();
   }
 
   function bindEvents() {
@@ -481,6 +484,13 @@
         return;
       }
 
+      const draftViewEdit = event.target.closest('[data-draft-pack-view-edit-action]');
+      if (draftViewEdit) {
+        event.preventDefault();
+        openDraftPackForReview(draftViewEdit.getAttribute('data-draft-pack-id') || '');
+        return;
+      }
+
       const approvedEmptyNav = event.target.closest('[data-approved-empty-tab]');
       if (approvedEmptyNav) {
         event.preventDefault();
@@ -693,6 +703,18 @@
     return Boolean(overlay && !overlay.hidden);
   }
 
+  function watchForManagerShell() {
+    if (state.managerObserver || byId('teacherContentKnowledgeManager') || typeof MutationObserver !== 'function') return;
+    const observer = new MutationObserver(() => {
+      if (!byId('teacherContentKnowledgeManager')) return;
+      observer.disconnect();
+      state.managerObserver = null;
+      render();
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    state.managerObserver = observer;
+  }
+
   function applySelectedUploadFiles(files = []) {
     state.selectedUploadFiles = files;
     state.selectedUploadFile = files[0] || null;
@@ -739,6 +761,12 @@
   }
 
   async function loadTeacherContent() {
+    if (state.loadPromise) return state.loadPromise;
+    if (state.loadedOnce) {
+      render();
+      return null;
+    }
+    state.loadPromise = (async () => {
     state.loading = true;
     state.errors = [];
     setStatus('Loading teacher content...');
@@ -767,6 +795,13 @@
     state.loading = false;
     state.loadedOnce = true;
     render();
+    })();
+    try {
+      await state.loadPromise;
+    } finally {
+      state.loadPromise = null;
+    }
+    return null;
   }
 
   function applySettledResult(result, kind) {
@@ -934,20 +969,21 @@
     manager.innerHTML = `
       <div class="teacher-content-card-head">
         <div>
-          <h4>Manage saved knowledge packs</h4>
-          <p>Draft and approved packs are managed here outside the import workflow.</p>
+          <h4>Knowledge Packs</h4>
+          <p>Upload class notes, slides, readings, and review them before student use.</p>
         </div>
-        <span class="teacher-content-pill ${approvedCount > 0 ? 'ready' : 'muted'}">${approvedCount > 0 ? 'Saved packs' : 'No approved packs'}</span>
+        <span class="teacher-content-pill ${approvedCount > 0 ? 'ready' : 'muted'}">${approvedCount > 0 ? 'Saved packs available' : 'No approved packs'}</span>
       </div>
-      <section class="teacher-content-approved-status" data-knowledge-pack-manager-summary>
-        <span data-manager-draft-count>${formatNumber(draftCount)} draft pack${Number(draftCount) === 1 ? '' : 's'}</span>
-        <span data-manager-approved-count>${formatNumber(approvedCount)} approved pack${Number(approvedCount) === 1 ? '' : 's'}</span>
+      <section class="teacher-content-manager-counts" data-knowledge-pack-manager-summary>
+        <span class="teacher-content-pill muted" data-manager-draft-count>${formatNumber(draftCount)} draft pack${Number(draftCount) === 1 ? '' : 's'}</span>
+        <span class="teacher-content-pill ${approvedCount > 0 ? 'ready' : 'muted'}" data-manager-approved-count>${formatNumber(approvedCount)} approved pack${Number(approvedCount) === 1 ? '' : 's'}</span>
       </section>
       <label class="teacher-content-draft-picker" for="teacherContentDraftSelect">
         <span>Draft review pack</span>
         <select id="teacherContentDraftSelect"></select>
         <small data-draft-picker-help>Use this Draft dropdown to switch review packs.</small>
       </label>
+      ${renderDraftPacksCard()}
       ${renderApprovedPacksCard()}
     `;
   }
@@ -1620,7 +1656,7 @@
         </div>
         <p>Knowledge pack saved: <strong data-review-done-pack-name>${escapeHtml(donePackName || 'Current review draft')}</strong></p>
         <div class="teacher-content-done-actions">
-          <button type="button" class="small-button secondary-small" data-review-done-view-knowledge-packs>View in Knowledge Packs</button>
+          <button type="button" class="small-button secondary-small" data-review-done-view-knowledge-packs>Manage Knowledge Packs</button>
         </div>
       </section>
     `;
@@ -2009,7 +2045,7 @@
             <button type="button" class="small-button" data-promote-draft data-review-create-approved-pack ${state.promotionActionLoading ? 'disabled' : ''}>${escapeHtml(promoteLabel)}</button>
           ` : ''}
           <button type="button" class="small-button secondary-small" data-handoff-tab="upload">Back to Upload / Start</button>
-          <button type="button" class="small-button secondary-small" data-review-done-view-knowledge-packs>View in Knowledge Packs</button>
+          <button type="button" class="small-button secondary-small" data-review-done-view-knowledge-packs>Manage Knowledge Packs</button>
         </div>
       </section>
     `;
@@ -2398,6 +2434,58 @@
       </div>
       ${renderApprovedSearchableSummary()}
       ${history}
+    `;
+  }
+
+  function renderDraftPacksCard() {
+    if (!state.drafts.length) {
+      return `
+        <section class="teacher-content-approved-empty" data-no-draft-packs-empty-state>
+          <strong>No draft knowledge packs yet.</strong>
+          <p>Upload content in Create New Knowledge to generate draft packs for review.</p>
+        </section>
+      `;
+    }
+
+    return `
+      <section class="teacher-content-approved-status" data-draft-pack-status-language>
+        <span>Draft Packs</span>
+        <span>Drafts stay in teacher review until accepted and promoted.</span>
+      </section>
+      <div class="teacher-content-approved-list" data-draft-pack-list>
+        ${state.drafts.map(renderDraftPack).join('')}
+      </div>
+    `;
+  }
+
+  function renderDraftPack(draft) {
+    const packId = String(draft?.packId || '');
+    const title = draft?.title || packId || 'Draft pack';
+    const summary = summarizeDraftReviewCounts(draft || {});
+    const itemCount = getDraftItemCount(draft || {});
+    const reviewedCount = summary.approved + summary.rejected;
+    const reviewStatus = summary.pending > 0
+      ? `${formatNumber(summary.pending)} pending`
+      : reviewedCount > 0
+        ? 'Reviewed'
+        : 'Needs review';
+    return `
+      <section class="teacher-content-approved-pack teacher-content-draft-pack" data-draft-pack-card>
+        <div class="teacher-content-approved-head">
+          <div>
+            <strong data-draft-pack-title>${escapeHtml(title)}</strong>
+            <span data-draft-pack-pack-id>${escapeHtml(packId || 'No pack ID')}</span>
+          </div>
+          <div class="teacher-content-approved-actions">
+            <button type="button" class="small-button secondary-small" data-draft-pack-view-edit-action data-draft-pack-id="${escapeAttr(packId)}">View / Edit Pack</button>
+          </div>
+        </div>
+        <div class="teacher-content-approved-badges">
+          <span>Draft</span>
+          <span>${escapeHtml(reviewStatus)}</span>
+          <span>${escapeHtml(`${formatNumber(itemCount)} item${Number(itemCount) === 1 ? '' : 's'}`)}</span>
+        </div>
+      </section>
     `;
   }
 
@@ -5351,12 +5439,27 @@
   }
 
   function focusKnowledgeManager() {
+    closeOverlay();
+    window.Charlemagne?.blades?.open?.('modes', { sound: false });
     const manager = byId('teacherContentKnowledgeManager');
     if (!manager) return;
     manager.scrollIntoView({ behavior: 'smooth', block: 'start' });
     const preferredFocus = manager.querySelector('[data-approved-pack-view-edit-action]') || manager.querySelector('#teacherContentDraftSelect');
     preferredFocus?.focus();
     setStatus('Viewing saved knowledge packs.');
+  }
+
+  function openDraftPackForReview(packId) {
+    if (!packId) return;
+    state.selectedDraftPackId = packId;
+    clearDraftScopedReviewUiState();
+    state.activeTab = 'review';
+    openOverlay().then(async () => {
+      if (state.loadedOnce) {
+        await loadSelectedDraftReport();
+      }
+      render();
+    });
   }
 
   function firstError(errors, fallback) {

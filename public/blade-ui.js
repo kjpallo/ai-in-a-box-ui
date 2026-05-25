@@ -161,11 +161,18 @@
             </section>
 
             <section class="teacher-profile-card teacher-content-entry-card">
-              <span class="profile-status-pill">Teacher Content</span>
-              <h4>Build Knowledge Packs</h4>
-              <p>Upload class notes for review</p>
-              <button type="button" id="openTeacherContentOverlay" class="small-button">Build Knowledge Packs</button>
-              <span id="teacherContentEntryStatus" class="profile-control-status">Read-only Phase 7A shell.</span>
+              <div class="teacher-content-entry-head">
+                <span class="profile-status-pill">Teacher Content</span>
+                <h4>Knowledge Packs</h4>
+                <p>Upload class notes, slides, readings, and review them before student use.</p>
+              </div>
+              <div class="teacher-content-entry-actions">
+                <button type="button" id="openTeacherContentOverlay" class="small-button">Build Knowledge Pack</button>
+                <span id="teacherContentEntryStatus" class="profile-control-status">Loading saved knowledge packs...</span>
+              </div>
+              <section id="teacherContentKnowledgeManager" class="teacher-content-knowledge-manager-shell teacher-content-profile-manager-shell" data-main-knowledge-pack-manager>
+                <p class="profile-empty-state">Loading saved knowledge packs...</p>
+              </section>
             </section>
 
             <section class="teacher-profile-card student-controls-card">

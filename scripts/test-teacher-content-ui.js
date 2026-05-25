@@ -16,6 +16,7 @@ const pkg = JSON.parse(read(packagePath));
 
 assertPageFlow();
 assertUploadPage();
+assertSavedPackManagerNotInModal();
 assertSavedPackManagementOnMainBlade();
 assertBulkUploadQueuePage();
 assertBulkQueueNamingRules();
@@ -89,15 +90,31 @@ function assertUploadPage() {
   assert.match(ui, /function normalizeImportProfileForPayload\(value\)/, 'Import profile helper should keep room for future profiles.');
 }
 
+function assertSavedPackManagerNotInModal() {
+  const overlay = ui.match(/function buildOverlay\(\) \{([\s\S]*?)\n  function init/);
+  assert.ok(overlay, 'Expected buildOverlay function.');
+  assert.doesNotMatch(overlay[1], /teacherContentKnowledgeManager|data-main-knowledge-pack-manager/, 'Create New Knowledge modal should not render saved-pack manager shell.');
+  assert.doesNotMatch(overlay[1], /Manage saved knowledge packs|Knowledge Packs/, 'Create New Knowledge modal should stay focused on import workflow states.');
+}
+
 function assertSavedPackManagementOnMainBlade() {
   const manager = ui.match(/function renderKnowledgeManager\(\) \{([\s\S]*?)\n  function renderDeckPreviewCard/);
   assert.ok(manager, 'Expected renderKnowledgeManager function.');
-  assert.match(manager[1], /Manage saved knowledge packs/, 'Main blade should include saved-pack management heading.');
+  assert.match(manager[1], /<h4>Knowledge Packs<\/h4>/, 'Main blade should include a Knowledge Packs heading.');
+  assert.match(manager[1], /Upload class notes, slides, readings, and review them before student use\./, 'Main blade should include teacher-friendly knowledge-pack description.');
   assert.match(manager[1], /data-main-knowledge-pack-manager|teacherContentKnowledgeManager/, 'Main blade should include a dedicated saved-pack manager container.');
   assert.match(manager[1], /data-manager-draft-count/, 'Main blade should show draft-pack count.');
   assert.match(manager[1], /data-manager-approved-count/, 'Main blade should show approved-pack count.');
   assert.match(manager[1], /teacherContentDraftSelect/, 'Main blade should include draft dropdown for selecting review pack.');
+  assert.match(manager[1], /renderDraftPacksCard\(\)/, 'Main blade should render draft packs by name.');
   assert.match(manager[1], /renderApprovedPacksCard\(\)/, 'Main blade should render approved-pack management controls.');
+  assert.match(ui, /data-draft-pack-list/, 'Main blade should include draft pack list container.');
+  assert.match(ui, /data-draft-pack-card/, 'Main blade should render draft pack cards.');
+  assert.match(ui, /data-draft-pack-title/, 'Draft pack cards should render actual pack names.');
+  assert.match(ui, /data-draft-pack-view-edit-action/, 'Draft pack cards should include View\\/Edit control.');
+  assert.match(ui, /data-approved-pack-title/, 'Approved pack cards should render actual pack names.');
+  assert.match(ui, /data-approved-pack-select-checkbox/, 'Approved pack cards should include deletion checkboxes.');
+  assert.match(ui, /data-approved-pack-activation-checkbox/, 'Approved pack cards should include enable\\/disable toggles.');
   assert.match(ui, /Enabled for student answers|Disabled for student answers/, 'Approved-pack toggles should clearly label student-answer enable state.');
   assert.match(ui, /View \/ Edit Pack/, 'Approved-pack management should still include View\\/Edit action.');
   assert.match(ui, /Delete Pack|Delete selected knowledge packs/, 'Approved-pack management should still include delete/archive actions.');
@@ -324,7 +341,7 @@ function assertDonePage() {
   assert.ok(doneCard, 'Expected renderReviewDoneCard function.');
   assert.match(doneCard[1], /Import review is complete for this draft session\./, 'Page 3 should contain completion message.');
   assert.match(doneCard[1], /data-review-done-pack-name/, 'Page 3 should show the saved pack name.');
-  assert.match(doneCard[1], /View in Knowledge Packs/, 'Page 3 should include a link/button to open saved-pack management.');
+  assert.match(doneCard[1], /Manage Knowledge Packs/, 'Page 3 should include a link/button to open saved-pack management.');
   assert.doesNotMatch(doneCard[1], /data-knowledge-pack-manager|renderApprovedPacksCard\(\)/, 'Done page should not render full saved-pack management cards.');
 
   assert.doesNotMatch(doneCard[1], /data-review-table-row|data-review-selection-checkbox|data-review-selection-item-key|Accept Selected|Accept All/, 'Page 3 should not contain review rows or selection controls.');
@@ -335,8 +352,10 @@ function assertDonePage() {
 }
 
 function assertTeacherContentEntryPointVisible() {
-  assert.match(bladeUi, /Build Knowledge Packs/, 'Teacher-content entry label should be visible and direct.');
-  assert.match(bladeUi, /Upload class notes for review/, 'Teacher-content entry should include clear subtext.');
+  assert.match(bladeUi, /Knowledge Packs/, 'Teacher-content entry label should be visible and direct.');
+  assert.match(bladeUi, /Build Knowledge Pack/, 'Teacher-content entry should include a clear create button.');
+  assert.match(bladeUi, /Upload class notes, slides, readings, and review them before student use\./, 'Teacher-content entry should include clear subtext.');
+  assert.match(bladeUi, /data-main-knowledge-pack-manager/, 'Teacher Profile blade should include the saved knowledge-pack manager shell.');
   assert.match(style, /\.teacher-content-entry-card \.small-button \{[\s\S]*border:/, 'Teacher-content entry CTA should be visible without hover.');
   assert.match(style, /\.teacher-content-required-glow/, 'Neon glow class should exist for import-profile validation.');
 }
