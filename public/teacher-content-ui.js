@@ -63,14 +63,14 @@
   ];
   const IMPORT_PROFILES = [
     { value: 'general', label: 'General' },
-    { value: 'physical_science', label: 'Physical Science' },
-    { value: 'biology', label: 'Biology' },
-    { value: 'chemistry', label: 'Chemistry' },
-    { value: 'earth_space_science', label: 'Earth and Space Science' },
+    { value: 'physical_science', label: 'Science' },
     { value: 'math', label: 'Math' },
     { value: 'english_reading', label: 'English / Reading' },
     { value: 'history_social_studies', label: 'History / Social Studies' },
-    { value: 'procedures_class_info', label: 'Procedures / Class Info' }
+    { value: 'art', label: 'Art' },
+    { value: 'computer_science', label: 'Computer Science' },
+    { value: 'robotics', label: 'Robotics' },
+    { value: 'procedures_class_info', label: 'Class Info / Procedures' }
   ];
 
   const EDITABLE_FIELDS = {
@@ -227,22 +227,19 @@
           <div>
             <span class="profile-status-pill">Teacher Content</span>
             <h3 id="teacherContentTitle">Create New Knowledge</h3>
-            <p>Review uploaded knowledge drafts, import reports, and approved pack summaries.</p>
+            <p>Upload and review draft content before publishing student-ready knowledge packs.</p>
           </div>
           <button type="button" id="teacherContentClose" class="teacher-content-close" aria-label="Close Teacher Content" data-teacher-content-close>×</button>
         </div>
 
         <div class="teacher-content-status-row">
           <span id="teacherContentLoadStatus">Ready to load teacher content.</span>
-          <label class="teacher-content-draft-picker" for="teacherContentDraftSelect">
-            <span>Draft</span>
-            <select id="teacherContentDraftSelect"></select>
-            <small data-draft-picker-help>Use this Draft dropdown to switch review packs.</small>
-          </label>
+          <span>Import workflow only: Upload / Start, Review Draft Content, Done.</span>
         </div>
 
         <nav id="teacherContentTabs" class="teacher-content-tabs" aria-label="Teacher Content cards"></nav>
         <div id="teacherContentDeck" class="teacher-content-deck"></div>
+        <section id="teacherContentKnowledgeManager" class="teacher-content-knowledge-manager-shell" data-main-knowledge-pack-manager></section>
 
         <div class="teacher-content-footer">
           <button type="button" id="teacherContentBack" class="small-button secondary-small">Back</button>
@@ -477,6 +474,13 @@
         return;
       }
 
+      const doneViewKnowledgePacks = event.target.closest('[data-review-done-view-knowledge-packs]');
+      if (doneViewKnowledgePacks) {
+        event.preventDefault();
+        focusKnowledgeManager();
+        return;
+      }
+
       const approvedEmptyNav = event.target.closest('[data-approved-empty-tab]');
       if (approvedEmptyNav) {
         event.preventDefault();
@@ -515,14 +519,16 @@
 
     byId('teacherContentBack')?.addEventListener('click', () => shiftTab(-1));
     byId('teacherContentNext')?.addEventListener('click', () => shiftTab(1));
-    byId('teacherContentDraftSelect')?.addEventListener('change', async (event) => {
-      state.selectedDraftPackId = event.target.value || '';
-      clearDraftScopedReviewUiState();
-      await loadSelectedDraftReport();
-      render();
-    });
-
     document.addEventListener('change', (event) => {
+      if (event.target?.id === 'teacherContentDraftSelect') {
+        state.selectedDraftPackId = event.target.value || '';
+        clearDraftScopedReviewUiState();
+        loadSelectedDraftReport().then(() => {
+          render();
+        });
+        return;
+      }
+
       if (event.target?.id === 'teacherContentStandardsBankSelect') {
         selectStandardsBank(event.target.value || '');
         return;
@@ -854,8 +860,9 @@
 
   function render() {
     renderTabs();
-    renderDraftSelect();
     renderDeck();
+    renderKnowledgeManager();
+    renderDraftSelect();
     renderFooter();
     renderStatus();
   }
@@ -917,6 +924,32 @@
       </article>
     `;
     }).join('');
+  }
+
+  function renderKnowledgeManager() {
+    const manager = byId('teacherContentKnowledgeManager');
+    if (!manager) return;
+    const draftCount = state.dashboard?.draftPacks ?? state.drafts.length;
+    const approvedCount = state.dashboard?.approvedPacks ?? state.approved.length;
+    manager.innerHTML = `
+      <div class="teacher-content-card-head">
+        <div>
+          <h4>Manage saved knowledge packs</h4>
+          <p>Draft and approved packs are managed here outside the import workflow.</p>
+        </div>
+        <span class="teacher-content-pill ${approvedCount > 0 ? 'ready' : 'muted'}">${approvedCount > 0 ? 'Saved packs' : 'No approved packs'}</span>
+      </div>
+      <section class="teacher-content-approved-status" data-knowledge-pack-manager-summary>
+        <span data-manager-draft-count>${formatNumber(draftCount)} draft pack${Number(draftCount) === 1 ? '' : 's'}</span>
+        <span data-manager-approved-count>${formatNumber(approvedCount)} approved pack${Number(approvedCount) === 1 ? '' : 's'}</span>
+      </section>
+      <label class="teacher-content-draft-picker" for="teacherContentDraftSelect">
+        <span>Draft review pack</span>
+        <select id="teacherContentDraftSelect"></select>
+        <small data-draft-picker-help>Use this Draft dropdown to switch review packs.</small>
+      </label>
+      ${renderApprovedPacksCard()}
+    `;
   }
 
   function renderDeckPreviewCard(tab, index) {
@@ -1574,20 +1607,21 @@
   }
 
   function renderReviewDoneCard() {
+    const draft = state.report?.draftPack || getSelectedDraftSummary();
+    const donePackName = draft?.title || draft?.packId || state.selectedDraftPackId || '';
     return `
       <section class="teacher-content-review-done" data-review-done-page>
-        <p>Congratulations, your knowledge packet is ready.</p>
-        <p>Click X to exit.</p>
-      </section>
-      <section class="teacher-content-knowledge-manager" data-knowledge-pack-manager>
         <div class="teacher-content-card-head">
           <div>
-            <h4>Knowledge Pack Manager</h4>
-            <p>Turn approved packs on/off and archive them when needed.</p>
+            <h4>Done</h4>
+            <p>Import review is complete for this draft session.</p>
           </div>
-          <span class="teacher-content-pill ready">Manager</span>
+          <span class="teacher-content-pill ready">Complete</span>
         </div>
-        ${renderApprovedPacksCard()}
+        <p>Knowledge pack saved: <strong data-review-done-pack-name>${escapeHtml(donePackName || 'Current review draft')}</strong></p>
+        <div class="teacher-content-done-actions">
+          <button type="button" class="small-button secondary-small" data-review-done-view-knowledge-packs>View in Knowledge Packs</button>
+        </div>
       </section>
     `;
   }
@@ -1975,7 +2009,7 @@
             <button type="button" class="small-button" data-promote-draft data-review-create-approved-pack ${state.promotionActionLoading ? 'disabled' : ''}>${escapeHtml(promoteLabel)}</button>
           ` : ''}
           <button type="button" class="small-button secondary-small" data-handoff-tab="upload">Back to Upload / Start</button>
-          <button type="button" class="small-button secondary-small" data-review-empty-tab="approvedPacks">View Approved Packs</button>
+          <button type="button" class="small-button secondary-small" data-review-done-view-knowledge-packs>View in Knowledge Packs</button>
         </div>
       </section>
     `;
@@ -2330,13 +2364,6 @@
     const selectedCount = state.selectedApprovedPackIds.length;
     if (!state.approved.length) {
       return `
-        <div class="teacher-content-card-head">
-          <div>
-            <h4>Knowledge Packs</h4>
-            <p>Dedicated management blade for approved packs and uploaded source history.</p>
-          </div>
-          <span class="teacher-content-pill muted">Empty</span>
-        </div>
         <section class="teacher-content-approved-empty" data-no-approved-packs-empty-state data-knowledge-packs-blade>
           <strong>No approved knowledge packs yet.</strong>
           <p>Review imported draft content before creating approved packs.</p>
@@ -2347,13 +2374,6 @@
     }
 
     return `
-      <div class="teacher-content-card-head">
-        <div>
-          <h4>Knowledge Packs</h4>
-          <p>Dedicated management blade for approved packs and uploaded source history.</p>
-        </div>
-        <span class="teacher-content-pill ready">Approved</span>
-      </div>
       <section class="teacher-content-approved-status" data-approved-pack-status-language>
         <span>Approved</span>
         <span>Saved for later. Not connected to student answers yet.</span>
@@ -2393,7 +2413,9 @@
     const deleteSaving = state.approvedDeleteSaving[packId] === true;
     const deleteMessage = state.approvedDeleteMessages[packId] || '';
     const selectedForDeletion = state.selectedApprovedPackIds.includes(packId);
-    const activationLabel = activationSaving ? 'Saving...' : (activationEnabled ? 'Enabled' : 'Disabled');
+    const activationLabel = activationSaving
+      ? 'Saving...'
+      : (activationEnabled ? 'Enabled for student answers' : 'Disabled for student answers');
     const importScope = pack.importScope || {};
     const scopeLabel = formatImportScopeLabel(importScope);
     const sourceNames = Array.isArray(pack.sourceFileNames) ? pack.sourceFileNames : [];
@@ -2432,7 +2454,7 @@
                 data-approved-pack-activation-toggle
                 data-approved-pack-activation-checkbox
               >
-              <span>Enable for future student router use</span>
+              <span>${escapeHtml(activationEnabled ? 'Enabled for student answers' : 'Disabled for student answers')}</span>
             </label>
             <small data-approved-pack-activation-status>${escapeHtml(activationLabel)}</small>
           </div>
@@ -5326,6 +5348,15 @@
 
   function countItems(value) {
     return Array.isArray(value) ? value.length : 0;
+  }
+
+  function focusKnowledgeManager() {
+    const manager = byId('teacherContentKnowledgeManager');
+    if (!manager) return;
+    manager.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const preferredFocus = manager.querySelector('[data-approved-pack-view-edit-action]') || manager.querySelector('#teacherContentDraftSelect');
+    preferredFocus?.focus();
+    setStatus('Viewing saved knowledge packs.');
   }
 
   function firstError(errors, fallback) {

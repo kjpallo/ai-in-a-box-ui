@@ -16,6 +16,7 @@ const pkg = JSON.parse(read(packagePath));
 
 assertPageFlow();
 assertUploadPage();
+assertSavedPackManagementOnMainBlade();
 assertBulkUploadQueuePage();
 assertBulkQueueNamingRules();
 assertReviewListTableLayout();
@@ -50,24 +51,33 @@ function assertPageFlow() {
 
 function assertUploadPage() {
   const uploadCard = ui.match(/function renderUploadSourceCard\(\) \{([\s\S]*?)\n  function renderUploadStartPlanShell/);
+  const importProfilesBlock = ui.match(/const IMPORT_PROFILES = \[([\s\S]*?)\n  \];/);
   assert.ok(uploadCard, 'Expected renderUploadSourceCard function.');
+  assert.ok(importProfilesBlock, 'Expected import profile list.');
   assert.match(uploadCard[1], /teacherContentUploadFile/, 'Upload page should include upload input.');
   assert.match(uploadCard[1], /teacherContentKnowledgeName/, 'Upload page should include knowledge packet name field.');
   assert.match(uploadCard[1], /teacherContentImportProfile/, 'Upload page should include import profile selector.');
   assert.match(uploadCard[1], /Choose import profile\.\.\./, 'Upload page should require selecting an import profile.');
-  assert.match(ui, /Physical Science/, 'Upload page should include Physical Science profile option.');
   [
     'General',
-    'Physical Science',
-    'Biology',
-    'Chemistry',
-    'Earth and Space Science',
+    'Science',
     'Math',
     'English / Reading',
     'History / Social Studies',
-    'Procedures / Class Info'
+    'Art',
+    'Computer Science',
+    'Robotics',
+    'Class Info / Procedures'
   ].forEach((label) => {
-    assert.match(ui, new RegExp(label.replaceAll('/', '\\/')), `Upload page should include ${label} profile option.`);
+    assert.match(importProfilesBlock[1], new RegExp(label.replaceAll('/', '\\/')), `Upload page should include ${label} profile option.`);
+  });
+  [
+    'Physical Science',
+    'Biology',
+    'Chemistry',
+    'Earth and Space Science'
+  ].forEach((legacyScienceLabel) => {
+    assert.doesNotMatch(importProfilesBlock[1], new RegExp(legacyScienceLabel.replaceAll('/', '\\/')), `${legacyScienceLabel} should not be visible in the main import profile dropdown.`);
   });
   assert.match(uploadCard[1], /Analyze Upload/, 'Upload page should include Analyze Upload action.');
   assert.match(uploadCard[1], /const canAttemptCreateReview = state\.selectedUploadFiles\.length > 0 && !uploadBusy;/, 'Analyze button should stay clickable after file selection so missing-profile validation can glow.');
@@ -77,6 +87,20 @@ function assertUploadPage() {
   assert.match(ui, /data-upload-create-progress/, 'Upload page should include simple progress UI.');
   assert.match(ui, /importProfile:\s*normalizeImportProfileForPayload\(state\.uploadImportProfile\)/, 'Prepare-review payload should include explicit importProfile.');
   assert.match(ui, /function normalizeImportProfileForPayload\(value\)/, 'Import profile helper should keep room for future profiles.');
+}
+
+function assertSavedPackManagementOnMainBlade() {
+  const manager = ui.match(/function renderKnowledgeManager\(\) \{([\s\S]*?)\n  function renderDeckPreviewCard/);
+  assert.ok(manager, 'Expected renderKnowledgeManager function.');
+  assert.match(manager[1], /Manage saved knowledge packs/, 'Main blade should include saved-pack management heading.');
+  assert.match(manager[1], /data-main-knowledge-pack-manager|teacherContentKnowledgeManager/, 'Main blade should include a dedicated saved-pack manager container.');
+  assert.match(manager[1], /data-manager-draft-count/, 'Main blade should show draft-pack count.');
+  assert.match(manager[1], /data-manager-approved-count/, 'Main blade should show approved-pack count.');
+  assert.match(manager[1], /teacherContentDraftSelect/, 'Main blade should include draft dropdown for selecting review pack.');
+  assert.match(manager[1], /renderApprovedPacksCard\(\)/, 'Main blade should render approved-pack management controls.');
+  assert.match(ui, /Enabled for student answers|Disabled for student answers/, 'Approved-pack toggles should clearly label student-answer enable state.');
+  assert.match(ui, /View \/ Edit Pack/, 'Approved-pack management should still include View\\/Edit action.');
+  assert.match(ui, /Delete Pack|Delete selected knowledge packs/, 'Approved-pack management should still include delete/archive actions.');
 }
 
 function assertBulkUploadQueuePage() {
@@ -298,10 +322,10 @@ function assertPausedStandardsWarningsAreDeemphasized() {
 function assertDonePage() {
   const doneCard = ui.match(/function renderReviewDoneCard\(\) \{([\s\S]*?)\n  function renderReviewSummaryLine/);
   assert.ok(doneCard, 'Expected renderReviewDoneCard function.');
-  assert.match(doneCard[1], /Congratulations, your knowledge packet is ready\./, 'Page 3 should contain completion message.');
-  assert.match(doneCard[1], /Click X to exit\./, 'Page 3 should contain close instruction.');
-  assert.match(doneCard[1], /data-knowledge-pack-manager/, 'Done page should include a Knowledge Pack Manager blade.');
-  assert.match(doneCard[1], /renderApprovedPacksCard\(\)/, 'Done page should surface approved pack activation/deletion controls.');
+  assert.match(doneCard[1], /Import review is complete for this draft session\./, 'Page 3 should contain completion message.');
+  assert.match(doneCard[1], /data-review-done-pack-name/, 'Page 3 should show the saved pack name.');
+  assert.match(doneCard[1], /View in Knowledge Packs/, 'Page 3 should include a link/button to open saved-pack management.');
+  assert.doesNotMatch(doneCard[1], /data-knowledge-pack-manager|renderApprovedPacksCard\(\)/, 'Done page should not render full saved-pack management cards.');
 
   assert.doesNotMatch(doneCard[1], /data-review-table-row|data-review-selection-checkbox|data-review-selection-item-key|Accept Selected|Accept All/, 'Page 3 should not contain review rows or selection controls.');
 

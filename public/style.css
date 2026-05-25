@@ -2117,7 +2117,7 @@ button:disabled {
   max-height: calc(100vh - 36px);
   overflow: hidden;
   display: grid;
-  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto auto;
   gap: 12px;
   padding: 16px;
   border: 1px solid rgba(102, 247, 209, 0.34);
@@ -2388,13 +2388,13 @@ button:disabled {
   position: relative;
   min-height: 0;
   overflow: hidden;
-  padding: 22px 48px 28px;
+  padding: 14px 20px 18px;
   scrollbar-width: thin;
   scrollbar-color: rgba(102, 247, 209, 0.55) rgba(3, 9, 10, 0.5);
 }
 
 .teacher-content-card {
-  min-height: min(570px, calc(100vh - 276px));
+  min-height: min(500px, calc(100vh - 360px));
   padding: 16px;
   border: 1px solid rgba(102, 247, 209, 0.2);
   border-radius: 20px;
@@ -2411,7 +2411,7 @@ button:disabled {
   align-content: start;
   position: relative;
   z-index: 12;
-  max-height: min(570px, calc(100vh - 276px));
+  max-height: min(500px, calc(100vh - 360px));
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: thin;
@@ -2420,7 +2420,7 @@ button:disabled {
 
 .teacher-content-card.preview {
   position: absolute;
-  inset: 22px 48px 28px;
+  inset: 14px 20px 18px;
   z-index: calc(9 - var(--deck-distance));
   min-height: 0;
   pointer-events: none;
@@ -2438,6 +2438,32 @@ button:disabled {
   align-items: center;
   max-width: 260px;
   color: #dffbf5;
+}
+
+.teacher-content-knowledge-manager-shell {
+  display: grid;
+  gap: 12px;
+  border: 1px solid rgba(102, 247, 209, 0.18);
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(2, 10, 12, 0.62);
+  max-height: min(33vh, 360px);
+  overflow: auto;
+}
+
+.teacher-content-knowledge-manager-shell .teacher-content-draft-picker {
+  align-items: center;
+  justify-content: flex-start;
+  border: 1px solid rgba(102, 247, 209, 0.14);
+  border-radius: 10px;
+  padding: 9px 10px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.teacher-content-done-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .teacher-content-pill {
@@ -5053,7 +5079,7 @@ button:disabled {
   .teacher-content-blade {
     width: calc(100vw - 20px);
     max-height: calc(100vh - 20px);
-    grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+    grid-template-rows: auto auto auto minmax(0, 1fr) auto auto;
     padding: 12px;
   }
 
@@ -5074,11 +5100,11 @@ button:disabled {
   }
 
   .teacher-content-card {
-    min-height: min(520px, calc(100vh - 300px));
+    min-height: min(480px, calc(100vh - 400px));
   }
 
   .teacher-content-card.active {
-    max-height: min(520px, calc(100vh - 300px));
+    max-height: min(480px, calc(100vh - 400px));
   }
 
   .teacher-content-card.preview {
@@ -5087,6 +5113,10 @@ button:disabled {
       translateX(calc(var(--deck-offset) * 18px))
       translateY(calc(var(--deck-distance) * 12px))
       scale(calc(1 - (var(--deck-distance) * 0.04)));
+  }
+
+  .teacher-content-knowledge-manager-shell {
+    max-height: min(36vh, 320px);
   }
 
   .teacher-content-tab {

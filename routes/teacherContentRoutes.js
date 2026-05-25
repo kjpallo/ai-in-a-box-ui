@@ -51,6 +51,9 @@ const IMPORT_PROFILE_VALUES = new Set([
   'math',
   'english_reading',
   'history_social_studies',
+  'art',
+  'computer_science',
+  'robotics',
   'procedures_class_info'
 ]);
 const DEFAULT_UPLOAD_LIMIT_BYTES = 15 * 1024 * 1024;
