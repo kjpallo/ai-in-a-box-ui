@@ -3445,6 +3445,47 @@ button:disabled {
   background: rgba(0, 0, 0, 0.16);
 }
 
+.teacher-content-review-card-list {
+  display: grid;
+  gap: 12px;
+}
+
+.teacher-content-review-card {
+  display: grid;
+  grid-template-columns: 36px minmax(110px, 0.42fr) minmax(220px, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.teacher-content-review-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.teacher-content-review-chip {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(102, 247, 209, 0.32);
+  border-radius: 999px;
+  padding: 3px 8px;
+  color: #ddfff7;
+  background: rgba(102, 247, 209, 0.08);
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.teacher-content-review-chip.status {
+  border-color: rgba(126, 233, 255, 0.32);
+  color: #e3f7ff;
+  background: rgba(126, 233, 255, 0.08);
+}
+
 .teacher-content-review-table-head,
 .teacher-content-review-table-row {
   display: grid;
@@ -3476,6 +3517,11 @@ button:disabled {
   border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
+.teacher-content-review-card.teacher-content-review-table-row {
+  grid-template-columns: 36px minmax(110px, 0.42fr) minmax(220px, 1fr) auto;
+  padding: 12px;
+}
+
 .teacher-content-review-table-row.selected {
   background: rgba(241, 159, 76, 0.08);
 }
@@ -3495,6 +3541,7 @@ button:disabled {
 .teacher-content-review-wording {
   display: grid;
   gap: 6px;
+  min-width: 0;
 }
 
 .teacher-content-review-source-details summary {
@@ -3514,6 +3561,8 @@ button:disabled {
 .teacher-content-review-row-actions {
   display: flex;
   justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .teacher-content-review-advanced-details {
@@ -3675,8 +3724,8 @@ button:disabled {
   border: 1px solid rgba(241, 159, 76, 0.32);
   border-radius: 12px;
   padding: 12px;
-  background: linear-gradient(180deg, rgba(20, 18, 14, 0.98), rgba(6, 13, 14, 0.98));
-  box-shadow: 0 -18px 42px rgba(0, 0, 0, 0.34), 0 0 22px rgba(241, 159, 76, 0.08);
+  background: rgba(20, 18, 14, 0.82);
+  box-shadow: none;
 }
 
 .teacher-content-review-action-bar > div:first-child {
@@ -3706,11 +3755,109 @@ button:disabled {
   gap: 12px;
   position: static;
   border: 1px solid rgba(102, 247, 209, 0.24);
-  border-radius: 16px;
+  border-radius: 12px;
   padding: 14px;
+  background: rgba(8, 29, 27, 0.68);
+  box-shadow: none;
+}
+
+.teacher-content-review-focused-fix {
+  display: grid;
+  gap: 14px;
+  position: static;
+  border: 1px solid rgba(102, 247, 209, 0.3);
+  border-radius: 16px;
+  padding: 16px;
   background:
-    linear-gradient(180deg, rgba(8, 29, 27, 0.98), rgba(3, 14, 15, 0.98));
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.46), 0 0 28px rgba(102, 247, 209, 0.1);
+    linear-gradient(145deg, rgba(9, 36, 33, 0.92), rgba(8, 18, 22, 0.94)),
+    radial-gradient(circle at top right, rgba(126, 233, 255, 0.12), transparent 34%);
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.28);
+}
+
+.teacher-content-review-focused-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.teacher-content-review-focused-head h4,
+.teacher-content-review-focused-head p {
+  margin: 0;
+}
+
+.teacher-content-review-focused-head p {
+  margin-top: 4px;
+  color: #d8eee9;
+}
+
+.teacher-content-review-focused-fix .teacher-content-edit-field,
+.teacher-content-review-focused-fix .teacher-content-edit-field textarea {
+  width: 100%;
+}
+
+.teacher-content-review-focused-fix [data-review-focused-blockers] ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.teacher-content-review-issues-to-fix {
+  border: 1px solid rgba(241, 159, 76, 0.3);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: rgba(241, 159, 76, 0.08);
+}
+
+.teacher-content-review-issues-to-fix h5 {
+  margin: 0 0 8px;
+}
+
+.teacher-content-review-issues-to-fix ul {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.teacher-content-review-issues-to-fix li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-start;
+  justify-content: space-between;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 8px;
+  overflow-wrap: anywhere;
+}
+
+.teacher-content-review-issues-to-fix li button {
+  margin-left: auto;
+  align-self: center;
+  flex-shrink: 0;
+}
+
+.teacher-content-review-issues-to-fix p {
+  margin: 2px 0 0;
+  line-height: 1.4;
+}
+
+.teacher-content-review-queue {
+  margin: 8px 0 10px;
+  padding: 8px 10px;
+  border: 1px solid rgba(102, 247, 209, 0.24);
+  border-radius: 10px;
+  background: rgba(102, 247, 209, 0.05);
+}
+
+.teacher-content-review-queue-list {
+  margin: 8px 0 0;
+  padding-left: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
 }
 
 .teacher-content-review-evidence-card {

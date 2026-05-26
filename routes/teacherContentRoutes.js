@@ -15,6 +15,7 @@ const {
   deleteApprovedKnowledgePack,
   deleteApprovedKnowledgePacks
 } = require('../lib/knowledge/deleteApprovedKnowledgePack');
+const { archiveAcceptedDraftKnowledgePack } = require('../lib/knowledge/archiveAcceptedDraftKnowledgePack');
 const { promoteDraftKnowledgePack } = require('../lib/knowledge/promoteDraftKnowledgePack');
 const {
   REVIEWABLE_SECTIONS,
@@ -426,7 +427,9 @@ function registerTeacherContentRoutes(app, options = {}) {
     try {
       const promotion = promoteDraftKnowledgePack(packId, {
         ...options,
-        force: req.body && req.body.force === true
+        force: req.body && req.body.force === true,
+        promotionMode: req.body && (req.body.promotionMode || req.body.mode),
+        selectedItems: req.body && (req.body.selectedItems || req.body.selectedRows)
       });
 
       if (!promotion.success) {
@@ -446,7 +449,15 @@ function registerTeacherContentRoutes(app, options = {}) {
 
       const approvedSummary = listApprovedPacksSummary(options);
       const approved = approvedSummary.approvedPacks.find((pack) => pack.packId === promotion.packId) || null;
-      const refreshedReport = getDraftPackReport(packId, options);
+      let archivedDraft = null;
+      const archiveWarnings = [];
+      try {
+        archivedDraft = archiveAcceptedDraftKnowledgePack(packId, options);
+      } catch (archiveError) {
+        archiveWarnings.push(`Approved pack was created, but the active draft copy could not be archived: ${archiveError instanceof Error ? archiveError.message : String(archiveError)}`);
+      }
+      const dashboard = getTeacherContentDashboard(options);
+      const drafts = listDraftPacksForReview(options);
 
       return res.json({
         success: true,
@@ -455,16 +466,57 @@ function registerTeacherContentRoutes(app, options = {}) {
           message: 'Draft promoted to approved knowledge pack.',
           outputPath: promotion.outputPath,
           approved,
-          dashboard: getTeacherContentDashboard(options),
-          report: refreshedReport,
+          archivedDraft,
+          dashboard,
+          drafts: drafts.draftPacks,
+          report: null,
           approvedSummary,
-          debug: buildPromotionDebugPayload(packId, options, refreshedReport, promotion)
+          debug: buildPromotionDebugPayload(packId, options, null, {
+            ...promotion,
+            archivedDraft
+          })
         },
-        warnings: promotion.warnings || [],
+        warnings: [...(promotion.warnings || []), ...archiveWarnings],
         errors: []
       });
     } catch (error) {
       return sendRouteError(res, error);
+    }
+  });
+
+  app.delete('/drafts/:packId/accepted-copy', (req, res) => {
+    const packId = String(req.params && req.params.packId || '').trim();
+    if (!isSafePackId(packId)) {
+      return res.status(400).json({
+        success: false,
+        errors: ['packId must contain only lowercase letters, numbers, underscores, and hyphens.']
+      });
+    }
+
+    try {
+      const archivedDraft = archiveAcceptedDraftKnowledgePack(packId, options);
+      const dashboard = getTeacherContentDashboard(options);
+      const drafts = listDraftPacksForReview(options);
+      const approvedSummary = listApprovedPacksSummary(options);
+      return res.json({
+        success: true,
+        data: {
+          ...archivedDraft,
+          message: archivedDraft.alreadyArchived
+            ? 'Accepted draft copy was already removed from active drafts. Approved pack was preserved.'
+            : 'Accepted draft copy archived from active drafts. Approved pack was preserved.',
+          dashboard,
+          drafts: drafts.draftPacks,
+          approvedSummary
+        },
+        warnings: [],
+        errors: []
+      });
+    } catch (error) {
+      return res.status(error.statusCode || 500).json({
+        success: false,
+        errors: [error instanceof Error ? error.message : String(error)]
+      });
     }
   });
 
@@ -1691,8 +1743,10 @@ function extractDraftItemRef(input) {
   const itemId = String(input.itemId || '').trim();
   const sourceFile = String(input.sourceFile || '').trim();
   const sourceLocation = String(input.sourceLocation || '').trim();
-  if (!itemId && !sourceFile && !sourceLocation) return null;
-  return { itemId, sourceFile, sourceLocation };
+  const title = String(input.title || '').trim();
+  const term = String(input.term || '').trim();
+  if (!itemId && !sourceFile && !sourceLocation && !title && !term) return null;
+  return { itemId, sourceFile, sourceLocation, title, term };
 }
 
 function resolveDraftItemMutationTarget({ packId, section, requestedIndex, itemRef, options = {} }) {
@@ -1781,15 +1835,23 @@ function draftItemMatchesRef(item, itemRef) {
   const hasItemId = nonEmptyString(itemRef && itemRef.itemId);
   const hasSourceFile = nonEmptyString(itemRef && itemRef.sourceFile);
   const hasSourceLocation = nonEmptyString(itemRef && itemRef.sourceLocation);
+  const hasTitle = nonEmptyString(itemRef && itemRef.title);
+  const hasTerm = nonEmptyString(itemRef && itemRef.term);
 
   const itemIdMatches = !hasItemId || normalizeComparableString(draftItemIdentity(item)) === normalizeComparableString(itemRef.itemId);
   const sourceFileMatches = !hasSourceFile || normalizeComparableString(item.sourceFile) === normalizeComparableString(itemRef.sourceFile);
   const sourceLocationMatches = !hasSourceLocation || normalizeComparableString(item.sourceLocation) === normalizeComparableString(itemRef.sourceLocation);
+  const titleMatches = !hasTitle || normalizeComparableString(item.title) === normalizeComparableString(itemRef.title);
+  const termMatches = !hasTerm || normalizeComparableString(item.term) === normalizeComparableString(itemRef.term);
   if (hasItemId && (hasSourceFile || hasSourceLocation)) {
     return itemIdMatches && sourceFileMatches && sourceLocationMatches;
   }
   if (hasItemId) return itemIdMatches;
-  return sourceFileMatches && sourceLocationMatches;
+  if (hasSourceFile || hasSourceLocation) {
+    return sourceFileMatches && sourceLocationMatches && titleMatches && termMatches;
+  }
+  if (hasTitle || hasTerm) return titleMatches && termMatches;
+  return false;
 }
 
 function draftItemIdentity(item) {

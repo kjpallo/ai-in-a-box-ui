@@ -140,6 +140,8 @@ async function main() {
     await assertPrepareReviewModelFailureDoesNotWriteDraft(handlers);
     await assertPromoteDraftEndpointSucceeds(handlers);
     await assertPromoteBlocksPendingItems(handlers);
+    await assertApprovedOnlyPromotionIgnoresUnselectedPendingItems(handlers);
+    await assertSelectedOnlyPromotionUsesOnlySelectedRows(handlers);
     await assertExistingDraftBlockersCanBeRejectedAndPromoted(handlers);
     await assertPromoteExcludesRejectedItems(handlers);
     await assertPromoteExcludesRepairNeededItems(handlers);
@@ -147,6 +149,7 @@ async function main() {
     await assertPromoteStrictValidationBlocksInvalidApprovedOutput(handlers);
     await assertPromoteDoesNotOverwriteWithoutForce(handlers);
     await assertPromoteOverwritesWithForce(handlers);
+    await assertRemoveAcceptedDraftCopyArchivesDraftOnly(handlers);
     await assertInvalidPromotePathTraversalRejected(handlers);
     await assertApproveDraftItemEndpoint(handlers);
     await assertApproveNeedsReviewLowConfidenceItemEndpoint(handlers);
@@ -2476,6 +2479,9 @@ async function assertApprovedBulkDeletePathTraversalRejectedBeforeMutation(handl
 }
 
 async function assertPromoteDraftEndpointSucceeds(handlers) {
+  const beforeDashboard = await request(handlers, 'GET', '/dashboard');
+  const beforeDraftCount = beforeDashboard.body.data.draftPacks;
+  const beforeApprovedCount = beforeDashboard.body.data.approvedPacks;
   writeKnowledgePack(draftPacksDir, makePack({
     packId: 'route-promote-ready-pack',
     title: 'Route Promote Ready Pack'
@@ -2493,9 +2499,15 @@ async function assertPromoteDraftEndpointSucceeds(handlers) {
   assert.equal(response.body.data.approved.activationEnabled, false, 'newly approved packs should stay disabled until explicitly enabled.');
   assert.equal(response.body.data.approved.activationStatus, 'disabled');
   assert.equal(response.body.data.approvedSummary.approvedPacks.find((pack) => pack.packId === 'route-promote-ready-pack').activationEnabled, false);
-  assert.ok(response.body.data.dashboard.approvedPacks >= 1, 'dashboard should report at least one approved pack after promotion.');
+  assert.equal(response.body.data.dashboard.draftPacks, beforeDraftCount, 'active draft count should drop back after source draft is archived.');
+  assert.equal(response.body.data.dashboard.approvedPacks, beforeApprovedCount + 1, 'approved count should increase after promotion.');
   assert.ok(response.body.data.outputPath.startsWith(approvedPacksDir));
   assert.equal(fs.existsSync(path.join(approvedPacksDir, 'route-promote-ready-pack', 'knowledge_pack.json')), true);
+  assert.equal(fs.existsSync(path.join(draftPacksDir, 'route-promote-ready-pack', 'knowledge_pack.json')), false, 'source draft should leave active draft-packs after promotion.');
+  assert.ok(response.body.data.archivedDraft.archivedPath.startsWith(path.join(draftPacksDir, '_accepted')), 'source draft should be archived under _accepted.');
+  assert.equal(fs.existsSync(path.join(response.body.data.archivedDraft.archivedPath, 'knowledge_pack.json')), true, 'archived draft copy should be preserved.');
+  assert.equal(Array.isArray(response.body.data.drafts), true, 'promotion should return refreshed active drafts.');
+  assert.equal(response.body.data.drafts.some((pack) => pack.packId === 'route-promote-ready-pack'), false, 'promoted draft should not reload into active review queue.');
 }
 
 async function assertPromoteBlocksPendingItems(handlers) {
@@ -2514,6 +2526,61 @@ async function assertPromoteBlocksPendingItems(handlers) {
   assert.equal(response.body.promotionReadiness.ready, false);
   assert.ok(response.body.promotionReadiness.blockedReasons.includes('pending items remain'));
   assert.equal(fs.existsSync(path.join(approvedPacksDir, 'route-promote-pending-pack', 'knowledge_pack.json')), false);
+}
+
+async function assertApprovedOnlyPromotionIgnoresUnselectedPendingItems(handlers) {
+  const packId = 'route-promote-approved-only-pending-pack';
+  writeKnowledgePack(draftPacksDir, makePack({
+    packId,
+    vocabulary: [
+      makeVocabularyItem('approved-route-term', 'approved'),
+      makeVocabularyItem('pending-route-term', 'pending')
+    ],
+    concepts: [],
+    referenceFormulas: [],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+
+  const response = await request(handlers, 'POST', '/drafts/:packId/promote', {
+    promotionMode: 'approvedOnly'
+  }, { packId });
+
+  assert.equal(response.statusCode, 200, JSON.stringify(response.body));
+  assert.equal(response.body.success, true);
+  const promoted = readKnowledgePack(approvedPacksDir, packId);
+  assert.deepEqual(promoted.vocabulary.map((item) => item.term), ['approved-route-term']);
+  assert.equal(JSON.stringify(promoted).includes('pending-route-term'), false);
+}
+
+async function assertSelectedOnlyPromotionUsesOnlySelectedRows(handlers) {
+  const packId = 'route-promote-selected-only-pack';
+  writeKnowledgePack(draftPacksDir, makePack({
+    packId,
+    vocabulary: [makeVocabularyItem('selected-route-term', 'approved')],
+    concepts: [makeConceptItem('unselected-route-concept', 'approved')],
+    referenceFormulas: [
+      {
+        ...makeReferenceFormula('pending-route-formula', 'pending')
+      }
+    ],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+
+  const response = await request(handlers, 'POST', '/drafts/:packId/promote', {
+    promotionMode: 'selectedOnly',
+    selectedItems: [{ section: 'vocabulary', index: 0 }]
+  }, { packId });
+
+  assert.equal(response.statusCode, 200, JSON.stringify(response.body));
+  assert.equal(response.body.success, true);
+  const promoted = readKnowledgePack(approvedPacksDir, packId);
+  assert.deepEqual(promoted.vocabulary.map((item) => item.term), ['selected-route-term']);
+  assert.deepEqual(promoted.concepts, []);
+  assert.deepEqual(promoted.referenceFormulas, []);
 }
 
 async function assertExistingDraftBlockersCanBeRejectedAndPromoted(handlers) {
@@ -2704,6 +2771,44 @@ async function assertPromoteOverwritesWithForce(handlers) {
   assert.equal(response.statusCode, 200);
   assert.equal(response.body.success, true);
   assert.equal(readKnowledgePack(approvedPacksDir, 'route-approved-pack').title, 'Draft Copy Of Existing Approved Pack');
+  assert.equal(fs.existsSync(path.join(draftPacksDir, 'route-approved-pack', 'knowledge_pack.json')), false, 'force-promoted draft copy should be archived from active drafts.');
+}
+
+async function assertRemoveAcceptedDraftCopyArchivesDraftOnly(handlers) {
+  const packId = 'route-remove-accepted-draft-copy';
+  writeKnowledgePack(draftPacksDir, makePack({
+    packId,
+    title: 'Route Remove Accepted Draft Copy',
+    vocabulary: [makeVocabularyItem('accepted-copy-term', 'approved')]
+  }));
+  writeKnowledgePack(approvedPacksDir, makePack({
+    packId,
+    title: 'Route Remove Accepted Approved Pack',
+    version: '1.0.0',
+    vocabulary: [makeVocabularyItem('accepted-copy-term', 'approved')]
+  }));
+
+  const draftsBefore = await request(handlers, 'GET', '/drafts');
+  assert.equal(draftsBefore.body.data.draftPacks.some((pack) => pack.packId === packId), false, 'drafts endpoint should hide active draft copies that already have an approved pack.');
+
+  const response = await request(handlers, 'DELETE', '/drafts/:packId/accepted-copy', {}, { packId });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.data.packId, packId);
+  assert.equal(response.body.data.approvedPackPreserved, true);
+  assert.equal(response.body.data.alreadyArchived, false);
+  assert.ok(response.body.data.archivedPath.startsWith(path.join(draftPacksDir, '_accepted')));
+  assert.equal(fs.existsSync(path.join(draftPacksDir, packId, 'knowledge_pack.json')), false, 'accepted draft copy should be removed from active draft-packs.');
+  assert.equal(fs.existsSync(path.join(response.body.data.archivedPath, 'knowledge_pack.json')), true, 'accepted draft copy should be archived for history.');
+  assert.equal(fs.existsSync(path.join(approvedPacksDir, packId, 'knowledge_pack.json')), true, 'removing accepted draft copy must not delete approved pack.');
+  assert.equal(response.body.data.drafts.some((pack) => pack.packId === packId), false, 'accepted draft copy should not reload into active review queue after removal.');
+  assert.equal(response.body.data.approvedSummary.approvedPacks.some((pack) => pack.packId === packId), true, 'approved pack should remain visible.');
+
+  const repeat = await request(handlers, 'DELETE', '/drafts/:packId/accepted-copy', {}, { packId });
+  assert.equal(repeat.statusCode, 200);
+  assert.equal(repeat.body.success, true);
+  assert.equal(repeat.body.data.alreadyArchived, true, 'remove accepted draft copy should be safe and persistent after refresh.');
 }
 
 async function assertInvalidPromotePathTraversalRejected(handlers) {
@@ -2913,6 +3018,7 @@ async function assertApproveDraftItemResolvesStableItemRefWhenIndexStale(handler
       ],
       itemRef: {
         itemId: 'stable-target-term',
+        term: 'stable-target-term',
         sourceFile: 'teacher_force_notes.txt',
         sourceLocation: 'Page 2'
       }
@@ -2926,6 +3032,7 @@ async function assertApproveDraftItemResolvesStableItemRefWhenIndexStale(handler
     assert.equal(approve.body.success, true);
     assert.equal(approve.body.data.debug.request.requestedIndex, 0);
     assert.equal(approve.body.data.debug.request.index, 1);
+    assert.equal(approve.body.data.debug.request.itemRef.term, 'stable-target-term');
     assert.equal(approve.body.data.debug.request.resolvedTarget.resolvedBy, 'itemRef');
     assert.equal(approve.body.data.debug.afterSnapshot.item.term, 'stable-target-term');
     assert.equal(approve.body.data.debug.afterSnapshot.item.reviewStatus, 'approved');
@@ -3178,18 +3285,19 @@ function assertNoRouterOrStudentModulesImported() {
   assert.deepEqual(
     snapshotRouterAndStudentFiles(),
     routerStudentFilesBefore,
-    'router/student files should not be touched'
+    'router/student/formula files should not be touched'
   );
 
   const importedPaths = Object.keys(require.cache).map((filePath) => path.relative(projectRoot, filePath));
   const forbidden = importedPaths.filter((filePath) => {
     return filePath.startsWith('lib/router/')
+      || filePath.startsWith('lib/formulas/')
       || filePath === 'lib/questionRouter.js'
       || filePath.startsWith('routes/student')
       || filePath === 'lib/server/questionAnswerService.js';
   });
 
-  assert.deepEqual(forbidden, [], `teacher content routes should not import router/student modules: ${forbidden.join(', ')}`);
+  assert.deepEqual(forbidden, [], `teacher content routes should not import router/student/formula modules: ${forbidden.join(', ')}`);
 }
 
 function createApp(handlers) {
@@ -3614,7 +3722,10 @@ function makeStandardsMapItem(standardId, reviewStatus) {
     relatedVocabulary: ['net-force'],
     relatedConcepts: ['balanced-forces'],
     reviewStatus,
-    confidence: reviewStatus === 'approved' ? 'high' : 'medium'
+    confidence: reviewStatus === 'approved' ? 'high' : 'medium',
+    sourceFile: 'teacher_force_notes.txt',
+    sourceLocation: 'Full Text',
+    sourceTextSnippet: 'Describe how balanced and unbalanced forces affect motion.'
   };
 }
 
@@ -3623,7 +3734,10 @@ function makeSmokeTest(reviewStatus) {
     question: 'What do balanced forces do?',
     expectedAnswer: 'They do not change motion.',
     reviewStatus,
-    confidence: reviewStatus === 'approved' ? 'high' : 'medium'
+    confidence: reviewStatus === 'approved' ? 'high' : 'medium',
+    sourceFile: 'teacher_force_notes.txt',
+    sourceLocation: 'Full Text',
+    sourceTextSnippet: 'Balanced forces do not change motion.'
   };
 }
 
@@ -3710,6 +3824,7 @@ function snapshotRouterAndStudentFiles() {
   const files = walkFiles(projectRoot).filter((filePath) => {
     const relativePath = path.relative(projectRoot, filePath);
     return relativePath.startsWith('lib/router/')
+      || relativePath.startsWith('lib/formulas/')
       || relativePath === 'lib/questionRouter.js'
       || relativePath.startsWith('routes/student')
       || relativePath === 'lib/server/questionAnswerService.js';

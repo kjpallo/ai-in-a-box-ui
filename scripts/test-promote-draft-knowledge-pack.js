@@ -17,6 +17,10 @@ fs.mkdirSync(approvedPacksDir, { recursive: true });
 
 try {
   assertBlocksPendingItems();
+  assertApprovedOnlyPromotesWithPendingRows();
+  assertSelectedOnlyPromotesOnlySelectedRows();
+  assertApprovedOnlyBlocksUnsafeApprovedRows();
+  assertApprovedOnlyKeepsReferenceFormulasReferenceOnly();
   assertPromotesApprovedItemsOnlyWhenRejectedItemsRemain();
   assertExcludesRepairNeededItems();
   assertBlocksApprovedItemsWithoutSourceGrounding();
@@ -120,6 +124,118 @@ function assertBlocksPendingItems() {
   assert.equal(result.validationPassed, false);
   assert.ok(result.errors.some((error) => error.includes('pending teacher review')));
   assert.equal(fs.existsSync(path.join(approvedPacksDir, 'pending-draft-pack', 'knowledge_pack.json')), false);
+}
+
+function assertApprovedOnlyPromotesWithPendingRows() {
+  writeDraftPack(makePack({
+    packId: 'approved-only-with-pending-draft-pack',
+    vocabulary: [
+      makeVocabularyItem('selected-approved-term'),
+      {
+        ...makeVocabularyItem('unselected-pending-term'),
+        reviewStatus: 'pending'
+      }
+    ],
+    concepts: [],
+    referenceFormulas: [],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+
+  const result = promoteDraftKnowledgePack('approved-only-with-pending-draft-pack', {
+    draftPacksDir,
+    approvedPacksDir,
+    standardsBank,
+    promotionMode: 'approvedOnly'
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  const promotedPack = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
+  assert.deepEqual(promotedPack.vocabulary.map((item) => item.term), ['selected-approved-term']);
+  assert.equal(JSON.stringify(promotedPack).includes('unselected-pending-term'), false);
+}
+
+function assertSelectedOnlyPromotesOnlySelectedRows() {
+  writeDraftPack(makePack({
+    packId: 'selected-only-draft-pack',
+    vocabulary: [makeVocabularyItem('selected-term')],
+    concepts: [makeConceptItem('unselected-approved-concept')],
+    referenceFormulas: [
+      {
+        ...makeReferenceFormula('unselected-pending-formula'),
+        reviewStatus: 'pending'
+      }
+    ],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+
+  const result = promoteDraftKnowledgePack('selected-only-draft-pack', {
+    draftPacksDir,
+    approvedPacksDir,
+    standardsBank,
+    promotionMode: 'selectedOnly',
+    selectedItems: [{ section: 'vocabulary', index: 0 }]
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  const promotedPack = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
+  assert.deepEqual(promotedPack.vocabulary.map((item) => item.term), ['selected-term']);
+  assert.deepEqual(promotedPack.concepts, []);
+  assert.deepEqual(promotedPack.referenceFormulas, []);
+}
+
+function assertApprovedOnlyBlocksUnsafeApprovedRows() {
+  writeDraftPack(makePack({
+    packId: 'approved-only-unsafe-draft-pack',
+    vocabulary: [
+      {
+        ...makeVocabularyItem('unsafe-approved-term'),
+        repairStatus: 'repair_needed'
+      }
+    ],
+    concepts: [],
+    referenceFormulas: [],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+
+  const result = promoteDraftKnowledgePack('approved-only-unsafe-draft-pack', {
+    draftPacksDir,
+    approvedPacksDir,
+    standardsBank,
+    promotionMode: 'approvedOnly'
+  });
+
+  assert.equal(result.success, false);
+  assert.ok(result.errors.some((error) => /repair-needed|invalid|quarantined/.test(error)));
+  assert.equal(fs.existsSync(path.join(approvedPacksDir, 'approved-only-unsafe-draft-pack', 'knowledge_pack.json')), false);
+}
+
+function assertApprovedOnlyKeepsReferenceFormulasReferenceOnly() {
+  writeDraftPack(makePack({
+    packId: 'approved-only-reference-formula-draft-pack',
+    vocabulary: [],
+    concepts: [],
+    referenceFormulas: [makeReferenceFormula('reference-only-formula')],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+
+  const result = promoteDraftKnowledgePack('approved-only-reference-formula-draft-pack', {
+    draftPacksDir,
+    approvedPacksDir,
+    standardsBank,
+    promotionMode: 'approvedOnly'
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  const promotedPack = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
+  assert.equal(promotedPack.referenceFormulas[0].solverStatus, 'reference_only');
 }
 
 function assertPromotesApprovedItemsOnlyWhenRejectedItemsRemain() {
@@ -553,7 +669,10 @@ function makeStandardsMapItem(standardId) {
     relatedVocabulary: ['net-force'],
     relatedConcepts: ['balanced-forces'],
     reviewStatus: 'approved',
-    confidence: 'high'
+    confidence: 'high',
+    sourceFile: 'teacher_upload.pdf',
+    sourceLocation: 'p. 5',
+    sourceTextSnippet: 'Describe how balanced and unbalanced forces affect motion.'
   };
 }
 
