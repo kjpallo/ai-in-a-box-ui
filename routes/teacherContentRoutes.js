@@ -15,7 +15,10 @@ const {
   deleteApprovedKnowledgePack,
   deleteApprovedKnowledgePacks
 } = require('../lib/knowledge/deleteApprovedKnowledgePack');
-const { archiveAcceptedDraftKnowledgePack } = require('../lib/knowledge/archiveAcceptedDraftKnowledgePack');
+const {
+  archiveAcceptedDraftKnowledgePack,
+  archiveDraftKnowledgePackFromReviewQueue
+} = require('../lib/knowledge/archiveAcceptedDraftKnowledgePack');
 const { promoteDraftKnowledgePack } = require('../lib/knowledge/promoteDraftKnowledgePack');
 const {
   REVIEWABLE_SECTIONS,
@@ -505,6 +508,42 @@ function registerTeacherContentRoutes(app, options = {}) {
           message: archivedDraft.alreadyArchived
             ? 'Accepted draft copy was already removed from active drafts. Approved pack was preserved.'
             : 'Accepted draft copy archived from active drafts. Approved pack was preserved.',
+          dashboard,
+          drafts: drafts.draftPacks,
+          approvedSummary
+        },
+        warnings: [],
+        errors: []
+      });
+    } catch (error) {
+      return res.status(error.statusCode || 500).json({
+        success: false,
+        errors: [error instanceof Error ? error.message : String(error)]
+      });
+    }
+  });
+
+  app.delete('/drafts/:packId/review-queue', (req, res) => {
+    const packId = String(req.params && req.params.packId || '').trim();
+    if (!isSafePackId(packId)) {
+      return res.status(400).json({
+        success: false,
+        errors: ['packId must contain only lowercase letters, numbers, underscores, and hyphens.']
+      });
+    }
+
+    try {
+      const archivedDraft = archiveDraftKnowledgePackFromReviewQueue(packId, options);
+      const dashboard = getTeacherContentDashboard(options);
+      const drafts = listDraftPacksForReview(options);
+      const approvedSummary = listApprovedPacksSummary(options);
+      return res.json({
+        success: true,
+        data: {
+          ...archivedDraft,
+          message: archivedDraft.alreadyArchived
+            ? 'Draft was already removed from the active review queue.'
+            : 'Draft removed from the active review queue.',
           dashboard,
           drafts: drafts.draftPacks,
           approvedSummary

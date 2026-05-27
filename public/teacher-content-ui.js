@@ -14,6 +14,7 @@
     standardsBank: (standardsBankId) => `/api/teacher-content/standards-banks/${encodeURIComponent(standardsBankId)}`,
     promoteDraft: (packId) => `/api/teacher-content/drafts/${encodeURIComponent(packId)}/promote`,
     acceptedDraftCopy: (packId) => `/api/teacher-content/drafts/${encodeURIComponent(packId)}/accepted-copy`,
+    draftReviewQueue: (packId) => `/api/teacher-content/drafts/${encodeURIComponent(packId)}/review-queue`,
     draftItem: (packId, section, index) => `/api/teacher-content/drafts/${encodeURIComponent(packId)}/items/${encodeURIComponent(section)}/${encodeURIComponent(index)}`,
     draftItemStatus: (packId, section, index) => `/api/teacher-content/drafts/${encodeURIComponent(packId)}/items/${encodeURIComponent(section)}/${encodeURIComponent(index)}/status`,
     approved: '/api/teacher-content/approved',
@@ -405,6 +406,13 @@
         return;
       }
 
+      const reviewQueueCleanup = event.target.closest('[data-review-pack-cleanup]');
+      if (reviewQueueCleanup) {
+        event.preventDefault();
+        cleanupDraftPackFromReviewQueue(reviewQueueCleanup.getAttribute('data-review-pack-id') || '');
+        return;
+      }
+
       const reviewQueueOpenApproved = event.target.closest('[data-review-pack-open-approved]');
       if (reviewQueueOpenApproved) {
         event.preventDefault();
@@ -419,6 +427,13 @@
           if (!moved) setStatus('No draft packs still need review.');
           render();
         });
+        return;
+      }
+
+      const reviewSaveEdits = event.target.closest('[data-review-save-edits]');
+      if (reviewSaveEdits) {
+        event.preventDefault();
+        saveFocusedReviewItemEditsFromButton(reviewSaveEdits);
         return;
       }
 
@@ -1734,12 +1749,47 @@
       ${isEditingReviewItem ? '<p class="teacher-content-review-edit-mode-note" data-review-edit-mode-note>Editing one item now. Bulk approval controls are hidden until you close this form.</p>' : ''}
       ${renderReviewNeedsReviewSummary(draft)}
       ${state.reviewBulkMessage ? `<p class="teacher-content-review-bulk-message" data-review-bulk-message>${escapeHtml(state.reviewBulkMessage)}</p>` : ''}
-      ${isEditingReviewItem ? '' : renderReviewActionBar(filteredItems, reviewState)}
       ${renderReviewTable(filteredItems)}
-      ${summary.pending === 0 && totalReviewableCount > 0 && allItems.length === 0 ? '<p class="profile-empty-state">All items in this draft have already been reviewed.</p>' : ''}
+      ${!isEditingReviewItem && filteredItems.length ? renderReviewActionBar(filteredItems, reviewState) : ''}
+      ${!filteredItems.length ? renderReviewEmptyQueueActionBar(draft, summary, totalReviewableCount) : ''}
       ${state.errors.length ? renderIssueList('Review Messages', state.errors) : ''}
       ${renderReviewAdvancedDetails(draft)}
       ${state.selectedReviewEvidenceItem ? renderReviewEvidencePanel(state.selectedReviewEvidenceItem) : ''}
+    `;
+  }
+
+  function renderReviewEmptyQueueActionBar(draft, summary = getReviewProgressSummary(draft), totalReviewableCount = getTotalPrimaryDraftItemCount(draft)) {
+    const packId = String(draft?.packId || state.selectedDraftPackId || '').trim();
+    const packApproved = isDraftPackApproved(packId);
+    const noVisibleRowsMessage = totalReviewableCount > 0 && Number(summary?.pending || 0) === 0
+      ? 'No visible draft rows remain in this review queue.'
+      : 'No visible draft rows are available for review.';
+    if (packApproved) {
+      return `
+        <section class="teacher-content-review-action-bar" data-review-empty-approved-state>
+          <div>
+            <strong>Review complete.</strong>
+            <small>${escapeHtml(noVisibleRowsMessage)} The matching approved knowledge pack exists.</small>
+          </div>
+          <div class="teacher-content-review-action-buttons">
+            <button type="button" class="small-button" data-review-done-view-knowledge-packs>Done</button>
+            <button type="button" class="small-button secondary-small" data-review-pack-open-approved data-review-pack-id="${escapeAttr(packId)}">Saved Knowledge Packs</button>
+            <button type="button" class="small-button secondary-small" data-review-pack-remove data-review-pack-id="${escapeAttr(packId)}">Remove accepted draft copy</button>
+          </div>
+        </section>
+      `;
+    }
+    return `
+      <section class="teacher-content-review-action-bar" data-review-empty-stale-state>
+        <div>
+          <strong>No approved pack exists for this draft.</strong>
+          <small>${escapeHtml(noVisibleRowsMessage)} Remove this stale draft from the active queue or cancel to leave it untouched.</small>
+        </div>
+        <div class="teacher-content-review-action-buttons">
+          <button type="button" class="small-button secondary-small" data-review-cancel>Cancel</button>
+          <button type="button" class="small-button" data-review-pack-cleanup data-review-pack-id="${escapeAttr(packId)}">Remove draft from review queue</button>
+        </div>
+      </section>
     `;
   }
 
@@ -1828,8 +1878,8 @@
                   ${pack.itemCountLabel ? `<small>${escapeHtml(pack.itemCountLabel)}</small>` : ''}
                 </button>
                 <div class="teacher-content-review-pack-card-actions">
-                  ${pack.statusLabel === 'accepted' ? `<button type="button" class="small-button secondary-small" data-review-pack-open-approved data-review-pack-id="${escapeAttr(pack.packId || '')}">Open approved pack</button>` : ''}
-                  ${pack.statusLabel === 'accepted' && pack.packId ? `<button type="button" class="small-button secondary-small" data-review-pack-remove data-review-pack-id="${escapeAttr(pack.packId || '')}">Remove accepted draft copy from active drafts</button>` : ''}
+                  ${pack.hasApproved ? `<button type="button" class="small-button secondary-small" data-review-pack-open-approved data-review-pack-id="${escapeAttr(pack.packId || '')}">Open approved pack</button>` : ''}
+                  ${pack.hasApproved && pack.packId ? `<button type="button" class="small-button secondary-small" data-review-pack-remove data-review-pack-id="${escapeAttr(pack.packId || '')}">Remove accepted draft copy from active drafts</button>` : ''}
                 </div>
               </div>
             </li>
@@ -1872,12 +1922,13 @@
       else if (!packId || status === 'waiting' || status === 'extracting' || status === 'processing') statusLabel = 'needs review';
       else if (itemCount === 0) statusLabel = 'empty';
       else if (summary.pending > 0 && reviewed > 0) statusLabel = 'partially reviewed';
-      else if (summary.pending === 0 && reviewed > 0) statusLabel = 'accepted';
+      else if (summary.pending === 0 && reviewed > 0) statusLabel = 'reviewed';
       return {
         packId,
         title,
         statusLabel,
-        itemCountLabel: `${formatNumber(itemCount)} items`
+        itemCountLabel: `${formatNumber(itemCount)} items`,
+        hasApproved: Boolean(approved)
       };
     }).filter((pack) => !removedPackIds.has(pack.packId));
     if (queueCards.length) return queueCards;
@@ -1885,15 +1936,19 @@
       const summary = summarizeDraftReviewCounts(draft || {});
       const itemCount = getDraftItemCount(draft || {});
       const reviewed = summary.approved + summary.rejected;
+      const packId = String(draft?.packId || '');
+      const approved = packId ? approvedLookup.get(packId) || null : null;
       let statusLabel = 'needs review';
-      if (itemCount === 0) statusLabel = 'empty';
+      if (approved) statusLabel = 'accepted';
+      else if (itemCount === 0) statusLabel = 'empty';
       else if (summary.pending > 0 && reviewed > 0) statusLabel = 'partially reviewed';
-      else if (summary.pending === 0 && reviewed > 0) statusLabel = 'accepted';
+      else if (summary.pending === 0 && reviewed > 0) statusLabel = 'reviewed';
       return {
-        packId: String(draft?.packId || ''),
+        packId,
         title: draft?.title || draft?.packId || 'Draft pack',
         statusLabel,
-        itemCountLabel: `${formatNumber(itemCount)} items`
+        itemCountLabel: `${formatNumber(itemCount)} items`,
+        hasApproved: Boolean(approved)
       };
     }).filter((pack) => !removedPackIds.has(pack.packId));
     if (activeDraftCards.length) return activeDraftCards;
@@ -1904,18 +1959,19 @@
         packId,
         title: pack?.title || packId || 'Approved pack',
         statusLabel: 'accepted',
-        itemCountLabel: `${formatNumber(itemCount)} items`
+        itemCountLabel: `${formatNumber(itemCount)} items`,
+        hasApproved: true
       };
     }).filter((pack) => pack.packId && !removedPackIds.has(pack.packId));
   }
 
   function isCurrentSelectedDraftAccepted(queuePacks = buildReviewQueuePacks()) {
-    return queuePacks.some((pack) => pack.packId === state.selectedDraftPackId && String(pack.statusLabel || '').toLowerCase() === 'accepted');
+    return queuePacks.some((pack) => pack.packId === state.selectedDraftPackId && pack.hasApproved === true);
   }
 
   function areAllReviewQueuePacksAccepted(queuePacks = buildReviewQueuePacks()) {
     const withPackIds = queuePacks.filter((pack) => String(pack.packId || '').trim());
-    return withPackIds.length > 0 && withPackIds.every((pack) => String(pack.statusLabel || '').toLowerCase() === 'accepted');
+    return withPackIds.length > 0 && withPackIds.every((pack) => pack.hasApproved === true);
   }
 
   function summarizeDraftReviewCounts(draft = {}) {
@@ -2423,9 +2479,9 @@
           ${safeSelected === 0 && totalSelected > 0 ? `<small data-review-accept-selected-disabled-reason>${escapeHtml(acceptSelectedTitle)}</small>` : ''}
         </div>
         <div class="teacher-content-review-action-buttons">
+          <button type="button" class="small-button secondary-small" data-review-cancel>Cancel</button>
           <button type="button" class="small-button" data-review-accept-selected ${acceptSelectedDisabled ? 'disabled' : ''} title="${escapeAttr(acceptSelectedTitle)}">Accept Selected</button>
           <button type="button" class="small-button" data-review-accept-all ${acceptAllDisabled ? 'disabled' : ''} title="${escapeAttr(acceptAllTitle)}">Accept All</button>
-          <button type="button" class="small-button secondary-small" data-review-cancel>Cancel</button>
         </div>
       </section>
     `;
@@ -2550,8 +2606,10 @@
           </div>
         </section>
         <div class="teacher-content-review-detail-actions">
+          <button type="button" class="small-button secondary-small" data-review-save-edits data-section="${escapeAttr(item.section)}" data-index="${escapeAttr(item.index)}"${identityAttrs}>Save changes</button>
           <button type="button" class="small-button" data-review-status="approved" data-section="${escapeAttr(item.section)}" data-index="${escapeAttr(item.index)}"${identityAttrs}>Approve item</button>
           <button type="button" class="small-button secondary-small" data-review-status="rejected" data-section="${escapeAttr(item.section)}" data-index="${escapeAttr(item.index)}"${identityAttrs}>Delete item</button>
+          <button type="button" class="small-button secondary-small" data-review-fix-back>Return to review list</button>
         </div>
       </section>
     `;
@@ -2931,6 +2989,8 @@
     const index = activeTabIndex();
     const back = byId('teacherContentBack');
     const next = byId('teacherContentNext');
+    const footer = back?.closest('.teacher-content-footer') || next?.closest('.teacher-content-footer') || null;
+    if (footer) footer.hidden = state.activeTab === 'review';
     if (back) back.disabled = index <= 0 || state.uploadPrepareReviewLoading || state.uploadCreateReviewLoading;
     if (next) next.disabled = index >= TABS.length - 1 || state.uploadPrepareReviewLoading || state.uploadCreateReviewLoading;
     const label = byId('teacherContentStepLabel');
@@ -3171,6 +3231,41 @@
     render();
   }
 
+  async function cleanupDraftPackFromReviewQueue(packId) {
+    const safePackId = String(packId || '').trim();
+    if (!safePackId) return;
+    const selected = safePackId === state.selectedDraftPackId;
+    try {
+      const payload = await fetchJson(ENDPOINTS.draftReviewQueue(safePackId), {
+        method: 'DELETE'
+      });
+      const data = unwrap(payload);
+      if (data?.dashboard) state.dashboard = data.dashboard;
+      if (Array.isArray(data?.drafts)) state.drafts = data.drafts;
+      if (data?.approvedSummary) applyApprovedSummary(data.approvedSummary);
+      const removed = new Set(state.reviewQueueRemovedPackIds || []);
+      removed.add(safePackId);
+      state.reviewQueueRemovedPackIds = Array.from(removed);
+      const queuePacks = buildReviewQueuePacks().filter((pack) => pack.packId);
+      if (selected) {
+        const nextPending = queuePacks.find((pack) => ['needs review', 'partially reviewed', 'reviewed', 'empty'].includes(String(pack.statusLabel || '').toLowerCase()));
+        const fallback = nextPending || queuePacks[0] || null;
+        if (fallback && fallback.packId !== safePackId) {
+          state.selectedDraftPackId = fallback.packId;
+          clearDraftScopedReviewUiState();
+          await loadSelectedDraftReport();
+        } else {
+          state.reviewCompleted = true;
+        }
+      }
+      setStatus(data?.message || 'Draft removed from the active review queue.');
+    } catch (error) {
+      state.errors.push(`Remove draft from review queue failed: ${error.message || 'Route error'}`);
+      setStatus('Remove draft from review queue failed.');
+    }
+    render();
+  }
+
   function canOpenDoneTab() {
     return state.reviewCompleted || isCurrentSelectedDraftAccepted() || areAllReviewQueuePacksAccepted();
   }
@@ -3240,6 +3335,12 @@
     const selected = items.filter((item) => state.selectedReviewItemKeys.includes(reviewItemKey(item.section, item.index)));
     const safeItems = selected.filter(isReviewItemReadyForPack);
     const skipped = selected.length - safeItems.length;
+    if (skipped > 0) {
+      state.reviewBulkMessage = `Accept Selected is blocked because ${formatNumber(skipped)} selected row${skipped === 1 ? '' : 's'} cannot be included as-is. Edit missing required fields/source evidence or choose Delete, then try again.`;
+      setStatus('Accept Selected is blocked by selected rows that need attention.');
+      render();
+      return;
+    }
     if (!safeItems.length) {
       state.reviewBulkMessage = selected.length
         ? `No valid selected items were accepted. ${formatNumber(skipped)} selected item${skipped === 1 ? '' : 's'} need edit or delete before the pack can be created.`
@@ -3603,7 +3704,9 @@
     const focusedPanel = button.closest('[data-review-focused-fix]');
     const selected = state.selectedReviewItem;
     const matchedItem = findReviewItemFromButton(button) || findReviewItem(section, index) || getActiveFixReviewItem() || selected || null;
-    const itemRef = buildReviewItemRefFromButton(button) || buildReviewItemRef(matchedItem);
+    const buttonItemRef = buildReviewItemRefFromButton(button);
+    const currentItemRef = buildReviewItemRef(matchedItem);
+    const itemRef = (detailPanel || focusedPanel) && currentItemRef ? currentItemRef : buttonItemRef || currentItemRef;
     appendReviewDebugEvent('review-status-button-click', {
       section,
       index,
@@ -3658,8 +3761,113 @@
     return mutateReviewDraft(
       ENDPOINTS.draftItemStatus(state.selectedDraftPackId, section, index),
       { reviewStatus, itemRef, debugContext },
-      `Marked ${SECTION_LABELS[section] || section} item ${index} ${reviewStatus}.`
+      `Marked ${SECTION_LABELS[section] || section} item ${index} ${reviewStatus}.`,
+      {
+        item: currentItem,
+        itemRef,
+        conflictMessage: reviewStatus === 'approved'
+          ? 'This item was refreshed. Try approving again.'
+          : 'This item was refreshed. Try the action again.'
+      }
     );
+  }
+
+  async function saveFocusedReviewItemEditsFromButton(button) {
+    if (!state.selectedDraftPackId) return;
+    const scope = button.closest('[data-review-focused-fix]') || document;
+    let item = findReviewItemFromButton(button) || getActiveFixReviewItem();
+    if (!item) {
+      state.errors.push('Could not find this item after the latest refresh. Reopen it from the review list.');
+      render();
+      return;
+    }
+
+    const changed = collectReviewFieldEdits(item, scope);
+    if (!changed.length) {
+      const message = 'No changes to save.';
+      setReviewInlineMessage(item.section, item.index, message);
+      state.reviewBulkMessage = message;
+      setStatus(message);
+      render();
+      return;
+    }
+
+    state.reviewActionLoading = true;
+    state.errors = [];
+    setStatus('Saving draft item edits...');
+    render();
+
+    let itemRef = buildReviewItemRef(item);
+    let refreshedItem = item;
+    try {
+      for (const edit of changed) {
+        const payload = await fetchJson(ENDPOINTS.draftItem(state.selectedDraftPackId, refreshedItem.section, refreshedItem.index), {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            field: edit.field,
+            value: edit.value,
+            itemRef,
+            debugContext: {
+              sourceAction: 'focused-fix-save-button',
+              changedFields: changed.map((entry) => entry.field),
+              draftPackId: state.selectedDraftPackId,
+              section: refreshedItem.section,
+              index: Number(refreshedItem.index),
+              itemId: refreshedItem.itemId || refreshedItem.term || refreshedItem.title || '',
+              itemRef
+            }
+          })
+        });
+        const data = unwrap(payload);
+        if (data?.report) state.report = data.report;
+        if (data?.debug) {
+          appendReviewDebugEvent('focused-save-edits-response', data.debug);
+        }
+        const resolvedSection = String(data?.debug?.request?.section || refreshedItem.section || '').trim() || refreshedItem.section;
+        const resolvedIndex = Number.isInteger(Number(data?.debug?.request?.index))
+          ? Number(data.debug.request.index)
+          : Number(refreshedItem.index);
+        refreshedItem = refreshFocusedReviewItemState(
+          findReviewItem(resolvedSection, resolvedIndex) || refreshedItem,
+          itemRef
+        ) || refreshedItem;
+        itemRef = buildReviewItemRef(refreshedItem) || itemRef;
+      }
+
+      await refreshDraftLists();
+      await refreshSelectedDraftReportFromBackend();
+      refreshedItem = refreshFocusedReviewItemState(refreshedItem, itemRef) || refreshedItem;
+      const message = makePostEditSaveMessage(refreshedItem, item);
+      setReviewInlineMessage(item.section, item.index, '');
+      setReviewInlineMessage(refreshedItem.section, refreshedItem.index, message);
+      state.reviewBulkMessage = message;
+      setStatus(message);
+    } catch (error) {
+      appendReviewDebugEvent('focused-save-edits-error', {
+        draftPackId: state.selectedDraftPackId,
+        section: item.section,
+        index: item.index,
+        errors: Array.isArray(error?.errors) ? error.errors : [error?.message || 'Route error'],
+        changedFields: changed.map((entry) => entry.field),
+        itemRef
+      });
+      if (isReviewConflictError(error)) {
+        await refreshFocusedReviewItemAfterConflict(item, itemRef, 'This item was refreshed. Try saving again.');
+      } else {
+        const routeErrors = Array.isArray(error?.errors) && error.errors.length
+          ? error.errors
+          : [error?.message || 'Route error'];
+        state.errors.push(...routeErrors);
+        const message = `Save failed: ${formatReviewBlockerSummary(routeErrors) || 'Route error'}`;
+        setReviewInlineMessage(item.section, item.index, message);
+        state.reviewBulkMessage = message;
+        setStatus(message);
+      }
+    } finally {
+      state.reviewActionLoading = false;
+      render();
+    }
   }
 
   async function approveSelectedReviewItemWithCurrentEdits(item, scope, debugContext = {}) {
@@ -3734,7 +3942,7 @@
         setReviewInlineMessage(resolvedSection, resolvedIndex, blockedMessage);
         state.activeFixItem = makeActiveFixItem(refreshedItem || item, {
           draftId: state.selectedDraftPackId,
-          itemRef
+          itemRef: buildReviewItemRef(refreshedItem || item) || itemRef
         });
         state.errors.push(blockedMessage);
         state.reviewBulkMessage = blockedMessage;
@@ -3744,6 +3952,18 @@
       const routeErrors = Array.isArray(error?.errors) && error.errors.length
         ? error.errors
         : [error?.message || 'Route error'];
+      if (isReviewConflictError(error)) {
+        appendReviewDebugEvent('approve-selected-with-edits-conflict-refresh', {
+          draftPackId: state.selectedDraftPackId,
+          section: item.section,
+          index: item.index,
+          errors: routeErrors,
+          changedFields: changed.map((entry) => entry.field),
+          itemRef
+        });
+        await refreshFocusedReviewItemAfterConflict(item, itemRef, 'This item was refreshed. Try approving again.');
+        return;
+      }
       const blockerSummary = formatReviewBlockerSummary(routeErrors);
       const blockedMessage = blockerSummary
         ? `Still blocked: ${blockerSummary}`
@@ -3789,7 +4009,7 @@
     return changed;
   }
 
-  async function mutateReviewDraft(url, body, successMessage) {
+  async function mutateReviewDraft(url, body, successMessage, conflictContext = {}) {
     state.reviewActionLoading = true;
     state.errors = [];
     setStatus('Saving draft review action...');
@@ -3811,6 +4031,14 @@
       setStatus(successMessage);
       return true;
     } catch (error) {
+      if (isReviewConflictError(error) && conflictContext.item) {
+        await refreshFocusedReviewItemAfterConflict(
+          conflictContext.item,
+          conflictContext.itemRef || body?.itemRef || null,
+          conflictContext.conflictMessage || 'This item was refreshed. Try the action again.'
+        );
+        return false;
+      }
       state.errors.push(`Draft review action failed: ${error.message || 'Route error'}`);
       return false;
     } finally {
@@ -4811,6 +5039,14 @@
       const fixDraftId = String(state.activeFixItem.draftId || '').trim();
       if (fixDraftId && state.selectedDraftPackId && fixDraftId !== state.selectedDraftPackId) {
         state.activeFixItem = null;
+      } else {
+        const nextFix = getActiveFixReviewItem();
+        if (nextFix) {
+          state.activeFixItem = makeActiveFixItem(nextFix, {
+            draftId: fixDraftId || state.selectedDraftPackId,
+            itemRef: buildReviewItemRef(nextFix)
+          });
+        }
       }
     }
     if (state.selectedReviewEvidenceItem) {
@@ -4819,6 +5055,43 @@
     }
     const visibleKeys = new Set(getVisibleReviewItems().map((item) => reviewItemKey(item.section, item.index)));
     state.selectedReviewItemKeys = state.selectedReviewItemKeys.filter((key) => visibleKeys.has(key));
+  }
+
+  function refreshFocusedReviewItemState(previousItem, previousItemRef = null) {
+    if (!previousItem) return null;
+    const refreshedItem = findReviewItemByIdentity(previousItem.section, Number(previousItem.index), previousItemRef || buildReviewItemRef(previousItem))
+      || findReviewItem(previousItem.section, Number(previousItem.index));
+    if (!refreshedItem) return null;
+    state.activeFixItem = makeActiveFixItem(refreshedItem, {
+      draftId: state.selectedDraftPackId,
+      itemRef: buildReviewItemRef(refreshedItem)
+    });
+    return refreshedItem;
+  }
+
+  function isReviewConflictError(error) {
+    const status = Number(error?.status || error?.statusCode || error?.data?.status || error?.data?.statusCode);
+    if (status === 409) return true;
+    const text = [
+      error?.message,
+      ...(Array.isArray(error?.errors) ? error.errors : []),
+      ...(Array.isArray(error?.data?.errors) ? error.data.errors : [])
+    ].filter(Boolean).join(' ');
+    return /selected draft item changed|multiple draft items matched|conflict/i.test(text);
+  }
+
+  async function refreshFocusedReviewItemAfterConflict(item, itemRef = null, message = 'This item was refreshed. Try the action again.') {
+    await refreshDraftLists();
+    await refreshSelectedDraftReportFromBackend();
+    const refreshedItem = refreshFocusedReviewItemState(item, itemRef);
+    const messageTarget = refreshedItem || item;
+    if (messageTarget) {
+      setReviewInlineMessage(messageTarget.section, messageTarget.index, message);
+    }
+    state.reviewBulkMessage = message;
+    state.errors.push(message);
+    setStatus(message);
+    return refreshedItem;
   }
 
   function findReviewItem(section, index) {

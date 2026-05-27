@@ -17,10 +17,13 @@ const pkg = JSON.parse(read(packagePath));
 assertTwoPrimaryScreens();
 assertUploadScreenIsSimple();
 assertReviewScreenIsSimpleList();
+assertReviewScreenUsesReviewActionFooter();
+assertReviewAcceptanceRequiresApprovedCounterpart();
 assertAcceptSelectedCreatesSelectedOnlyPack();
 assertAcceptAllCreatesApprovedOnlyPack();
 assertDeleteMarksRejectedAndHidesRows();
 assertEditUsesSafeFields();
+assertFocusedEditRefreshesBeforeApproval();
 assertSuccessReturnsToKnowledgeManager();
 assertPrimaryFlowHidesTechnicalImportControls();
 assertRouterAndFormulaGuardsRemainInRouteTests();
@@ -54,6 +57,7 @@ function assertReviewScreenIsSimpleList() {
   const actionBar = extractFunctionSource(ui, 'renderReviewActionBar');
 
   assert.match(reviewCard, /renderReviewTable\(filteredItems\)/, 'Review screen should render a single list immediately.');
+  assert.match(reviewCard, /renderReviewTable\(filteredItems\)[\s\S]*renderReviewActionBar\(filteredItems, reviewState\)/, 'Review action bar should render after visible rows as the review footer.');
   assert.doesNotMatch(reviewCard, /renderReviewFilters\(\)|renderReviewIssuesToFix\(/, 'Review screen should not show competing filter or issue panels in the primary path.');
   assert.match(rowRenderer, /data-review-selection-checkbox/, 'Each row should include a checkbox.');
   assert.match(rowRenderer, /data-review-item-category/, 'Each row should show an item type label.');
@@ -64,8 +68,35 @@ function assertReviewScreenIsSimpleList() {
   assert.match(actionBar, /data-review-accept-selected/, 'Bottom bar should include Accept Selected.');
   assert.match(actionBar, /data-review-accept-all/, 'Bottom bar should include Accept All.');
   assert.match(actionBar, /data-review-cancel/, 'Bottom bar should include Cancel.');
+  assert.match(actionBar, /data-review-cancel[\s\S]*data-review-accept-selected[\s\S]*data-review-accept-all/, 'Review footer actions should be ordered Cancel, Accept Selected, Accept All.');
   assert.doesNotMatch(actionBar, /data-review-select-all|data-review-exclude-selected-flagged|data-review-reject-blockers-promote/, 'Bottom bar should not show old bulk technical actions.');
   assert.match(style, /\.teacher-content-review-card\.teacher-content-review-table-row \{[\s\S]*grid-template-columns: 36px minmax\(110px, 0\.42fr\) minmax\(220px, 1fr\) auto;/, 'Review rows should be laid out as checkbox, type, preview, actions.');
+}
+
+function assertReviewScreenUsesReviewActionFooter() {
+  const renderFooter = extractFunctionSource(ui, 'renderFooter');
+  const actionBar = extractFunctionSource(ui, 'renderReviewActionBar');
+
+  assert.match(renderFooter, /footer\.hidden = state\.activeTab === 'review'/, 'The old Back/Next wizard footer should be hidden on the Review screen.');
+  assert.match(actionBar, /const acceptSelectedDisabled = state\.reviewActionLoading \|\| state\.promotionActionLoading \|\| totalSelected === 0 \|\| safeSelected === 0/, 'Accept Selected should be disabled until at least one valid visible row is checked.');
+  assert.match(actionBar, /const acceptAllDisabled = state\.reviewActionLoading \|\| state\.promotionActionLoading \|\| safeAll === 0/, 'Accept All should be enabled when at least one visible valid row exists.');
+}
+
+function assertReviewAcceptanceRequiresApprovedCounterpart() {
+  const queueList = extractFunctionSource(ui, 'renderReviewQueueList');
+  const queueBuilder = extractFunctionSource(ui, 'buildReviewQueuePacks');
+  const acceptedCheck = extractFunctionSource(ui, 'isCurrentSelectedDraftAccepted');
+  const emptyActionBar = extractFunctionSource(ui, 'renderReviewEmptyQueueActionBar');
+  const cleanupDraft = extractFunctionSource(ui, 'cleanupDraftPackFromReviewQueue');
+
+  assert.match(queueBuilder, /hasApproved: Boolean\(approved\)/, 'Draft queue cards should explicitly track whether an approved counterpart exists.');
+  assert.match(queueBuilder, /summary\.pending === 0 && reviewed > 0\) statusLabel = 'reviewed'/, 'Fully reviewed drafts without approved counterparts should not be labeled accepted.');
+  assert.match(acceptedCheck, /pack\.hasApproved === true/, 'Accepted UI state should require a matching approved pack.');
+  assert.match(queueList, /pack\.hasApproved \?[\s\S]*data-review-pack-open-approved/, 'Open approved pack should only render when an approved counterpart exists.');
+  assert.match(queueList, /pack\.hasApproved && pack\.packId \?[\s\S]*data-review-pack-remove/, 'Remove accepted draft copy should only render when an approved counterpart exists.');
+  assert.match(emptyActionBar, /No approved pack exists for this draft/, 'Empty stale drafts should not claim they were accepted.');
+  assert.match(emptyActionBar, /data-review-pack-cleanup/, 'Empty stale drafts should offer cleanup from the review queue.');
+  assert.match(cleanupDraft, /ENDPOINTS\.draftReviewQueue\(safePackId\)/, 'Stale draft cleanup should use the review-queue cleanup endpoint, not accepted-copy archive.');
 }
 
 function assertAcceptSelectedCreatesSelectedOnlyPack() {
@@ -77,6 +108,7 @@ function assertAcceptSelectedCreatesSelectedOnlyPack() {
   assert.match(acceptSelected, /promotionMode: 'selectedOnly'/, 'Accept Selected should use selectedOnly promotion mode.');
   assert.match(acceptSelected, /selectedItems: safeItems\.map\(makePromotionSelectionItem\)/, 'Accept Selected should send explicit selected rows to promotion.');
   assert.match(acceptSelected, /autoPromoteAfterAccept: true/, 'Accept Selected should create the approved JSON pack after approving rows.');
+  assert.match(acceptSelected, /if \(skipped > 0\) \{[\s\S]*Accept Selected is blocked/, 'Unsafe selected rows should block Accept Selected with a clear message.');
   assert.match(acceptReview, /requestDraftPromotion\(draftPackIdAtStart, \{[\s\S]*promotionMode: options\.promotionMode \|\| 'approvedOnly'[\s\S]*selectedItems/, 'Accept flow should pass promotion mode and selected items to the backend.');
   assert.match(requestPromotion, /promotionMode: options\.promotionMode \|\| options\.mode/, 'Promotion request should include a safe promotion mode.');
   assert.match(requestPromotion, /selectedItems: Array\.isArray\(options\.selectedItems\)/, 'Promotion request should include selected row refs when provided.');
@@ -106,6 +138,28 @@ function assertEditUsesSafeFields() {
   assert.ok(editableFields, 'Expected editable field map.');
   assert.match(focusedEditor, /EDITABLE_FIELDS\[item\.section\]/, 'Focused editor should use the UI mirror of SAFE_EDIT_FIELDS.');
   assert.doesNotMatch(editableFields[1], /solverStatus/, 'Formula solverStatus should not be teacher-editable.');
+}
+
+function assertFocusedEditRefreshesBeforeApproval() {
+  const focusedEditor = extractFunctionSource(ui, 'renderFocusedReviewItemFix');
+  const saveEdits = extractFunctionSource(ui, 'saveFocusedReviewItemEditsFromButton');
+  const statusButton = extractFunctionSource(ui, 'updateReviewStatusFromButton');
+  const reconcile = extractFunctionSource(ui, 'reconcileSelectedReviewItem');
+  const conflictRefresh = extractFunctionSource(ui, 'refreshFocusedReviewItemAfterConflict');
+  const approveWithEdits = extractFunctionSource(ui, 'approveSelectedReviewItemWithCurrentEdits');
+
+  assert.match(focusedEditor, /data-review-save-edits[\s\S]*Save changes/, 'Focused editor should expose Save changes as a primary item action.');
+  assert.match(focusedEditor, /Approve item[\s\S]*Delete item[\s\S]*Return to review list/, 'Focused editor should expose approve, delete, and return actions together.');
+  assert.match(saveEdits, /collectReviewFieldEdits\(item, scope\)/, 'Focused save should collect safe editable field changes from the focused panel.');
+  assert.match(saveEdits, /ENDPOINTS\.draftItem\(state\.selectedDraftPackId, refreshedItem\.section, refreshedItem\.index\)/, 'Focused save should use the draft item edit endpoint.');
+  assert.match(saveEdits, /await refreshSelectedDraftReportFromBackend\(\)/, 'Focused save should refresh the selected draft report after edit.');
+  assert.match(saveEdits, /refreshedItem = refreshFocusedReviewItemState\(refreshedItem, itemRef\)/, 'Focused save should replace active focused item state with the refreshed item.');
+  assert.match(statusButton, /const currentItemRef = buildReviewItemRef\(matchedItem\)/, 'Focused approve should rebuild the item ref from the latest matched item.');
+  assert.match(statusButton, /\(detailPanel \|\| focusedPanel\) && currentItemRef \? currentItemRef/, 'Focused approve should prefer the refreshed item ref over stale button attrs.');
+  assert.match(reconcile, /state\.activeFixItem = makeActiveFixItem\(nextFix/, 'Reconcile should refresh active focused item identity after report updates.');
+  assert.match(conflictRefresh, /await refreshSelectedDraftReportFromBackend\(\)/, '409 conflict recovery should refresh the selected draft report.');
+  assert.match(conflictRefresh, /This item was refreshed\. Try the action again\./, 'Conflict recovery should have a helpful refreshed-item fallback message.');
+  assert.match(approveWithEdits, /This item was refreshed\. Try approving again\./, 'Approve conflicts should ask the teacher to retry after automatic refresh.');
 }
 
 function assertSuccessReturnsToKnowledgeManager() {

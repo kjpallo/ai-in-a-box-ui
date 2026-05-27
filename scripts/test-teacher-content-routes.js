@@ -150,6 +150,8 @@ async function main() {
     await assertPromoteDoesNotOverwriteWithoutForce(handlers);
     await assertPromoteOverwritesWithForce(handlers);
     await assertRemoveAcceptedDraftCopyArchivesDraftOnly(handlers);
+    await assertRemoveAcceptedDraftCopyFindsApprovedPackByJsonPackId(handlers);
+    await assertStaleDraftCanBeRemovedFromReviewQueueWithoutApprovedPack(handlers);
     await assertInvalidPromotePathTraversalRejected(handlers);
     await assertApproveDraftItemEndpoint(handlers);
     await assertApproveNeedsReviewLowConfidenceItemEndpoint(handlers);
@@ -157,6 +159,7 @@ async function main() {
     await assertEditDraftItemEndpoint(handlers);
     await assertApproveDraftItemWithInlineEdits(handlers);
     await assertApproveDraftItemResolvesStableItemRefWhenIndexStale(handlers);
+    await assertApproveDraftItemAfterFocusedEditRequiresRefreshedItemRef(handlers);
     await assertTeacherEditClearsLowConfidencePromotionBlock(handlers);
     await assertTeacherEditStillBlockedWhenRequiredFieldsRemainMissing(handlers);
     await assertDisallowedEditFails(handlers);
@@ -2811,6 +2814,54 @@ async function assertRemoveAcceptedDraftCopyArchivesDraftOnly(handlers) {
   assert.equal(repeat.body.data.alreadyArchived, true, 'remove accepted draft copy should be safe and persistent after refresh.');
 }
 
+async function assertRemoveAcceptedDraftCopyFindsApprovedPackByJsonPackId(handlers) {
+  const packId = 'route-approved-by-json-pack-id';
+  writeKnowledgePack(draftPacksDir, makePack({
+    packId,
+    title: 'Route Draft Copy Matched By Json Pack Id',
+    vocabulary: [makeVocabularyItem('json-pack-id-term', 'approved')]
+  }));
+  writeKnowledgePack(path.join(approvedPacksDir, 'folder-name-does-not-match'), makePack({
+    packId,
+    title: 'Route Approved Matched By Json Pack Id',
+    version: '1.0.0',
+    vocabulary: [makeVocabularyItem('json-pack-id-term', 'approved')]
+  }));
+
+  const response = await request(handlers, 'DELETE', '/drafts/:packId/accepted-copy', {}, { packId });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.data.packId, packId);
+  assert.equal(response.body.data.approvedPackPreserved, true);
+  assert.equal(fs.existsSync(path.join(draftPacksDir, packId, 'knowledge_pack.json')), false, 'draft should be archived even when approved folder name differs.');
+  assert.equal(fs.existsSync(path.join(approvedPacksDir, 'folder-name-does-not-match', packId, 'knowledge_pack.json')), true, 'approved pack with matching JSON packId should be preserved.');
+}
+
+async function assertStaleDraftCanBeRemovedFromReviewQueueWithoutApprovedPack(handlers) {
+  const packId = 'route-stale-review-queue-draft';
+  writeKnowledgePack(draftPacksDir, makePack({
+    packId,
+    title: 'Route Stale Review Queue Draft',
+    vocabulary: [makeVocabularyItem('stale-review-term', 'rejected')]
+  }));
+
+  const acceptedCopy = await request(handlers, 'DELETE', '/drafts/:packId/accepted-copy', {}, { packId });
+  assert.equal(acceptedCopy.statusCode, 409, 'accepted-copy archive should still require an approved counterpart.');
+
+  const response = await request(handlers, 'DELETE', '/drafts/:packId/review-queue', {}, { packId });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.data.packId, packId);
+  assert.equal(response.body.data.approvedPackPreserved, false);
+  assert.equal(response.body.data.removedFromReviewQueue, true);
+  assert.ok(response.body.data.archivedPath.startsWith(path.join(draftPacksDir, '_removed')));
+  assert.equal(fs.existsSync(path.join(draftPacksDir, packId, 'knowledge_pack.json')), false, 'stale draft should be removed from active draft-packs.');
+  assert.equal(fs.existsSync(path.join(response.body.data.archivedPath, 'knowledge_pack.json')), true, 'stale draft should be archived instead of deleted outright.');
+  assert.equal(response.body.data.drafts.some((pack) => pack.packId === packId), false, 'stale draft should not reload into active review queue.');
+}
+
 async function assertInvalidPromotePathTraversalRejected(handlers) {
   const response = await request(handlers, 'POST', '/drafts/:packId/promote', {}, {
     packId: '../route-promote-ready-pack'
@@ -3046,6 +3097,84 @@ async function assertApproveDraftItemResolvesStableItemRefWhenIndexStale(handler
     assert.equal(editedDraft.vocabulary[1].studentDefinition, 'Stable-item-ref teacher wording.');
     assert.equal(editedDraft.vocabulary[1].teacherVerified, true);
     assert.equal(editedDraft.vocabulary[1].manuallyEdited, true);
+  } finally {
+    fs.rmSync(path.join(draftPacksDir, packId), { recursive: true, force: true });
+    fs.rmSync(path.join(approvedPacksDir, packId), { recursive: true, force: true });
+  }
+}
+
+async function assertApproveDraftItemAfterFocusedEditRequiresRefreshedItemRef(handlers) {
+  const packId = 'route-focused-edit-refresh-pack';
+  writeKnowledgePack(draftPacksDir, makePack({
+    packId,
+    vocabulary: [
+      {
+        ...makeVocabularyItem('focused-edit-old-term', 'pending'),
+        sourceLocation: 'Page 8',
+        sourceTextSnippet: 'Focused editor source snippet.'
+      }
+    ],
+    concepts: [],
+    referenceFormulas: [],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+
+  try {
+    const oldItemRef = {
+      itemId: 'focused-edit-old-term',
+      term: 'focused-edit-old-term',
+      sourceFile: 'teacher_force_notes.txt',
+      sourceLocation: 'Page 8'
+    };
+    const edit = await request(handlers, 'PATCH', '/drafts/:packId/items/:section/:index', {
+      field: 'term',
+      value: 'focused-edit-new-term',
+      itemRef: oldItemRef
+    }, {
+      packId,
+      section: 'vocabulary',
+      index: '0'
+    });
+
+    assert.equal(edit.statusCode, 200);
+    assert.equal(edit.body.success, true);
+    assert.equal(edit.body.data.debug.refreshedItem.itemId, 'focused-edit-new-term');
+
+    const staleApprove = await request(handlers, 'PATCH', '/drafts/:packId/items/:section/:index/status', {
+      reviewStatus: 'approved',
+      itemRef: oldItemRef
+    }, {
+      packId,
+      section: 'vocabulary',
+      index: '0'
+    });
+
+    assert.equal(staleApprove.statusCode, 409);
+    assert.equal(staleApprove.body.success, false);
+    assert.ok(staleApprove.body.errors.some((error) => error.includes('selected draft item changed')));
+
+    const refreshedItemRef = {
+      ...oldItemRef,
+      itemId: 'focused-edit-new-term',
+      term: 'focused-edit-new-term'
+    };
+    const approve = await request(handlers, 'PATCH', '/drafts/:packId/items/:section/:index/status', {
+      reviewStatus: 'approved',
+      itemRef: refreshedItemRef
+    }, {
+      packId,
+      section: 'vocabulary',
+      index: '0'
+    });
+
+    assert.equal(approve.statusCode, 200);
+    assert.equal(approve.body.success, true);
+    assert.equal(approve.body.data.debug.request.itemRef.term, 'focused-edit-new-term');
+    assert.equal(approve.body.data.debug.afterSnapshot.item.term, 'focused-edit-new-term');
+    assert.equal(approve.body.data.debug.afterSnapshot.item.reviewStatus, 'approved');
+    assert.equal(readKnowledgePack(draftPacksDir, packId).vocabulary[0].reviewStatus, 'approved');
   } finally {
     fs.rmSync(path.join(draftPacksDir, packId), { recursive: true, force: true });
     fs.rmSync(path.join(approvedPacksDir, packId), { recursive: true, force: true });
