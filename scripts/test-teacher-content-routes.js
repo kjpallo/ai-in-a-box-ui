@@ -142,6 +142,10 @@ async function main() {
     await assertPromoteBlocksPendingItems(handlers);
     await assertApprovedOnlyPromotionIgnoresUnselectedPendingItems(handlers);
     await assertSelectedOnlyPromotionUsesOnlySelectedRows(handlers);
+    await assertCombinedApproveAllValidAcrossMultipleDrafts(handlers);
+    await assertCombinedApproveSelectedAcrossMultipleDrafts(handlers);
+    await assertCombinedApproveDedupesAndUpdatesExistingItem(handlers);
+    await assertCombinedApproveRejectsUnsafePackIds(handlers);
     await assertExistingDraftBlockersCanBeRejectedAndPromoted(handlers);
     await assertPromoteExcludesRejectedItems(handlers);
     await assertPromoteExcludesRepairNeededItems(handlers);
@@ -177,9 +181,13 @@ async function main() {
     await assertApprovedDeleteRequiresConfirmation(handlers);
     await assertInvalidApprovedDeletePathTraversalRejected(handlers);
     await assertMissingApprovedDeletePackRejected(handlers);
-    await assertApprovedBulkDeleteArchivesSelectedPacksOnly(handlers);
+    await assertApprovedBulkDeleteRequiresConfirmation(handlers);
+    await assertDeleteSelectedRemovesApprovedAndDraftPacks(handlers);
+    await assertDeleteAllRemovesEveryVisiblePack(handlers);
     await assertApprovedBulkDeletePathTraversalRejectedBeforeMutation(handlers);
-    await assertApprovedDeleteArchivesPackAndActivationOnly(handlers);
+    await assertApprovedDeleteRemovesMatchingDraftAndArchivedCopies(handlers);
+    await assertDraftOnlyDeleteRemovesPackFromVisibleList(handlers);
+    await assertDeleteByPackIdDoesNotRemoveSimilarTitlePack(handlers);
     await assertUploadHistoryEndpoint(handlers);
     await assertMissingDraftReportEndpoint(handlers);
     await assertPathTraversalRejected(handlers);
@@ -2338,13 +2346,13 @@ async function assertApprovedDeleteRequiresConfirmation(handlers) {
 
   assert.equal(response.statusCode, 400);
   assert.equal(response.body.success, false);
-  assert.match(response.body.errors[0], /confirmationText/);
+  assert.match(response.body.errors[0], /confirmed must be true/);
   assert.equal(fs.existsSync(path.join(approvedPacksDir, 'route-approved-pack', 'knowledge_pack.json')), true);
 }
 
 async function assertInvalidApprovedDeletePathTraversalRejected(handlers) {
   const response = await request(handlers, 'DELETE', '/approved/:packId', {
-    confirmationText: 'DELETE'
+    confirmed: true
   }, {
     packId: '../route-approved-pack'
   });
@@ -2356,44 +2364,81 @@ async function assertInvalidApprovedDeletePathTraversalRejected(handlers) {
 
 async function assertMissingApprovedDeletePackRejected(handlers) {
   const response = await request(handlers, 'DELETE', '/approved/:packId', {
-    confirmationText: 'DELETE'
+    confirmed: true
   }, {
     packId: 'missing-approved-pack'
   });
 
   assert.equal(response.statusCode, 404);
   assert.equal(response.body.success, false);
-  assert.match(response.body.errors[0], /Approved pack not found/);
+  assert.match(response.body.errors[0], /No matching saved knowledge pack/);
 }
 
-async function assertApprovedDeleteArchivesPackAndActivationOnly(handlers) {
+async function assertApprovedDeleteRemovesMatchingDraftAndArchivedCopies(handlers) {
+  const packId = 'route-approved-pack';
   const uploadedSourcePath = path.join(uploadIncomingDir, 'route-approved-source.pdf');
   fs.writeFileSync(uploadedSourcePath, 'uploaded source remains');
-  const draftBefore = snapshotFiles(draftPacksDir);
+  writeKnowledgePack(approvedPacksDir, makePack({
+    packId,
+    title: 'Route Approved Pack',
+    version: '1.0.0',
+    vocabulary: [makeVocabularyItem('route-approved-source', 'approved')]
+  }));
+  fs.writeFileSync(activationRegistryPath, `${JSON.stringify({
+    version: 1,
+    packs: {
+      [packId]: { enabled: true, updatedAt: '2026-01-01T00:00:00.000Z' }
+    }
+  }, null, 2)}\n`);
+  writeKnowledgePack(draftPacksDir, makePack({
+    packId,
+    title: 'Route Approved Pack',
+    version: '0.1.0-draft',
+    vocabulary: [makeVocabularyItem('route-approved-draft-copy', 'approved')]
+  }));
+  writeKnowledgePack(path.join(draftPacksDir, '_accepted', `2026-01-01T00-00-00-000Z-${packId}`), makePack({
+    packId,
+    title: 'Route Approved Pack',
+    version: '0.1.0-draft',
+    vocabulary: [makeVocabularyItem('route-approved-accepted-copy', 'approved')]
+  }));
+  writeKnowledgePack(path.join(draftPacksDir, '_removed', `2026-01-01T00-00-00-000Z-${packId}`), makePack({
+    packId,
+    title: 'Route Approved Pack',
+    version: '0.1.0-draft',
+    vocabulary: [makeVocabularyItem('route-approved-removed-copy', 'approved')]
+  }));
   const uploadsBefore = snapshotFiles(path.join(tempRoot, 'uploads'));
   const response = await request(handlers, 'DELETE', '/approved/:packId', {
-    confirmationText: 'DELETE'
+    confirmed: true
   }, {
-    packId: 'route-approved-pack'
+    packId
   });
 
   assert.equal(response.statusCode, 200);
   assert.equal(response.body.success, true);
-  assert.equal(response.body.data.packId, 'route-approved-pack');
+  assert.equal(response.body.data.packId, packId);
   assert.equal(response.body.data.removedActivation, true);
   assert.equal(response.body.data.sourceFilesPreserved, true);
-  assert.equal(response.body.data.draftPacksPreserved, true);
-  assert.equal(fs.existsSync(path.join(approvedPacksDir, 'route-approved-pack', 'knowledge_pack.json')), false);
-  assert.ok(response.body.data.archivedPath.startsWith(deletedApprovedPacksDir));
-  assert.equal(fs.existsSync(path.join(response.body.data.archivedPath, 'knowledge_pack.json')), true);
-  assert.equal(JSON.parse(fs.readFileSync(path.join(response.body.data.archivedPath, 'knowledge_pack.json'), 'utf8')).packId, 'route-approved-pack');
-  assert.equal(Object.prototype.hasOwnProperty.call(JSON.parse(fs.readFileSync(activationRegistryPath, 'utf8')).packs, 'route-approved-pack'), false);
-  assert.equal(response.body.data.approvedSummary.approvedPacks.some((pack) => pack.packId === 'route-approved-pack'), false);
-  assert.deepEqual(snapshotFiles(draftPacksDir), draftBefore, 'delete should not remove or modify draft packs');
+  assert.equal(response.body.deleted.length, 2);
+  assert.deepEqual(response.body.notFound, []);
+  assert.deepEqual(response.body.errors, []);
+  assert.equal(fs.existsSync(path.join(approvedPacksDir, packId, 'knowledge_pack.json')), false);
+  assert.equal(fs.existsSync(path.join(draftPacksDir, packId, 'knowledge_pack.json')), false);
+  assert.equal(fs.existsSync(path.join(draftPacksDir, '_accepted', `2026-01-01T00-00-00-000Z-${packId}`, packId, 'knowledge_pack.json')), true);
+  assert.equal(fs.existsSync(path.join(draftPacksDir, '_removed', `2026-01-01T00-00-00-000Z-${packId}`, packId, 'knowledge_pack.json')), true);
+  assert.equal(Object.prototype.hasOwnProperty.call(JSON.parse(fs.readFileSync(activationRegistryPath, 'utf8')).packs, packId), false);
+  assert.equal(response.body.data.approvedSummary.approvedPacks.some((pack) => pack.packId === packId), false);
+  assert.equal(response.body.data.approvedSummary.approvedPacks.some((pack) => pack.packId === 'route-draft-pack'), false, 'approved delete should keep visible draft list clean for matching pack IDs.');
+  const dashboard = await request(handlers, 'GET', '/dashboard');
+  assert.equal(dashboard.statusCode, 200);
+  assert.equal(dashboard.body.data.draftPacks, 0, 'deleted approved pack should not reappear as draft after refresh.');
+  const draftsResponse = await request(handlers, 'GET', '/drafts');
+  assert.equal(draftsResponse.body.data.draftPacks.some((pack) => pack.packId === packId), false, 'deleted approved pack should not appear in draft list.');
   assert.deepEqual(snapshotFiles(path.join(tempRoot, 'uploads')), uploadsBefore, 'delete should not remove uploaded source files');
 }
 
-async function assertApprovedBulkDeleteArchivesSelectedPacksOnly(handlers) {
+async function assertDeleteSelectedRemovesApprovedAndDraftPacks(handlers) {
   writeKnowledgePack(approvedPacksDir, makePack({
     packId: 'route-bulk-delete-pack-one',
     title: 'Route Bulk Delete Pack One',
@@ -2412,6 +2457,24 @@ async function assertApprovedBulkDeleteArchivesSelectedPacksOnly(handlers) {
     version: '1.0.0',
     vocabulary: [makeVocabularyItem('bulk-keep', 'approved')]
   }));
+  writeKnowledgePack(draftPacksDir, makePack({
+    packId: 'route-bulk-delete-draft-only',
+    title: 'Route Bulk Delete Draft Only',
+    version: '0.1.0-draft',
+    vocabulary: [makeVocabularyItem('bulk-delete-draft-only', 'approved')]
+  }));
+  writeKnowledgePack(path.join(draftPacksDir, '_accepted', '2026-01-01T00-00-00-000Z-route-bulk-delete-pack-two'), makePack({
+    packId: 'route-bulk-delete-pack-two',
+    title: 'Route Bulk Delete Pack Two',
+    version: '0.1.0-draft',
+    vocabulary: [makeVocabularyItem('bulk-delete-two-accepted', 'approved')]
+  }));
+  writeKnowledgePack(path.join(draftPacksDir, '_removed', '2026-01-01T00-00-00-000Z-route-bulk-delete-draft-only'), makePack({
+    packId: 'route-bulk-delete-draft-only',
+    title: 'Route Bulk Delete Draft Only',
+    version: '0.1.0-draft',
+    vocabulary: [makeVocabularyItem('bulk-delete-draft-removed', 'approved')]
+  }));
   fs.writeFileSync(activationRegistryPath, `${JSON.stringify({
     version: 1,
     packs: {
@@ -2424,38 +2487,109 @@ async function assertApprovedBulkDeleteArchivesSelectedPacksOnly(handlers) {
 
   const uploadedSourcePath = path.join(uploadIncomingDir, 'route-bulk-delete-source.pdf');
   fs.writeFileSync(uploadedSourcePath, 'bulk delete uploaded source remains');
-  const draftBefore = snapshotFiles(draftPacksDir);
   const uploadsBefore = snapshotFiles(path.join(tempRoot, 'uploads'));
   const nonSelectedBefore = readKnowledgePack(approvedPacksDir, 'route-bulk-keep-pack');
   const response = await request(handlers, 'DELETE', '/approved', {
-    packIds: ['route-bulk-delete-pack-one', 'route-bulk-delete-pack-two'],
-    confirmationText: 'DELETE'
+    packIds: ['route-bulk-delete-pack-one', 'route-bulk-delete-pack-two', 'route-bulk-delete-draft-only'],
+    confirmed: true
   });
 
   assert.equal(response.statusCode, 200);
   assert.equal(response.body.success, true);
-  assert.equal(response.body.data.deletedCount, 2);
-  assert.deepEqual(response.body.data.deletedPackIds, ['route-bulk-delete-pack-one', 'route-bulk-delete-pack-two']);
+  assert.equal(response.body.data.deletedCount, 3);
+  assert.deepEqual(response.body.data.deletedPackIds, ['route-bulk-delete-pack-one', 'route-bulk-delete-pack-two', 'route-bulk-delete-draft-only']);
   assert.equal(response.body.data.sourceFilesPreserved, true);
-  assert.equal(response.body.data.draftPacksPreserved, true);
   assert.equal(fs.existsSync(path.join(approvedPacksDir, 'route-bulk-delete-pack-one', 'knowledge_pack.json')), false);
   assert.equal(fs.existsSync(path.join(approvedPacksDir, 'route-bulk-delete-pack-two', 'knowledge_pack.json')), false);
+  assert.equal(fs.existsSync(path.join(draftPacksDir, 'route-bulk-delete-pack-two', 'knowledge_pack.json')), false);
+  assert.equal(fs.existsSync(path.join(draftPacksDir, 'route-bulk-delete-draft-only', 'knowledge_pack.json')), false);
+  assert.equal(fs.existsSync(path.join(draftPacksDir, '_accepted', '2026-01-01T00-00-00-000Z-route-bulk-delete-pack-two', 'route-bulk-delete-pack-two', 'knowledge_pack.json')), true);
+  assert.equal(fs.existsSync(path.join(draftPacksDir, '_removed', '2026-01-01T00-00-00-000Z-route-bulk-delete-draft-only', 'route-bulk-delete-draft-only', 'knowledge_pack.json')), true);
   assert.equal(fs.existsSync(path.join(approvedPacksDir, 'route-bulk-keep-pack', 'knowledge_pack.json')), true);
   assert.deepEqual(readKnowledgePack(approvedPacksDir, 'route-bulk-keep-pack'), nonSelectedBefore, 'non-selected approved pack should remain untouched');
-  assert.equal(response.body.data.deletions.length, 2);
+  assert.equal(response.body.data.deletions.length, 3);
   response.body.data.deletions.forEach((deletion) => {
-    assert.ok(deletion.archivedPath.startsWith(deletedApprovedPacksDir));
-    assert.equal(fs.existsSync(path.join(deletion.archivedPath, 'knowledge_pack.json')), true);
+    assert.deepEqual(deletion.errors, []);
+    assert.equal(Array.isArray(deletion.deleted), true);
+    assert.equal(deletion.deleted.length > 0, true);
   });
   const activationState = JSON.parse(fs.readFileSync(activationRegistryPath, 'utf8'));
   assert.equal(Object.prototype.hasOwnProperty.call(activationState.packs, 'route-bulk-delete-pack-one'), false);
   assert.equal(Object.prototype.hasOwnProperty.call(activationState.packs, 'route-bulk-delete-pack-two'), false);
+  assert.equal(Object.prototype.hasOwnProperty.call(activationState.packs, 'route-bulk-delete-draft-only'), false);
   assert.equal(activationState.packs['route-bulk-keep-pack'].enabled, true);
   assert.equal(response.body.data.approvedSummary.approvedPacks.some((pack) => pack.packId === 'route-bulk-delete-pack-one'), false);
   assert.equal(response.body.data.approvedSummary.approvedPacks.some((pack) => pack.packId === 'route-bulk-delete-pack-two'), false);
+  assert.equal(response.body.data.approvedSummary.approvedPacks.some((pack) => pack.packId === 'route-bulk-delete-draft-only'), false);
   assert.equal(response.body.data.approvedSummary.approvedPacks.some((pack) => pack.packId === 'route-bulk-keep-pack'), true);
-  assert.deepEqual(snapshotFiles(draftPacksDir), draftBefore, 'bulk delete should not remove or modify draft packs');
+  const draftsResponse = await request(handlers, 'GET', '/drafts');
+  assert.equal(draftsResponse.body.data.draftPacks.some((pack) => pack.packId === 'route-bulk-delete-draft-only'), false, 'bulk delete should remove selected draft rows from the visible list.');
+  assert.equal(draftsResponse.body.data.draftPacks.some((pack) => pack.packId === 'route-bulk-keep-pack'), false, 'approved rows should never reappear as draft rows.');
   assert.deepEqual(snapshotFiles(path.join(tempRoot, 'uploads')), uploadsBefore, 'bulk delete should not remove uploaded source files');
+}
+
+async function assertApprovedBulkDeleteRequiresConfirmation(handlers) {
+  writeKnowledgePack(approvedPacksDir, makePack({
+    packId: 'route-bulk-confirm-required-pack',
+    title: 'Route Bulk Confirm Required Pack',
+    version: '1.0.0',
+    vocabulary: [makeVocabularyItem('bulk-confirm-required', 'approved')]
+  }));
+  const response = await request(handlers, 'DELETE', '/approved', {
+    packIds: ['route-bulk-confirm-required-pack']
+  });
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.success, false);
+  assert.match(response.body.errors[0], /confirmed must be true/);
+  assert.equal(fs.existsSync(path.join(approvedPacksDir, 'route-bulk-confirm-required-pack', 'knowledge_pack.json')), true);
+}
+
+async function assertDeleteAllRemovesEveryVisiblePack(handlers) {
+  writeKnowledgePack(approvedPacksDir, makePack({
+    packId: 'route-delete-all-approved-visible',
+    title: 'Route Delete All Approved Visible',
+    version: '1.0.0',
+    vocabulary: [makeVocabularyItem('route-delete-all-approved-visible', 'approved')]
+  }));
+  writeKnowledgePack(draftPacksDir, makePack({
+    packId: 'route-delete-all-draft-visible',
+    title: 'Route Delete All Draft Visible',
+    version: '0.1.0-draft',
+    vocabulary: [makeVocabularyItem('route-delete-all-draft-visible', 'approved')]
+  }));
+  writeKnowledgePack(path.join(draftPacksDir, '_removed', '2026-01-01T00-00-00-000Z-route-delete-all-draft-visible'), makePack({
+    packId: 'route-delete-all-draft-visible',
+    title: 'Route Delete All Draft Visible',
+    version: '0.1.0-draft',
+    vocabulary: [makeVocabularyItem('route-delete-all-draft-removed-visible', 'approved')]
+  }));
+  const uploadsBefore = snapshotFiles(path.join(tempRoot, 'uploads'));
+  const beforeDashboard = await request(handlers, 'GET', '/dashboard');
+  const visiblePackIds = new Set();
+  const approvedResponse = await request(handlers, 'GET', '/approved');
+  (approvedResponse.body.data.approvedPacks || []).forEach((pack) => {
+    if (pack && pack.packId) visiblePackIds.add(pack.packId);
+  });
+  const draftsResponse = await request(handlers, 'GET', '/drafts');
+  (draftsResponse.body.data.draftPacks || []).forEach((pack) => {
+    if (pack && pack.packId) visiblePackIds.add(pack.packId);
+  });
+  const packIds = Array.from(visiblePackIds).sort();
+  const response = await request(handlers, 'DELETE', '/approved', {
+    packIds,
+    confirmed: true
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.data.deletedCount, packIds.length, 'delete all should remove every visible pack ID.');
+  const afterDashboard = await request(handlers, 'GET', '/dashboard');
+  assert.equal(afterDashboard.statusCode, 200);
+  assert.equal(afterDashboard.body.data.approvedPacks, 0, 'delete all should clear visible approved packs.');
+  assert.equal(afterDashboard.body.data.draftPacks, 0, 'delete all should clear visible draft packs.');
+  assert.equal(beforeDashboard.body.data.approvedPacks + beforeDashboard.body.data.draftPacks > 0, true, 'setup should include visible packs before delete all.');
+  assert.deepEqual(snapshotFiles(path.join(tempRoot, 'uploads')), uploadsBefore, 'delete all should not remove uploaded source files');
 }
 
 async function assertApprovedBulkDeletePathTraversalRejectedBeforeMutation(handlers) {
@@ -2470,7 +2604,7 @@ async function assertApprovedBulkDeletePathTraversalRejectedBeforeMutation(handl
   const draftBefore = snapshotFiles(draftPacksDir);
   const response = await request(handlers, 'DELETE', '/approved', {
     packIds: ['route-bulk-invalid-guard-pack', '../route-approved-pack'],
-    confirmationText: 'DELETE'
+    confirmed: true
   });
 
   assert.equal(response.statusCode, 400);
@@ -2479,6 +2613,63 @@ async function assertApprovedBulkDeletePathTraversalRejectedBeforeMutation(handl
   assert.deepEqual(snapshotFiles(approvedPacksDir), approvedBefore, 'invalid bulk delete should not modify approved packs');
   assert.deepEqual(snapshotFiles(deletedApprovedPacksDir), deletedBefore, 'invalid bulk delete should not archive any packs');
   assert.deepEqual(snapshotFiles(draftPacksDir), draftBefore, 'invalid bulk delete should not modify draft packs');
+}
+
+async function assertDraftOnlyDeleteRemovesPackFromVisibleList(handlers) {
+  const packId = 'route-draft-only-delete-pack';
+  writeKnowledgePack(draftPacksDir, makePack({
+    packId,
+    title: 'Route Draft Only Delete Pack',
+    version: '0.1.0-draft',
+    vocabulary: [makeVocabularyItem('route-draft-only-delete', 'approved')]
+  }));
+  writeKnowledgePack(path.join(draftPacksDir, '_accepted', `2026-01-01T00-00-00-000Z-${packId}`), makePack({
+    packId,
+    title: 'Route Draft Only Delete Pack',
+    version: '0.1.0-draft',
+    vocabulary: [makeVocabularyItem('route-draft-only-delete-accepted', 'approved')]
+  }));
+
+  const response = await request(handlers, 'DELETE', '/approved/:packId', {
+    confirmed: true
+  }, {
+    packId
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.success, true);
+  assert.equal(fs.existsSync(path.join(draftPacksDir, packId, 'knowledge_pack.json')), false);
+  assert.equal(fs.existsSync(path.join(draftPacksDir, '_accepted', `2026-01-01T00-00-00-000Z-${packId}`, packId, 'knowledge_pack.json')), true);
+  const draftsResponse = await request(handlers, 'GET', '/drafts');
+  assert.equal(draftsResponse.body.data.draftPacks.some((pack) => pack.packId === packId), false, 'deleted draft pack should be removed from visible list after refresh.');
+}
+
+async function assertDeleteByPackIdDoesNotRemoveSimilarTitlePack(handlers) {
+  const targetPackId = 'route-similar-title-target';
+  const keepPackId = 'route-similar-title-keep';
+  writeKnowledgePack(draftPacksDir, makePack({
+    packId: targetPackId,
+    title: 'Forces Unit 1',
+    version: '0.1.0-draft',
+    vocabulary: [makeVocabularyItem('route-similar-title-target', 'approved')]
+  }));
+  writeKnowledgePack(approvedPacksDir, makePack({
+    packId: keepPackId,
+    title: 'Forces Unit 1',
+    version: '1.0.0',
+    vocabulary: [makeVocabularyItem('route-similar-title-keep', 'approved')]
+  }));
+
+  const response = await request(handlers, 'DELETE', '/approved/:packId', {
+    confirmed: true
+  }, {
+    packId: targetPackId
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.success, true);
+  assert.equal(fs.existsSync(path.join(draftPacksDir, targetPackId, 'knowledge_pack.json')), false);
+  assert.equal(fs.existsSync(path.join(approvedPacksDir, keepPackId, 'knowledge_pack.json')), true);
 }
 
 async function assertPromoteDraftEndpointSucceeds(handlers) {
@@ -2584,6 +2775,211 @@ async function assertSelectedOnlyPromotionUsesOnlySelectedRows(handlers) {
   assert.deepEqual(promoted.vocabulary.map((item) => item.term), ['selected-route-term']);
   assert.deepEqual(promoted.concepts, []);
   assert.deepEqual(promoted.referenceFormulas, []);
+}
+
+async function assertCombinedApproveAllValidAcrossMultipleDrafts(handlers) {
+  const packOneId = 'route-combined-all-pack-one';
+  const packTwoId = 'route-combined-all-pack-two';
+  writeKnowledgePack(draftPacksDir, makePack({
+    packId: packOneId,
+    title: 'Combined Source One',
+    vocabulary: [
+      makeVocabularyItem('combined-all-valid-one', 'pending'),
+      makeVocabularyItem('combined-all-rejected', 'rejected'),
+      {
+        ...makeVocabularyItem('combined-all-blocked', 'approved'),
+        sourceTextSnippet: ''
+      }
+    ],
+    concepts: [],
+    referenceFormulas: [],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+  writeKnowledgePack(draftPacksDir, makePack({
+    packId: packTwoId,
+    title: 'Combined Source Two',
+    vocabulary: [],
+    concepts: [makeConceptItem('combined-all-concept-valid', 'pending')],
+    referenceFormulas: [],
+    problemBank: [makeProblemItem('combined-all-problem-valid', 'approved')],
+    standardsMap: [],
+    smokeTests: []
+  }));
+
+  const response = await request(handlers, 'POST', '/review/approve-combined', {
+    mode: 'all_valid',
+    reviewBatchName: 'Combined Batch Alpha',
+    reviewBatchPackIds: [packOneId, packTwoId],
+    rows: [
+      { draftPackId: packOneId, section: 'vocabulary', index: 0 },
+      { draftPackId: packOneId, section: 'vocabulary', index: 1 },
+      { draftPackId: packOneId, section: 'vocabulary', index: 2 },
+      { draftPackId: packTwoId, section: 'concepts', index: 0 },
+      { draftPackId: packTwoId, section: 'problemBank', index: 0 }
+    ]
+  });
+
+  assert.equal(response.statusCode, 200, JSON.stringify(response.body));
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.data.acceptedCount, 3, 'only valid visible rows should be accepted.');
+  assert.equal(response.body.data.skipped.rejected, 1, 'rejected rows should be skipped.');
+  assert.equal(response.body.data.skipped.blocked, 1, 'blocking rows should be skipped.');
+
+  const combinedPackId = response.body.data.combinedPack.packId;
+  const combined = readKnowledgePack(approvedPacksDir, combinedPackId);
+  assert.equal(Array.isArray(combined.vocabulary), true);
+  assert.equal(combined.vocabulary.some((item) => item.term === 'combined-all-valid-one'), true);
+  assert.equal(combined.vocabulary.some((item) => item.term === 'combined-all-rejected'), false);
+  assert.equal(combined.vocabulary.some((item) => item.term === 'combined-all-blocked'), false);
+  assert.equal(combined.concepts.some((item) => item.conceptId === 'combined-all-concept-valid'), true);
+  assert.equal(combined.problemBank.some((item) => item.problemId === 'combined-all-problem-valid'), true);
+  assert.equal(combined.metadata.combinedApproval.reviewBatchName, 'Combined Batch Alpha');
+  assert.equal(Array.isArray(combined.metadata.combinedApproval.sourceDraftPackIds), true);
+
+  const remainingPackOne = readKnowledgePack(draftPacksDir, packOneId);
+  assert.equal(remainingPackOne.vocabulary.some((item) => item.term === 'combined-all-valid-one'), false, 'accepted rows should be cleared from the draft queue.');
+  assert.equal(remainingPackOne.vocabulary.some((item) => item.term === 'combined-all-rejected'), true, 'excluded rows should remain excluded.');
+  assert.equal(remainingPackOne.vocabulary.some((item) => item.term === 'combined-all-blocked'), true, 'blocking rows should remain for later review.');
+  assert.equal(
+    Array.isArray(response.body.data.archivedDrafts) && response.body.data.archivedDrafts.some((entry) => entry.packId === packTwoId),
+    true,
+    'all-valid combined approval may archive a source draft once accepted rows are fully cleared.'
+  );
+  const draftsAfter = await request(handlers, 'GET', '/drafts');
+  assert.equal(draftsAfter.body.data.draftPacks.some((pack) => pack.packId === packTwoId), false, 'archived source drafts should leave the active review queue.');
+}
+
+async function assertCombinedApproveSelectedAcrossMultipleDrafts(handlers) {
+  const packOneId = 'route-combined-selected-pack-one';
+  const packTwoId = 'route-combined-selected-pack-two';
+  writeKnowledgePack(draftPacksDir, makePack({
+    packId: packOneId,
+    title: 'Combined Select One',
+    vocabulary: [
+      makeVocabularyItem('combined-selected-accepted', 'pending'),
+      makeVocabularyItem('combined-selected-unselected', 'pending')
+    ],
+    concepts: [],
+    referenceFormulas: [],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+  writeKnowledgePack(draftPacksDir, makePack({
+    packId: packTwoId,
+    title: 'Combined Select Two',
+    vocabulary: [],
+    concepts: [makeConceptItem('combined-selected-concept', 'pending')],
+    referenceFormulas: [],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+
+  const response = await request(handlers, 'POST', '/review/approve-combined', {
+    mode: 'selected',
+    reviewBatchName: 'Combined Batch Beta',
+    reviewBatchPackIds: [packOneId, packTwoId],
+    rows: [
+      { draftPackId: packOneId, section: 'vocabulary', index: 0 },
+      { draftPackId: packTwoId, section: 'concepts', index: 0 }
+    ]
+  });
+
+  assert.equal(response.statusCode, 200, JSON.stringify(response.body));
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.data.acceptedCount, 2);
+  const combinedPackId = response.body.data.combinedPack.packId;
+  const combined = readKnowledgePack(approvedPacksDir, combinedPackId);
+  assert.equal(combined.vocabulary.some((item) => item.term === 'combined-selected-accepted'), true);
+  assert.equal(combined.vocabulary.some((item) => item.term === 'combined-selected-unselected'), false, 'unselected rows must not be accepted.');
+  assert.equal(combined.concepts.some((item) => item.conceptId === 'combined-selected-concept'), true);
+
+  const remainingPackOne = readKnowledgePack(draftPacksDir, packOneId);
+  const remainingPackTwo = readKnowledgePack(draftPacksDir, packTwoId);
+  assert.equal(remainingPackOne.vocabulary.some((item) => item.term === 'combined-selected-accepted'), false, 'selected accepted rows should clear from the queue.');
+  assert.equal(remainingPackOne.vocabulary.some((item) => item.term === 'combined-selected-unselected'), true, 'unselected rows should stay for later review.');
+  assert.equal(remainingPackTwo.concepts.some((item) => item.conceptId === 'combined-selected-concept'), false);
+}
+
+async function assertCombinedApproveDedupesAndUpdatesExistingItem(handlers) {
+  const packId = 'route-combined-dedupe-pack';
+  writeKnowledgePack(draftPacksDir, makePack({
+    packId,
+    title: 'Combined Dedupe Source',
+    vocabulary: [
+      {
+        ...makeVocabularyItem('combined-dedupe-term', 'pending'),
+        studentDefinition: 'Version one'
+      }
+    ],
+    concepts: [],
+    referenceFormulas: [],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+
+  const first = await request(handlers, 'POST', '/review/approve-combined', {
+    mode: 'selected',
+    reviewBatchName: 'Combined Batch Gamma',
+    reviewBatchPackIds: [packId],
+    rows: [
+      { draftPackId: packId, section: 'vocabulary', index: 0 }
+    ]
+  });
+  assert.equal(first.statusCode, 200, JSON.stringify(first.body));
+  const combinedPackId = first.body.data.combinedPack.packId;
+  const afterFirst = readKnowledgePack(approvedPacksDir, combinedPackId);
+  assert.equal(afterFirst.vocabulary.filter((item) => item.term === 'combined-dedupe-term').length, 1);
+  assert.equal(afterFirst.vocabulary.find((item) => item.term === 'combined-dedupe-term').studentDefinition, 'Version one');
+
+  writeKnowledgePack(draftPacksDir, makePack({
+    packId,
+    title: 'Combined Dedupe Source',
+    vocabulary: [
+      {
+        ...makeVocabularyItem('combined-dedupe-term', 'pending'),
+        studentDefinition: 'Version two (edited)'
+      }
+    ],
+    concepts: [],
+    referenceFormulas: [],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+
+  const second = await request(handlers, 'POST', '/review/approve-combined', {
+    mode: 'selected',
+    reviewBatchName: 'Combined Batch Gamma',
+    reviewBatchPackIds: [packId],
+    rows: [
+      { draftPackId: packId, section: 'vocabulary', index: 0 }
+    ]
+  });
+  assert.equal(second.statusCode, 200, JSON.stringify(second.body));
+  assert.equal(second.body.data.combinedPack.packId, combinedPackId, 'repeat accepts should merge into the same combined pack.');
+  const afterSecond = readKnowledgePack(approvedPacksDir, combinedPackId);
+  const dedupedRows = afterSecond.vocabulary.filter((item) => item.term === 'combined-dedupe-term');
+  assert.equal(dedupedRows.length, 1, 'same section + same term should not duplicate.');
+  assert.equal(dedupedRows[0].studentDefinition, 'Version two (edited)', 'later edited data should replace stale values when accepted again.');
+}
+
+async function assertCombinedApproveRejectsUnsafePackIds(handlers) {
+  const beforeApproved = snapshotKnowledgePackFiles(approvedPacksDir);
+  const response = await request(handlers, 'POST', '/review/approve-combined', {
+    mode: 'selected',
+    reviewBatchName: 'Unsafe Combined Batch',
+    rows: [
+      { draftPackId: '../unsafe-pack', section: 'vocabulary', index: 0 }
+    ]
+  });
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.success, false);
+  assert.deepEqual(snapshotKnowledgePackFiles(approvedPacksDir), beforeApproved, 'unsafe combined approval rows should not mutate approved packs.');
 }
 
 async function assertExistingDraftBlockersCanBeRejectedAndPromoted(handlers) {

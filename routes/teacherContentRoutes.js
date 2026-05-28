@@ -19,6 +19,7 @@ const {
   archiveAcceptedDraftKnowledgePack,
   archiveDraftKnowledgePackFromReviewQueue
 } = require('../lib/knowledge/archiveAcceptedDraftKnowledgePack');
+const { approveCombinedReviewRows } = require('../lib/knowledge/approveCombinedReviewRows');
 const { promoteDraftKnowledgePack } = require('../lib/knowledge/promoteDraftKnowledgePack');
 const {
   REVIEWABLE_SECTIONS,
@@ -487,6 +488,59 @@ function registerTeacherContentRoutes(app, options = {}) {
     }
   });
 
+  app.post('/review/approve-combined', (req, res) => {
+    try {
+      const approval = approveCombinedReviewRows({
+        mode: req.body && req.body.mode,
+        reviewBatchName: req.body && (req.body.reviewBatchName || req.body.batchName || req.body.knowledgeName),
+        reviewBatchPackIds: req.body && (req.body.reviewBatchPackIds || req.body.queuePackIds || req.body.packIds),
+        rows: req.body && (req.body.rows || req.body.items || req.body.selectedItems || req.body.selectedRows)
+      }, options);
+
+      if (!approval.success) {
+        return res.status(400).json({
+          success: false,
+          errors: approval.errors || ['No valid rows could be approved.'],
+          warnings: approval.warnings || [],
+          skipped: approval.skipped || undefined
+        });
+      }
+
+      const dashboard = getTeacherContentDashboard(options);
+      const drafts = listDraftPacksForReview(options);
+      const approvedSummary = listApprovedPacksSummary(options);
+      const reportsByPackId = {};
+      const refreshedPackIds = Array.from(new Set([
+        ...(Array.isArray(approval.updatedDraftPackIds) ? approval.updatedDraftPackIds : []),
+        ...(Array.isArray(req.body && req.body.reviewBatchPackIds) ? req.body.reviewBatchPackIds : [])
+      ].map((packId) => String(packId || '').trim()).filter((packId) => isSafePackId(packId))));
+      refreshedPackIds.forEach((packId) => {
+        const report = getDraftPackReport(packId, options);
+        if (report && report.success) reportsByPackId[packId] = report;
+      });
+
+      return res.json({
+        success: true,
+        data: {
+          mode: approval.mode,
+          acceptedCount: approval.acceptedCount,
+          skipped: approval.skipped,
+          combinedPack: approval.combinedPack,
+          archivedDrafts: approval.archivedDrafts || [],
+          updatedDraftPackIds: approval.updatedDraftPackIds || [],
+          dashboard,
+          drafts: drafts.draftPacks,
+          approvedSummary,
+          reportsByPackId
+        },
+        errors: [],
+        warnings: approval.warnings || []
+      });
+    } catch (error) {
+      return sendRouteError(res, error);
+    }
+  });
+
   app.delete('/drafts/:packId/accepted-copy', (req, res) => {
     const packId = String(req.params && req.params.packId || '').trim();
     if (!isSafePackId(packId)) {
@@ -569,21 +623,23 @@ function registerTeacherContentRoutes(app, options = {}) {
     if (invalidPackId || !packIds.length) {
       return res.status(400).json({
         success: false,
-        errors: [packIds.length ? 'packIds must contain only lowercase letters, numbers, underscores, and hyphens.' : 'packIds must include at least one approved pack ID.']
+        errors: [packIds.length ? 'packIds must contain only lowercase letters, numbers, underscores, and hyphens.' : 'packIds must include at least one visible knowledge pack ID.']
       });
     }
 
+    const confirmed = req.body && req.body.confirmed === true;
     const confirmationText = String(req.body && req.body.confirmationText || '').trim();
-    if (!confirmationText) {
+    if (!confirmed && !confirmationText) {
       return res.status(400).json({
         success: false,
-        errors: ['confirmationText is required before deleting approved packs.']
+        errors: ['confirmed must be true before deleting visible knowledge packs.']
       });
     }
 
     try {
       const deletion = deleteApprovedKnowledgePacks(packIds, {
         ...options,
+        confirmed,
         confirmationText
       });
       const approvedSummary = listApprovedPacksSummary(options);
@@ -591,7 +647,7 @@ function registerTeacherContentRoutes(app, options = {}) {
         success: true,
         data: {
           ...deletion,
-          message: 'Selected approved packs archived. Uploaded source files and draft packs were left untouched.',
+          message: 'Selected knowledge packs deleted from saved teacher-content locations.',
           approvedSummary
         },
         errors: [],
@@ -657,33 +713,47 @@ function registerTeacherContentRoutes(app, options = {}) {
       });
     }
 
+    const confirmed = req.body && req.body.confirmed === true;
     const confirmationText = String(req.body && req.body.confirmationText || '').trim();
-    if (!confirmationText) {
+    if (!confirmed && !confirmationText) {
       return res.status(400).json({
         success: false,
-        errors: ['confirmationText is required before deleting an approved pack.']
+        errors: ['confirmed must be true before deleting a visible knowledge pack.']
       });
     }
 
     try {
       const deletion = deleteApprovedKnowledgePack(packId, {
         ...options,
+        confirmed,
         confirmationText
       });
+      if (!deletion.success) {
+        return res.status(404).json({
+          success: false,
+          deleted: deletion.deleted || [],
+          notFound: deletion.notFound || [packId],
+          errors: deletion.errors && deletion.errors.length ? deletion.errors : ['No matching saved knowledge pack was deleted.']
+        });
+      }
       const approvedSummary = listApprovedPacksSummary(options);
       return res.json({
         success: true,
+        deleted: deletion.deleted || [],
+        notFound: deletion.notFound || [],
+        errors: deletion.errors || [],
         data: {
           ...deletion,
-          message: 'Approved pack archived. Uploaded source files and draft packs were left untouched.',
+          message: 'Deleted pack from saved knowledge.',
           approvedSummary
         },
-        errors: [],
         warnings: []
       });
     } catch (error) {
       return res.status(error.statusCode || 500).json({
         success: false,
+        deleted: [],
+        notFound: [packId],
         errors: [error instanceof Error ? error.message : String(error)]
       });
     }

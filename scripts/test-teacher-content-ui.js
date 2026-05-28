@@ -14,23 +14,35 @@ const style = read(stylePath);
 const routeTest = read(routeTestPath);
 const pkg = JSON.parse(read(packagePath));
 
-assertTwoPrimaryScreens();
-assertUploadScreenIsSimple();
-assertReviewScreenIsSimpleList();
-assertReviewScreenUsesReviewActionFooter();
-assertReviewAcceptanceRequiresApprovedCounterpart();
-assertAcceptSelectedCreatesSelectedOnlyPack();
-assertAcceptAllCreatesApprovedOnlyPack();
-assertDeleteMarksRejectedAndHidesRows();
-assertEditUsesSafeFields();
-assertFocusedEditRefreshesBeforeApproval();
-assertSuccessReturnsToKnowledgeManager();
-assertPrimaryFlowHidesTechnicalImportControls();
-assertRouterAndFormulaGuardsRemainInRouteTests();
-assertPackageScript();
-assertTeacherContentRouteTestsStillPass();
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
 
-console.log('Teacher content UI tests passed.');
+async function main() {
+  assertTwoPrimaryScreens();
+  assertUploadScreenIsSimple();
+  assertReviewScreenIsSimpleList();
+  assertReviewAggregatesAllQueuePacks();
+  assertReviewScreenUsesReviewActionFooter();
+  assertReviewAcceptanceRequiresApprovedCounterpart();
+  assertAcceptSelectedUsesCombinedPackApproval();
+  assertAcceptAllUsesCombinedPackApproval();
+  assertDeleteMarksRejectedAndHidesRows();
+  assertExcludeSelectedRoutesAcrossDraftPacks();
+  assertEditActionKeepsDraftPackIdentity();
+  assertEditUsesSafeFields();
+  assertFocusedEditRefreshesBeforeApproval();
+  assertSuccessReturnsToKnowledgeManager();
+  assertPrimaryFlowHidesTechnicalImportControls();
+  assertSavedKnowledgePackBulkDeleteUi();
+  await assertSavedKnowledgePackBulkDeleteBehavior();
+  assertRouterAndFormulaGuardsRemainInRouteTests();
+  assertPackageScript();
+  assertTeacherContentRouteTestsStillPass();
+
+  console.log('Teacher content UI tests passed.');
+}
 
 function assertTwoPrimaryScreens() {
   const tabsBlock = ui.match(/const TABS = \[([\s\S]*?)\n  \];/);
@@ -53,32 +65,73 @@ function assertUploadScreenIsSimple() {
 
 function assertReviewScreenIsSimpleList() {
   const reviewCard = extractFunctionSource(ui, 'renderReviewCard');
+  const reviewTable = extractFunctionSource(ui, 'renderReviewTable');
+  const sortControl = extractFunctionSource(ui, 'renderReviewSortControl');
   const rowRenderer = extractFunctionSource(ui, 'renderReviewTableRow');
   const actionBar = extractFunctionSource(ui, 'renderReviewActionBar');
 
   assert.match(reviewCard, /renderReviewTable\(filteredItems\)/, 'Review screen should render a single list immediately.');
   assert.match(reviewCard, /renderReviewTable\(filteredItems\)[\s\S]*renderReviewActionBar\(filteredItems, reviewState\)/, 'Review action bar should render after visible rows as the review footer.');
   assert.doesNotMatch(reviewCard, /renderReviewFilters\(\)|renderReviewIssuesToFix\(/, 'Review screen should not show competing filter or issue panels in the primary path.');
+  assert.match(reviewTable, /data-review-combined-table/, 'Review should render one combined table shell.');
+  assert.match(reviewTable, /renderReviewSortControl\('source', 'Source'\)/, 'Review table should include source sorting.');
+  assert.match(reviewTable, /renderReviewSortControl\('itemType', 'Item Type'\)/, 'Review table should include item-type sorting.');
+  assert.match(reviewTable, /renderReviewSortControl\('title', 'Title'\)/, 'Review table should include title sorting.');
+  assert.match(reviewTable, /renderReviewSortControl\('status', 'Status \/ Warning'\)/, 'Review table should include status sorting.');
+  assert.match(sortControl, /data-review-sort="\$\{escapeAttr\(sortKey\)\}"/, 'Sort controls should render with data-review-sort attributes.');
   assert.match(rowRenderer, /data-review-selection-checkbox/, 'Each row should include a checkbox.');
+  assert.match(rowRenderer, /data-review-item-source/, 'Each row should show source pack or file.');
   assert.match(rowRenderer, /data-review-item-category/, 'Each row should show an item type label.');
+  assert.match(rowRenderer, /data-review-item-title/, 'Each row should show title/term/name.');
   assert.match(rowRenderer, /data-review-item-wording/, 'Each row should show a main content preview.');
+  assert.match(rowRenderer, /data-review-item-status-warning/, 'Each row should show status/warning details.');
   assert.match(rowRenderer, /data-review-edit/, 'Each row should include Edit.');
   assert.match(rowRenderer, /Delete/, 'Each row should include Delete.');
   assert.doesNotMatch(rowRenderer, /Approve item|Reject \/ Exclude/, 'Rows should not expose extra competing approve/reject actions.');
+  assert.match(actionBar, /data-review-select-all/, 'Bottom bar should include Select all visible.');
+  assert.match(actionBar, /data-review-clear-selection/, 'Bottom bar should include Clear selection.');
+  assert.match(actionBar, /data-review-exclude-selected/, 'Bottom bar should include Exclude selected.');
   assert.match(actionBar, /data-review-accept-selected/, 'Bottom bar should include Accept Selected.');
   assert.match(actionBar, /data-review-accept-all/, 'Bottom bar should include Accept All.');
-  assert.match(actionBar, /data-review-cancel/, 'Bottom bar should include Cancel.');
-  assert.match(actionBar, /data-review-cancel[\s\S]*data-review-accept-selected[\s\S]*data-review-accept-all/, 'Review footer actions should be ordered Cancel, Accept Selected, Accept All.');
-  assert.doesNotMatch(actionBar, /data-review-select-all|data-review-exclude-selected-flagged|data-review-reject-blockers-promote/, 'Bottom bar should not show old bulk technical actions.');
-  assert.match(style, /\.teacher-content-review-card\.teacher-content-review-table-row \{[\s\S]*grid-template-columns: 36px minmax\(110px, 0\.42fr\) minmax\(220px, 1fr\) auto;/, 'Review rows should be laid out as checkbox, type, preview, actions.');
+  assert.match(actionBar, /Accept All Valid/, 'Bottom bar should include Accept All Valid copy.');
+  assert.doesNotMatch(actionBar, /data-review-exclude-selected-flagged|data-review-reject-blockers-promote/, 'Bottom bar should not show old bulk technical actions.');
+  assert.match(style, /\.teacher-content-review-table-shell\[data-review-combined-table\] \.teacher-content-review-table-head,\s*\.teacher-content-review-table-shell\[data-review-combined-table\] \.teacher-content-review-table-row \{[\s\S]*grid-template-columns: 34px minmax\(170px, 1fr\) minmax\(120px, 0\.7fr\) minmax\(150px, 0\.8fr\) minmax\(250px, 1\.5fr\) minmax\(200px, 1\.1fr\) auto;/, 'Review rows should use combined table columns.');
+}
+
+function assertReviewAggregatesAllQueuePacks() {
+  const queueList = extractFunctionSource(ui, 'renderReviewQueueList');
+  const summaryLine = extractFunctionSource(ui, 'renderReviewSummaryLine');
+  const allItems = extractFunctionSource(ui, 'getAllReviewItems');
+  const itemsForPack = extractFunctionSource(ui, 'getReviewItemsForPack');
+  const enrichIdentity = extractFunctionSource(ui, 'enrichReviewItemWithPackIdentity');
+  const queueReports = extractFunctionSource(ui, 'refreshReviewQueueReports');
+  const sortState = extractFunctionSource(ui, 'getSortedReviewItems');
+
+  assert.match(queueList, /Reviewing .*draft packs together/i, 'Review queue copy should communicate queue-wide review context.');
+  assert.match(summaryLine, /candidate items from .*sources/, 'Review summary should describe candidate rows across queue sources.');
+  assert.match(allItems, /getReviewQueuePackIds\(\)/, 'Visible review rows should aggregate every queue pack.');
+  assert.match(allItems, /flatMap\(\(packId\) => getAllReviewItemsForPack\(packId\)\)/, 'Aggregated review rows should flatten all queue pack rows.');
+  assert.match(itemsForPack, /draftPackId/, 'Aggregated rows should preserve draft pack id identity.');
+  assert.match(itemsForPack, /sourcePackName/, 'Aggregated rows should preserve source pack/file identity.');
+  assert.match(enrichIdentity, /originalItemData/, 'Aggregated rows should preserve the original item data payload.');
+  assert.match(queueReports, /ENDPOINTS\.draftReport\(packId, state\.selectedStandardsBankId\)/, 'Queue aggregation should fetch report data for every visible draft pack.');
+  assert.match(sortState, /reviewItemKeyForItem\(left\)\.localeCompare\(reviewItemKeyForItem\(right\)\)/, 'Sorting tie-breakers should use queue-wide row identity.');
 }
 
 function assertReviewScreenUsesReviewActionFooter() {
   const renderFooter = extractFunctionSource(ui, 'renderFooter');
   const actionBar = extractFunctionSource(ui, 'renderReviewActionBar');
+  const selectAllVisible = extractFunctionSource(ui, 'toggleSelectAllVisibleReviewItems');
+  const setSort = extractFunctionSource(ui, 'setReviewSort');
+  const clearSelection = extractFunctionSource(ui, 'clearReviewSelection');
 
   assert.match(renderFooter, /footer\.hidden = state\.activeTab === 'review'/, 'The old Back/Next wizard footer should be hidden on the Review screen.');
-  assert.match(actionBar, /const acceptSelectedDisabled = state\.reviewActionLoading \|\| state\.promotionActionLoading \|\| totalSelected === 0 \|\| safeSelected === 0/, 'Accept Selected should be disabled until at least one valid visible row is checked.');
+  assert.match(selectAllVisible, /const visible = getFilteredReviewItems\(getVisibleReviewItems\(\)\)/, 'Select all visible should use visible filtered rows.');
+  assert.match(selectAllVisible, /if \(allSelected\) selected\.delete\(key\)/, 'Select all visible should toggle off when everything visible is selected.');
+  assert.match(selectAllVisible, /else selected\.add\(key\)/, 'Select all visible should add all visible row keys when needed.');
+  assert.match(setSort, /state\.reviewSortDirection = state\.reviewSortDirection === 'asc' \? 'desc' : 'asc'/, 'Sort controls should toggle direction when the same column is selected.');
+  assert.match(clearSelection, /state\.selectedReviewItemKeys = \[\]/, 'Clear selection should clear selected row keys.');
+  assert.match(actionBar, /const acceptSelectedDisabled = state\.reviewActionLoading \|\| state\.promotionActionLoading \|\| selectedRows\.length === 0 \|\| safeSelected === 0/, 'Accept Selected should stay disabled until at least one valid selected row is checked.');
   assert.match(actionBar, /const acceptAllDisabled = state\.reviewActionLoading \|\| state\.promotionActionLoading \|\| safeAll === 0/, 'Accept All should be enabled when at least one visible valid row exists.');
 }
 
@@ -99,37 +152,59 @@ function assertReviewAcceptanceRequiresApprovedCounterpart() {
   assert.match(cleanupDraft, /ENDPOINTS\.draftReviewQueue\(safePackId\)/, 'Stale draft cleanup should use the review-queue cleanup endpoint, not accepted-copy archive.');
 }
 
-function assertAcceptSelectedCreatesSelectedOnlyPack() {
+function assertAcceptSelectedUsesCombinedPackApproval() {
   const acceptSelected = extractFunctionSource(ui, 'acceptSelectedReviewItems');
   const acceptReview = extractFunctionSource(ui, 'acceptReviewItems');
-  const requestPromotion = extractFunctionSource(ui, 'requestDraftPromotion');
+  const requestCombined = extractFunctionSource(ui, 'requestCombinedReviewApproval');
 
+  assert.match(acceptSelected, /getFilteredReviewItems\(getVisibleReviewItems\(\)\)/, 'Accept Selected should operate on the aggregated visible review rows.');
   assert.match(acceptSelected, /state\.selectedReviewItemKeys\.includes/, 'Accept Selected should only use checked rows.');
-  assert.match(acceptSelected, /promotionMode: 'selectedOnly'/, 'Accept Selected should use selectedOnly promotion mode.');
-  assert.match(acceptSelected, /selectedItems: safeItems\.map\(makePromotionSelectionItem\)/, 'Accept Selected should send explicit selected rows to promotion.');
-  assert.match(acceptSelected, /autoPromoteAfterAccept: true/, 'Accept Selected should create the approved JSON pack after approving rows.');
-  assert.match(acceptSelected, /if \(skipped > 0\) \{[\s\S]*Accept Selected is blocked/, 'Unsafe selected rows should block Accept Selected with a clear message.');
-  assert.match(acceptReview, /requestDraftPromotion\(draftPackIdAtStart, \{[\s\S]*promotionMode: options\.promotionMode \|\| 'approvedOnly'[\s\S]*selectedItems/, 'Accept flow should pass promotion mode and selected items to the backend.');
-  assert.match(requestPromotion, /promotionMode: options\.promotionMode \|\| options\.mode/, 'Promotion request should include a safe promotion mode.');
-  assert.match(requestPromotion, /selectedItems: Array\.isArray\(options\.selectedItems\)/, 'Promotion request should include selected row refs when provided.');
+  assert.match(acceptSelected, /one combined knowledge pack/i, 'Accept Selected confirmation should mention one combined knowledge pack.');
+  assert.match(acceptReview, /requestCombinedReviewApproval\(readyItems, \{[\s\S]*mode: options\.mode \|\| 'selected'/, 'Accept flow should call combined approval with an explicit mode.');
+  assert.match(requestCombined, /ENDPOINTS\.approveCombinedReview/, 'Combined approval request should use the combined review endpoint.');
+  assert.match(requestCombined, /reviewBatchPackIds: getReviewQueuePackIds\(\)/, 'Combined approval should send queue pack ids so repeated accepts update one pack for the batch.');
+  assert.match(requestCombined, /itemRef: buildReviewItemRef\(item\)/, 'Combined approval should send stable per-row refs.');
 }
 
-function assertAcceptAllCreatesApprovedOnlyPack() {
+function assertAcceptAllUsesCombinedPackApproval() {
   const acceptAll = extractFunctionSource(ui, 'acceptAllReviewItems');
-  assert.match(acceptAll, /const items = getVisibleReviewItems\(\)/, 'Accept All should use visible review rows.');
+  assert.match(acceptAll, /const items = getFilteredReviewItems\(getVisibleReviewItems\(\)\)/, 'Accept All should operate on aggregated visible rows.');
   assert.match(acceptAll, /items\.filter\(isReviewItemReadyForPack\)/, 'Accept All should only include valid visible rows.');
-  assert.match(acceptAll, /promotionMode: 'approvedOnly'/, 'Accept All should use approvedOnly promotion mode.');
-  assert.match(acceptAll, /autoPromoteAfterAccept: true/, 'Accept All should create the approved JSON pack.');
+  assert.match(acceptAll, /mode: 'all_valid'/, 'Accept All should request all_valid combined approval mode.');
+  assert.match(acceptAll, /one combined knowledge pack/i, 'Accept All confirmation should mention one combined knowledge pack.');
 }
 
 function assertDeleteMarksRejectedAndHidesRows() {
   const rowRenderer = extractFunctionSource(ui, 'renderReviewTableRow');
   const visibleItems = extractFunctionSource(ui, 'getVisibleReviewItems');
   const simpleVisibility = extractFunctionSource(ui, 'isItemVisibleInSimpleReviewList');
+  const excludeSelected = extractFunctionSource(ui, 'excludeSelectedReviewItems');
 
   assert.match(rowRenderer, /data-review-status="rejected"[\s\S]*>Delete</, 'Delete should send rejected reviewStatus.');
+  assert.match(excludeSelected, /reviewStatus: 'rejected'/, 'Exclude selected should set selected rows to rejected.');
+  assert.match(excludeSelected, /const selected = getSelectedReviewItems\(\)/, 'Exclude selected should use selected rows.');
   assert.match(visibleItems, /isItemVisibleInSimpleReviewList/, 'Visible review rows should use simple visibility filtering.');
   assert.match(simpleVisibility, /status !== 'rejected'/, 'Rejected rows should be hidden from the simple review list.');
+}
+
+function assertExcludeSelectedRoutesAcrossDraftPacks() {
+  const excludeSelected = extractFunctionSource(ui, 'excludeSelectedReviewItems');
+  assert.match(excludeSelected, /const draftPackId = String\(item\?\.draftPackId \|\| state\.selectedDraftPackId \|\| ''\)\.trim\(\)/, 'Exclude selected should route each row to its own draft pack.');
+  assert.match(excludeSelected, /ENDPOINTS\.draftItemStatus\(draftPackId, item\.section, item\.index\)/, 'Exclude selected should PATCH the matching item in the matching source pack.');
+  assert.match(excludeSelected, /await refreshReviewQueueReports\(\{ force: true, packIds: getReviewQueuePackIds\(\) \}\)/, 'Exclude selected should refresh queue-wide aggregated rows after multi-pack updates.');
+}
+
+function assertEditActionKeepsDraftPackIdentity() {
+  const rowRenderer = extractFunctionSource(ui, 'renderReviewTableRow');
+  const openFocused = extractFunctionSource(ui, 'openFocusedReviewItemFixFromButton');
+  const findFromButton = extractFunctionSource(ui, 'findReviewItemFromButton');
+  const identityAttrs = extractFunctionSource(ui, 'renderReviewItemIdentityDataAttrs');
+
+  assert.match(rowRenderer, /data-draft-pack-id="\$\{escapeAttr\(item\.draftPackId \|\| state\.selectedDraftPackId \|\| ''\)\}"/, 'Each row should keep draft pack id in DOM identity attributes.');
+  assert.match(identityAttrs, /data-draft-pack-id/, 'Identity attributes should include draft pack id.');
+  assert.match(findFromButton, /const draftPackId = String\(button\?\.dataset\?\.draftPackId/, 'Find-from-button should resolve item identity with draft pack id.');
+  assert.match(openFocused, /if \(targetDraftPackId && targetDraftPackId !== state\.selectedDraftPackId\)/, 'Edit should switch to the correct source draft pack before opening focused edit.');
+  assert.match(openFocused, /await loadSelectedDraftReport\(\)/, 'Edit should load the selected draft pack report before opening.');
 }
 
 function assertEditUsesSafeFields() {
@@ -166,7 +241,7 @@ function assertSuccessReturnsToKnowledgeManager() {
   const acceptReview = extractFunctionSource(ui, 'acceptReviewItems');
   const focusManager = extractFunctionSource(ui, 'focusKnowledgeManager');
   assert.match(acceptReview, /focusKnowledgeManager\(state\.reviewBulkMessage\)/, 'Successful approval should return to saved knowledge pack manager.');
-  assert.match(acceptReview, /stays Disabled for student answers until you enable it/, 'Success copy should preserve activation safety.');
+  assert.match(acceptReview, /combined knowledge pack/i, 'Success copy should mention combined knowledge pack output.');
   assert.match(focusManager, /window\.Charlemagne\?\.blades\?\.open\?\.\('ai-improvement'/, 'Saved manager focus should open the Knowledge blade.');
 }
 
@@ -179,6 +254,172 @@ function assertPrimaryFlowHidesTechnicalImportControls() {
   assert.doesNotMatch(uploadCard, /Run Preview Draft|Run Full Document Import|Import page range|Max preview chars/, 'Preview/full/range controls should not be shown in the primary upload screen.');
   assert.doesNotMatch(reviewCard, /Preview Draft|Full Import|batch size|selected range/i, 'Review screen should not expose preview/full-import controls.');
   assert.match(uploadCard, /<details class="teacher-content-upload-details" data-upload-technical-details>/, 'Technical details should remain collapsed.');
+}
+
+function assertSavedKnowledgePackBulkDeleteUi() {
+  const manager = extractFunctionSource(ui, 'renderKnowledgeManager');
+  const approvedRow = extractFunctionSource(ui, 'renderApprovedPack');
+  const draftRow = extractFunctionSource(ui, 'renderDraftPack');
+  const bulkActions = extractFunctionSource(ui, 'renderApprovedBulkActions');
+  const singleDelete = extractFunctionSource(ui, 'deleteApprovedPack');
+  const selectOne = extractFunctionSource(ui, 'toggleApprovedPackSelection');
+  const selectAll = extractFunctionSource(ui, 'toggleApprovedPackSelectAll');
+  const bulkDelete = extractFunctionSource(ui, 'deleteApprovedPacksById');
+  const deleteSelected = extractFunctionSource(ui, 'deleteSelectedApprovedPacks');
+  const deleteAll = extractFunctionSource(ui, 'deleteAllApprovedPacks');
+  const visibleRows = extractFunctionSource(ui, 'getVisibleKnowledgePackRows');
+
+  assert.match(manager, /teacher-content-simple-pack-shell/, 'Saved Knowledge Packs should wrap rows and bottom actions in a shared shell.');
+  assert.match(manager, /teacher-content-simple-pack-list[\s\S]*renderApprovedBulkActions/, 'Bulk actions should render after the list so controls stay at the bottom.');
+  assert.match(approvedRow, /data-approved-pack-select-checkbox/, 'Approved pack rows should render deletion selection checkboxes.');
+  assert.match(draftRow, /data-approved-pack-select-checkbox/, 'Draft pack rows should render deletion selection checkboxes.');
+  assert.match(draftRow, /data-approved-pack-delete-action/, 'Draft pack rows should support single delete actions.');
+  assert.match(approvedRow, /data-approved-pack-activation-checkbox/, 'Approved pack rows should preserve activation checkboxes.');
+  assert.match(bulkActions, /data-approved-pack-select-all-checkbox/, 'Bottom bulk controls should include Select all.');
+  assert.match(bulkActions, /data-approved-pack-bulk-delete-action[\s\S]*Delete selected/, 'Bulk controls should include Delete selected.');
+  assert.match(bulkActions, /selectedDisabled \? 'disabled'/, 'Delete selected should be disabled with no selected approved packs.');
+  assert.match(bulkActions, /data-approved-pack-delete-all-action[\s\S]*Delete all/, 'Bulk controls should include Delete all.');
+  assert.match(selectOne, /selected\.add\(packId\)/, 'Selecting one approved pack should add it to selection state.');
+  assert.match(selectOne, /selected\.delete\(packId\)/, 'Unselecting one approved pack should remove it from selection state.');
+  assert.match(visibleRows, /kind: 'draft'/, 'Visible pack rows should include draft rows.');
+  assert.match(selectAll, /checkbox\.checked \? visiblePackIds : \[\]/, 'Select all should select or clear all visible pack IDs.');
+  assert.match(singleDelete, /window\.confirm\('Are you sure you want to delete this knowledge pack\?'\)/, 'Single delete should use a simple browser confirmation.');
+  assert.match(singleDelete, /if \(!confirmed\) return;/, 'Single delete cancel should skip backend delete.');
+  assert.match(singleDelete, /body: JSON\.stringify\(\{ confirmed \}\)/, 'Single delete should send confirmed=true to backend.');
+  assert.match(bulkDelete, /window\.confirm\(/, 'Bulk delete should use browser confirm instead of typed prompt.');
+  assert.match(bulkDelete, /delete these selected knowledge packs/, 'Delete selected should use the required confirmation copy.');
+  assert.match(bulkDelete, /delete all saved knowledge packs/, 'Delete all should use the required confirmation copy.');
+  assert.match(bulkDelete, /if \(!confirmed\) return;/, 'Bulk delete cancel should skip backend delete.');
+  assert.match(bulkDelete, /const count = selectedPacks\.length;/, 'Bulk delete should derive count from selected packs before using it.');
+  assert.match(bulkDelete, /Deleting \$\{count\} knowledge pack/, 'Bulk delete should use defined count in status copy.');
+  assert.match(bulkDelete, /confirmed: true/, 'Bulk delete should send confirmed=true to backend.');
+  assert.match(bulkDelete, /packIds: selectedPacks\.map\(\(pack\) => pack\.packId\)/, 'Bulk delete should send selected/visible pack IDs based on helper input.');
+  assert.match(bulkDelete, /console\.log\('\[knowledge-delete\] request'/, 'Bulk delete should log request details.');
+  assert.match(bulkDelete, /console\.log\('\[knowledge-delete\] response'/, 'Bulk delete should log response details.');
+  assert.match(bulkDelete, /console\.log\('\[knowledge-delete\] error'/, 'Bulk delete should log error details.');
+  assert.match(bulkDelete, /ENDPOINTS\.approvedBulkDelete/, 'Bulk delete should call the approved bulk delete endpoint.');
+  assert.match(bulkDelete, /state\.selectedApprovedPackIds = \[\]/, 'Bulk delete success should clear selected approved pack IDs.');
+  assert.match(bulkDelete, /state\.approvedBulkDeleteMessage = 'Deleted pack from saved knowledge\.'/, 'Bulk delete success should use the required status message.');
+  assert.match(bulkDelete, /await refreshTeacherContentSummaries\(\)/, 'Bulk delete should refresh teacher-content summaries after deletion.');
+  assert.match(singleDelete, /console\.log\('\[knowledge-delete\] request'/, 'Single delete should log the delete request for debugging.');
+  assert.match(singleDelete, /console\.log\('\[knowledge-delete\] response'/, 'Single delete should log the delete response for debugging.');
+  assert.match(singleDelete, /Deleted pack from saved knowledge\./, 'Single delete success should use the required status message.');
+  assert.match(singleDelete, /Delete failed\. Check console\/server logs\./, 'Single delete failures should use the required message.');
+  assert.match(deleteSelected, /state\.selectedApprovedPackIds/, 'Delete selected should delete only selected approved pack IDs.');
+  assert.match(deleteAll, /getVisibleKnowledgePackRows\(\)\.map/, 'Delete all should use the visible packs in this section.');
+  assert.match(style, /\.teacher-content-blade-manager-shell \{[\s\S]*max-height: none;[\s\S]*overflow: hidden;/, 'Saved Knowledge Packs manager should stretch inside the blade.');
+  assert.match(style, /\.teacher-content-simple-pack-shell \{[\s\S]*grid-template-rows: minmax\(0, 1fr\) auto;/, 'Saved Knowledge Packs should reserve bottom space for bulk controls.');
+  assert.match(style, /\.teacher-content-simple-pack-list \{[\s\S]*overflow-y: auto;/, 'Saved Knowledge Packs rows should scroll inside the card.');
+  assert.match(style, /\.teacher-content-simple-pack-row \{[\s\S]*grid-template-columns: 28px minmax\(180px, 1\.2fr\) minmax\(190px, 1fr\) auto;/, 'Approved rows should align checkbox, title, activation, and actions.');
+  assert.match(routeTest, /assertDeleteSelectedRemovesApprovedAndDraftPacks/, 'Route tests should cover bulk deleting selected draft and approved packs.');
+  assert.match(routeTest, /assertDeleteAllRemovesEveryVisiblePack/, 'Route tests should cover deleting all visible saved packs.');
+  assert.match(routeTest, /assertDraftOnlyDeleteRemovesPackFromVisibleList/, 'Route tests should cover deleting draft-only rows.');
+  assert.match(routeTest, /assertApprovedBulkDeletePathTraversalRejectedBeforeMutation/, 'Route tests should cover path traversal rejection before mutation.');
+}
+
+async function assertSavedKnowledgePackBulkDeleteBehavior() {
+  const bulkDeleteSource = extractFunctionSource(ui, 'deleteApprovedPacksById');
+  const deleteSelectedSource = extractFunctionSource(ui, 'deleteSelectedApprovedPacks');
+  const deleteAllSource = extractFunctionSource(ui, 'deleteAllApprovedPacks');
+  const createHarness = () => {
+    const state = {
+      selectedApprovedPackIds: ['pack-a', 'pack-c'],
+      approvedBulkDeleteSaving: false,
+      approvedBulkDeleteMessage: '',
+      approvedDeleteMessages: {},
+      appliedSummary: null
+    };
+    const visibleRows = [
+      { packId: 'pack-a' },
+      { packId: 'pack-b' },
+      { packId: 'pack-c' }
+    ];
+    const calls = {
+      fetch: [],
+      confirm: [],
+      refresh: 0,
+      render: 0,
+      status: [],
+      summary: []
+    };
+    const envFactory = new Function(
+      'state',
+      'window',
+      'fetchJson',
+      'ENDPOINTS',
+      'unwrap',
+      'applyApprovedSummary',
+      'refreshTeacherContentSummaries',
+      'setStatus',
+      'render',
+      'getVisibleKnowledgePackRows',
+      `${bulkDeleteSource}\n${deleteSelectedSource}\n${deleteAllSource}\nreturn { deleteApprovedPacksById, deleteSelectedApprovedPacks, deleteAllApprovedPacks };`
+    );
+    const windowMock = {
+      confirm(message) {
+        calls.confirm.push(message);
+        return true;
+      }
+    };
+    const fetchJson = async (url, options) => {
+      calls.fetch.push({ url, options });
+      return { ok: true, approvedSummary: { approvedPacks: [] } };
+    };
+    const bound = envFactory(
+      state,
+      windowMock,
+      fetchJson,
+      { approvedBulkDelete: '/teacher-content/approved/bulk-delete' },
+      (payload) => payload,
+      (summary) => {
+        state.appliedSummary = summary;
+        calls.summary.push(summary);
+      },
+      async () => {
+        calls.refresh += 1;
+      },
+      (message) => {
+        calls.status.push(message);
+      },
+      () => {
+        calls.render += 1;
+      },
+      () => visibleRows
+    );
+    return { state, visibleRows, calls, windowMock, bound };
+  };
+
+  {
+    const harness = createHarness();
+    harness.windowMock.confirm = () => false;
+    await harness.bound.deleteSelectedApprovedPacks();
+    assert.equal(harness.calls.fetch.length, 0, 'Delete selected Cancel should not call fetch.');
+    assert.deepEqual(harness.state.selectedApprovedPackIds, ['pack-a', 'pack-c'], 'Delete selected Cancel should not change row selection.');
+  }
+
+  {
+    const harness = createHarness();
+    await harness.bound.deleteSelectedApprovedPacks();
+    assert.equal(harness.calls.fetch.length, 1, 'Delete selected OK should call fetch once.');
+    const request = harness.calls.fetch[0];
+    assert.equal(request.url, '/teacher-content/approved/bulk-delete');
+    assert.equal(request.options.method, 'DELETE');
+    const body = JSON.parse(request.options.body);
+    assert.equal(body.confirmed, true, 'Delete selected OK should send confirmed: true.');
+    assert.deepEqual(body.packIds, ['pack-a', 'pack-c'], 'Delete selected OK should send selected pack IDs.');
+    assert.deepEqual(harness.state.selectedApprovedPackIds, [], 'Successful bulk delete should clear selection.');
+    assert.equal(harness.calls.refresh, 1, 'Successful bulk delete should refresh summaries.');
+  }
+
+  {
+    const harness = createHarness();
+    await harness.bound.deleteAllApprovedPacks();
+    assert.equal(harness.calls.fetch.length, 1, 'Delete all OK should call fetch once.');
+    const request = harness.calls.fetch[0];
+    const body = JSON.parse(request.options.body);
+    assert.equal(body.confirmed, true, 'Delete all OK should send confirmed: true.');
+    assert.deepEqual(body.packIds, ['pack-a', 'pack-b', 'pack-c'], 'Delete all OK should send visible pack IDs.');
+  }
 }
 
 function assertRouterAndFormulaGuardsRemainInRouteTests() {
@@ -205,13 +446,16 @@ function read(filePath) {
 }
 
 function extractFunctionSource(source, functionName) {
-  const startToken = `function ${functionName}(`;
-  const start = source.indexOf(startToken);
+  const asyncStartToken = `async function ${functionName}(`;
+  const plainStartToken = `function ${functionName}(`;
+  const asyncStart = source.indexOf(asyncStartToken);
+  const plainStart = source.indexOf(plainStartToken);
+  const start = asyncStart >= 0 ? asyncStart : plainStart;
   assert.ok(start >= 0, `Expected function ${functionName} in teacher-content-ui.js.`);
   let braceIndex = -1;
   let parenDepth = 0;
   let sawSignatureParen = false;
-  for (let index = start + `function ${functionName}`.length; index < source.length; index += 1) {
+  for (let index = start + `${asyncStart >= 0 ? 'async function' : 'function'} ${functionName}`.length; index < source.length; index += 1) {
     const char = source[index];
     if (char === '(') {
       parenDepth += 1;
