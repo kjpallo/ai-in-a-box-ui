@@ -1796,10 +1796,15 @@
 
   async function refreshReviewQueueReports(options = {}) {
     const force = options.force === true;
+    const activeDraftPackIds = new Set(
+      (Array.isArray(state.drafts) ? state.drafts : [])
+        .map((draft) => String(draft?.packId || '').trim())
+        .filter(Boolean)
+    );
     const requestedPackIds = Array.isArray(options.packIds)
       ? options.packIds.map((packId) => String(packId || '').trim()).filter(Boolean)
       : getReviewQueuePackIds();
-    const packIds = Array.from(new Set(requestedPackIds));
+    const packIds = Array.from(new Set(requestedPackIds)).filter((packId) => activeDraftPackIds.has(packId));
     if (!packIds.length) {
       state.reviewReportsByPackId = {};
       state.reviewQueueReportsLoading = false;
@@ -2337,7 +2342,7 @@
         <div>
           <strong>${escapeHtml(state.promotionMessage || status)}</strong>
           <span>Approval copies reviewed draft content into approved knowledge packs.</span>
-          <span>It will not change student answering yet.</span>
+          <span>It will make this approved pack live for student answers.</span>
           <small>${escapeHtml(readiness.ready ? 'Existing safety checks will run again before anything is copied.' : disabledReason)}</small>
         </div>
         <button
@@ -2809,8 +2814,8 @@
       const data = promotion.data || {};
       state.promotionMessage = 'Knowledge pack approved.';
       state.reviewBulkMessage = blockers.length > 0
-        ? `Excluded ${formatNumber(blockers.length)} flagged item${blockers.length === 1 ? '' : 's'} and approved the remaining valid content. The approved pack is Disabled for student answers until you enable it from the Knowledge blade.`
-        : 'Approved reviewed valid items and created an approved pack. The approved pack is Disabled for student answers until you enable it from the Knowledge blade.';
+        ? `Excluded ${formatNumber(blockers.length)} flagged item${blockers.length === 1 ? '' : 's'} and approved the remaining valid content. The approved pack is now live for student answers.`
+        : 'Approved reviewed valid items and created an approved pack. The approved pack is now live for student answers.';
       if (data?.dashboard) state.dashboard = data.dashboard;
       if (Array.isArray(data?.drafts)) state.drafts = data.drafts;
       state.report = data && Object.prototype.hasOwnProperty.call(data, 'report') ? data.report : state.report;
@@ -2904,7 +2909,7 @@
     }
 
     const confirmed = window.confirm(
-      'This will create an approved knowledge pack from approved items only. Rejected items will stay out, and student answering will not change yet.'
+      'This will create an approved knowledge pack from valid items only, archive this draft from Saved Knowledge Packs, and make the approved pack live for student answers.'
     );
     if (!confirmed) return;
 
@@ -2936,11 +2941,18 @@
       state.promotionMessage = 'Knowledge pack approved.';
       if (data?.dashboard) state.dashboard = data.dashboard;
       if (Array.isArray(data?.drafts)) state.drafts = data.drafts;
-      state.report = data && Object.prototype.hasOwnProperty.call(data, 'report') ? data.report : state.report;
+      const archivedPackIds = new Set((Array.isArray(data?.archivedDrafts) ? data.archivedDrafts : []).map((entry) => String(entry?.packId || '').trim()).filter(Boolean));
+      state.selectedReviewItemKeys = [];
+      if (state.selectedDraftPackId && archivedPackIds.has(state.selectedDraftPackId)) {
+        state.selectedDraftPackId = '';
+        state.report = null;
+      } else {
+        state.report = data && Object.prototype.hasOwnProperty.call(data, 'report') ? data.report : state.report;
+      }
       if (data?.approvedSummary) applyApprovedSummary(data.approvedSummary);
       await refreshTeacherContentSummaries();
       state.reviewCompleted = true;
-      focusKnowledgeManager('Knowledge pack approved. It is saved in Saved Knowledge Packs and stays Disabled for student answers until you enable it.');
+      focusKnowledgeManager('Knowledge pack approved and live for student answers. It is saved in Saved Knowledge Packs.');
     } catch (error) {
       const routeErrors = Array.isArray(error.errors) && error.errors.length ? error.errors : [error.message || 'Route error'];
       state.errors.push(...routeErrors);
@@ -2962,13 +2974,12 @@
       };
     }
     try {
-      const payload = await fetchJson(ENDPOINTS.promoteDraft(safePackId), {
+      const payload = await fetchJson(ENDPOINTS.approveCombinedReview, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          force: options.force === true,
-          promotionMode: options.promotionMode || options.mode,
-          selectedItems: Array.isArray(options.selectedItems) ? options.selectedItems : undefined
+          mode: 'final_publish',
+          draftPackId: safePackId
         })
       });
       return {
@@ -2977,7 +2988,7 @@
         data: unwrap(payload)
       };
     } catch (error) {
-      const result = {
+      return {
         success: false,
         errors: Array.isArray(error?.errors) && error.errors.length
           ? error.errors
@@ -2987,13 +2998,6 @@
           : null,
         data: null
       };
-      if (options.force !== true && hasApprovedPackExistsConflict(result)) {
-        const confirmed = window.confirm(
-          'An approved pack for this draft already exists. Replace it with the newly reviewed version?'
-        );
-        if (confirmed) return requestDraftPromotion(safePackId, { ...options, force: true });
-      }
-      return result;
     }
   }
 

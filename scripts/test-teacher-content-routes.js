@@ -147,6 +147,7 @@ async function main() {
     await assertCombinedApproveSelectedArchivesEmptiedDraftWhenApprovedPackIdDiffers(handlers);
     await assertCombinedApproveDedupesAndUpdatesExistingItem(handlers);
     await assertCombinedApproveRejectsUnsafePackIds(handlers);
+    await assertFinalPublishUsesDraftPackIdOnlyAndArchivesDraft(handlers);
     await assertExistingDraftBlockersCanBeRejectedAndPromoted(handlers);
     await assertPromoteExcludesRejectedItems(handlers);
     await assertPromoteExcludesRepairNeededItems(handlers);
@@ -3046,6 +3047,99 @@ async function assertCombinedApproveRejectsUnsafePackIds(handlers) {
   assert.equal(response.statusCode, 400);
   assert.equal(response.body.success, false);
   assert.deepEqual(snapshotKnowledgePackFiles(approvedPacksDir), beforeApproved, 'unsafe combined approval rows should not mutate approved packs.');
+}
+
+async function assertFinalPublishUsesDraftPackIdOnlyAndArchivesDraft(handlers) {
+  const packId = 'route-final-publish-pack';
+  writeKnowledgePack(draftPacksDir, makePack({
+    packId,
+    title: 'Route Final Publish Pack',
+    vocabulary: [
+      makeVocabularyItem('final-publish-valid-term', 'pending'),
+      makeVocabularyItem('final-publish-needs-review-term', 'needs_review'),
+      {
+        ...makeVocabularyItem('final-publish-low-confidence-term', 'approved'),
+        confidence: 'low'
+      },
+      {
+        ...makeVocabularyItem('final-publish-missing-source-term', 'pending'),
+        sourceFile: '',
+        sourceLocation: '',
+        sourceTextSnippet: ''
+      },
+      {
+        ...makeVocabularyItem('final-publish-weak-grounding-term', 'pending'),
+        sourceGrounding: {
+          status: 'unsupported',
+          termOrTitleFound: false,
+          explanationSupported: false
+        }
+      },
+      makeVocabularyItem('final-publish-rejected-term', 'rejected')
+    ],
+    concepts: [makeConceptItem('final-publish-valid-concept', 'pending')],
+    referenceFormulas: [
+      {
+        ...makeReferenceFormula('final-publish-invalid-formula', 'approved'),
+        validationStatus: 'invalid'
+      }
+    ],
+    problemBank: [makeProblemItem('final-publish-valid-problem', 'approved')],
+    standardsMap: [
+      {
+        ...makeStandardsMapItem('SAMPLE.PS.FORCES.2', 'approved'),
+        quarantineStatus: 'quarantined'
+      }
+    ],
+    smokeTests: []
+  }));
+
+  const response = await request(handlers, 'POST', '/review/approve-combined', {
+    mode: 'final_publish',
+    draftPackId: packId
+  });
+
+  assert.equal(response.statusCode, 200, JSON.stringify(response.body));
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.data.mode, 'final_publish');
+  assert.equal(response.body.data.combinedPack.packId, packId);
+  assert.equal(response.body.data.acceptedCount, 7, 'final publish should include structurally usable rows even when they are pending, needs_review, low-confidence, weak-grounding, or missing source fields.');
+  assert.equal(response.body.data.skipped.blocked, 2);
+  assert.equal(response.body.data.skipped.rejected, 1);
+  assert.equal(response.body.data.activation.activationEnabled, true, 'final publish should enable activation for student answers.');
+
+  const approved = readKnowledgePack(approvedPacksDir, packId);
+  assert.deepEqual(approved.vocabulary.map((item) => item.term), [
+    'final-publish-valid-term',
+    'final-publish-needs-review-term',
+    'final-publish-low-confidence-term',
+    'final-publish-missing-source-term',
+    'final-publish-weak-grounding-term'
+  ]);
+  assert.equal(approved.vocabulary.every((item) => item.reviewStatus === 'approved'), true, 'final publish should stamp accepted rows as approved.');
+  assert.equal(JSON.stringify(approved).includes('final-publish-invalid-formula'), false, 'invalid rows should stay out of approved output.');
+  assert.equal(JSON.stringify(approved).includes('SAMPLE.PS.FORCES.2'), false, 'quarantined rows should stay out of approved output.');
+  assert.equal(JSON.stringify(approved).includes('final-publish-rejected-term'), false, 'rejected rows should stay out of approved output.');
+  assert.equal(approved.vocabulary.some((item) => item.term === 'final-publish-low-confidence-term' && String(item.confidence) === 'low'), true, 'low-confidence metadata should be preserved on published rows.');
+  assert.equal(approved.vocabulary.some((item) => item.term === 'final-publish-missing-source-term' && !item.sourceFile && !item.sourceLocation && !item.sourceTextSnippet), true, 'missing source metadata should not block final publish.');
+  assert.equal(approved.vocabulary.some((item) => item.term === 'final-publish-weak-grounding-term' && item.sourceGrounding && item.sourceGrounding.status === 'unsupported'), true, 'weak source grounding metadata should be preserved on published rows.');
+  assert.equal(approved.concepts.some((item) => item.conceptId === 'final-publish-valid-concept'), true);
+  assert.equal(approved.problemBank.some((item) => item.problemId === 'final-publish-valid-problem'), true);
+
+  const activation = JSON.parse(fs.readFileSync(activationRegistryPath, 'utf8'));
+  assert.equal(activation.packs[packId].enabled, true, 'activation registry should mark final-published pack as enabled.');
+  assert.equal(response.body.data.approvedSummary.approvedPacks.find((pack) => pack.packId === packId).activationEnabled, true);
+
+  assert.equal(fs.existsSync(path.join(draftPacksDir, packId, 'knowledge_pack.json')), false, 'final publish should archive/remove the active draft from draft-packs.');
+  assert.equal(response.body.data.drafts.some((draft) => draft.packId === packId), false, 'final-published draft should disappear from active drafts summary.');
+  assert.equal(response.body.data.draftSummary.draftPacks.some((draft) => draft.packId === packId), false, 'draftSummary should be refreshed after final publish.');
+  const archived = response.body.data.archivedDrafts.find((entry) => entry.packId === packId);
+  assert.ok(archived, 'final publish should return archived draft metadata.');
+  assert.ok(String(archived.archivedPath || '').startsWith(path.join(draftPacksDir, '_removed')));
+  const archivedCopy = JSON.parse(fs.readFileSync(path.join(archived.archivedPath, 'knowledge_pack.json'), 'utf8'));
+  assert.equal(archivedCopy.referenceFormulas.some((item) => item.formulaId === 'final-publish-invalid-formula'), true, 'archived draft should preserve skipped/invalid rows for review history.');
+  assert.equal(archivedCopy.standardsMap.some((item) => item.standardId === 'SAMPLE.PS.FORCES.2'), true, 'archived draft should preserve skipped/quarantined rows for review history.');
+  assert.equal(archivedCopy.vocabulary.some((item) => item.term === 'final-publish-rejected-term'), true, 'archived draft should preserve rejected rows for review history.');
 }
 
 async function assertExistingDraftBlockersCanBeRejectedAndPromoted(handlers) {

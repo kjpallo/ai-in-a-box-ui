@@ -492,6 +492,7 @@ function registerTeacherContentRoutes(app, options = {}) {
     try {
       const approval = approveCombinedReviewRows({
         mode: req.body && req.body.mode,
+        draftPackId: req.body && (req.body.draftPackId || req.body.packId),
         reviewBatchName: req.body && (req.body.reviewBatchName || req.body.batchName || req.body.knowledgeName),
         reviewBatchPackIds: req.body && (req.body.reviewBatchPackIds || req.body.queuePackIds || req.body.packIds),
         rows: req.body && (req.body.rows || req.body.items || req.body.selectedItems || req.body.selectedRows)
@@ -512,7 +513,8 @@ function registerTeacherContentRoutes(app, options = {}) {
       const reportsByPackId = {};
       const refreshedPackIds = Array.from(new Set([
         ...(Array.isArray(approval.updatedDraftPackIds) ? approval.updatedDraftPackIds : []),
-        ...(Array.isArray(req.body && req.body.reviewBatchPackIds) ? req.body.reviewBatchPackIds : [])
+        ...(Array.isArray(req.body && req.body.reviewBatchPackIds) ? req.body.reviewBatchPackIds : []),
+        String(req.body && (req.body.draftPackId || req.body.packId) || '').trim()
       ].map((packId) => String(packId || '').trim()).filter((packId) => isSafePackId(packId))));
       refreshedPackIds.forEach((packId) => {
         const report = getDraftPackReport(packId, options);
@@ -526,10 +528,14 @@ function registerTeacherContentRoutes(app, options = {}) {
           acceptedCount: approval.acceptedCount,
           skipped: approval.skipped,
           combinedPack: approval.combinedPack,
+          activation: approval.activation || null,
+          finalPublish: approval.finalPublish === true,
+          draftPackId: approval.draftPackId || null,
           archivedDrafts: approval.archivedDrafts || [],
           updatedDraftPackIds: approval.updatedDraftPackIds || [],
           dashboard,
           drafts: drafts.draftPacks,
+          draftSummary: drafts,
           approvedSummary,
           reportsByPackId
         },

@@ -329,47 +329,56 @@
       }
     
     async function acceptAllReviewItems() {
-        const items = getFilteredReviewItems(getVisibleReviewItems());
-        const safeItems = items.filter(isReviewItemReadyForPack);
-        const skipped = Math.max(0, items.length - safeItems.length);
-        if (!safeItems.length) {
-          state.reviewBulkMessage = 'Accept All Valid found no valid visible rows.';
+        const draftPackId = String(state.selectedDraftPackId || '').trim();
+        if (!draftPackId) {
+          state.reviewBulkMessage = 'Select a draft pack before publishing the current draft.';
           setStatus(state.reviewBulkMessage);
           render();
           return;
         }
-    
+
         const confirmed = window.confirm(
-          `Accept ${formatNumber(safeItems.length)} valid visible row${safeItems.length === 1 ? '' : 's'} into one combined knowledge pack?`
+          'Publish this draft now? All structurally usable rows will be included in one combined knowledge pack.'
         );
         if (!confirmed) return;
-    
-        await acceptReviewItems(safeItems, {
+
+        await acceptReviewItems([], {
           actionLabel: 'Accept All Valid',
-          mode: 'all_valid',
-          skipped,
-          doneMessage: `Accepted ${formatNumber(safeItems.length)} valid visible row${safeItems.length === 1 ? '' : 's'} into one combined knowledge pack.`
+          mode: 'final_publish',
+          draftPackId,
+          doneMessage: 'Published the current draft into one combined knowledge pack.'
         });
       }
     
     async function acceptReviewItems(items, options = {}) {
         if (state.reviewActionLoading) return;
-        const readyItems = (Array.isArray(items) ? items : []).filter(isReviewItemReadyForPack);
-        if (!readyItems.length) return;
+        const mode = options.mode || 'selected';
+        const finalPublish = mode === 'final_publish';
+        const readyItems = finalPublish
+          ? []
+          : (Array.isArray(items) ? items : []).filter(isReviewItemReadyForPack);
+        if (!finalPublish && !readyItems.length) return;
         state.reviewActionLoading = true;
         state.errors = [];
-        state.reviewBulkMessage = `${options.actionLabel || 'Accept'} is saving valid rows into one combined knowledge pack.`;
-        setStatus('Saving rows into one combined knowledge pack...');
+        state.reviewBulkMessage = finalPublish
+          ? `${options.actionLabel || 'Accept'} is publishing the current draft into one combined knowledge pack.`
+          : `${options.actionLabel || 'Accept'} is saving valid rows into one combined knowledge pack.`;
+        setStatus(finalPublish
+          ? 'Publishing current draft...'
+          : 'Saving rows into one combined knowledge pack...');
         render();
     
         try {
           const combinedApproval = await requestCombinedReviewApproval(readyItems, {
-            mode: options.mode || 'selected'
+            mode,
+            draftPackId: options.draftPackId
           });
           if (!combinedApproval.success) {
             state.errors.push(...combinedApproval.errors);
             const skipped = Number(combinedApproval.skipped?.blocked || 0) + Number(combinedApproval.skipped?.stale || 0);
-            state.reviewBulkMessage = skipped > 0
+            state.reviewBulkMessage = finalPublish
+              ? `${options.actionLabel || 'Accept'} failed.`
+              : skipped > 0
               ? `${options.actionLabel || 'Accept'} skipped ${formatNumber(skipped)} row${skipped === 1 ? '' : 's'} that are stale or still blocked.`
               : `${options.actionLabel || 'Accept'} failed.`;
             setStatus(state.reviewBulkMessage);
@@ -377,13 +386,21 @@
           }
     
           const data = combinedApproval.data || {};
+          const archivedPackIds = new Set((Array.isArray(data.archivedDrafts) ? data.archivedDrafts : []).map((entry) => String(entry?.packId || '').trim()).filter(Boolean));
+          const publishedDraftPackId = String(options.draftPackId || state.selectedDraftPackId || '').trim();
           if (data.dashboard) state.dashboard = data.dashboard;
           if (Array.isArray(data.drafts)) {
             state.drafts = data.drafts;
-            if (state.selectedDraftPackId && !state.drafts.some((draft) => String(draft?.packId || '') === String(state.selectedDraftPackId || ''))) {
+            if (finalPublish && publishedDraftPackId && archivedPackIds.has(publishedDraftPackId)) {
+              state.selectedDraftPackId = '';
+              state.report = null;
+            } else if (state.selectedDraftPackId && !state.drafts.some((draft) => String(draft?.packId || '') === String(state.selectedDraftPackId || ''))) {
               state.selectedDraftPackId = state.drafts[0]?.packId || '';
               if (!state.selectedDraftPackId) state.report = null;
             }
+          } else if (finalPublish && publishedDraftPackId && archivedPackIds.has(publishedDraftPackId)) {
+            state.selectedDraftPackId = '';
+            state.report = null;
           }
           if (data.approvedSummary) applyApprovedSummary(data.approvedSummary);
           if (data.reportsByPackId && typeof data.reportsByPackId === 'object') {
@@ -417,6 +434,43 @@
       }
     
     async function requestCombinedReviewApproval(items, options = {}) {
+        const mode = options.mode || 'selected';
+        if (mode === 'final_publish') {
+          const safeDraftPackId = String(options.draftPackId || state.selectedDraftPackId || '').trim();
+          if (!safeDraftPackId) {
+            return {
+              success: false,
+              errors: ['A draft pack must be selected before final publish.'],
+              skipped: null,
+              data: null
+            };
+          }
+          try {
+            const payload = await fetchJson(ENDPOINTS.approveCombinedReview, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                mode: 'final_publish',
+                draftPackId: safeDraftPackId
+              })
+            });
+            return {
+              success: true,
+              errors: [],
+              skipped: null,
+              data: unwrap(payload)
+            };
+          } catch (error) {
+            return {
+              success: false,
+              errors: Array.isArray(error?.errors) && error.errors.length
+                ? error.errors
+                : [error?.message || 'Combined approval failed.'],
+              skipped: error?.data?.skipped || null,
+              data: null
+            };
+          }
+        }
         const rows = (Array.isArray(items) ? items : []).map((item) => ({
           draftPackId: String(item?.draftPackId || '').trim(),
           section: String(item?.section || '').trim(),
@@ -437,7 +491,7 @@
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              mode: options.mode || 'selected',
+              mode,
               reviewBatchName: resolveCombinedReviewBatchName(),
               reviewBatchPackIds: getReviewQueuePackIds(),
               rows

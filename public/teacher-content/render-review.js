@@ -615,16 +615,14 @@
         const safeAll = visible.filter(isReviewItemReadyForPack).length;
         const skippedAll = Math.max(0, visible.length - safeAll);
         const acceptSelectedDisabled = state.reviewActionLoading || state.promotionActionLoading || selectedRows.length === 0 || safeSelected === 0;
-        const acceptAllDisabled = state.reviewActionLoading || state.promotionActionLoading || safeAll === 0;
+        const acceptAllDisabled = state.reviewActionLoading || state.promotionActionLoading;
         const excludeSelectedDisabled = state.reviewActionLoading || state.promotionActionLoading || totalSelected === 0;
         const acceptSelectedTitle = safeSelected > 0
           ? 'Save checked valid rows into one combined knowledge pack.'
           : selectedReviewItemsHaveBlockers()
             ? 'Selected rows need edits or should be excluded before they can be included.'
             : 'Check at least one valid row to save into one combined knowledge pack.';
-        const acceptAllTitle = safeAll > 0
-          ? 'Save every valid visible row into one combined knowledge pack.'
-          : 'No valid visible rows are ready to save into the combined knowledge pack.';
+        const acceptAllTitle = 'Publish this draft into one combined knowledge pack (skips rejected and structurally unusable rows).';
         return `
           <section class="teacher-content-review-action-bar" data-review-bottom-action-bar>
             <div>

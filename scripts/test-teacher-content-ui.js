@@ -15,6 +15,7 @@ const packagePath = path.join(projectRoot, 'package.json');
 const routeTestPath = path.join(projectRoot, 'scripts', 'test-teacher-content-routes.js');
 
 const uiEntry = read(uiEntryPath);
+const reviewActions = read(uiReviewActionsPath);
 const ui = `${read(uiConstantsPath)}\n${read(uiRenderReviewPath)}\n${read(uiRenderApprovedPath)}\n${read(uiReviewActionsPath)}\n${read(uiIndexPath)}`;
 const style = read(stylePath);
 const routeTest = read(routeTestPath);
@@ -33,6 +34,7 @@ async function main() {
   assertReviewAggregatesAllQueuePacks();
   assertReviewScreenUsesReviewActionFooter();
   assertReviewAcceptanceRequiresApprovedCounterpart();
+  assertFinalApproveUsesCombinedFinalPublish();
   assertAcceptSelectedUsesCombinedPackApproval();
   assertAcceptAllUsesCombinedPackApproval();
   assertDeleteMarksRejectedAndHidesRows();
@@ -129,7 +131,31 @@ function assertReviewAggregatesAllQueuePacks() {
   assert.match(itemsForPack, /sourcePackName/, 'Aggregated rows should preserve source pack/file identity.');
   assert.match(enrichIdentity, /originalItemData/, 'Aggregated rows should preserve the original item data payload.');
   assert.match(queueReports, /ENDPOINTS\.draftReport\(packId, state\.selectedStandardsBankId\)/, 'Queue aggregation should fetch report data for every visible draft pack.');
+  assert.match(queueReports, /activeDraftPackIds/, 'Queue report refresh should build an active draft pack id set.');
+  assert.match(queueReports, /\.filter\(\(packId\) => activeDraftPackIds\.has\(packId\)\)/, 'Queue report refresh should only request draft reports for active draft pack ids.');
   assert.match(sortState, /reviewItemKeyForItem\(left\)\.localeCompare\(reviewItemKeyForItem\(right\)\)/, 'Sorting tie-breakers should use queue-wide row identity.');
+}
+
+function assertFinalApproveUsesCombinedFinalPublish() {
+  const promoteSelectedDraft = extractFunctionSource(ui, 'promoteSelectedDraft');
+  const requestDraftPromotion = extractFunctionSource(ui, 'requestDraftPromotion');
+  const acceptAllReviewItems = extractFunctionSource(reviewActions, 'acceptAllReviewItems');
+  const requestCombined = extractFunctionSource(reviewActions, 'requestCombinedReviewApproval');
+
+  assert.match(requestDraftPromotion, /ENDPOINTS\.approveCombinedReview/, 'Final approve should use the combined review approval endpoint.');
+  assert.match(requestDraftPromotion, /mode: 'final_publish'/, 'Final approve request should send final_publish mode.');
+  assert.match(requestDraftPromotion, /draftPackId: safePackId/, 'Final approve request should send draftPackId.');
+  assert.doesNotMatch(requestDraftPromotion, /selectedItems|rows:\s*\[|index:/, 'Final approve request should not send stale selected row indexes.');
+  assert.match(promoteSelectedDraft, /state\.selectedReviewItemKeys = \[\]/, 'Final approve success should clear selected review item keys.');
+  assert.match(promoteSelectedDraft, /archivedDrafts/, 'Final approve success should read archived draft metadata from combined approval response.');
+  assert.match(promoteSelectedDraft, /state\.selectedDraftPackId = ''/, 'Final approve success should clear selected draft when archived.');
+  assert.match(promoteSelectedDraft, /applyApprovedSummary\(data\.approvedSummary\)/, 'Final approve success should refresh approved summary.');
+  assert.match(promoteSelectedDraft, /await refreshTeacherContentSummaries\(\)/, 'Final approve success should refresh draft and approved summaries.');
+  assert.match(acceptAllReviewItems, /acceptReviewItems\(\[\], \{[\s\S]*mode: 'final_publish'/, 'Final review-screen Accept All should call combined approval using final_publish mode.');
+  assert.match(acceptAllReviewItems, /draftPackId/, 'Final review-screen Accept All should pass draftPackId.');
+  assert.match(requestCombined, /if \(mode === 'final_publish'\)[\s\S]*mode: 'final_publish'/, 'Review actions combined approval should branch for final_publish mode.');
+  assert.match(requestCombined, /body: JSON\.stringify\(\{\s*mode: 'final_publish',\s*draftPackId: safeDraftPackId\s*\}\)/, 'Final publish payload should only include mode and draftPackId.');
+  assert.doesNotMatch(acceptAllReviewItems, /safeItems|rows:\s*\[|selectedReviewItemKeys\.includes/, 'Final review-screen Accept All should not depend on selected row indexes.');
 }
 
 function assertReviewScreenUsesReviewActionFooter() {
@@ -146,7 +172,7 @@ function assertReviewScreenUsesReviewActionFooter() {
   assert.match(setSort, /state\.reviewSortDirection = state\.reviewSortDirection === 'asc' \? 'desc' : 'asc'/, 'Sort controls should toggle direction when the same column is selected.');
   assert.match(clearSelection, /state\.selectedReviewItemKeys = \[\]/, 'Clear selection should clear selected row keys.');
   assert.match(actionBar, /const acceptSelectedDisabled = state\.reviewActionLoading \|\| state\.promotionActionLoading \|\| selectedRows\.length === 0 \|\| safeSelected === 0/, 'Accept Selected should stay disabled until at least one valid selected row is checked.');
-  assert.match(actionBar, /const acceptAllDisabled = state\.reviewActionLoading \|\| state\.promotionActionLoading \|\| safeAll === 0/, 'Accept All should be enabled when at least one visible valid row exists.');
+  assert.match(actionBar, /const acceptAllDisabled = state\.reviewActionLoading \|\| state\.promotionActionLoading/, 'Accept All should only be disabled while actions are in progress.');
 }
 
 function assertReviewAcceptanceRequiresApprovedCounterpart() {
@@ -174,7 +200,7 @@ function assertAcceptSelectedUsesCombinedPackApproval() {
   assert.match(acceptSelected, /getFilteredReviewItems\(getVisibleReviewItems\(\)\)/, 'Accept Selected should operate on the aggregated visible review rows.');
   assert.match(acceptSelected, /state\.selectedReviewItemKeys\.includes/, 'Accept Selected should only use checked rows.');
   assert.match(acceptSelected, /one combined knowledge pack/i, 'Accept Selected confirmation should mention one combined knowledge pack.');
-  assert.match(acceptReview, /requestCombinedReviewApproval\(readyItems, \{[\s\S]*mode: options\.mode \|\| 'selected'/, 'Accept flow should call combined approval with an explicit mode.');
+  assert.match(acceptReview, /requestCombinedReviewApproval\(readyItems, \{[\s\S]*mode[\s\S]*draftPackId: options\.draftPackId/, 'Accept flow should call combined approval with explicit mode and draftPackId options.');
   assert.match(requestCombined, /ENDPOINTS\.approveCombinedReview/, 'Combined approval request should use the combined review endpoint.');
   assert.match(requestCombined, /reviewBatchPackIds: getReviewQueuePackIds\(\)/, 'Combined approval should send queue pack ids so repeated accepts update one pack for the batch.');
   assert.match(requestCombined, /itemRef: buildReviewItemRef\(item\)/, 'Combined approval should send stable per-row refs.');
@@ -182,10 +208,10 @@ function assertAcceptSelectedUsesCombinedPackApproval() {
 
 function assertAcceptAllUsesCombinedPackApproval() {
   const acceptAll = extractFunctionSource(ui, 'acceptAllReviewItems');
-  assert.match(acceptAll, /const items = getFilteredReviewItems\(getVisibleReviewItems\(\)\)/, 'Accept All should operate on aggregated visible rows.');
-  assert.match(acceptAll, /items\.filter\(isReviewItemReadyForPack\)/, 'Accept All should only include valid visible rows.');
-  assert.match(acceptAll, /mode: 'all_valid'/, 'Accept All should request all_valid combined approval mode.');
-  assert.match(acceptAll, /one combined knowledge pack/i, 'Accept All confirmation should mention one combined knowledge pack.');
+  assert.match(acceptAll, /const draftPackId = String\(state\.selectedDraftPackId \|\| ''\)\.trim\(\)/, 'Accept All should resolve the selected draft pack id before publishing.');
+  assert.doesNotMatch(acceptAll, /getPromotableApprovedReviewItemCount\(\)/, 'Accept All should not require promotable approved item counts before final publish.');
+  assert.match(acceptAll, /acceptReviewItems\(\[\], \{[\s\S]*mode: 'final_publish'[\s\S]*draftPackId/, 'Accept All should trigger final_publish without selected row payload.');
+  assert.match(acceptAll, /Publish this draft now\?/, 'Accept All confirmation should communicate draft publish behavior.');
 }
 
 function assertDeleteMarksRejectedAndHidesRows() {
