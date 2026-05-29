@@ -43,6 +43,7 @@ async function main() {
   assertSuccessReturnsToKnowledgeManager();
   assertPrimaryFlowHidesTechnicalImportControls();
   assertSavedKnowledgePackBulkDeleteUi();
+  assertSavedKnowledgePacksHideApprovedDraftDuplicates();
   await assertSavedKnowledgePackBulkDeleteBehavior();
   assertRouterAndFormulaGuardsRemainInRouteTests();
   assertPackageScript();
@@ -328,6 +329,177 @@ function assertSavedKnowledgePackBulkDeleteUi() {
   assert.match(routeTest, /assertDeleteAllRemovesEveryVisiblePack/, 'Route tests should cover deleting all visible saved packs.');
   assert.match(routeTest, /assertDraftOnlyDeleteRemovesPackFromVisibleList/, 'Route tests should cover deleting draft-only rows.');
   assert.match(routeTest, /assertApprovedBulkDeletePathTraversalRejectedBeforeMutation/, 'Route tests should cover path traversal rejection before mutation.');
+}
+
+function assertSavedKnowledgePacksHideApprovedDraftDuplicates() {
+  const renderSimpleRowsSource = extractFunctionSource(ui, 'renderSimpleKnowledgePackRows');
+  const renderApprovedRowSource = extractFunctionSource(ui, 'renderApprovedPack');
+  const renderDraftRowSource = extractFunctionSource(ui, 'renderDraftPack');
+  const hiddenDraftMatcherSource = extractFunctionSource(ui, 'buildHiddenDraftPackIdSetForSavedList');
+  const hasStrongSourceMetadataSource = extractFunctionSource(ui, 'hasStrongSourceMetadata');
+  const collectComparablePackSourceMetadataSource = extractFunctionSource(ui, 'collectComparablePackSourceMetadata');
+  const collectComparableSetSource = extractFunctionSource(ui, 'collectComparableSet');
+  const matchesByComparableSourceMetadataSource = extractFunctionSource(ui, 'matchesByComparableSourceMetadata');
+  const hasComparableSetOverlapSource = extractFunctionSource(ui, 'hasComparableSetOverlap');
+  const canFallbackToFileNameOverlapSource = extractFunctionSource(ui, 'canFallbackToFileNameOverlap');
+  const normalizeComparableTitleSource = extractFunctionSource(ui, 'normalizeComparableTitle');
+
+  const renderHarnessFactory = new Function(
+    'state',
+    'getVisibleDraftPacks',
+    'escapeHtml',
+    'escapeAttr',
+    `${renderApprovedRowSource}\n${renderDraftRowSource}\n${hasStrongSourceMetadataSource}\n${collectComparablePackSourceMetadataSource}\n${collectComparableSetSource}\n${matchesByComparableSourceMetadataSource}\n${hasComparableSetOverlapSource}\n${canFallbackToFileNameOverlapSource}\n${normalizeComparableTitleSource}\n${hiddenDraftMatcherSource}\n${renderSimpleRowsSource}\nreturn { renderSimpleKnowledgePackRows };`
+  );
+
+  const escapeHtml = (value) => String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+  const escapeAttr = (value) => escapeHtml(value);
+  const countMatches = (text, pattern) => (String(text || '').match(pattern) || []).length;
+
+  {
+    const state = {
+      approved: [{ packId: 'pack-approved', title: 'Approved Pack', activationEnabled: false }],
+      drafts: [{ packId: 'pack-approved', title: 'Draft copy that should hide' }],
+      selectedApprovedPackIds: [],
+      approvedActivationSaving: {},
+      approvedDeleteSaving: {},
+      approvedBulkDeleteSaving: false
+    };
+    const harness = renderHarnessFactory(state, () => state.drafts, escapeHtml, escapeAttr);
+    const html = harness.renderSimpleKnowledgePackRows();
+    assert.equal(countMatches(html, /data-approved-pack-card/g), 1, 'Matching approved+draft packId should render one approved row.');
+    assert.equal(countMatches(html, /data-draft-pack-card/g), 0, 'Matching approved+draft packId should not render a duplicate draft row.');
+  }
+
+  {
+    const state = {
+      approved: [{ packId: 'pack-approved', title: 'Approved Pack', activationEnabled: false }],
+      drafts: [
+        { packId: ' pack-approved ', title: 'Whitespace draft duplicate should hide' },
+        { packId: 'pack-draft-only', title: 'Draft Only' }
+      ],
+      selectedApprovedPackIds: [],
+      approvedActivationSaving: {},
+      approvedDeleteSaving: {},
+      approvedBulkDeleteSaving: false
+    };
+    const harness = renderHarnessFactory(state, () => state.drafts, escapeHtml, escapeAttr);
+    const html = harness.renderSimpleKnowledgePackRows();
+    assert.equal(countMatches(html, /data-approved-pack-card/g), 1, 'Approved row should still render once when duplicate draft has padded packId.');
+    assert.equal(countMatches(html, /data-draft-pack-card/g), 1, 'Unapproved draft rows should still render as Draft.');
+    assert.match(html, /data-draft-pack-id="pack-draft-only"/, 'Draft-only pack should remain visible in Saved Knowledge list.');
+  }
+
+  {
+    const sharedUploadId = 'b00953c3-5437-4226-a4b1-54b1afa28d20';
+    const state = {
+      approved: [{
+        packId: 'charlemagne-test-02-medium-10-slide-motion-forces-0308ba7ee8',
+        title: 'Charlemagne Test 02 Medium 10 Slide Motion Forces',
+        activationEnabled: false,
+        sourceFileNames: ['Charlemagne Test 02 Medium 10 Slide Motion Forces.pdf'],
+        sourceUploadIds: [sharedUploadId]
+      }],
+      drafts: [{
+        packId: 'draft-charlemagne-test-02-medium-10-slide-motion-forces-b00953c3-5437-4226-a4b1-54b1afa28d20',
+        title: 'Charlemagne Test 02 Medium 10 Slide Motion Forces',
+        sourceFileNames: ['Charlemagne Test 02 Medium 10 Slide Motion Forces.pdf'],
+        sourceUploadIds: [sharedUploadId]
+      }],
+      selectedApprovedPackIds: [],
+      approvedActivationSaving: {},
+      approvedDeleteSaving: {},
+      approvedBulkDeleteSaving: false
+    };
+    const harness = renderHarnessFactory(state, () => state.drafts, escapeHtml, escapeAttr);
+    const html = harness.renderSimpleKnowledgePackRows();
+    assert.equal(countMatches(html, /data-approved-pack-card/g), 1, 'Approved row should render for real uploadId overlap cases.');
+    assert.equal(countMatches(html, /data-draft-pack-card/g), 0, 'Draft row should hide when approved and draft share source uploadId even with different pack IDs.');
+  }
+
+  {
+    const state = {
+      approved: [{
+        packId: 'approved-source-file-overlap',
+        title: 'Shared Source File Name',
+        activationEnabled: false,
+        sourceFileNames: ['shared_motion_forces.pdf'],
+        sourceUploadIds: ['approved-upload-has-id']
+      }],
+      drafts: [{
+        packId: 'draft-source-file-overlap',
+        title: 'Shared Source File Name',
+        sourceFileNames: ['shared_motion_forces.pdf'],
+        sourceUploadIds: ['']
+      }],
+      selectedApprovedPackIds: [],
+      approvedActivationSaving: {},
+      approvedDeleteSaving: {},
+      approvedBulkDeleteSaving: false
+    };
+    const harness = renderHarnessFactory(state, () => state.drafts, escapeHtml, escapeAttr);
+    const html = harness.renderSimpleKnowledgePackRows();
+    assert.equal(countMatches(html, /data-approved-pack-card/g), 1, 'Approved row should render for filename fallback cases.');
+    assert.equal(countMatches(html, /data-draft-pack-card/g), 0, 'Draft row should hide when one side is missing upload IDs but source file names overlap.');
+  }
+
+  {
+    const state = {
+      approved: [{
+        packId: 'charlemagne-test-02-medium-10-slide-motion-forces-0308ba7ee8',
+        title: 'Charlemagne Test 02 Medium 10 Slide Motion Forces',
+        activationEnabled: false,
+        sourceFileNames: [],
+        sourceUploadIds: []
+      }],
+      drafts: [{
+        packId: 'draft-charlemagne-test-02-medium-10-slide-motion-forces-b00953c3-5437-4226-a4b1-54b1afa28d20',
+        title: 'Charlemagne Test 02 Medium 10 Slide Motion Forces',
+        sourceFileNames: [],
+        sourceUploadIds: []
+      }],
+      selectedApprovedPackIds: [],
+      approvedActivationSaving: {},
+      approvedDeleteSaving: {},
+      approvedBulkDeleteSaving: false
+    };
+    const harness = renderHarnessFactory(state, () => state.drafts, escapeHtml, escapeAttr);
+    const html = harness.renderSimpleKnowledgePackRows();
+    assert.equal(countMatches(html, /data-approved-pack-card/g), 1, 'Approved row should render for the accepted pack.');
+    assert.equal(countMatches(html, /data-draft-pack-card/g), 0, 'Same-title blank-source draft duplicates should be hidden even when pack IDs differ.');
+  }
+
+  {
+    const state = {
+      approved: [{
+        packId: 'pack-title-source-approved',
+        title: 'Shared Title',
+        activationEnabled: false,
+        sourceFileNames: ['teacher-force.pdf'],
+        sourceUploadIds: ['upload-approved-1']
+      }],
+      drafts: [{
+        packId: 'pack-title-source-draft',
+        title: 'Shared Title',
+        sourceFileNames: ['another-file.pdf'],
+        sourceUploadIds: ['upload-draft-2']
+      }],
+      selectedApprovedPackIds: [],
+      approvedActivationSaving: {},
+      approvedDeleteSaving: {},
+      approvedBulkDeleteSaving: false
+    };
+    const harness = renderHarnessFactory(state, () => state.drafts, escapeHtml, escapeAttr);
+    const html = harness.renderSimpleKnowledgePackRows();
+    assert.equal(countMatches(html, /data-approved-pack-card/g), 1, 'Approved row should render.');
+    assert.equal(countMatches(html, /data-draft-pack-card/g), 1, 'Draft with stronger distinct source metadata should remain visible even with same normalized title.');
+    assert.match(html, /data-draft-pack-id="pack-title-source-draft"/, 'Unrelated same-title draft should still render as Draft when stronger metadata exists.');
+  }
 }
 
 async function assertSavedKnowledgePackBulkDeleteBehavior() {

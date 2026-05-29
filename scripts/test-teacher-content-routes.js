@@ -144,6 +144,7 @@ async function main() {
     await assertSelectedOnlyPromotionUsesOnlySelectedRows(handlers);
     await assertCombinedApproveAllValidAcrossMultipleDrafts(handlers);
     await assertCombinedApproveSelectedAcrossMultipleDrafts(handlers);
+    await assertCombinedApproveSelectedArchivesEmptiedDraftWhenApprovedPackIdDiffers(handlers);
     await assertCombinedApproveDedupesAndUpdatesExistingItem(handlers);
     await assertCombinedApproveRejectsUnsafePackIds(handlers);
     await assertExistingDraftBlockersCanBeRejectedAndPromoted(handlers);
@@ -155,6 +156,8 @@ async function main() {
     await assertPromoteOverwritesWithForce(handlers);
     await assertRemoveAcceptedDraftCopyArchivesDraftOnly(handlers);
     await assertRemoveAcceptedDraftCopyFindsApprovedPackByJsonPackId(handlers);
+    await assertRemoveAcceptedDraftCopyMatchesApprovedByBlankSourceTitleFallback(handlers);
+    await assertDraftsEndpointHidesSourceUploadIdMatchedAcceptedDrafts(handlers);
     await assertStaleDraftCanBeRemovedFromReviewQueueWithoutApprovedPack(handlers);
     await assertInvalidPromotePathTraversalRejected(handlers);
     await assertApproveDraftItemEndpoint(handlers);
@@ -2432,8 +2435,12 @@ async function assertApprovedDeleteRemovesMatchingDraftAndArchivedCopies(handler
   assert.equal(response.body.data.approvedSummary.approvedPacks.some((pack) => pack.packId === 'route-draft-pack'), false, 'approved delete should keep visible draft list clean for matching pack IDs.');
   const dashboard = await request(handlers, 'GET', '/dashboard');
   assert.equal(dashboard.statusCode, 200);
-  assert.equal(dashboard.body.data.draftPacks, 0, 'deleted approved pack should not reappear as draft after refresh.');
   const draftsResponse = await request(handlers, 'GET', '/drafts');
+  assert.equal(
+    (draftsResponse.body.data.draftPacks || []).length,
+    dashboard.body.data.draftPacks,
+    'dashboard draft count should match the draft summary endpoint after approved delete.'
+  );
   assert.equal(draftsResponse.body.data.draftPacks.some((pack) => pack.packId === packId), false, 'deleted approved pack should not appear in draft list.');
   assert.deepEqual(snapshotFiles(path.join(tempRoot, 'uploads')), uploadsBefore, 'delete should not remove uploaded source files');
 }
@@ -2585,9 +2592,21 @@ async function assertDeleteAllRemovesEveryVisiblePack(handlers) {
   assert.equal(response.body.success, true);
   assert.equal(response.body.data.deletedCount, packIds.length, 'delete all should remove every visible pack ID.');
   const afterDashboard = await request(handlers, 'GET', '/dashboard');
+  const afterApproved = await request(handlers, 'GET', '/approved');
+  const afterDrafts = await request(handlers, 'GET', '/drafts');
+  const visibleAfterDeleteAll = new Set([
+    ...(afterApproved.body.data.approvedPacks || []).map((pack) => pack && pack.packId).filter(Boolean),
+    ...(afterDrafts.body.data.draftPacks || []).map((pack) => pack && pack.packId).filter(Boolean)
+  ]);
   assert.equal(afterDashboard.statusCode, 200);
   assert.equal(afterDashboard.body.data.approvedPacks, 0, 'delete all should clear visible approved packs.');
-  assert.equal(afterDashboard.body.data.draftPacks, 0, 'delete all should clear visible draft packs.');
+  packIds.forEach((packId) => {
+    assert.equal(
+      visibleAfterDeleteAll.has(packId),
+      false,
+      `delete all should remove packId ${packId} from the visible saved knowledge lists.`
+    );
+  });
   assert.equal(beforeDashboard.body.data.approvedPacks + beforeDashboard.body.data.draftPacks > 0, true, 'setup should include visible packs before delete all.');
   assert.deepEqual(snapshotFiles(path.join(tempRoot, 'uploads')), uploadsBefore, 'delete all should not remove uploaded source files');
 }
@@ -2898,10 +2917,14 @@ async function assertCombinedApproveSelectedAcrossMultipleDrafts(handlers) {
   assert.equal(combined.concepts.some((item) => item.conceptId === 'combined-selected-concept'), true);
 
   const remainingPackOne = readKnowledgePack(draftPacksDir, packOneId);
-  const remainingPackTwo = readKnowledgePack(draftPacksDir, packTwoId);
   assert.equal(remainingPackOne.vocabulary.some((item) => item.term === 'combined-selected-accepted'), false, 'selected accepted rows should clear from the queue.');
   assert.equal(remainingPackOne.vocabulary.some((item) => item.term === 'combined-selected-unselected'), true, 'unselected rows should stay for later review.');
-  assert.equal(remainingPackTwo.concepts.some((item) => item.conceptId === 'combined-selected-concept'), false);
+  assert.equal(
+    Array.isArray(response.body.data.archivedDrafts) && response.body.data.archivedDrafts.some((entry) => entry.packId === packTwoId),
+    true,
+    'selected combined approval should archive source drafts that are fully emptied by accepted rows.'
+  );
+  assert.equal(fs.existsSync(path.join(draftPacksDir, packTwoId, 'knowledge_pack.json')), false, 'fully accepted source draft should be archived from active draft-packs.');
 }
 
 async function assertCombinedApproveDedupesAndUpdatesExistingItem(handlers) {
@@ -2966,6 +2989,49 @@ async function assertCombinedApproveDedupesAndUpdatesExistingItem(handlers) {
   const dedupedRows = afterSecond.vocabulary.filter((item) => item.term === 'combined-dedupe-term');
   assert.equal(dedupedRows.length, 1, 'same section + same term should not duplicate.');
   assert.equal(dedupedRows[0].studentDefinition, 'Version two (edited)', 'later edited data should replace stale values when accepted again.');
+}
+
+async function assertCombinedApproveSelectedArchivesEmptiedDraftWhenApprovedPackIdDiffers(handlers) {
+  const draftPackId = 'draft-route-combined-selected-archive-real-case';
+  const sharedTitle = 'Charlemagne Test 02 Medium 10 Slide Motion Forces';
+  writeKnowledgePack(draftPacksDir, makePack({
+    packId: draftPackId,
+    title: sharedTitle,
+    sourceFiles: [],
+    metadata: {},
+    vocabulary: [makeVocabularyItem('combined-selected-archive-term', 'pending')],
+    concepts: [],
+    referenceFormulas: [],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+
+  const response = await request(handlers, 'POST', '/review/approve-combined', {
+    mode: 'selected',
+    reviewBatchName: sharedTitle,
+    reviewBatchPackIds: [draftPackId],
+    rows: [
+      { draftPackId, section: 'vocabulary', index: 0 }
+    ]
+  });
+
+  assert.equal(response.statusCode, 200, JSON.stringify(response.body));
+  assert.equal(response.body.success, true);
+  const combinedPackId = String(response.body.data.combinedPack.packId || '');
+  assert.notEqual(combinedPackId, draftPackId, 'combined approval should create a distinct approved pack ID.');
+  assert.equal(String(response.body.data.combinedPack.title || ''), sharedTitle, 'approved combined pack should preserve the teacher-facing title.');
+  assert.equal(
+    Array.isArray(response.body.data.archivedDrafts) && response.body.data.archivedDrafts.some((entry) => entry.packId === draftPackId),
+    true,
+    'selected combined approval should archive a draft that is fully emptied by accepted rows.'
+  );
+  assert.equal(fs.existsSync(path.join(draftPacksDir, draftPackId, 'knowledge_pack.json')), false, 'emptied draft should be archived from active draft-packs.');
+  assert.equal(fs.existsSync(path.join(approvedPacksDir, combinedPackId, 'knowledge_pack.json')), true, 'approved combined pack should remain saved.');
+
+  const drafts = await request(handlers, 'GET', '/drafts');
+  assert.equal(drafts.statusCode, 200, JSON.stringify(drafts.body));
+  assert.equal(drafts.body.data.draftPacks.some((pack) => pack.packId === draftPackId), false, 'archived accepted draft should not remain in the active draft summary.');
 }
 
 async function assertCombinedApproveRejectsUnsafePackIds(handlers) {
@@ -3232,6 +3298,96 @@ async function assertRemoveAcceptedDraftCopyFindsApprovedPackByJsonPackId(handle
   assert.equal(response.body.data.approvedPackPreserved, true);
   assert.equal(fs.existsSync(path.join(draftPacksDir, packId, 'knowledge_pack.json')), false, 'draft should be archived even when approved folder name differs.');
   assert.equal(fs.existsSync(path.join(approvedPacksDir, 'folder-name-does-not-match', packId, 'knowledge_pack.json')), true, 'approved pack with matching JSON packId should be preserved.');
+}
+
+async function assertRemoveAcceptedDraftCopyMatchesApprovedByBlankSourceTitleFallback(handlers) {
+  const draftPackId = 'draft-route-remove-accepted-title-fallback';
+  const approvedPackId = 'route-remove-accepted-title-fallback';
+  const sharedTitle = 'Charlemagne Route Title Fallback Archive Case';
+
+  writeKnowledgePack(draftPacksDir, makePack({
+    packId: draftPackId,
+    title: sharedTitle,
+    sourceFiles: [],
+    metadata: {},
+    vocabulary: [makeVocabularyItem('title-fallback-draft-term', 'approved')]
+  }));
+  writeKnowledgePack(approvedPacksDir, makePack({
+    packId: approvedPackId,
+    title: sharedTitle,
+    version: '1.0.0',
+    sourceFiles: [],
+    metadata: {},
+    vocabulary: [makeVocabularyItem('title-fallback-approved-term', 'approved')]
+  }));
+
+  const draftsBefore = await request(handlers, 'GET', '/drafts');
+  assert.equal(draftsBefore.statusCode, 200, JSON.stringify(draftsBefore.body));
+  assert.equal(
+    draftsBefore.body.data.draftPacks.some((pack) => pack.packId === draftPackId),
+    false,
+    'active draft summary should hide matched accepted drafts when title fallback identifies an approved counterpart.'
+  );
+
+  const response = await request(handlers, 'DELETE', '/drafts/:packId/accepted-copy', {}, { packId: draftPackId });
+
+  assert.equal(response.statusCode, 200, JSON.stringify(response.body));
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.data.packId, draftPackId);
+  assert.equal(response.body.data.approvedPackPreserved, true);
+  assert.equal(fs.existsSync(path.join(draftPacksDir, draftPackId, 'knowledge_pack.json')), false, 'title fallback match should archive the accepted draft copy even when pack IDs differ.');
+  assert.equal(fs.existsSync(path.join(approvedPacksDir, approvedPackId, 'knowledge_pack.json')), true, 'title fallback match should keep the approved pack.');
+}
+
+async function assertDraftsEndpointHidesSourceUploadIdMatchedAcceptedDrafts(handlers) {
+  const sharedUploadId = 'b00953c3-5437-4226-a4b1-54b1afa28d20';
+  const draftPackId = 'draft-charlemagne-test-02-medium-10-slide-motion-forces-b00953c3-5437-4226-a4b1-54b1afa28d20';
+  const approvedPackId = 'charlemagne-test-02-medium-10-slide-motion-forces-0308ba7ee8';
+  const sharedTitle = 'Charlemagne Test 02 Medium 10 Slide Motion Forces';
+
+  try {
+    writeKnowledgePack(draftPacksDir, makePack({
+      packId: draftPackId,
+      title: sharedTitle,
+      sourceFiles: [{
+        fileName: 'charlemagne_02_motion_forces.pdf',
+        fileType: 'pdf',
+        reviewStatus: 'approved',
+        confidence: 'high',
+        uploadId: sharedUploadId
+      }],
+      vocabulary: [makeVocabularyItem('source-upload-overlap-draft-term', 'pending')]
+    }));
+    writeKnowledgePack(approvedPacksDir, makePack({
+      packId: approvedPackId,
+      title: sharedTitle,
+      version: '1.0.0',
+      sourceFiles: [{
+        fileName: 'charlemagne_02_motion_forces.pdf',
+        fileType: 'pdf',
+        reviewStatus: 'approved',
+        confidence: 'high',
+        uploadId: sharedUploadId
+      }],
+      vocabulary: [makeVocabularyItem('source-upload-overlap-approved-term', 'approved')]
+    }));
+
+    const drafts = await request(handlers, 'GET', '/drafts');
+    assert.equal(drafts.statusCode, 200, JSON.stringify(drafts.body));
+    assert.equal(
+      drafts.body.data.draftPacks.some((pack) => pack.packId === draftPackId),
+      false,
+      'active draft summary should hide drafts that match approved packs by source uploadId overlap.'
+    );
+    assert.equal(
+      fs.existsSync(path.join(draftPacksDir, draftPackId, 'knowledge_pack.json')),
+      true,
+      'visibility dedupe should not archive a draft automatically when review rows still remain.'
+    );
+  } finally {
+    fs.rmSync(path.join(draftPacksDir, draftPackId), { recursive: true, force: true });
+    fs.rmSync(path.join(approvedPacksDir, approvedPackId), { recursive: true, force: true });
+  }
 }
 
 async function assertStaleDraftCanBeRemovedFromReviewQueueWithoutApprovedPack(handlers) {

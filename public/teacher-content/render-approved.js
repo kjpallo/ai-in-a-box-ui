@@ -54,13 +54,17 @@
 
     function renderSimpleKnowledgePackRows() {
       const approvedRows = state.approved.map((pack) => renderApprovedPack(pack));
-      const draftRows = getVisibleDraftPacks().map((draft) => renderDraftPack(draft));
+      const hiddenDraftPackIds = buildHiddenDraftPackIdSetForSavedList();
+      const draftRows = getVisibleDraftPacks()
+        .filter((draft) => !hiddenDraftPackIds.has(String(draft?.packId || '').trim()))
+        .map((draft) => renderDraftPack(draft));
       return [...approvedRows, ...draftRows].join('');
     }
 
     function getVisibleKnowledgePackRows() {
       const visibleRows = [];
       const seenPackIds = new Set();
+      const hiddenDraftPackIds = buildHiddenDraftPackIdSetForSavedList();
       state.approved.forEach((pack) => {
         const packId = String(pack?.packId || '').trim();
         if (!packId || seenPackIds.has(packId)) return;
@@ -73,7 +77,7 @@
       });
       getVisibleDraftPacks().forEach((draft) => {
         const packId = String(draft?.packId || '').trim();
-        if (!packId || seenPackIds.has(packId)) return;
+        if (!packId || seenPackIds.has(packId) || hiddenDraftPackIds.has(packId)) return;
         visibleRows.push({
           kind: 'draft',
           packId,
@@ -82,6 +86,110 @@
         seenPackIds.add(packId);
       });
       return visibleRows;
+    }
+
+    function buildHiddenDraftPackIdSetForSavedList() {
+      const hidden = new Set();
+      const approvedByPackId = new Set();
+      const approvedByNormalizedTitle = new Map();
+      const approvedSourceMetadata = [];
+      state.approved.forEach((approved) => {
+        const approvedPackId = String(approved?.packId || '').trim();
+        if (approvedPackId) approvedByPackId.add(approvedPackId);
+        approvedSourceMetadata.push(collectComparablePackSourceMetadata(approved));
+        const approvedTitleKey = normalizeComparableTitle(approved?.title || approvedPackId);
+        if (!approvedTitleKey) return;
+        if (!approvedByNormalizedTitle.has(approvedTitleKey)) approvedByNormalizedTitle.set(approvedTitleKey, []);
+        approvedByNormalizedTitle.get(approvedTitleKey).push(approved);
+      });
+
+      getVisibleDraftPacks().forEach((draft) => {
+        const draftPackId = String(draft?.packId || '').trim();
+        if (!draftPackId) return;
+        if (approvedByPackId.has(draftPackId)) {
+          hidden.add(draftPackId);
+          return;
+        }
+
+        const draftSourceMetadata = collectComparablePackSourceMetadata(draft);
+        const hasSourceMetadataOverlap = approvedSourceMetadata.some((approvedSourceMetadataRecord) => {
+          return matchesByComparableSourceMetadata(draftSourceMetadata, approvedSourceMetadataRecord);
+        });
+        if (hasSourceMetadataOverlap) {
+          hidden.add(draftPackId);
+          return;
+        }
+
+        const titleKey = normalizeComparableTitle(draft?.title || draftPackId);
+        if (!titleKey) return;
+        const approvedTitleMatches = approvedByNormalizedTitle.get(titleKey) || [];
+        if (!approvedTitleMatches.length) return;
+
+        if (draftSourceMetadata.hasStrongSourceMetadata) return;
+        const strongerApprovedSourceMatchExists = approvedTitleMatches.some((approved) => hasStrongSourceMetadata(approved));
+        if (!strongerApprovedSourceMatchExists) {
+          hidden.add(draftPackId);
+        }
+      });
+
+      return hidden;
+    }
+
+    function hasStrongSourceMetadata(packSummary = {}) {
+      if (packSummary?.hasStrongSourceMetadata === true) return true;
+      if (Array.isArray(packSummary?.sourceUploadIds) && packSummary.sourceUploadIds.some((value) => String(value || '').trim())) return true;
+      if (Array.isArray(packSummary?.sourceFileNames) && packSummary.sourceFileNames.some((value) => String(value || '').trim())) return true;
+      return false;
+    }
+
+    function collectComparablePackSourceMetadata(packSummary = {}) {
+      return {
+        packId: normalizeComparableTitle(packSummary?.packId),
+        sourceUploadIds: collectComparableSet(packSummary?.sourceUploadIds),
+        sourceFileNames: collectComparableSet(packSummary?.sourceFileNames),
+        combinedSourceDraftPackIds: collectComparableSet(packSummary?.combinedSourceDraftPackIds),
+        hasStrongSourceMetadata: hasStrongSourceMetadata(packSummary)
+      };
+    }
+
+    function collectComparableSet(values) {
+      const set = new Set();
+      (Array.isArray(values) ? values : []).forEach((value) => {
+        const normalized = normalizeComparableTitle(value);
+        if (normalized) set.add(normalized);
+      });
+      return set;
+    }
+
+    function matchesByComparableSourceMetadata(draftMetadata, approvedMetadata) {
+      if (!draftMetadata || !approvedMetadata) return false;
+      if (draftMetadata.packId && approvedMetadata.combinedSourceDraftPackIds.has(draftMetadata.packId)) return true;
+      if (hasComparableSetOverlap(draftMetadata.sourceUploadIds, approvedMetadata.sourceUploadIds)) return true;
+      if (canFallbackToFileNameOverlap(draftMetadata.sourceUploadIds, approvedMetadata.sourceUploadIds)) {
+        return hasComparableSetOverlap(draftMetadata.sourceFileNames, approvedMetadata.sourceFileNames);
+      }
+      return false;
+    }
+
+    function hasComparableSetOverlap(leftSet, rightSet) {
+      if (!(leftSet instanceof Set) || !(rightSet instanceof Set) || !leftSet.size || !rightSet.size) return false;
+      for (const value of leftSet) {
+        if (rightSet.has(value)) return true;
+      }
+      return false;
+    }
+
+    function canFallbackToFileNameOverlap(leftUploadIds, rightUploadIds) {
+      const leftHasUploadIds = leftUploadIds instanceof Set && leftUploadIds.size > 0;
+      const rightHasUploadIds = rightUploadIds instanceof Set && rightUploadIds.size > 0;
+      return leftHasUploadIds !== rightHasUploadIds;
+    }
+
+    function normalizeComparableTitle(value) {
+      return String(value || '')
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, ' ');
     }
 
     function renderApprovedPacksCard() {

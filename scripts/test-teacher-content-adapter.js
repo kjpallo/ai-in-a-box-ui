@@ -56,6 +56,7 @@ try {
 
   assertDashboardCounts();
   assertDraftReviewList();
+  assertDraftVisibilityDedupeRules();
   assertFixturePacksRequireExplicitOption();
   assertDraftPackReport();
   assertDraftPackReportWithStoredCoverageAndNullExtraction();
@@ -119,6 +120,10 @@ function assertDraftReviewList() {
     totalApproved: 5,
     totalRejected: 1,
     validationPassed: true,
+    sourceFileNames: ['teacher_force_notes.txt'],
+    sourceSummary: 'teacher_force_notes.txt',
+    sourceUploadIds: [],
+    hasStrongSourceMetadata: true,
     importScope: {
       scope: 'full_document',
       scopeLabel: 'Full Import',
@@ -134,6 +139,146 @@ function assertDraftReviewList() {
     rangeLimited: false,
     sourcePath: path.join(draftPacksDir, 'teacher-content-draft', 'knowledge_pack.json')
   });
+}
+
+function assertDraftVisibilityDedupeRules() {
+  const sharedUploadId = 'b00953c3-5437-4226-a4b1-54b1afa28d20';
+  const samePackId = 'draft-visibility-same-pack-id';
+  const sourceOverlapDraftPackId = 'draft-charlemagne-test-02-medium-10-slide-motion-forces-b00953c3-5437-4226-a4b1-54b1afa28d20';
+  const sourceOverlapApprovedPackId = 'charlemagne-test-02-medium-10-slide-motion-forces-0308ba7ee8';
+  const titleFallbackDraftPackId = 'draft-visibility-title-fallback';
+  const titleFallbackApprovedPackId = 'approved-visibility-title-fallback';
+  const sourceFileOverlapDraftPackId = 'draft-visibility-source-file-overlap';
+  const sourceFileOverlapApprovedPackId = 'approved-visibility-source-file-overlap';
+  const sameTitleDifferentSourceDraftPackId = 'draft-visibility-same-title-different-source';
+  const sameTitleDifferentSourceApprovedPackId = 'approved-visibility-same-title-different-source';
+  const addedDraftPackIds = [
+    samePackId,
+    sourceOverlapDraftPackId,
+    sourceFileOverlapDraftPackId,
+    titleFallbackDraftPackId,
+    sameTitleDifferentSourceDraftPackId
+  ];
+  const addedApprovedPackIds = [
+    samePackId,
+    sourceOverlapApprovedPackId,
+    sourceFileOverlapApprovedPackId,
+    titleFallbackApprovedPackId,
+    sameTitleDifferentSourceApprovedPackId
+  ];
+
+  try {
+    writeKnowledgePack(draftPacksDir, makePack({
+      packId: samePackId,
+      title: 'Draft Visibility Same PackId Draft'
+    }));
+    writeKnowledgePack(approvedPacksDir, makePack({
+      packId: samePackId,
+      title: 'Draft Visibility Same PackId Approved',
+      version: '1.0.0'
+    }));
+
+    writeKnowledgePack(draftPacksDir, makePack({
+      packId: sourceOverlapDraftPackId,
+      title: 'Charlemagne Test 02 Medium 10 Slide Motion Forces',
+      sourceFiles: [{
+        fileName: 'charlemagne_02_motion_forces.pdf',
+        fileType: 'pdf',
+        reviewStatus: 'approved',
+        confidence: 'high',
+        uploadId: sharedUploadId
+      }]
+    }));
+    writeKnowledgePack(approvedPacksDir, makePack({
+      packId: sourceOverlapApprovedPackId,
+      title: 'Charlemagne Test 02 Medium 10 Slide Motion Forces',
+      version: '1.0.0',
+      sourceFiles: [{
+        fileName: 'charlemagne_02_motion_forces.pdf',
+        fileType: 'pdf',
+        reviewStatus: 'approved',
+        confidence: 'high',
+        uploadId: sharedUploadId
+      }]
+    }));
+
+    writeKnowledgePack(draftPacksDir, makePack({
+      packId: titleFallbackDraftPackId,
+      title: 'Draft Visibility Title Fallback',
+      sourceFiles: [],
+      metadata: {}
+    }));
+    writeKnowledgePack(approvedPacksDir, makePack({
+      packId: titleFallbackApprovedPackId,
+      title: 'Draft Visibility Title Fallback',
+      version: '1.0.0',
+      sourceFiles: [],
+      metadata: {}
+    }));
+
+    writeKnowledgePack(draftPacksDir, makePack({
+      packId: sourceFileOverlapDraftPackId,
+      title: 'Draft Visibility Source File Overlap',
+      sourceFiles: [{
+        fileName: 'shared_source_file_overlap.pdf',
+        fileType: 'pdf',
+        reviewStatus: 'approved',
+        confidence: 'high'
+      }]
+    }));
+    writeKnowledgePack(approvedPacksDir, makePack({
+      packId: sourceFileOverlapApprovedPackId,
+      title: 'Draft Visibility Source File Overlap',
+      version: '1.0.0',
+      sourceFiles: [{
+        fileName: 'shared_source_file_overlap.pdf',
+        fileType: 'pdf',
+        reviewStatus: 'approved',
+        confidence: 'high',
+        uploadId: 'approved-upload-present'
+      }]
+    }));
+
+    writeKnowledgePack(draftPacksDir, makePack({
+      packId: sameTitleDifferentSourceDraftPackId,
+      title: 'Draft Visibility Shared Title Different Source',
+      sourceFiles: [{
+        fileName: 'shared-title-source.pdf',
+        fileType: 'pdf',
+        reviewStatus: 'approved',
+        confidence: 'high',
+        uploadId: 'draft-upload-111'
+      }]
+    }));
+    writeKnowledgePack(approvedPacksDir, makePack({
+      packId: sameTitleDifferentSourceApprovedPackId,
+      title: 'Draft Visibility Shared Title Different Source',
+      version: '1.0.0',
+      sourceFiles: [{
+        fileName: 'shared-title-source.pdf',
+        fileType: 'pdf',
+        reviewStatus: 'approved',
+        confidence: 'high',
+        uploadId: 'approved-upload-222'
+      }]
+    }));
+
+    const drafts = listDraftPacksForReview({ draftPacksDir, approvedPacksDir, standardsBank });
+    const visiblePackIds = new Set((drafts.draftPacks || []).map((pack) => pack.packId));
+
+    assert.equal(visiblePackIds.has(samePackId), false, 'same packId draft should be hidden when approved counterpart exists.');
+    assert.equal(visiblePackIds.has(sourceOverlapDraftPackId), false, 'draft should be hidden when approved counterpart shares source uploadId.');
+    assert.equal(visiblePackIds.has(sourceFileOverlapDraftPackId), false, 'draft should be hidden when one side is missing upload IDs but source file names overlap.');
+    assert.equal(visiblePackIds.has(titleFallbackDraftPackId), false, 'blank-source same-title fallback should still hide accepted draft duplicates.');
+    assert.equal(visiblePackIds.has(sameTitleDifferentSourceDraftPackId), true, 'same-title drafts with different source uploadIds should stay visible.');
+  } finally {
+    addedDraftPackIds.forEach((packId) => {
+      fs.rmSync(path.join(draftPacksDir, packId), { recursive: true, force: true });
+    });
+    addedApprovedPackIds.forEach((packId) => {
+      fs.rmSync(path.join(approvedPacksDir, packId), { recursive: true, force: true });
+    });
+  }
 }
 
 function assertFixturePacksRequireExplicitOption() {

@@ -2590,11 +2590,17 @@
   function isDraftPackApproved(packId) {
     const safePackId = String(packId || '').trim();
     if (!safePackId) return false;
-    return state.approved.some((pack) => String(pack?.packId || '') === safePackId);
+    return state.approved.some((pack) => String(pack?.packId || '').trim() === safePackId);
   }
 
   function getVisibleDraftPacks() {
-    return state.drafts.filter((draft) => !isDraftPackApproved(draft?.packId));
+    const seenDraftPackIds = new Set();
+    return state.drafts.filter((draft) => {
+      const draftPackId = String(draft?.packId || '').trim();
+      if (!draftPackId || seenDraftPackIds.has(draftPackId) || isDraftPackApproved(draftPackId)) return false;
+      seenDraftPackIds.add(draftPackId);
+      return true;
+    });
   }
 
   async function selectReviewQueuePack(packId) {
