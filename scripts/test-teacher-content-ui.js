@@ -8,13 +8,14 @@ const uiEntryPath = path.join(projectRoot, 'public', 'teacher-content-ui.js');
 const uiIndexPath = path.join(projectRoot, 'public', 'teacher-content', 'index.js');
 const uiConstantsPath = path.join(projectRoot, 'public', 'teacher-content', 'constants.js');
 const uiRenderReviewPath = path.join(projectRoot, 'public', 'teacher-content', 'render-review.js');
+const uiRenderApprovedPath = path.join(projectRoot, 'public', 'teacher-content', 'render-approved.js');
 const uiReviewActionsPath = path.join(projectRoot, 'public', 'teacher-content', 'review-actions.js');
 const stylePath = path.join(projectRoot, 'public', 'style.css');
 const packagePath = path.join(projectRoot, 'package.json');
 const routeTestPath = path.join(projectRoot, 'scripts', 'test-teacher-content-routes.js');
 
 const uiEntry = read(uiEntryPath);
-const ui = `${read(uiConstantsPath)}\n${read(uiRenderReviewPath)}\n${read(uiReviewActionsPath)}\n${read(uiIndexPath)}`;
+const ui = `${read(uiConstantsPath)}\n${read(uiRenderReviewPath)}\n${read(uiRenderApprovedPath)}\n${read(uiReviewActionsPath)}\n${read(uiIndexPath)}`;
 const style = read(stylePath);
 const routeTest = read(routeTestPath);
 const pkg = JSON.parse(read(packagePath));
