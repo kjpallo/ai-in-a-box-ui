@@ -1,27 +1,38 @@
+.git/
 node_modules/
 .venv/
+.DS_Store
+
+# Local env and secret files
 .env
 .env.*
-logs/teacher_gmail_auth.json
-logs/teacher_gmail_auth.json.tmp
+*.pem
+*.key
+*.p12
+*.pfx
+*secret*.local.*
+*token*.local.*
+*oauth*.json
+*gmail*auth*.json
+*teacher*auth*.json
+
+# Local artifacts
+logs/
 audio/*
-!.gitkeep
+!audio/.gitkeep
 voices/*.onnx
 voices/*.json
-models/*.bin
-vendor/whisper.cpp/
-.DS_Store
-.venv/
-models/*.bin
-vendor/whisper.cpp/
+models/
+vendor/
+backups/
+tmp/
+tmp/model-responses/
+
+# Backup/scratch
 *.bak
 *.bak-*
 public/*.bak-*
 server.js.bak-*
-
-logs/
-backups/
-tmp/model-responses/
 
 # Local upload artifacts (keep folder structure via .gitkeep)
 knowledge/uploads/incoming/*
@@ -35,6 +46,3 @@ knowledge/uploads/ocr/*
 
 # Review handoff artifacts
 review-handoff/
-
-# Local test/debug scratch
-/tmp/

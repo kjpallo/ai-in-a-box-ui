@@ -23,7 +23,6 @@ INCLUDE_PATHS=(
   "tests"
   "knowledge"
   "charlemagne_motion_force_knowledge_pack"
-  "review-handoff"
 )
 
 EXCLUDE_PATTERNS=(
@@ -41,6 +40,8 @@ EXCLUDE_PATTERNS=(
   "*/audio/*"
   "voices/*.onnx"
   "*/voices/*.onnx"
+  "voices/*.json"
+  "*/voices/*.json"
   "models/*"
   "*/models/*"
   "vendor/*"
@@ -54,11 +55,19 @@ EXCLUDE_PATTERNS=(
   "knowledge/uploads/page-images/*"
   "knowledge/uploads/ocr/*"
   "tmp/model-responses/*"
+  "*.pem"
+  "*.key"
+  "*.p12"
+  "*.pfx"
   "*token*"
   "*secret*"
   "*oauth*"
   "*teacher_auth*"
   "*gmail_auth*"
+  "*teacher*auth*.json"
+  "*gmail*auth*.json"
+  "*auth*.key"
+  "*auth*.pem"
 )
 
 (
@@ -73,7 +82,7 @@ trap 'rm -f "${ENTRY_LIST_FILE}"' EXIT
 zipinfo -1 "${ZIP_PATH}" > "${ENTRY_LIST_FILE}"
 
 SUSPICIOUS_PATHS="$(
-  grep -E -i '(^|/)\.env($|[.])|(^|/)logs/|(^|/)[^/]*token[^/]*($|[.])|(^|/)[^/]*secret[^/]*($|[.])|(^|/)[^/]*(oauth|gmail_auth|teacher_auth)[^/]*($|[.])|(^|/)[^/]*auth[^/]*\.(json|txt|key|pem|env|ini|yaml|yml)$' "${ENTRY_LIST_FILE}" || true
+  grep -E -i '(^|/)\.env($|[.])|(^|/)logs/|(^|/)audio/|(^|/)models/|(^|/)vendor/|(^|/)backups/|(^|/)tmp/|(^|/)knowledge/uploads/(incoming|extracted|page-images|ocr)/|(^|/)[^/]*(token|secret|oauth|gmail[_-]?auth|teacher[_-]?auth)[^/]*\.(json|txt|key|pem|env|ini|yaml|yml)$|(^|/)[^/]*auth[^/]*\.(json|txt|key|pem|env|ini|yaml|yml)$|(^|/)[^/]*\.(pem|key|p12|pfx)$|(^|/)voices/[^/]*\.(onnx|json)$' "${ENTRY_LIST_FILE}" || true
 )"
 
 if [[ -n "${SUSPICIOUS_PATHS}" ]]; then
