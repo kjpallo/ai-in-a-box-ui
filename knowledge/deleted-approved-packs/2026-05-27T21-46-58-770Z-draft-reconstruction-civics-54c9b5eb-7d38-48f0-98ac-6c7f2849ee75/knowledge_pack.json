@@ -1,0 +1,496 @@
+{
+  "vocabulary": [
+    {
+      "term": "Reconstruction",
+      "aliases": [],
+      "studentDefinition": "The period after the Civil War when the United States was rebuilding.",
+      "source": "Page 1 / Chunk 1",
+      "vocabId": "vocab-reconstruction",
+      "reviewStatus": "approved",
+      "confidence": "low",
+      "notes": "Generated vocabulary ID during import normalization. Source evidence was filled from extraction defaults during import normalization; keep teacher review required.",
+      "normalizationNotes": [
+        "Generated vocabulary ID during import normalization.",
+        "Source evidence was filled from extraction defaults during import normalization; keep teacher review required."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceFile": "Reconstruction Civics.pdf",
+      "sourceLocation": "extracted text",
+      "sourceTextSnippet": "[Page 1 / Chunk 1] History and Civics: Reconstruction Notes Page 1 of 3 - Charlemagne bulk subject test Vocabulary Reconstruction was the period after the Civil War when the United States worked to rebuild and bring former Confederate state...",
+      "teacherDefinition": "History and Civics: Reconstruction Notes Page 1 of 3 - Charlemagne bulk subject test Vocabulary Reconstruction was the period after the Civil War when the United States worked to rebuild and bring former Confederate",
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 0.9545454545454546,
+        "reasons": []
+      },
+      "warningStatus": "",
+      "teacherReviewed": true,
+      "teacherVerified": true,
+      "teacherApproved": true,
+      "teacherReviewedAt": "2026-05-25T23:52:10.459Z",
+      "confidenceOverride": "teacher_verified"
+    },
+    {
+      "term": "Amendment",
+      "source": "Page 1 / Chunk 1",
+      "aliases": [],
+      "vocabId": "vocab-amendment",
+      "reviewStatus": "approved",
+      "confidence": "low",
+      "notes": "Generated vocabulary ID during import normalization. Source evidence was filled from extraction defaults during import normalization; keep teacher review required.",
+      "normalizationNotes": [
+        "Generated vocabulary ID during import normalization.",
+        "Source evidence was filled from extraction defaults during import normalization; keep teacher review required."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceFile": "Reconstruction Civics.pdf",
+      "sourceLocation": "extracted text",
+      "sourceTextSnippet": "[Page 1 / Chunk 1] History and Civics: Reconstruction Notes Page 1 of 3 - Charlemagne bulk subject test Vocabulary Reconstruction was the period after the Civil War when the United States worked to rebuild and bring former Confederate state...",
+      "studentDefinition": "Amendment means a change or addition to the Constitution",
+      "teacherDefinition": "Amendment means a change or addition to the Constitution",
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": "",
+      "teacherReviewed": true,
+      "teacherVerified": true,
+      "teacherApproved": true,
+      "teacherReviewedAt": "2026-05-25T23:51:45.619Z",
+      "confidenceOverride": "teacher_verified"
+    },
+    {
+      "term": "Black Codes",
+      "usage": "Black Codes were laws restricting the freedom of African Americans.",
+      "aliases": [],
+      "vocabId": "vocab-black-codes",
+      "reviewStatus": "approved",
+      "confidence": "low",
+      "notes": "Generated vocabulary ID during import normalization. Source evidence was filled from extraction defaults during import normalization; keep teacher review required.",
+      "normalizationNotes": [
+        "Generated vocabulary ID during import normalization.",
+        "Source evidence was filled from extraction defaults during import normalization; keep teacher review required."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceFile": "Reconstruction Civics.pdf",
+      "sourceLocation": "extracted text",
+      "sourceTextSnippet": "[Page 2 / Chunk 1] History and Civics: Reconstruction Notes Page 2 of 3 - Charlemagne bulk subject test People and Events The Freedmen's Bureau helped formerly enslaved people and poor white Southerners with schools, food, labor contracts, ...",
+      "studentDefinition": "Black Codes were laws that limited the freedom of African Americans after the Civil War",
+      "teacherDefinition": "Black Codes were laws that limited the freedom of African Americans after the Civil War",
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": "",
+      "teacherReviewed": true,
+      "teacherVerified": true,
+      "teacherApproved": true,
+      "teacherReviewedAt": "2026-05-25T23:51:37.000Z",
+      "confidenceOverride": "teacher_verified"
+    },
+    {
+      "term": "Civic participation",
+      "aliases": [],
+      "studentDefinition": "Civic participation includes voting, serving on juries, attending public meetings, contacting representatives, and staying informed.",
+      "usage": "Civic participation includes the active involvement of citizens in the political life of their community.",
+      "source": "Page 3 / Chunk 1",
+      "vocabId": "vocab-civic-participation",
+      "reviewStatus": "approved",
+      "confidence": "low",
+      "notes": "Generated vocabulary ID during import normalization. Source evidence was filled from extraction defaults during import normalization; keep teacher review required.",
+      "normalizationNotes": [
+        "Generated vocabulary ID during import normalization.",
+        "Source evidence was filled from extraction defaults during import normalization; keep teacher review required."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceFile": "Reconstruction Civics.pdf",
+      "sourceLocation": "extracted text",
+      "sourceTextSnippet": "[Page 3 / Chunk 1] History and Civics: Reconstruction Notes Page 3 of 3 - Charlemagne bulk subject test Civics Connection Civic participation includes voting, serving on juries, attending public meetings, contacting representatives, and sta...",
+      "teacherDefinition": "[Page 3 / Chunk 1] History and Civics: Reconstruction Notes Page 3 of 3 - Charlemagne bulk subject test Civics Connection Civic participation includes voting, serving on juries, attending public meetings, contacting",
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 0.9090909090909091,
+        "reasons": []
+      },
+      "warningStatus": "",
+      "teacherReviewed": true,
+      "teacherVerified": true,
+      "teacherApproved": true,
+      "teacherReviewedAt": "2026-05-25T23:50:27.996Z",
+      "confidenceOverride": "teacher_verified"
+    }
+  ],
+  "concepts": [
+    {
+      "conceptId": "concept-reconstruction-was-simple",
+      "title": "Reconstruction Was Simple",
+      "aliases": [],
+      "studentExplanation": "Reconstruction was not a simple success or failure.",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Reconstruction Civics.pdf",
+      "sourceLocation": "Page 3 / Chunk 1",
+      "sourceTextSnippet": "Misconception Reconstruction was not a simple success or failure.",
+      "sourceParse": "deterministic_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    }
+  ],
+  "referenceFormulas": [],
+  "problemBank": [],
+  "standardsMap": [],
+  "smokeTests": [],
+  "sourceFiles": [
+    {
+      "fileName": "Reconstruction Civics.pdf",
+      "fileType": "pdf",
+      "uploadId": "54c9b5eb-7d38-48f0-98ac-6c7f2849ee75",
+      "storedFileName": "54c9b5eb-7d38-48f0-98ac-6c7f2849ee75.pdf",
+      "extractionJsonFileName": "54c9b5eb-7d38-48f0-98ac-6c7f2849ee75_extraction.json",
+      "characterCount": 419,
+      "pageCount": 3,
+      "chunkCount": 1,
+      "reviewStatus": "pending",
+      "confidence": "low",
+      "notes": "Added from extraction metadata for draft traceability.",
+      "sourceReferences": []
+    }
+  ],
+  "metadata": {
+    "modelMetadata": {
+      "createdBy": "charlemagne-teacher-content-import"
+    },
+    "createdBy": "charlemagne-teacher-content-import",
+    "createdAt": "2026-05-25T02:37:08.239Z",
+    "updatedAt": "2026-05-25T02:37:24.902Z",
+    "status": "draft",
+    "reviewStatus": "pending",
+    "packName": "Reconstruction Civics",
+    "packId": "draft-reconstruction-civics-54c9b5eb-7d38-48f0-98ac-6c7f2849ee75",
+    "sourceUpload": {
+      "uploadId": "54c9b5eb-7d38-48f0-98ac-6c7f2849ee75",
+      "originalFileName": "Reconstruction Civics.pdf",
+      "storedFileName": "54c9b5eb-7d38-48f0-98ac-6c7f2849ee75.pdf",
+      "extractionJsonFileName": "54c9b5eb-7d38-48f0-98ac-6c7f2849ee75_extraction.json",
+      "importProfile": "general",
+      "fileType": "pdf",
+      "characterCount": 2052,
+      "pageCount": 3,
+      "chunkCount": 3
+    },
+    "extraction": {
+      "characterCount": 2052,
+      "pageCount": 3,
+      "chunkCount": 3
+    },
+    "importProfile": "general",
+    "importScope": {
+      "scope": "full_document",
+      "scopeLabel": "Full Import",
+      "sampleOnly": false,
+      "rangeLimited": false,
+      "completePacketImported": true,
+      "pageRangeLabel": "1-3",
+      "chunkRangeLabel": "1-3",
+      "rangeLabel": "Pages 1-3",
+      "pages": [
+        1,
+        2,
+        3
+      ],
+      "chunks": [
+        1,
+        2,
+        3
+      ],
+      "textBearingPages": [
+        1,
+        2,
+        3
+      ],
+      "firstTextPage": 1,
+      "originalPageCount": 3,
+      "processedPageCount": 3,
+      "processedChunkCount": 3,
+      "processedCharacterCount": 2052,
+      "warning": ""
+    },
+    "importUncertainSections": [],
+    "deduplication": {
+      "vocabulary": {
+        "raw": 6,
+        "duplicatesRemoved": 0,
+        "final": 6
+      },
+      "concepts": {
+        "raw": 1,
+        "duplicatesRemoved": 0,
+        "final": 1
+      },
+      "problemBank": {
+        "raw": 0,
+        "duplicatesRemoved": 0,
+        "final": 0
+      }
+    },
+    "importNormalization": {
+      "conceptIdsGenerated": 0,
+      "conceptTitlesGenerated": 0,
+      "vocabularyIdsGenerated": 3,
+      "vocabularyTermsGenerated": 0,
+      "problemIdsGenerated": 0,
+      "smokeTestIdsGenerated": 0,
+      "standardsMapIdsMapped": 0,
+      "sourceEvidenceFilled": 3,
+      "reviewNeededItems": 14,
+      "droppedItems": 0,
+      "totalNormalized": 6,
+      "notes": [
+        "Generated vocabulary ID during import normalization.",
+        "Source evidence was filled from extraction defaults during import normalization; keep teacher review required.",
+        "Deterministically parsed from a labeled concept source section."
+      ]
+    },
+    "importBatches": 3,
+    "invalidGeneratedItems": [],
+    "importWarnings": [],
+    "importCoverage": {
+      "totalPages": 3,
+      "totalChunks": 3,
+      "processedPages": 3,
+      "processedChunks": 3,
+      "pagesWithDraftItems": 1,
+      "chunksWithDraftItems": 1,
+      "chunksWithNoExtractedKnowledge": 2,
+      "noKnowledgeChunks": [
+        "Page 1",
+        "Page 2"
+      ],
+      "sectionsDetected": [
+        "concepts",
+        "vocabulary"
+      ],
+      "sourceSignals": {
+        "definitionLikeText": true,
+        "equationLikeText": false,
+        "practiceLikeText": false
+      },
+      "itemCounts": {
+        "vocabulary": 6,
+        "concepts": 1,
+        "referenceFormulas": 0,
+        "problemBank": 0,
+        "standardsMap": 0,
+        "smokeTests": 0
+      },
+      "failedBatches": [],
+      "sourceManifest": [
+        {
+          "chunkId": "chunk-1",
+          "sourceFile": "54c9b5eb-7d38-48f0-98ac-6c7f2849ee75.pdf",
+          "sourceLocation": "Page 1",
+          "chunkIndex": 1,
+          "charCount": 734,
+          "status": "no_items_found"
+        },
+        {
+          "chunkId": "chunk-2",
+          "sourceFile": "54c9b5eb-7d38-48f0-98ac-6c7f2849ee75.pdf",
+          "sourceLocation": "Page 2",
+          "chunkIndex": 2,
+          "charCount": 692,
+          "status": "no_items_found"
+        },
+        {
+          "chunkId": "chunk-3",
+          "sourceFile": "54c9b5eb-7d38-48f0-98ac-6c7f2849ee75.pdf",
+          "sourceLocation": "Page 3",
+          "chunkIndex": 3,
+          "charCount": 622,
+          "status": "drafted"
+        }
+      ],
+      "coverageSummary": {
+        "totalChunks": 3,
+        "queuedChunks": 0,
+        "draftedChunks": 1,
+        "skippedEmptyChunks": 0,
+        "noItemsFoundChunks": 2,
+        "needsReviewChunks": 0,
+        "failedChunks": 0,
+        "totalSourceChars": 2048,
+        "completedChunks": 3,
+        "allChunksTerminal": true
+      },
+      "queuedChunks": 0,
+      "allChunksTerminal": true,
+      "importComplete": true,
+      "warnings": [
+        "Many chunks produced no items."
+      ]
+    },
+    "sourceEvidenceValidation": {
+      "checkedItems": 7,
+      "supportedItems": 7,
+      "weakItems": 0,
+      "unsupportedItems": 0,
+      "thinExtractionItems": 0,
+      "warnings": []
+    },
+    "partialDraft": true,
+    "autoImportPlan": {
+      "mode": "auto_full",
+      "recommendedImportScope": "full_document",
+      "batchStrategy": "sequential_batches",
+      "batchCount": 3,
+      "batches": [
+        {
+          "batchIndex": 1,
+          "sourceLocations": [
+            "Page 1"
+          ],
+          "pageNumbers": [
+            1
+          ],
+          "estimatedCharacters": 734,
+          "estimatedTokens": 245
+        },
+        {
+          "batchIndex": 2,
+          "sourceLocations": [
+            "Page 2"
+          ],
+          "pageNumbers": [
+            2
+          ],
+          "estimatedCharacters": 692,
+          "estimatedTokens": 231
+        },
+        {
+          "batchIndex": 3,
+          "sourceLocations": [
+            "Page 3"
+          ],
+          "pageNumbers": [
+            3
+          ],
+          "estimatedCharacters": 622,
+          "estimatedTokens": 208
+        }
+      ],
+      "limits": {
+        "maxCharactersPerBatch": 1250,
+        "maxEstimatedTokensPerBatch": 417,
+        "availableMemoryMb": 210,
+        "totalMemoryMb": 8192
+      },
+      "warnings": [
+        "Available memory is low (210 MB). Automatically using smaller sequential chunks."
+      ],
+      "reason": "Available memory is low, so the planner reduced batch size and will process 3 sequential chunks automatically.",
+      "canOverride": true,
+      "inspection": {
+        "fileType": "pdf",
+        "originalFileName": "54c9b5eb-7d38-48f0-98ac-6c7f2849ee75.pdf",
+        "rawFileSizeBytes": 4388,
+        "totalPageSlideSheetCount": 3,
+        "textBearingPageSlideSheetCount": 3,
+        "firstTextBearingPageSlideSheet": 1,
+        "totalExtractedCharacters": 2048,
+        "largestSectionCharacterCount": 734,
+        "estimatedTokenCount": 683,
+        "configuredImportModel": "gemma4:e2b"
+      }
+    },
+    "approvedImportScope": {
+      "scope": "full_document",
+      "scopeLabel": "Full Import",
+      "sampleOnly": false,
+      "rangeLimited": false,
+      "completePacketImported": true,
+      "pageRangeLabel": "1-3",
+      "chunkRangeLabel": "1-3",
+      "rangeLabel": "Pages 1-3",
+      "pages": [
+        1,
+        2,
+        3
+      ],
+      "chunks": [
+        1,
+        2,
+        3
+      ],
+      "textBearingPages": [
+        1,
+        2,
+        3
+      ],
+      "firstTextPage": 1,
+      "originalPageCount": 3,
+      "processedPageCount": 3,
+      "processedChunkCount": 3,
+      "processedCharacterCount": 2052,
+      "warning": ""
+    },
+    "rangeLimitedApprovedPack": false,
+    "approvalScopeWarning": ""
+  },
+  "schemaVersion": "1.0.0",
+  "packId": "draft-reconstruction-civics-54c9b5eb-7d38-48f0-98ac-6c7f2849ee75",
+  "version": "0.1.0-draft",
+  "title": "Reconstruction Civics",
+  "subject": "Teacher Uploaded Content",
+  "gradeLevel": "Teacher Review",
+  "status": "draft",
+  "reviewStatus": "pending"
+}

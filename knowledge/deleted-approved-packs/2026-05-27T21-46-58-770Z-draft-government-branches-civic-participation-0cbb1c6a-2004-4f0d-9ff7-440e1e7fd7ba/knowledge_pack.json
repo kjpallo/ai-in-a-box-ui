@@ -1,0 +1,368 @@
+{
+  "vocabulary": [],
+  "concepts": [
+    {
+      "conceptId": "concept-student-may-think",
+      "title": "Student May Think",
+      "aliases": [],
+      "studentExplanation": "l Students may think only voting counts as civic participation.",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Government Branches Civic Participation.pdf",
+      "sourceLocation": "Page 3 / Chunk 1",
+      "sourceTextSnippet": "Misconception l Students may think only voting counts as civic participation.",
+      "sourceParse": "deterministic_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    }
+  ],
+  "referenceFormulas": [],
+  "problemBank": [],
+  "standardsMap": [],
+  "smokeTests": [],
+  "sourceFiles": [
+    {
+      "fileName": "Government Branches Civic Participation.pdf",
+      "fileType": "pdf",
+      "uploadId": "0cbb1c6a-2004-4f0d-9ff7-440e1e7fd7ba",
+      "storedFileName": "0cbb1c6a-2004-4f0d-9ff7-440e1e7fd7ba.pdf",
+      "extractionJsonFileName": "0cbb1c6a-2004-4f0d-9ff7-440e1e7fd7ba_extraction.json",
+      "characterCount": 419,
+      "pageCount": 3,
+      "chunkCount": 1,
+      "reviewStatus": "pending",
+      "confidence": "low",
+      "notes": "Added from extraction metadata for draft traceability.",
+      "sourceReferences": []
+    }
+  ],
+  "metadata": {
+    "modelMetadata": {
+      "createdBy": "charlemagne-teacher-content-import"
+    },
+    "createdBy": "charlemagne-teacher-content-import",
+    "createdAt": "2026-05-25T02:39:38.298Z",
+    "updatedAt": "2026-05-25T02:40:40.357Z",
+    "status": "draft",
+    "reviewStatus": "pending",
+    "packName": "Government Branches Civic Participation",
+    "packId": "draft-government-branches-civic-participation-0cbb1c6a-2004-4f0d-9ff7-440e1e7fd7ba",
+    "sourceUpload": {
+      "uploadId": "0cbb1c6a-2004-4f0d-9ff7-440e1e7fd7ba",
+      "originalFileName": "Government Branches Civic Participation.pdf",
+      "storedFileName": "0cbb1c6a-2004-4f0d-9ff7-440e1e7fd7ba.pdf",
+      "extractionJsonFileName": "0cbb1c6a-2004-4f0d-9ff7-440e1e7fd7ba_extraction.json",
+      "importProfile": "general",
+      "fileType": "pdf",
+      "characterCount": 2164,
+      "pageCount": 3,
+      "chunkCount": 3
+    },
+    "extraction": {
+      "characterCount": 2164,
+      "pageCount": 3,
+      "chunkCount": 3
+    },
+    "importProfile": "general",
+    "importScope": {
+      "scope": "full_document",
+      "scopeLabel": "Full Import",
+      "sampleOnly": false,
+      "rangeLimited": false,
+      "completePacketImported": true,
+      "pageRangeLabel": "1-3",
+      "chunkRangeLabel": "1-3",
+      "rangeLabel": "Pages 1-3",
+      "pages": [
+        1,
+        2,
+        3
+      ],
+      "chunks": [
+        1,
+        2,
+        3
+      ],
+      "textBearingPages": [
+        1,
+        2,
+        3
+      ],
+      "firstTextPage": 1,
+      "originalPageCount": 3,
+      "processedPageCount": 3,
+      "processedChunkCount": 3,
+      "processedCharacterCount": 2164,
+      "warning": ""
+    },
+    "importUncertainSections": [],
+    "deduplication": {
+      "vocabulary": {
+        "raw": 5,
+        "duplicatesRemoved": 0,
+        "final": 5
+      },
+      "concepts": {
+        "raw": 1,
+        "duplicatesRemoved": 0,
+        "final": 1
+      },
+      "problemBank": {
+        "raw": 0,
+        "duplicatesRemoved": 0,
+        "final": 0
+      }
+    },
+    "importNormalization": {
+      "conceptIdsGenerated": 0,
+      "conceptTitlesGenerated": 0,
+      "vocabularyIdsGenerated": 4,
+      "vocabularyTermsGenerated": 0,
+      "problemIdsGenerated": 0,
+      "smokeTestIdsGenerated": 0,
+      "standardsMapIdsMapped": 0,
+      "sourceEvidenceFilled": 4,
+      "reviewNeededItems": 18,
+      "droppedItems": 0,
+      "totalNormalized": 8,
+      "notes": [
+        "Generated vocabulary ID during import normalization.",
+        "Source evidence was filled from extraction defaults during import normalization; keep teacher review required.",
+        "Deterministically parsed from a Vocabulary Term: definition source line.",
+        "Deterministically parsed from a labeled concept source section."
+      ]
+    },
+    "importBatches": 2,
+    "invalidGeneratedItems": [],
+    "importWarnings": [],
+    "importCoverage": {
+      "totalPages": 3,
+      "totalChunks": 3,
+      "processedPages": 3,
+      "processedChunks": 3,
+      "pagesWithDraftItems": 1,
+      "chunksWithDraftItems": 1,
+      "chunksWithNoExtractedKnowledge": 1,
+      "noKnowledgeChunks": [
+        "Page 1"
+      ],
+      "sectionsDetected": [
+        "concepts",
+        "referenceFormulas",
+        "smokeTests",
+        "vocabulary"
+      ],
+      "sourceSignals": {
+        "definitionLikeText": true,
+        "equationLikeText": false,
+        "practiceLikeText": false
+      },
+      "itemCounts": {
+        "vocabulary": 5,
+        "concepts": 1,
+        "referenceFormulas": 0,
+        "problemBank": 0,
+        "standardsMap": 0,
+        "smokeTests": 0
+      },
+      "failedBatches": [
+        {
+          "batchIndex": 3,
+          "retryIndex": 1,
+          "chunkLabels": [
+            "Page 2 / Chunk 1 / Retry Chunk 1"
+          ],
+          "pages": [
+            2
+          ],
+          "characterCount": 235,
+          "errors": [
+            "Local Gemma crashed while reading batch 3 of 7. Retrying once with a smaller batch. Affected source chunks/pages: Page 2 / Chunk 1 / Retry Chunk 1.",
+            "Current model: gemma4:e2b.",
+            "Ollama detail for batch 3: Ollama returned HTTP 500: {\"error\":\"an error was encountered while running the model: error: command buffer 1 failed with status 1\\nsignal arrived during cgo execution\\nGGML_ASSERT([rsets-\\u003edata count] == 0) failed\"}"
+          ]
+        }
+      ],
+      "sourceManifest": [
+        {
+          "chunkId": "chunk-1",
+          "sourceFile": "0cbb1c6a-2004-4f0d-9ff7-440e1e7fd7ba.pdf",
+          "sourceLocation": "Page 1",
+          "chunkIndex": 1,
+          "charCount": 796,
+          "status": "no_items_found"
+        },
+        {
+          "chunkId": "chunk-2",
+          "sourceFile": "0cbb1c6a-2004-4f0d-9ff7-440e1e7fd7ba.pdf",
+          "sourceLocation": "Page 2",
+          "chunkIndex": 2,
+          "charCount": 706,
+          "status": "failed_after_retries"
+        },
+        {
+          "chunkId": "chunk-3",
+          "sourceFile": "0cbb1c6a-2004-4f0d-9ff7-440e1e7fd7ba.pdf",
+          "sourceLocation": "Page 3",
+          "chunkIndex": 3,
+          "charCount": 658,
+          "status": "drafted"
+        }
+      ],
+      "coverageSummary": {
+        "totalChunks": 3,
+        "queuedChunks": 0,
+        "draftedChunks": 1,
+        "skippedEmptyChunks": 0,
+        "noItemsFoundChunks": 1,
+        "needsReviewChunks": 0,
+        "failedChunks": 1,
+        "totalSourceChars": 2160,
+        "completedChunks": 3,
+        "allChunksTerminal": true
+      },
+      "queuedChunks": 0,
+      "allChunksTerminal": true,
+      "importComplete": true,
+      "warnings": [
+        "1 section failed after retry.",
+        "Model draft failed for batch 3 (Page 2 / Chunk 1 / Retry Chunk 1). Review draft was not completed for those source chunks/pages."
+      ]
+    },
+    "sourceEvidenceValidation": {
+      "checkedItems": 6,
+      "supportedItems": 5,
+      "weakItems": 0,
+      "unsupportedItems": 1,
+      "thinExtractionItems": 0,
+      "warnings": [
+        "Generated wording was not strongly supported by the extracted source text."
+      ]
+    },
+    "partialDraft": true,
+    "autoImportPlan": {
+      "mode": "auto_full",
+      "recommendedImportScope": "full_document",
+      "batchStrategy": "sequential_batches",
+      "batchCount": 3,
+      "batches": [
+        {
+          "batchIndex": 1,
+          "sourceLocations": [
+            "Page 1"
+          ],
+          "pageNumbers": [
+            1
+          ],
+          "estimatedCharacters": 796,
+          "estimatedTokens": 266
+        },
+        {
+          "batchIndex": 2,
+          "sourceLocations": [
+            "Page 2"
+          ],
+          "pageNumbers": [
+            2
+          ],
+          "estimatedCharacters": 706,
+          "estimatedTokens": 236
+        },
+        {
+          "batchIndex": 3,
+          "sourceLocations": [
+            "Page 3"
+          ],
+          "pageNumbers": [
+            3
+          ],
+          "estimatedCharacters": 658,
+          "estimatedTokens": 220
+        }
+      ],
+      "limits": {
+        "maxCharactersPerBatch": 1250,
+        "maxEstimatedTokensPerBatch": 417,
+        "availableMemoryMb": 128,
+        "totalMemoryMb": 8192
+      },
+      "warnings": [
+        "Available memory is low (128 MB). Automatically using smaller sequential chunks."
+      ],
+      "reason": "Available memory is low, so the planner reduced batch size and will process 3 sequential chunks automatically.",
+      "canOverride": true,
+      "inspection": {
+        "fileType": "pdf",
+        "originalFileName": "0cbb1c6a-2004-4f0d-9ff7-440e1e7fd7ba.pdf",
+        "rawFileSizeBytes": 4672,
+        "totalPageSlideSheetCount": 3,
+        "textBearingPageSlideSheetCount": 3,
+        "firstTextBearingPageSlideSheet": 1,
+        "totalExtractedCharacters": 2160,
+        "largestSectionCharacterCount": 796,
+        "estimatedTokenCount": 720,
+        "configuredImportModel": "gemma4:e2b"
+      }
+    },
+    "approvedImportScope": {
+      "scope": "full_document",
+      "scopeLabel": "Full Import",
+      "sampleOnly": false,
+      "rangeLimited": false,
+      "completePacketImported": true,
+      "pageRangeLabel": "1-3",
+      "chunkRangeLabel": "1-3",
+      "rangeLabel": "Pages 1-3",
+      "pages": [
+        1,
+        2,
+        3
+      ],
+      "chunks": [
+        1,
+        2,
+        3
+      ],
+      "textBearingPages": [
+        1,
+        2,
+        3
+      ],
+      "firstTextPage": 1,
+      "originalPageCount": 3,
+      "processedPageCount": 3,
+      "processedChunkCount": 3,
+      "processedCharacterCount": 2164,
+      "warning": ""
+    },
+    "rangeLimitedApprovedPack": false,
+    "approvalScopeWarning": ""
+  },
+  "schemaVersion": "1.0.0",
+  "packId": "draft-government-branches-civic-participation-0cbb1c6a-2004-4f0d-9ff7-440e1e7fd7ba",
+  "version": "0.1.0-draft",
+  "title": "Government Branches Civic Participation",
+  "subject": "Teacher Uploaded Content",
+  "gradeLevel": "Teacher Review",
+  "status": "draft",
+  "reviewStatus": "pending"
+}

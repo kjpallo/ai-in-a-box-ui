@@ -1,0 +1,1552 @@
+{
+  "theme": {
+    "theme_name": "Theme",
+    "definition": "The underlying message or central idea of a story."
+  },
+  "theme_details": [
+    {
+      "term": "Theme",
+      "definition": "The underlying message or central idea of a story."
+    }
+  ],
+  "vocabulary": [
+    {
+      "vocabId": "vocab-theme",
+      "term": "Theme",
+      "aliases": [],
+      "studentDefinition": "the message or insight about life in a text",
+      "teacherDefinition": "the message or insight about life in a text",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "reviewStatus": "approved",
+      "confidence": "high",
+      "sourceFile": "Theme Character Conflict.pptx",
+      "sourceLocation": "Slide 1 / Chunk 1",
+      "sourceTextSnippet": "Theme: the message or insight about life in a text.",
+      "sourceParse": "deterministic_vocabulary_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceReferences": [
+        {
+          "sourceFile": "Theme Character Conflict.pptx",
+          "sourceLocation": "Slide 1 / Chunk 1",
+          "sourceTextSnippet": "Theme: the message or insight about life in a text."
+        },
+        {
+          "sourceFile": "Theme Character Conflict.pptx",
+          "sourceLocation": "extracted text",
+          "sourceTextSnippet": "[Slide 5 / Chunk 1] ELA Review Vocabulary Theme, characterization, conflict, claim, evidence, commentary, simile, metaphor, point of view. Core Concept Students should make an interpretation and support it with evidence. Useful answers expl..."
+        }
+      ],
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "vocabId": "vocab-characterization",
+      "term": "Characterization",
+      "aliases": [],
+      "studentDefinition": "how an author shows what a character is like",
+      "teacherDefinition": "how an author shows what a character is like",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "reviewStatus": "approved",
+      "confidence": "high",
+      "sourceFile": "Theme Character Conflict.pptx",
+      "sourceLocation": "Slide 1 / Chunk 1",
+      "sourceTextSnippet": "Characterization: how an author shows what a character is like.",
+      "sourceParse": "deterministic_vocabulary_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "vocabId": "vocab-conflict",
+      "term": "Conflict",
+      "aliases": [],
+      "studentDefinition": "a struggle between characters, forces, or ideas",
+      "teacherDefinition": "a struggle between characters, forces, or ideas",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "reviewStatus": "approved",
+      "confidence": "high",
+      "sourceFile": "Theme Character Conflict.pptx",
+      "sourceLocation": "Slide 1 / Chunk 1",
+      "sourceTextSnippet": "Conflict: a struggle between characters, forces, or ideas.",
+      "sourceParse": "deterministic_vocabulary_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "vocabId": "vocab-claim",
+      "term": "Claim",
+      "aliases": [],
+      "studentDefinition": "a statement the writer tries to prove",
+      "teacherDefinition": "a statement the writer tries to prove",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "reviewStatus": "approved",
+      "confidence": "high",
+      "sourceFile": "Theme Character Conflict.pptx",
+      "sourceLocation": "Slide 2 / Chunk 1",
+      "sourceTextSnippet": "Claim: a statement the writer tries to prove.",
+      "sourceParse": "deterministic_vocabulary_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "vocabId": "vocab-evidence",
+      "term": "Evidence",
+      "aliases": [],
+      "studentDefinition": "a quote, detail, or example from the text",
+      "teacherDefinition": "a quote, detail, or example from the text",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "reviewStatus": "approved",
+      "confidence": "high",
+      "sourceFile": "Theme Character Conflict.pptx",
+      "sourceLocation": "Slide 2 / Chunk 1",
+      "sourceTextSnippet": "Evidence: a quote, detail, or example from the text.",
+      "sourceParse": "deterministic_vocabulary_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "vocabId": "vocab-commentary",
+      "term": "Commentary",
+      "aliases": [],
+      "studentDefinition": "the writer explains how the evidence supports the claim",
+      "teacherDefinition": "the writer explains how the evidence supports the claim",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "reviewStatus": "approved",
+      "confidence": "high",
+      "sourceFile": "Theme Character Conflict.pptx",
+      "sourceLocation": "Slide 2 / Chunk 1",
+      "sourceTextSnippet": "Commentary: the writer explains how the evidence supports the claim.",
+      "sourceParse": "deterministic_vocabulary_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "vocabId": "vocab-simile",
+      "term": "Simile",
+      "aliases": [],
+      "studentDefinition": "compares two unlike things using like or as",
+      "teacherDefinition": "compares two unlike things using like or as",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "reviewStatus": "approved",
+      "confidence": "high",
+      "sourceFile": "Theme Character Conflict.pptx",
+      "sourceLocation": "Slide 3 / Chunk 1",
+      "sourceTextSnippet": "Simile: compares two unlike things using like or as.",
+      "sourceParse": "deterministic_vocabulary_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "vocabId": "vocab-metaphor",
+      "term": "Metaphor",
+      "aliases": [],
+      "studentDefinition": "directly compares unlike things",
+      "teacherDefinition": "directly compares unlike things",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "reviewStatus": "approved",
+      "confidence": "high",
+      "sourceFile": "Theme Character Conflict.pptx",
+      "sourceLocation": "Slide 3 / Chunk 1",
+      "sourceTextSnippet": "Metaphor: directly compares unlike things.",
+      "sourceParse": "deterministic_vocabulary_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "vocabId": "vocab-personification",
+      "term": "Personification",
+      "aliases": [],
+      "studentDefinition": "gives human qualities to nonhuman things",
+      "teacherDefinition": "gives human qualities to nonhuman things",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "reviewStatus": "approved",
+      "confidence": "high",
+      "sourceFile": "Theme Character Conflict.pptx",
+      "sourceLocation": "Slide 3 / Chunk 1",
+      "sourceTextSnippet": "Personification: gives human qualities to nonhuman things.",
+      "sourceParse": "deterministic_vocabulary_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "vocabId": "vocab-narrator",
+      "term": "Narrator",
+      "aliases": [],
+      "studentDefinition": "the voice telling the story",
+      "teacherDefinition": "the voice telling the story",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "reviewStatus": "approved",
+      "confidence": "high",
+      "sourceFile": "Theme Character Conflict.pptx",
+      "sourceLocation": "Slide 4 / Chunk 1",
+      "sourceTextSnippet": "Narrator: the voice telling the story.",
+      "sourceParse": "deterministic_vocabulary_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "vocabId": "vocab-first-person",
+      "term": "First person",
+      "aliases": [],
+      "studentDefinition": "uses I or we",
+      "teacherDefinition": "uses I or we",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "reviewStatus": "approved",
+      "confidence": "high",
+      "sourceFile": "Theme Character Conflict.pptx",
+      "sourceLocation": "Slide 4 / Chunk 1",
+      "sourceTextSnippet": "First person: uses I or we.",
+      "sourceParse": "deterministic_vocabulary_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "vocabId": "vocab-third-person",
+      "term": "Third person",
+      "aliases": [],
+      "studentDefinition": "uses he, she, they, or character names",
+      "teacherDefinition": "uses he, she, they, or character names",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "reviewStatus": "approved",
+      "confidence": "high",
+      "sourceFile": "Theme Character Conflict.pptx",
+      "sourceLocation": "Slide 4 / Chunk 1",
+      "sourceTextSnippet": "Third person: uses he, she, they, or character names.",
+      "sourceParse": "deterministic_vocabulary_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "vocabId": "vocab-perspective",
+      "term": "Perspective",
+      "aliases": [],
+      "studentDefinition": "how a character sees events",
+      "teacherDefinition": "how a character sees events",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "reviewStatus": "approved",
+      "confidence": "high",
+      "sourceFile": "Theme Character Conflict.pptx",
+      "sourceLocation": "Slide 4 / Chunk 1",
+      "sourceTextSnippet": "Perspective: how a character sees events.",
+      "sourceParse": "deterministic_vocabulary_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    }
+  ],
+  "concepts": [
+    {
+      "conceptId": "concept-theme-usually-written",
+      "title": "Theme Usually Written",
+      "aliases": [],
+      "studentExplanation": "A theme is usually not written as one word.",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Theme Character Conflict.pptx",
+      "sourceLocation": "Slide 1 / Chunk 1",
+      "sourceTextSnippet": "Core Concept A theme is usually not written as one word.",
+      "sourceParse": "deterministic_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "conceptId": "concept-reader-infer-theme",
+      "title": "Reader Infer Theme",
+      "aliases": [],
+      "studentExplanation": "Readers infer theme by tracking choices, conflict, and change.",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Theme Character Conflict.pptx",
+      "sourceLocation": "Slide 1 / Chunk 1",
+      "sourceTextSnippet": "Readers infer theme by tracking choices, conflict, and change.",
+      "sourceParse": "deterministic_structured_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "conceptId": "concept-character-reveal-theme",
+      "title": "Character Reveal Theme",
+      "aliases": [],
+      "studentExplanation": "A character can reveal a theme through what they learn or f",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Theme Character Conflict.pptx",
+      "sourceLocation": "Slide 1 / Chunk 1",
+      "sourceTextSnippet": "A character can reveal a theme through what they learn or f",
+      "sourceParse": "deterministic_structured_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "name": "Claim",
+      "definition": "A statement that is asserted to be true and must be supported by evidence.",
+      "related_concepts": [
+        "Evidence",
+        "Reasoning"
+      ],
+      "aliases": [],
+      "title": "Claim",
+      "reviewStatus": "approved",
+      "confidence": "low",
+      "notes": "Generated concept title during import normalization from model/source text. Generated concept ID during import normalization. Source evidence was filled from extraction defaults during import normalization; keep teacher review required.",
+      "normalizationNotes": [
+        "Generated concept title during import normalization from model/source text.",
+        "Generated concept ID during import normalization.",
+        "Source evidence was filled from extraction defaults during import normalization; keep teacher review required."
+      ],
+      "conceptId": "concept-claim",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceFile": "Theme Character Conflict.pptx",
+      "sourceLocation": "extracted text",
+      "sourceTextSnippet": "[Slide 2 / Chunk 1] Evidence and Commentary Vocabulary Claim: a statement the writer tries to prove. Evidence: a quote, detail, or example from the text. Commentary: the writer explains how the evidence supports the claim. Core Concept Stro...",
+      "studentExplanation": "English Theme Character PPTX | Slide 1 of 5 | Charlemagne bulk subject test Evidence and Commentary Vocabulary Claim: a statement the writer tries to prove.",
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "name": "Evidence",
+      "definition": "Information or facts used to support a claim.",
+      "related_concepts": [
+        "Claim",
+        "Reasoning"
+      ],
+      "aliases": [],
+      "title": "Evidence",
+      "reviewStatus": "approved",
+      "confidence": "low",
+      "notes": "Generated concept title during import normalization from model/source text. Generated concept ID during import normalization. Source evidence was filled from extraction defaults during import normalization; keep teacher review required.",
+      "normalizationNotes": [
+        "Generated concept title during import normalization from model/source text.",
+        "Generated concept ID during import normalization.",
+        "Source evidence was filled from extraction defaults during import normalization; keep teacher review required."
+      ],
+      "conceptId": "concept-evidence",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceFile": "Theme Character Conflict.pptx",
+      "sourceLocation": "extracted text",
+      "sourceTextSnippet": "[Slide 2 / Chunk 1] Evidence and Commentary Vocabulary Claim: a statement the writer tries to prove. Evidence: a quote, detail, or example from the text. Commentary: the writer explains how the evidence supports the claim. Core Concept Stro...",
+      "studentExplanation": "English Theme Character PPTX | Slide 1 of 5 | Charlemagne bulk subject test Evidence and Commentary Vocabulary Claim: a statement the writer tries to prove.",
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "name": "Reasoning",
+      "definition": "The logical process of drawing conclusions from evidence and facts.",
+      "related_concepts": [
+        "Evidence",
+        "Claim"
+      ],
+      "aliases": [],
+      "title": "Reasoning",
+      "reviewStatus": "approved",
+      "confidence": "low",
+      "notes": "Generated concept title during import normalization from model/source text. Generated concept ID during import normalization. Source evidence was filled from extraction defaults during import normalization; keep teacher review required. Generated wording was not strongly supported by the extracted source text.",
+      "normalizationNotes": [
+        "Generated concept title during import normalization from model/source text.",
+        "Generated concept ID during import normalization.",
+        "Source evidence was filled from extraction defaults during import normalization; keep teacher review required."
+      ],
+      "conceptId": "concept-reasoning",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceFile": "Theme Character Conflict.pptx",
+      "sourceLocation": "extracted text",
+      "sourceTextSnippet": "[Slide 2 / Chunk 1] Evidence and Commentary Vocabulary Claim: a statement the writer tries to prove. Evidence: a quote, detail, or example from the text. Commentary: the writer explains how the evidence supports the claim. Core Concept Stro...",
+      "studentExplanation": "Theme and Character: Reading Notes Vocabulary Theme: the message or insight about life in a text.",
+      "sourceGrounding": {
+        "status": "unsupported",
+        "termOrTitleFound": false,
+        "explanationSupported": false,
+        "evidenceStrength": 0,
+        "reasons": [
+          "Concept title was not found or strongly reflected in the cited source evidence."
+        ]
+      },
+      "warnings": [
+        "Generated wording was not strongly supported by the extracted source text."
+      ],
+      "warningStatus": "source_evidence_weak",
+      "repairStatus": "repair_needed"
+    },
+    {
+      "conceptId": "concept-strong-paragraph-connect",
+      "title": "Strong Paragraph Connect",
+      "aliases": [],
+      "studentExplanation": "Strong paragraphs connect evidence back to the claim.",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Theme Character Conflict.pptx",
+      "sourceLocation": "Slide 2 / Chunk 1",
+      "sourceTextSnippet": "Core Concept Strong paragraphs connect evidence back to the claim.",
+      "sourceParse": "deterministic_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "conceptId": "concept-commentary-should-explain",
+      "title": "Commentary Should Explain",
+      "aliases": [],
+      "studentExplanation": "Commentary should explain thinking, not just repeat the quote.",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Theme Character Conflict.pptx",
+      "sourceLocation": "Slide 2 / Chunk 1",
+      "sourceTextSnippet": "Commentary should explain thinking, not just repeat the quote.",
+      "sourceParse": "deterministic_structured_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "conceptId": "concept-reader-should-able",
+      "title": "Reader Should Able",
+      "aliases": [],
+      "studentExplanation": "A reader should be able to see why the evidence matters.",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Theme Character Conflict.pptx",
+      "sourceLocation": "Slide 2 / Chunk 1",
+      "sourceTextSnippet": "A reader should be able to see why the evidence matters.",
+      "sourceParse": "deterministic_structured_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "concept": "Figurative language",
+      "description": "Language that uses words or expressions with a meaning that is different from the literal interpretation.",
+      "related_terms": [
+        "Simile",
+        "Metaphor",
+        "Personification"
+      ],
+      "aliases": [],
+      "title": "Figurative Language",
+      "reviewStatus": "approved",
+      "confidence": "low",
+      "notes": "Generated concept title during import normalization from model/source text. Generated concept ID during import normalization. Source evidence was filled from extraction defaults during import normalization; keep teacher review required.",
+      "normalizationNotes": [
+        "Generated concept title during import normalization from model/source text.",
+        "Generated concept ID during import normalization.",
+        "Source evidence was filled from extraction defaults during import normalization; keep teacher review required."
+      ],
+      "conceptId": "concept-figurative-language",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceFile": "Theme Character Conflict.pptx",
+      "sourceLocation": "extracted text",
+      "sourceTextSnippet": "[Slide 3 / Chunk 1] Figurative Language Vocabulary Simile: compares two unlike things using like or as. Metaphor: directly compares unlike things. Personification: gives human qualities to nonhuman things. Core Concept Figurative language c...",
+      "studentExplanation": "English Theme Character PPTX | Slide 2 of 5 | Charlemagne bulk subject test [Slide 3 / Chunk 1] Figurative Language Vocabulary Simile: compares two unlike things using like or as.",
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "conceptId": "concept-figurative-language-affect",
+      "title": "Figurative Language Affect",
+      "aliases": [],
+      "studentExplanation": "Figurative language can affect tone and meaning.",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Theme Character Conflict.pptx",
+      "sourceLocation": "Slide 3 / Chunk 1",
+      "sourceTextSnippet": "Core Concept Figurative language can affect tone and meaning.",
+      "sourceParse": "deterministic_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "conceptId": "concept-reader-should-explain",
+      "title": "Reader Should Explain",
+      "aliases": [],
+      "studentExplanation": "Readers should explain what the image suggests, not only label the device.",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Theme Character Conflict.pptx",
+      "sourceLocation": "Slide 3 / Chunk 1",
+      "sourceTextSnippet": "Readers should explain what the image suggests, not only label the device.",
+      "sourceParse": "deterministic_structured_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "conceptId": "concept-author-use-language",
+      "title": "Author Use Language",
+      "aliases": [],
+      "studentExplanation": "Authors use language choices to shape mood.",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Theme Character Conflict.pptx",
+      "sourceLocation": "Slide 3 / Chunk 1",
+      "sourceTextSnippet": "Authors use language choices to shape mood.",
+      "sourceParse": "deterministic_structured_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "concept": "Point of View",
+      "description": "The perspective from which a story is told.",
+      "aliases": [],
+      "title": "Point Of View",
+      "reviewStatus": "approved",
+      "confidence": "low",
+      "notes": "Generated concept title during import normalization from model/source text. Generated concept ID during import normalization. Source evidence was filled from extraction defaults during import normalization; keep teacher review required.",
+      "normalizationNotes": [
+        "Generated concept title during import normalization from model/source text.",
+        "Generated concept ID during import normalization.",
+        "Source evidence was filled from extraction defaults during import normalization; keep teacher review required."
+      ],
+      "conceptId": "concept-point-of-view",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceFile": "Theme Character Conflict.pptx",
+      "sourceLocation": "extracted text",
+      "sourceTextSnippet": "[Slide 4 / Chunk 1] Point of View and Perspective Vocabulary Narrator: the voice telling the story. First person: uses I or we. Third person: uses he, she, they, or character names. Perspective: how a character sees events. Core Concept Poi...",
+      "studentExplanation": "English Theme Character PPTX | Slide 2 of 5 | Charlemagne bulk subject test [Slide 4 / Chunk 1] Point of View and Perspective Vocabulary Narrator: the voice telling the story.",
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "conceptId": "concept-point-view-change",
+      "title": "Point View Change",
+      "aliases": [],
+      "studentExplanation": "Point of view changes what information the reader receives.",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Theme Character Conflict.pptx",
+      "sourceLocation": "Slide 4 / Chunk 1",
+      "sourceTextSnippet": "Core Concept Point of view changes what information the reader receives.",
+      "sourceParse": "deterministic_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "conceptId": "concept-perspective-biased-incomplete",
+      "title": "Perspective Biased Incomplete",
+      "aliases": [],
+      "studentExplanation": "Perspective can be biased or incomplete.",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Theme Character Conflict.pptx",
+      "sourceLocation": "Slide 4 / Chunk 1",
+      "sourceTextSnippet": "Perspective can be biased or incomplete.",
+      "sourceParse": "deterministic_structured_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "conceptId": "concept-student-should-support",
+      "title": "Student Should Support",
+      "aliases": [],
+      "studentExplanation": "Students should support claims about perspective with text evidence.",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Theme Character Conflict.pptx",
+      "sourceLocation": "Slide 4 / Chunk 1",
+      "sourceTextSnippet": "Students should support claims about perspective with text evidence.",
+      "sourceParse": "deterministic_structured_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "concept": "Making inferences",
+      "description": "Drawing conclusions based on evidence from the text.",
+      "aliases": [],
+      "title": "Making Inferences",
+      "reviewStatus": "approved",
+      "confidence": "low",
+      "notes": "Generated concept title during import normalization from model/source text. Generated concept ID during import normalization. Source evidence was filled from extraction defaults during import normalization; keep teacher review required. Generated wording was not strongly supported by the extracted source text.",
+      "normalizationNotes": [
+        "Generated concept title during import normalization from model/source text.",
+        "Generated concept ID during import normalization.",
+        "Source evidence was filled from extraction defaults during import normalization; keep teacher review required."
+      ],
+      "conceptId": "concept-making-inferences",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceFile": "Theme Character Conflict.pptx",
+      "sourceLocation": "extracted text",
+      "sourceTextSnippet": "[Slide 5 / Chunk 1] ELA Review Vocabulary Theme, characterization, conflict, claim, evidence, commentary, simile, metaphor, point of view. Core Concept Students should make an interpretation and support it with evidence. Useful answers expl...",
+      "studentExplanation": "Theme and Character: Reading Notes Vocabulary Theme: the message or insight about life in a text.",
+      "sourceGrounding": {
+        "status": "unsupported",
+        "termOrTitleFound": false,
+        "explanationSupported": false,
+        "evidenceStrength": 0,
+        "reasons": [
+          "Concept title was not found or strongly reflected in the cited source evidence."
+        ]
+      },
+      "warnings": [
+        "Generated wording was not strongly supported by the extracted source text."
+      ],
+      "warningStatus": "source_evidence_weak",
+      "repairStatus": "repair_needed"
+    },
+    {
+      "conceptId": "concept-student-should-make",
+      "title": "Student Should Make",
+      "aliases": [],
+      "studentExplanation": "Students should make an interpretation and support it with evidence.",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Theme Character Conflict.pptx",
+      "sourceLocation": "Slide 5 / Chunk 1",
+      "sourceTextSnippet": "Core Concept Students should make an interpretation and support it with evidence.",
+      "sourceParse": "deterministic_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "conceptId": "concept-useful-answer-explain",
+      "title": "Useful Answer Explain",
+      "aliases": [],
+      "studentExplanation": "Useful answers explain why a detail matters.",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Theme Character Conflict.pptx",
+      "sourceLocation": "Slide 5 / Chunk 1",
+      "sourceTextSnippet": "Useful answers explain why a detail matters.",
+      "sourceParse": "deterministic_structured_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "conceptId": "concept-import-should-keep",
+      "title": "Import Should Keep",
+      "aliases": [],
+      "studentExplanation": "The import should keep source slide tracking.",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Theme Character Conflict.pptx",
+      "sourceLocation": "Slide 5 / Chunk 1",
+      "sourceTextSnippet": "The import should keep source slide tracking.",
+      "sourceParse": "deterministic_structured_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "conceptId": "concept-expected-category-vocabulary",
+      "title": "Expected Category Vocabulary",
+      "aliases": [],
+      "studentExplanation": "Expected categories: vocabulary, concepts, review facts, procedures.",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Theme Character Conflict.pptx",
+      "sourceLocation": "Slide 5 / Chunk 1",
+      "sourceTextSnippet": "Expected categories: vocabulary, concepts, review facts, procedures.",
+      "sourceParse": "deterministic_structured_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    }
+  ],
+  "referenceFormulas": [],
+  "problemBank": [],
+  "standardsMap": [],
+  "smokeTests": [],
+  "sourceFiles": [
+    {
+      "fileName": "Theme Character Conflict.pptx",
+      "fileType": "pptx",
+      "uploadId": "762f1262-94cf-4eff-aad8-fb0f49e5948b",
+      "storedFileName": "762f1262-94cf-4eff-aad8-fb0f49e5948b.pptx",
+      "extractionJsonFileName": "762f1262-94cf-4eff-aad8-fb0f49e5948b_extraction.json",
+      "characterCount": 420,
+      "pageCount": 5,
+      "chunkCount": 1,
+      "reviewStatus": "pending",
+      "confidence": "low",
+      "notes": "Added from extraction metadata for draft traceability.",
+      "sourceReferences": []
+    }
+  ],
+  "metadata": {
+    "modelMetadata": {
+      "createdBy": "charlemagne-teacher-content-import"
+    },
+    "createdBy": "charlemagne-teacher-content-import",
+    "createdAt": "2026-05-25T02:43:48.603Z",
+    "updatedAt": "2026-05-25T02:44:37.360Z",
+    "status": "draft",
+    "reviewStatus": "pending",
+    "packName": "Theme Character Conflict",
+    "packId": "draft-theme-character-conflict-762f1262-94cf-4eff-aad8-fb0f49e5948b",
+    "sourceUpload": {
+      "uploadId": "762f1262-94cf-4eff-aad8-fb0f49e5948b",
+      "originalFileName": "Theme Character Conflict.pptx",
+      "storedFileName": "762f1262-94cf-4eff-aad8-fb0f49e5948b.pptx",
+      "extractionJsonFileName": "762f1262-94cf-4eff-aad8-fb0f49e5948b_extraction.json",
+      "importProfile": "general",
+      "fileType": "pptx",
+      "characterCount": 2981,
+      "pageCount": 5,
+      "chunkCount": 5
+    },
+    "extraction": {
+      "characterCount": 2981,
+      "pageCount": 5,
+      "chunkCount": 5
+    },
+    "importProfile": "general",
+    "importScope": {
+      "scope": "full_document",
+      "scopeLabel": "Full Import",
+      "sampleOnly": false,
+      "rangeLimited": false,
+      "completePacketImported": true,
+      "pageRangeLabel": "1-5",
+      "chunkRangeLabel": "1-5",
+      "rangeLabel": "Pages 1-5",
+      "pages": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "chunks": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "textBearingPages": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "firstTextPage": 1,
+      "originalPageCount": 5,
+      "processedPageCount": 5,
+      "processedChunkCount": 5,
+      "processedCharacterCount": 2981,
+      "warning": ""
+    },
+    "importUncertainSections": [],
+    "deduplication": {
+      "vocabulary": {
+        "raw": 14,
+        "duplicatesRemoved": 1,
+        "final": 13
+      },
+      "concepts": {
+        "raw": 22,
+        "duplicatesRemoved": 0,
+        "final": 22
+      },
+      "problemBank": {
+        "raw": 0,
+        "duplicatesRemoved": 0,
+        "final": 0
+      }
+    },
+    "importNormalization": {
+      "conceptIdsGenerated": 0,
+      "conceptTitlesGenerated": 0,
+      "vocabularyIdsGenerated": 0,
+      "vocabularyTermsGenerated": 0,
+      "problemIdsGenerated": 0,
+      "smokeTestIdsGenerated": 0,
+      "standardsMapIdsMapped": 0,
+      "sourceEvidenceFilled": 0,
+      "reviewNeededItems": 34,
+      "droppedItems": 0,
+      "totalNormalized": 0,
+      "notes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line.",
+        "Deterministically parsed from a labeled concept source section."
+      ]
+    },
+    "importBatches": 5,
+    "invalidGeneratedItems": [],
+    "importWarnings": [],
+    "importCoverage": {
+      "totalPages": 5,
+      "totalChunks": 5,
+      "processedPages": 5,
+      "processedChunks": 5,
+      "pagesWithDraftItems": 5,
+      "chunksWithDraftItems": 5,
+      "chunksWithNoExtractedKnowledge": 0,
+      "noKnowledgeChunks": [],
+      "sectionsDetected": [
+        "concepts",
+        "referenceFormulas",
+        "vocabulary"
+      ],
+      "sourceSignals": {
+        "definitionLikeText": true,
+        "equationLikeText": false,
+        "practiceLikeText": false
+      },
+      "itemCounts": {
+        "vocabulary": 13,
+        "concepts": 22,
+        "referenceFormulas": 0,
+        "problemBank": 0,
+        "standardsMap": 0,
+        "smokeTests": 0
+      },
+      "failedBatches": [],
+      "sourceManifest": [
+        {
+          "chunkId": "chunk-1",
+          "sourceFile": "762f1262-94cf-4eff-aad8-fb0f49e5948b.pptx",
+          "sourceLocation": "Slide 1",
+          "chunkIndex": 1,
+          "charCount": 676,
+          "status": "drafted"
+        },
+        {
+          "chunkId": "chunk-2",
+          "sourceFile": "762f1262-94cf-4eff-aad8-fb0f49e5948b.pptx",
+          "sourceLocation": "Slide 2",
+          "chunkIndex": 2,
+          "charCount": 599,
+          "status": "drafted"
+        },
+        {
+          "chunkId": "chunk-3",
+          "sourceFile": "762f1262-94cf-4eff-aad8-fb0f49e5948b.pptx",
+          "sourceLocation": "Slide 3",
+          "chunkIndex": 3,
+          "charCount": 575,
+          "status": "drafted"
+        },
+        {
+          "chunkId": "chunk-4",
+          "sourceFile": "762f1262-94cf-4eff-aad8-fb0f49e5948b.pptx",
+          "sourceLocation": "Slide 4",
+          "chunkIndex": 4,
+          "charCount": 622,
+          "status": "drafted"
+        },
+        {
+          "chunkId": "chunk-5",
+          "sourceFile": "762f1262-94cf-4eff-aad8-fb0f49e5948b.pptx",
+          "sourceLocation": "Slide 5",
+          "chunkIndex": 5,
+          "charCount": 501,
+          "status": "drafted"
+        }
+      ],
+      "coverageSummary": {
+        "totalChunks": 5,
+        "queuedChunks": 0,
+        "draftedChunks": 5,
+        "skippedEmptyChunks": 0,
+        "noItemsFoundChunks": 0,
+        "needsReviewChunks": 0,
+        "failedChunks": 0,
+        "totalSourceChars": 2973,
+        "completedChunks": 5,
+        "allChunksTerminal": true
+      },
+      "queuedChunks": 0,
+      "allChunksTerminal": true,
+      "importComplete": true,
+      "warnings": []
+    },
+    "sourceEvidenceValidation": {
+      "checkedItems": 35,
+      "supportedItems": 33,
+      "weakItems": 0,
+      "unsupportedItems": 2,
+      "thinExtractionItems": 0,
+      "warnings": [
+        "Generated wording was not strongly supported by the extracted source text."
+      ]
+    },
+    "partialDraft": false,
+    "autoImportPlan": {
+      "mode": "auto_full",
+      "recommendedImportScope": "full_document",
+      "batchStrategy": "sequential_batches",
+      "batchCount": 5,
+      "batches": [
+        {
+          "batchIndex": 1,
+          "sourceLocations": [
+            "Slide 1"
+          ],
+          "pageNumbers": [
+            1
+          ],
+          "estimatedCharacters": 676,
+          "estimatedTokens": 226
+        },
+        {
+          "batchIndex": 2,
+          "sourceLocations": [
+            "Slide 2"
+          ],
+          "pageNumbers": [
+            2
+          ],
+          "estimatedCharacters": 599,
+          "estimatedTokens": 200
+        },
+        {
+          "batchIndex": 3,
+          "sourceLocations": [
+            "Slide 3"
+          ],
+          "pageNumbers": [
+            3
+          ],
+          "estimatedCharacters": 575,
+          "estimatedTokens": 192
+        },
+        {
+          "batchIndex": 4,
+          "sourceLocations": [
+            "Slide 4"
+          ],
+          "pageNumbers": [
+            4
+          ],
+          "estimatedCharacters": 622,
+          "estimatedTokens": 208
+        },
+        {
+          "batchIndex": 5,
+          "sourceLocations": [
+            "Slide 5"
+          ],
+          "pageNumbers": [
+            5
+          ],
+          "estimatedCharacters": 501,
+          "estimatedTokens": 167
+        }
+      ],
+      "limits": {
+        "maxCharactersPerBatch": 1250,
+        "maxEstimatedTokensPerBatch": 417,
+        "availableMemoryMb": 148,
+        "totalMemoryMb": 8192
+      },
+      "warnings": [
+        "Available memory is low (148 MB). Automatically using smaller sequential chunks."
+      ],
+      "reason": "Available memory is low, so the planner reduced batch size and will process 5 sequential chunks automatically.",
+      "canOverride": true,
+      "inspection": {
+        "fileType": "pptx",
+        "originalFileName": "762f1262-94cf-4eff-aad8-fb0f49e5948b.pptx",
+        "rawFileSizeBytes": 34918,
+        "totalPageSlideSheetCount": 5,
+        "textBearingPageSlideSheetCount": 5,
+        "firstTextBearingPageSlideSheet": 1,
+        "totalExtractedCharacters": 2973,
+        "largestSectionCharacterCount": 676,
+        "estimatedTokenCount": 991,
+        "configuredImportModel": "gemma4:e2b"
+      }
+    }
+  },
+  "schemaVersion": "1.0.0",
+  "packId": "draft-theme-character-conflict-762f1262-94cf-4eff-aad8-fb0f49e5948b",
+  "version": "0.1.0-draft",
+  "title": "Theme Character Conflict",
+  "subject": "Teacher Uploaded Content",
+  "gradeLevel": "Teacher Review",
+  "status": "draft",
+  "reviewStatus": "pending"
+}

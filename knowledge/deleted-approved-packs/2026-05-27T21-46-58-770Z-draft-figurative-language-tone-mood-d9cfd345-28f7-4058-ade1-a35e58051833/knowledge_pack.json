@@ -1,0 +1,803 @@
+{
+  "vocabulary": [
+    {
+      "vocabId": "vocab-personification",
+      "term": "Personification",
+      "aliases": [],
+      "studentDefinition": "giving human traits to nonhuman things",
+      "teacherDefinition": "giving human traits to nonhuman things",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "reviewStatus": "approved",
+      "confidence": "high",
+      "sourceFile": "Figurative Language Tone Mood.pptx",
+      "sourceLocation": "Slide 1 / Chunk 1",
+      "sourceTextSnippet": "- Personification: giving human traits to nonhuman things.",
+      "sourceParse": "deterministic_vocabulary_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceReferences": [
+        {
+          "sourceFile": "Figurative Language Tone Mood.pptx",
+          "sourceLocation": "Slide 1 / Chunk 1",
+          "sourceTextSnippet": "- Personification: giving human traits to nonhuman things."
+        },
+        {
+          "sourceFile": "Figurative Language Tone Mood.pptx",
+          "sourceLocation": "extracted text",
+          "sourceTextSnippet": "[Slide 4] Review Review Check - Vocabulary should include simile, metaphor, personification, tone, mood, imagery, symbol, theme. - Concepts should explain how authors create meaning. - Do not invent story-specific details. English_ELA | Sli..."
+        }
+      ],
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "vocabId": "vocab-tone",
+      "term": "Tone",
+      "aliases": [],
+      "studentDefinition": "the author's attitude toward the subject",
+      "teacherDefinition": "the author's attitude toward the subject",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "reviewStatus": "approved",
+      "confidence": "high",
+      "sourceFile": "Figurative Language Tone Mood.pptx",
+      "sourceLocation": "Slide 2 / Chunk 1",
+      "sourceTextSnippet": "- Tone: the author's attitude toward the subject.",
+      "sourceParse": "deterministic_vocabulary_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "vocabId": "vocab-mood",
+      "term": "Mood",
+      "aliases": [],
+      "studentDefinition": "the feeling created for the reader",
+      "teacherDefinition": "the feeling created for the reader",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "reviewStatus": "approved",
+      "confidence": "high",
+      "sourceFile": "Figurative Language Tone Mood.pptx",
+      "sourceLocation": "Slide 2 / Chunk 1",
+      "sourceTextSnippet": "- Mood: the feeling created for the reader.",
+      "sourceParse": "deterministic_vocabulary_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceReferences": [
+        {
+          "sourceFile": "Figurative Language Tone Mood.pptx",
+          "sourceLocation": "Slide 2 / Chunk 1",
+          "sourceTextSnippet": "- Mood: the feeling created for the reader."
+        },
+        {
+          "sourceFile": "Figurative Language Tone Mood.pptx",
+          "sourceLocation": "extracted text",
+          "sourceTextSnippet": "[Slide 4] Review Review Check - Vocabulary should include simile, metaphor, personification, tone, mood, imagery, symbol, theme. - Concepts should explain how authors create meaning. - Do not invent story-specific details. English_ELA | Sli..."
+        }
+      ],
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "vocabId": "vocab-word-choice",
+      "term": "Word choice",
+      "aliases": [],
+      "studentDefinition": "the specific words an author uses",
+      "teacherDefinition": "the specific words an author uses",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "reviewStatus": "approved",
+      "confidence": "high",
+      "sourceFile": "Figurative Language Tone Mood.pptx",
+      "sourceLocation": "Slide 2 / Chunk 1",
+      "sourceTextSnippet": "- Word choice: the specific words an author uses.",
+      "sourceParse": "deterministic_vocabulary_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    }
+  ],
+  "concepts": [
+    {
+      "conceptId": "concept-figurative-language-help",
+      "title": "Figurative Language Help",
+      "aliases": [],
+      "studentExplanation": "- Figurative language helps readers understand ideas by making comparisons.",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Figurative Language Tone Mood.pptx",
+      "sourceLocation": "Slide 1 / Chunk 1",
+      "sourceTextSnippet": "Core Concept - Figurative language helps readers understand ideas by making comparisons.",
+      "sourceParse": "deterministic_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceReferences": [
+        {
+          "sourceFile": "Figurative Language Tone Mood.pptx",
+          "sourceLocation": "Slide 1 / Chunk 1",
+          "sourceTextSnippet": "Core Concept - Figurative language helps readers understand ideas by making comparisons."
+        },
+        {
+          "sourceFile": "Figurative Language Tone Mood.pptx",
+          "sourceLocation": "Slide 1 / Chunk 1 / Retry Chunk 2",
+          "sourceTextSnippet": "Core Concept - Figurative language helps readers understand ideas by making comparisons."
+        }
+      ],
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "conceptId": "concept-what-comparison-suggest",
+      "title": "What Comparison Suggest",
+      "aliases": [],
+      "studentExplanation": "- Students should explain what the comparison suggests, not just identify the device.",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Figurative Language Tone Mood.pptx",
+      "sourceLocation": "Slide 1 / Chunk 1",
+      "sourceTextSnippet": "- Students should explain what the comparison suggests, not",
+      "sourceParse": "deterministic_structured_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceReferences": [
+        {
+          "sourceFile": "Figurative Language Tone Mood.pptx",
+          "sourceLocation": "Slide 1 / Chunk 1",
+          "sourceTextSnippet": "- Students should explain what the comparison suggests, not"
+        },
+        {
+          "sourceFile": "Figurative Language Tone Mood.pptx",
+          "sourceLocation": "Slide 1 / Chunk 1 / Retry Chunk 2",
+          "sourceTextSnippet": "- Students should explain what the comparison suggests, not"
+        }
+      ],
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "conceptId": "concept-tone-come-author",
+      "title": "Tone Come Author",
+      "aliases": [],
+      "studentExplanation": "- Tone comes from the author; mood is what the reader feels.",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Figurative Language Tone Mood.pptx",
+      "sourceLocation": "Slide 2 / Chunk 1",
+      "sourceTextSnippet": "Core Concept - Tone comes from the author; mood is what the reader feels.",
+      "sourceParse": "deterministic_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "conceptId": "concept-tone-mood-related",
+      "title": "Tone Mood Related",
+      "aliases": [],
+      "studentExplanation": "- Tone and mood are related but not the same.",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Figurative Language Tone Mood.pptx",
+      "sourceLocation": "Slide 2 / Chunk 1",
+      "sourceTextSnippet": "Misconception - Tone and mood are related but not the same.",
+      "sourceParse": "deterministic_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "conceptId": "concept-word-choice-imagery",
+      "title": "Word Choice Imagery",
+      "aliases": [],
+      "studentExplanation": "Word choice and imagery help create tone and mood.",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Figurative Language Tone Mood.pptx",
+      "sourceLocation": "Slide 2 / Chunk 1",
+      "sourceTextSnippet": "- Word choice and imagery help create tone and mood.",
+      "sourceParse": "deterministic_structured_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "conceptId": "concept-english-ela-slide",
+      "title": "English Ela Slide",
+      "aliases": [],
+      "studentExplanation": "English_ELA | Slide 2 of 4 | Charlemagne sub",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Figurative Language Tone Mood.pptx",
+      "sourceLocation": "Slide 2 / Chunk 1",
+      "sourceTextSnippet": "English_ELA | Slide 2 of 4 | Charlemagne sub",
+      "sourceParse": "deterministic_structured_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceReferences": [
+        {
+          "sourceFile": "Figurative Language Tone Mood.pptx",
+          "sourceLocation": "Slide 2 / Chunk 1",
+          "sourceTextSnippet": "English_ELA | Slide 2 of 4 | Charlemagne sub"
+        },
+        {
+          "sourceFile": "Figurative Language Tone Mood.pptx",
+          "sourceLocation": "Slide 3",
+          "sourceTextSnippet": "English_ELA | Slide 3 of 4 | Charlemagne subject-folder import stress test"
+        }
+      ],
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "conceptId": "concept-symbol-support-theme",
+      "title": "Symbol Support Theme",
+      "aliases": [],
+      "studentExplanation": "- A symbol can support a theme when it appears in meaningful moments.",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Figurative Language Tone Mood.pptx",
+      "sourceLocation": "Slide 3",
+      "sourceTextSnippet": "Core Concept - A symbol can support a theme when it appears in meaningful moments.",
+      "sourceParse": "deterministic_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "conceptId": "concept-student-need-evidence",
+      "title": "Student Need Evidence",
+      "aliases": [],
+      "studentExplanation": "Students need evidence before making a theme claim.",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Figurative Language Tone Mood.pptx",
+      "sourceLocation": "Slide 3",
+      "sourceTextSnippet": "- Students need evidence before making a theme claim.",
+      "sourceParse": "deterministic_structured_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    }
+  ],
+  "referenceFormulas": [],
+  "problemBank": [],
+  "standardsMap": [],
+  "smokeTests": [],
+  "sourceFiles": [
+    {
+      "fileName": "Figurative Language Tone Mood.pptx",
+      "fileType": "pptx",
+      "uploadId": "d9cfd345-28f7-4058-ade1-a35e58051833",
+      "storedFileName": "d9cfd345-28f7-4058-ade1-a35e58051833.pptx",
+      "extractionJsonFileName": "d9cfd345-28f7-4058-ade1-a35e58051833_extraction.json",
+      "characterCount": 419,
+      "pageCount": 4,
+      "chunkCount": 1,
+      "reviewStatus": "needs_review",
+      "confidence": "low",
+      "notes": "Added from extraction metadata for draft traceability.",
+      "sourceReferences": []
+    }
+  ],
+  "metadata": {
+    "modelMetadata": {
+      "createdBy": "charlemagne-teacher-content-import"
+    },
+    "createdBy": "charlemagne-teacher-content-import",
+    "createdAt": "2026-05-25T02:45:22.858Z",
+    "updatedAt": "2026-05-25T02:46:02.536Z",
+    "status": "draft",
+    "reviewStatus": "pending",
+    "packName": "Figurative Language Tone Mood",
+    "packId": "draft-figurative-language-tone-mood-d9cfd345-28f7-4058-ade1-a35e58051833",
+    "sourceUpload": {
+      "uploadId": "d9cfd345-28f7-4058-ade1-a35e58051833",
+      "originalFileName": "Figurative Language Tone Mood.pptx",
+      "storedFileName": "d9cfd345-28f7-4058-ade1-a35e58051833.pptx",
+      "extractionJsonFileName": "d9cfd345-28f7-4058-ade1-a35e58051833_extraction.json",
+      "importProfile": "general",
+      "fileType": "pptx",
+      "characterCount": 1702,
+      "pageCount": 4,
+      "chunkCount": 4
+    },
+    "extraction": {
+      "characterCount": 1702,
+      "pageCount": 4,
+      "chunkCount": 4
+    },
+    "importProfile": "general",
+    "importScope": {
+      "scope": "full_document",
+      "scopeLabel": "Full Import",
+      "sampleOnly": false,
+      "rangeLimited": false,
+      "completePacketImported": true,
+      "pageRangeLabel": "1-4",
+      "chunkRangeLabel": "1-4",
+      "rangeLabel": "Pages 1-4",
+      "pages": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "chunks": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "textBearingPages": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "firstTextPage": 1,
+      "originalPageCount": 4,
+      "processedPageCount": 4,
+      "processedChunkCount": 4,
+      "processedCharacterCount": 1702,
+      "warning": ""
+    },
+    "importUncertainSections": [],
+    "deduplication": {
+      "vocabulary": {
+        "raw": 14,
+        "duplicatesRemoved": 4,
+        "final": 10
+      },
+      "concepts": {
+        "raw": 9,
+        "duplicatesRemoved": 1,
+        "final": 8
+      },
+      "problemBank": {
+        "raw": 0,
+        "duplicatesRemoved": 0,
+        "final": 0
+      }
+    },
+    "importNormalization": {
+      "conceptIdsGenerated": 0,
+      "conceptTitlesGenerated": 0,
+      "vocabularyIdsGenerated": 3,
+      "vocabularyTermsGenerated": 0,
+      "problemIdsGenerated": 0,
+      "smokeTestIdsGenerated": 0,
+      "standardsMapIdsMapped": 0,
+      "sourceEvidenceFilled": 3,
+      "reviewNeededItems": 18,
+      "droppedItems": 0,
+      "totalNormalized": 6,
+      "notes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line.",
+        "Generated vocabulary ID during import normalization.",
+        "Source evidence was filled from extraction defaults during import normalization; keep teacher review required.",
+        "Deterministically parsed from a labeled concept source section."
+      ]
+    },
+    "importBatches": 4,
+    "invalidGeneratedItems": [
+      {
+        "section": "results",
+        "index": 0,
+        "requiredField": "",
+        "reason": "Ignored unsupported top-level model output array: results."
+      }
+    ],
+    "importWarnings": [],
+    "importCoverage": {
+      "totalPages": 4,
+      "totalChunks": 4,
+      "processedPages": 4,
+      "processedChunks": 4,
+      "pagesWithDraftItems": 3,
+      "chunksWithDraftItems": 3,
+      "chunksWithNoExtractedKnowledge": 1,
+      "noKnowledgeChunks": [
+        "Slide 4"
+      ],
+      "sectionsDetected": [
+        "concepts",
+        "smokeTests",
+        "vocabulary"
+      ],
+      "sourceSignals": {
+        "definitionLikeText": true,
+        "equationLikeText": false,
+        "practiceLikeText": false
+      },
+      "itemCounts": {
+        "vocabulary": 10,
+        "concepts": 8,
+        "referenceFormulas": 0,
+        "problemBank": 0,
+        "standardsMap": 0,
+        "smokeTests": 0
+      },
+      "failedBatches": [],
+      "sourceManifest": [
+        {
+          "chunkId": "chunk-1",
+          "sourceFile": "d9cfd345-28f7-4058-ade1-a35e58051833.pptx",
+          "sourceLocation": "Slide 1",
+          "chunkIndex": 1,
+          "charCount": 590,
+          "status": "drafted"
+        },
+        {
+          "chunkId": "chunk-2",
+          "sourceFile": "d9cfd345-28f7-4058-ade1-a35e58051833.pptx",
+          "sourceLocation": "Slide 2",
+          "chunkIndex": 2,
+          "charCount": 430,
+          "status": "drafted"
+        },
+        {
+          "chunkId": "chunk-3",
+          "sourceFile": "d9cfd345-28f7-4058-ade1-a35e58051833.pptx",
+          "sourceLocation": "Slide 3",
+          "chunkIndex": 3,
+          "charCount": 389,
+          "status": "drafted"
+        },
+        {
+          "chunkId": "chunk-4",
+          "sourceFile": "d9cfd345-28f7-4058-ade1-a35e58051833.pptx",
+          "sourceLocation": "Slide 4",
+          "chunkIndex": 4,
+          "charCount": 287,
+          "status": "no_items_found"
+        }
+      ],
+      "coverageSummary": {
+        "totalChunks": 4,
+        "queuedChunks": 0,
+        "draftedChunks": 3,
+        "skippedEmptyChunks": 0,
+        "noItemsFoundChunks": 1,
+        "needsReviewChunks": 0,
+        "failedChunks": 0,
+        "totalSourceChars": 1696,
+        "completedChunks": 4,
+        "allChunksTerminal": true
+      },
+      "queuedChunks": 0,
+      "allChunksTerminal": true,
+      "importComplete": true,
+      "warnings": []
+    },
+    "sourceEvidenceValidation": {
+      "checkedItems": 18,
+      "supportedItems": 17,
+      "weakItems": 0,
+      "unsupportedItems": 1,
+      "thinExtractionItems": 0,
+      "warnings": [
+        "Generated wording was not strongly supported by the extracted source text."
+      ]
+    },
+    "partialDraft": true,
+    "autoImportPlan": {
+      "mode": "auto_full",
+      "recommendedImportScope": "full_document",
+      "batchStrategy": "sequential_batches",
+      "batchCount": 4,
+      "batches": [
+        {
+          "batchIndex": 1,
+          "sourceLocations": [
+            "Slide 1"
+          ],
+          "pageNumbers": [
+            1
+          ],
+          "estimatedCharacters": 590,
+          "estimatedTokens": 197
+        },
+        {
+          "batchIndex": 2,
+          "sourceLocations": [
+            "Slide 2"
+          ],
+          "pageNumbers": [
+            2
+          ],
+          "estimatedCharacters": 430,
+          "estimatedTokens": 144
+        },
+        {
+          "batchIndex": 3,
+          "sourceLocations": [
+            "Slide 3"
+          ],
+          "pageNumbers": [
+            3
+          ],
+          "estimatedCharacters": 389,
+          "estimatedTokens": 130
+        },
+        {
+          "batchIndex": 4,
+          "sourceLocations": [
+            "Slide 4"
+          ],
+          "pageNumbers": [
+            4
+          ],
+          "estimatedCharacters": 287,
+          "estimatedTokens": 96
+        }
+      ],
+      "limits": {
+        "maxCharactersPerBatch": 1250,
+        "maxEstimatedTokensPerBatch": 417,
+        "availableMemoryMb": 76,
+        "totalMemoryMb": 8192
+      },
+      "warnings": [
+        "Available memory is low (76 MB). Automatically using smaller sequential chunks."
+      ],
+      "reason": "Available memory is low, so the planner reduced batch size and will process 4 sequential chunks automatically.",
+      "canOverride": true,
+      "inspection": {
+        "fileType": "pptx",
+        "originalFileName": "d9cfd345-28f7-4058-ade1-a35e58051833.pptx",
+        "rawFileSizeBytes": 32612,
+        "totalPageSlideSheetCount": 4,
+        "textBearingPageSlideSheetCount": 4,
+        "firstTextBearingPageSlideSheet": 1,
+        "totalExtractedCharacters": 1696,
+        "largestSectionCharacterCount": 590,
+        "estimatedTokenCount": 566,
+        "configuredImportModel": "gemma4:e2b"
+      }
+    },
+    "approvedImportScope": {
+      "scope": "full_document",
+      "scopeLabel": "Full Import",
+      "sampleOnly": false,
+      "rangeLimited": false,
+      "completePacketImported": true,
+      "pageRangeLabel": "1-4",
+      "chunkRangeLabel": "1-4",
+      "rangeLabel": "Pages 1-4",
+      "pages": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "chunks": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "textBearingPages": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "firstTextPage": 1,
+      "originalPageCount": 4,
+      "processedPageCount": 4,
+      "processedChunkCount": 4,
+      "processedCharacterCount": 1702,
+      "warning": ""
+    },
+    "rangeLimitedApprovedPack": false,
+    "approvalScopeWarning": ""
+  },
+  "schemaVersion": "1.0.0",
+  "packId": "draft-figurative-language-tone-mood-d9cfd345-28f7-4058-ade1-a35e58051833",
+  "version": "0.1.0-draft",
+  "title": "Figurative Language Tone Mood",
+  "subject": "Teacher Uploaded Content",
+  "gradeLevel": "Teacher Review",
+  "status": "draft",
+  "reviewStatus": "pending"
+}

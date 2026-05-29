@@ -1,0 +1,484 @@
+{
+  "vocabulary": [
+    {
+      "vocabId": "vocab-l-evidence",
+      "term": "Evidence",
+      "aliases": [],
+      "studentDefinition": "quoted, paraphrased, or summarized in",
+      "teacherDefinition": "quoted, paraphrased, or summarized in",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "reviewStatus": "approved",
+      "confidence": "high",
+      "sourceFile": "Argument Evidence Commentary.pdf",
+      "sourceLocation": "Page 1 / Chunk 1",
+      "sourceTextSnippet": "l Evidence: quoted, paraphrased, or summarized in",
+      "sourceParse": "deterministic_vocabulary_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "vocabId": "vocab-l-paraphrase",
+      "term": "Paraphrase",
+      "aliases": [],
+      "studentDefinition": "restating an idea in your own words while keeping the same meaning",
+      "teacherDefinition": "restating an idea in your own words while keeping the same meaning",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "reviewStatus": "approved",
+      "confidence": "high",
+      "sourceFile": "Argument Evidence Commentary.pdf",
+      "sourceLocation": "Page 2 / Chunk 1",
+      "sourceTextSnippet": "l Paraphrase: restating an idea in your own words while keeping the same meaning.",
+      "sourceParse": "deterministic_vocabulary_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "vocabId": "vocab-l-textual-evidence",
+      "term": "Textual evidence",
+      "aliases": [],
+      "studentDefinition": "words or ideas from a reading passage used to support an answer",
+      "teacherDefinition": "words or ideas from a reading passage used to support an answer",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "reviewStatus": "approved",
+      "confidence": "high",
+      "sourceFile": "Argument Evidence Commentary.pdf",
+      "sourceLocation": "Page 2 / Chunk 1",
+      "sourceTextSnippet": "l Textual evidence: words or ideas from a reading passage used to support an answer.",
+      "sourceParse": "deterministic_vocabulary_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    }
+  ],
+  "concepts": [
+    {
+      "conceptId": "concept-student-should-use",
+      "title": "Student Should Use",
+      "aliases": [],
+      "studentExplanation": "l Students should use short",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Argument Evidence Commentary.pdf",
+      "sourceLocation": "Page 2 / Chunk 1",
+      "sourceTextSnippet": "Core Concept l Students should use short",
+      "sourceParse": "deterministic_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceReferences": [
+        {
+          "sourceFile": "Argument Evidence Commentary.pdf",
+          "sourceLocation": "Page 2 / Chunk 1",
+          "sourceTextSnippet": "Core Concept l Students should use short"
+        },
+        {
+          "sourceFile": "Argument Evidence Commentary.pdf",
+          "sourceLocation": "Page 2 / Chunk 1 / Retry Chunk 2",
+          "sourceTextSnippet": "Core Concept l Students should use short"
+        }
+      ],
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    }
+  ],
+  "referenceFormulas": [],
+  "problemBank": [],
+  "standardsMap": [],
+  "smokeTests": [],
+  "sourceFiles": [
+    {
+      "fileName": "Argument Evidence Commentary.pdf",
+      "fileType": "pdf",
+      "uploadId": "b11f309a-05ff-497b-a8c8-d1285b22beeb",
+      "storedFileName": "b11f309a-05ff-497b-a8c8-d1285b22beeb.pdf",
+      "extractionJsonFileName": "b11f309a-05ff-497b-a8c8-d1285b22beeb_extraction.json",
+      "characterCount": 419,
+      "pageCount": 3,
+      "chunkCount": 1,
+      "reviewStatus": "pending",
+      "confidence": "low",
+      "notes": "Added from extraction metadata for draft traceability.",
+      "sourceReferences": []
+    }
+  ],
+  "metadata": {
+    "modelMetadata": {
+      "createdBy": "charlemagne-teacher-content-import"
+    },
+    "createdBy": "charlemagne-teacher-content-import",
+    "createdAt": "2026-05-25T02:46:11.298Z",
+    "updatedAt": "2026-05-25T02:47:00.591Z",
+    "status": "draft",
+    "reviewStatus": "pending",
+    "packName": "Argument Evidence Commentary",
+    "packId": "draft-argument-evidence-commentary-b11f309a-05ff-497b-a8c8-d1285b22beeb",
+    "sourceUpload": {
+      "uploadId": "b11f309a-05ff-497b-a8c8-d1285b22beeb",
+      "originalFileName": "Argument Evidence Commentary.pdf",
+      "storedFileName": "b11f309a-05ff-497b-a8c8-d1285b22beeb.pdf",
+      "extractionJsonFileName": "b11f309a-05ff-497b-a8c8-d1285b22beeb_extraction.json",
+      "importProfile": "general",
+      "fileType": "pdf",
+      "characterCount": 2451,
+      "pageCount": 3,
+      "chunkCount": 3
+    },
+    "extraction": {
+      "characterCount": 2451,
+      "pageCount": 3,
+      "chunkCount": 3
+    },
+    "importProfile": "general",
+    "importScope": {
+      "scope": "full_document",
+      "scopeLabel": "Full Import",
+      "sampleOnly": false,
+      "rangeLimited": false,
+      "completePacketImported": true,
+      "pageRangeLabel": "1-3",
+      "chunkRangeLabel": "1-3",
+      "rangeLabel": "Pages 1-3",
+      "pages": [
+        1,
+        2,
+        3
+      ],
+      "chunks": [
+        1,
+        2,
+        3
+      ],
+      "textBearingPages": [
+        1,
+        2,
+        3
+      ],
+      "firstTextPage": 1,
+      "originalPageCount": 3,
+      "processedPageCount": 3,
+      "processedChunkCount": 3,
+      "processedCharacterCount": 2451,
+      "warning": ""
+    },
+    "importUncertainSections": [],
+    "deduplication": {
+      "vocabulary": {
+        "raw": 7,
+        "duplicatesRemoved": 1,
+        "final": 6
+      },
+      "concepts": {
+        "raw": 1,
+        "duplicatesRemoved": 0,
+        "final": 1
+      },
+      "problemBank": {
+        "raw": 0,
+        "duplicatesRemoved": 0,
+        "final": 0
+      }
+    },
+    "importNormalization": {
+      "conceptIdsGenerated": 0,
+      "conceptTitlesGenerated": 0,
+      "vocabularyIdsGenerated": 1,
+      "vocabularyTermsGenerated": 0,
+      "problemIdsGenerated": 0,
+      "smokeTestIdsGenerated": 0,
+      "standardsMapIdsMapped": 0,
+      "sourceEvidenceFilled": 1,
+      "reviewNeededItems": 19,
+      "droppedItems": 0,
+      "totalNormalized": 2,
+      "notes": [
+        "Generated vocabulary ID during import normalization.",
+        "Source evidence was filled from extraction defaults during import normalization; keep teacher review required.",
+        "Deterministically parsed from a Vocabulary Term: definition source line.",
+        "Deterministically parsed from a labeled concept source section."
+      ]
+    },
+    "importBatches": 3,
+    "invalidGeneratedItems": [
+      {
+        "section": "vocabulary",
+        "index": 1,
+        "requiredField": "term",
+        "reason": "Missing required term."
+      },
+      {
+        "section": "vocabulary",
+        "index": 1,
+        "requiredField": "term",
+        "reason": "Vocabulary term \"assertion\" was missing a usable definition."
+      },
+      {
+        "section": "vocabulary",
+        "index": 3,
+        "requiredField": "term",
+        "reason": "Vocabulary term \"assertion\" was missing a usable definition."
+      }
+    ],
+    "importWarnings": [
+      "Removed invalid generated item vocabulary[1]: Missing required term.",
+      "Removed invalid generated item vocabulary[1]: Vocabulary term \"assertion\" was missing a usable definition.",
+      "Removed invalid generated item vocabulary[3]: Vocabulary term \"assertion\" was missing a usable definition."
+    ],
+    "importCoverage": {
+      "totalPages": 3,
+      "totalChunks": 3,
+      "processedPages": 3,
+      "processedChunks": 3,
+      "pagesWithDraftItems": 2,
+      "chunksWithDraftItems": 2,
+      "chunksWithNoExtractedKnowledge": 1,
+      "noKnowledgeChunks": [
+        "Page 3"
+      ],
+      "sectionsDetected": [
+        "concepts",
+        "problemBank",
+        "referenceFormulas",
+        "smokeTests",
+        "vocabulary"
+      ],
+      "sourceSignals": {
+        "definitionLikeText": true,
+        "equationLikeText": false,
+        "practiceLikeText": false
+      },
+      "itemCounts": {
+        "vocabulary": 6,
+        "concepts": 1,
+        "referenceFormulas": 0,
+        "problemBank": 0,
+        "standardsMap": 0,
+        "smokeTests": 0
+      },
+      "failedBatches": [],
+      "sourceManifest": [
+        {
+          "chunkId": "chunk-1",
+          "sourceFile": "b11f309a-05ff-497b-a8c8-d1285b22beeb.pdf",
+          "sourceLocation": "Page 1",
+          "chunkIndex": 1,
+          "charCount": 1156,
+          "status": "drafted"
+        },
+        {
+          "chunkId": "chunk-2",
+          "sourceFile": "b11f309a-05ff-497b-a8c8-d1285b22beeb.pdf",
+          "sourceLocation": "Page 2",
+          "chunkIndex": 2,
+          "charCount": 766,
+          "status": "drafted"
+        },
+        {
+          "chunkId": "chunk-3",
+          "sourceFile": "b11f309a-05ff-497b-a8c8-d1285b22beeb.pdf",
+          "sourceLocation": "Page 3",
+          "chunkIndex": 3,
+          "charCount": 525,
+          "status": "no_items_found"
+        }
+      ],
+      "coverageSummary": {
+        "totalChunks": 3,
+        "queuedChunks": 0,
+        "draftedChunks": 2,
+        "skippedEmptyChunks": 0,
+        "noItemsFoundChunks": 1,
+        "needsReviewChunks": 0,
+        "failedChunks": 0,
+        "totalSourceChars": 2447,
+        "completedChunks": 3,
+        "allChunksTerminal": true
+      },
+      "queuedChunks": 0,
+      "allChunksTerminal": true,
+      "importComplete": true,
+      "warnings": [
+        "Problem bank detected but few/no problems were drafted."
+      ]
+    },
+    "sourceEvidenceValidation": {
+      "checkedItems": 7,
+      "supportedItems": 7,
+      "weakItems": 0,
+      "unsupportedItems": 0,
+      "thinExtractionItems": 0,
+      "warnings": []
+    },
+    "partialDraft": true,
+    "autoImportPlan": {
+      "mode": "auto_full",
+      "recommendedImportScope": "full_document",
+      "batchStrategy": "sequential_batches",
+      "batchCount": 3,
+      "batches": [
+        {
+          "batchIndex": 1,
+          "sourceLocations": [
+            "Page 1"
+          ],
+          "pageNumbers": [
+            1
+          ],
+          "estimatedCharacters": 1156,
+          "estimatedTokens": 386
+        },
+        {
+          "batchIndex": 2,
+          "sourceLocations": [
+            "Page 2"
+          ],
+          "pageNumbers": [
+            2
+          ],
+          "estimatedCharacters": 766,
+          "estimatedTokens": 256
+        },
+        {
+          "batchIndex": 3,
+          "sourceLocations": [
+            "Page 3"
+          ],
+          "pageNumbers": [
+            3
+          ],
+          "estimatedCharacters": 525,
+          "estimatedTokens": 175
+        }
+      ],
+      "limits": {
+        "maxCharactersPerBatch": 1250,
+        "maxEstimatedTokensPerBatch": 417,
+        "availableMemoryMb": 93,
+        "totalMemoryMb": 8192
+      },
+      "warnings": [
+        "Available memory is low (93 MB). Automatically using smaller sequential chunks."
+      ],
+      "reason": "Available memory is low, so the planner reduced batch size and will process 3 sequential chunks automatically.",
+      "canOverride": true,
+      "inspection": {
+        "fileType": "pdf",
+        "originalFileName": "b11f309a-05ff-497b-a8c8-d1285b22beeb.pdf",
+        "rawFileSizeBytes": 4892,
+        "totalPageSlideSheetCount": 3,
+        "textBearingPageSlideSheetCount": 3,
+        "firstTextBearingPageSlideSheet": 1,
+        "totalExtractedCharacters": 2447,
+        "largestSectionCharacterCount": 1156,
+        "estimatedTokenCount": 816,
+        "configuredImportModel": "gemma4:e2b"
+      }
+    },
+    "approvedImportScope": {
+      "scope": "full_document",
+      "scopeLabel": "Full Import",
+      "sampleOnly": false,
+      "rangeLimited": false,
+      "completePacketImported": true,
+      "pageRangeLabel": "1-3",
+      "chunkRangeLabel": "1-3",
+      "rangeLabel": "Pages 1-3",
+      "pages": [
+        1,
+        2,
+        3
+      ],
+      "chunks": [
+        1,
+        2,
+        3
+      ],
+      "textBearingPages": [
+        1,
+        2,
+        3
+      ],
+      "firstTextPage": 1,
+      "originalPageCount": 3,
+      "processedPageCount": 3,
+      "processedChunkCount": 3,
+      "processedCharacterCount": 2451,
+      "warning": ""
+    },
+    "rangeLimitedApprovedPack": false,
+    "approvalScopeWarning": ""
+  },
+  "schemaVersion": "1.0.0",
+  "packId": "draft-argument-evidence-commentary-b11f309a-05ff-497b-a8c8-d1285b22beeb",
+  "version": "0.1.0-draft",
+  "title": "Argument Evidence Commentary",
+  "subject": "Teacher Uploaded Content",
+  "gradeLevel": "Teacher Review",
+  "status": "draft",
+  "reviewStatus": "pending"
+}

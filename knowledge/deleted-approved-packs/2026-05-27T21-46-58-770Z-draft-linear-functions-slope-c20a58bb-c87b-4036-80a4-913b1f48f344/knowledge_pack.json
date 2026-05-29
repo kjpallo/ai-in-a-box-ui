@@ -1,0 +1,587 @@
+{
+  "vocabulary": [
+    {
+      "vocabId": "vocab-l-slope",
+      "term": "Slope",
+      "aliases": [],
+      "studentDefinition": "rate of change of a line",
+      "teacherDefinition": "rate of change of a line",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "reviewStatus": "approved",
+      "confidence": "high",
+      "sourceFile": "Linear Functions Slope.pdf",
+      "sourceLocation": "Page 1 / Chunk 1",
+      "sourceTextSnippet": "l Slope: rate of change of a line.",
+      "sourceParse": "deterministic_vocabulary_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "vocabId": "vocab-l-y-intercept",
+      "term": "Y-intercept",
+      "aliases": [],
+      "studentDefinition": "where a graph crosses the y-axis",
+      "teacherDefinition": "where a graph crosses the y-axis",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "reviewStatus": "approved",
+      "confidence": "high",
+      "sourceFile": "Linear Functions Slope.pdf",
+      "sourceLocation": "Page 1 / Chunk 1",
+      "sourceTextSnippet": "l Y-intercept: where a graph crosses the y-axis.",
+      "sourceParse": "deterministic_vocabulary_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceReferences": [
+        {
+          "sourceFile": "Linear Functions Slope.pdf",
+          "sourceLocation": "Page 1 / Chunk 1",
+          "sourceTextSnippet": "l Y-intercept: where a graph crosses the y-axis."
+        },
+        {
+          "sourceFile": "Linear Functions Slope.pdf",
+          "sourceLocation": "extracted text",
+          "sourceTextSnippet": "[Page 3 / Chunk 1 / Retry Chunk 1] Math: Linear Functions and Slope Page 3 of 3 - Math - Charlemagne subject-folder import stress test Misconception l Students may confuse the y-intercept with the slope."
+        }
+      ],
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "vocabId": "vocab-l-independent-variable",
+      "term": "Independent variable",
+      "aliases": [],
+      "studentDefinition": "input variable",
+      "teacherDefinition": "input variable",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "reviewStatus": "approved",
+      "confidence": "high",
+      "sourceFile": "Linear Functions Slope.pdf",
+      "sourceLocation": "Page 1 / Chunk 1",
+      "sourceTextSnippet": "l Independent variable: input variable.",
+      "sourceParse": "deterministic_vocabulary_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "vocabId": "vocab-l-linear-relationship",
+      "term": "Linear relationship",
+      "aliases": [],
+      "studentDefinition": "relationship with a constant rate of change",
+      "teacherDefinition": "relationship with a constant rate of change",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "reviewStatus": "approved",
+      "confidence": "high",
+      "sourceFile": "Linear Functions Slope.pdf",
+      "sourceLocation": "Page 2 / Chunk 1",
+      "sourceTextSnippet": "l Linear relationship: relationship with a constant rate of change.",
+      "sourceParse": "deterministic_vocabulary_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    }
+  ],
+  "concepts": [
+    {
+      "conceptId": "concept-l-slope-tells-how-mu",
+      "title": "L Slope Tells How Mu",
+      "aliases": [],
+      "studentExplanation": "l Slope tells how mu",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Linear Functions Slope.pdf",
+      "sourceLocation": "Page 1 / Chunk 1",
+      "sourceTextSnippet": "l Slope tells how mu",
+      "sourceParse": "deterministic_structured_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "conceptId": "concept-table-graph-equation",
+      "title": "Table Graph Equation",
+      "aliases": [],
+      "studentExplanation": "l Tables, graphs, equations, and verbal descriptions can represent the same linear functi",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Linear Functions Slope.pdf",
+      "sourceLocation": "Page 2 / Chunk 1",
+      "sourceTextSnippet": "Core Concept l Tables, graphs, equations, and verbal descriptions can represent the same linear functi",
+      "sourceParse": "deterministic_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "conceptId": "concept-student-may-confuse",
+      "title": "Student May Confuse",
+      "aliases": [],
+      "studentExplanation": "l Students may confuse the y-intercept with the slope.",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Linear Functions Slope.pdf",
+      "sourceLocation": "Page 3 / Chunk 1",
+      "sourceTextSnippet": "Misconception l Students may confuse the y-intercept with the slope.",
+      "sourceParse": "deterministic_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceReferences": [
+        {
+          "sourceFile": "Linear Functions Slope.pdf",
+          "sourceLocation": "Page 3 / Chunk 1",
+          "sourceTextSnippet": "Misconception l Students may confuse the y-intercept with the slope."
+        },
+        {
+          "sourceFile": "Linear Functions Slope.pdf",
+          "sourceLocation": "Page 3 / Chunk 1 / Retry Chunk 1",
+          "sourceTextSnippet": "Misconception l Students may confuse the y-intercept with the slope."
+        }
+      ],
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    }
+  ],
+  "referenceFormulas": [],
+  "problemBank": [],
+  "standardsMap": [],
+  "smokeTests": [],
+  "sourceFiles": [
+    {
+      "fileName": "Linear Functions Slope.pdf",
+      "fileType": "pdf",
+      "uploadId": "c20a58bb-c87b-4036-80a4-913b1f48f344",
+      "storedFileName": "c20a58bb-c87b-4036-80a4-913b1f48f344.pdf",
+      "extractionJsonFileName": "c20a58bb-c87b-4036-80a4-913b1f48f344_extraction.json",
+      "characterCount": 419,
+      "pageCount": 3,
+      "chunkCount": 1,
+      "reviewStatus": "pending",
+      "confidence": "low",
+      "notes": "Added from extraction metadata for draft traceability.",
+      "sourceReferences": []
+    }
+  ],
+  "metadata": {
+    "modelMetadata": {
+      "createdBy": "charlemagne-teacher-content-import"
+    },
+    "createdBy": "charlemagne-teacher-content-import",
+    "createdAt": "2026-05-25T02:30:28.147Z",
+    "updatedAt": "2026-05-25T02:31:36.056Z",
+    "status": "draft",
+    "reviewStatus": "pending",
+    "packName": "Linear Functions Slope",
+    "packId": "draft-linear-functions-slope-c20a58bb-c87b-4036-80a4-913b1f48f344",
+    "sourceUpload": {
+      "uploadId": "c20a58bb-c87b-4036-80a4-913b1f48f344",
+      "originalFileName": "Linear Functions Slope.pdf",
+      "storedFileName": "c20a58bb-c87b-4036-80a4-913b1f48f344.pdf",
+      "extractionJsonFileName": "c20a58bb-c87b-4036-80a4-913b1f48f344_extraction.json",
+      "importProfile": "general",
+      "fileType": "pdf",
+      "characterCount": 1851,
+      "pageCount": 3,
+      "chunkCount": 3
+    },
+    "extraction": {
+      "characterCount": 1851,
+      "pageCount": 3,
+      "chunkCount": 3
+    },
+    "importProfile": "general",
+    "importScope": {
+      "scope": "full_document",
+      "scopeLabel": "Full Import",
+      "sampleOnly": false,
+      "rangeLimited": false,
+      "completePacketImported": true,
+      "pageRangeLabel": "1-3",
+      "chunkRangeLabel": "1-3",
+      "rangeLabel": "Pages 1-3",
+      "pages": [
+        1,
+        2,
+        3
+      ],
+      "chunks": [
+        1,
+        2,
+        3
+      ],
+      "textBearingPages": [
+        1,
+        2,
+        3
+      ],
+      "firstTextPage": 1,
+      "originalPageCount": 3,
+      "processedPageCount": 3,
+      "processedChunkCount": 3,
+      "processedCharacterCount": 1851,
+      "warning": ""
+    },
+    "importUncertainSections": [],
+    "deduplication": {
+      "vocabulary": {
+        "raw": 9,
+        "duplicatesRemoved": 1,
+        "final": 8
+      },
+      "concepts": {
+        "raw": 3,
+        "duplicatesRemoved": 0,
+        "final": 3
+      },
+      "problemBank": {
+        "raw": 0,
+        "duplicatesRemoved": 0,
+        "final": 0
+      }
+    },
+    "importNormalization": {
+      "conceptIdsGenerated": 0,
+      "conceptTitlesGenerated": 0,
+      "vocabularyIdsGenerated": 1,
+      "vocabularyTermsGenerated": 0,
+      "problemIdsGenerated": 0,
+      "smokeTestIdsGenerated": 0,
+      "standardsMapIdsMapped": 0,
+      "sourceEvidenceFilled": 1,
+      "reviewNeededItems": 18,
+      "droppedItems": 0,
+      "totalNormalized": 2,
+      "notes": [
+        "Generated vocabulary ID during import normalization.",
+        "Source evidence was filled from extraction defaults during import normalization; keep teacher review required.",
+        "Deterministically parsed from a Vocabulary Term: definition source line.",
+        "Deterministically parsed from a labeled concept source section."
+      ]
+    },
+    "importBatches": 3,
+    "invalidGeneratedItems": [
+      {
+        "section": "vocabulary",
+        "index": 1,
+        "requiredField": "term",
+        "reason": "Missing required term."
+      },
+      {
+        "section": "vocabulary",
+        "index": 2,
+        "requiredField": "term",
+        "reason": "Missing required term."
+      }
+    ],
+    "importWarnings": [
+      "Removed invalid generated item vocabulary[1]: Missing required term.",
+      "Removed invalid generated item vocabulary[2]: Missing required term."
+    ],
+    "importCoverage": {
+      "totalPages": 3,
+      "totalChunks": 3,
+      "processedPages": 3,
+      "processedChunks": 3,
+      "pagesWithDraftItems": 3,
+      "chunksWithDraftItems": 3,
+      "chunksWithNoExtractedKnowledge": 0,
+      "noKnowledgeChunks": [],
+      "sectionsDetected": [
+        "concepts",
+        "problemBank",
+        "referenceFormulas",
+        "smokeTests",
+        "vocabulary"
+      ],
+      "sourceSignals": {
+        "definitionLikeText": true,
+        "equationLikeText": true,
+        "practiceLikeText": true
+      },
+      "itemCounts": {
+        "vocabulary": 8,
+        "concepts": 3,
+        "referenceFormulas": 0,
+        "problemBank": 0,
+        "standardsMap": 0,
+        "smokeTests": 0
+      },
+      "failedBatches": [],
+      "sourceManifest": [
+        {
+          "chunkId": "chunk-1",
+          "sourceFile": "c20a58bb-c87b-4036-80a4-913b1f48f344.pdf",
+          "sourceLocation": "Page 1",
+          "chunkIndex": 1,
+          "charCount": 800,
+          "status": "drafted"
+        },
+        {
+          "chunkId": "chunk-2",
+          "sourceFile": "c20a58bb-c87b-4036-80a4-913b1f48f344.pdf",
+          "sourceLocation": "Page 2",
+          "chunkIndex": 2,
+          "charCount": 563,
+          "status": "drafted"
+        },
+        {
+          "chunkId": "chunk-3",
+          "sourceFile": "c20a58bb-c87b-4036-80a4-913b1f48f344.pdf",
+          "sourceLocation": "Page 3",
+          "chunkIndex": 3,
+          "charCount": 484,
+          "status": "drafted"
+        }
+      ],
+      "coverageSummary": {
+        "totalChunks": 3,
+        "queuedChunks": 0,
+        "draftedChunks": 3,
+        "skippedEmptyChunks": 0,
+        "noItemsFoundChunks": 0,
+        "needsReviewChunks": 0,
+        "failedChunks": 0,
+        "totalSourceChars": 1847,
+        "completedChunks": 3,
+        "allChunksTerminal": true
+      },
+      "queuedChunks": 0,
+      "allChunksTerminal": true,
+      "importComplete": true,
+      "warnings": [
+        "Equation-like source text was found but no reference formulas were drafted.",
+        "Practice/example question text was found but no problem bank items were drafted."
+      ]
+    },
+    "sourceEvidenceValidation": {
+      "checkedItems": 11,
+      "supportedItems": 11,
+      "weakItems": 0,
+      "unsupportedItems": 0,
+      "thinExtractionItems": 0,
+      "warnings": []
+    },
+    "partialDraft": false,
+    "autoImportPlan": {
+      "mode": "auto_full",
+      "recommendedImportScope": "full_document",
+      "batchStrategy": "sequential_batches",
+      "batchCount": 3,
+      "batches": [
+        {
+          "batchIndex": 1,
+          "sourceLocations": [
+            "Page 1"
+          ],
+          "pageNumbers": [
+            1
+          ],
+          "estimatedCharacters": 800,
+          "estimatedTokens": 267
+        },
+        {
+          "batchIndex": 2,
+          "sourceLocations": [
+            "Page 2"
+          ],
+          "pageNumbers": [
+            2
+          ],
+          "estimatedCharacters": 563,
+          "estimatedTokens": 188
+        },
+        {
+          "batchIndex": 3,
+          "sourceLocations": [
+            "Page 3"
+          ],
+          "pageNumbers": [
+            3
+          ],
+          "estimatedCharacters": 484,
+          "estimatedTokens": 162
+        }
+      ],
+      "limits": {
+        "maxCharactersPerBatch": 1250,
+        "maxEstimatedTokensPerBatch": 417,
+        "availableMemoryMb": 97,
+        "totalMemoryMb": 8192
+      },
+      "warnings": [
+        "Available memory is low (97 MB). Automatically using smaller sequential chunks."
+      ],
+      "reason": "Available memory is low, so the planner reduced batch size and will process 3 sequential chunks automatically.",
+      "canOverride": true,
+      "inspection": {
+        "fileType": "pdf",
+        "originalFileName": "c20a58bb-c87b-4036-80a4-913b1f48f344.pdf",
+        "rawFileSizeBytes": 4453,
+        "totalPageSlideSheetCount": 3,
+        "textBearingPageSlideSheetCount": 3,
+        "firstTextBearingPageSlideSheet": 1,
+        "totalExtractedCharacters": 1847,
+        "largestSectionCharacterCount": 800,
+        "estimatedTokenCount": 616,
+        "configuredImportModel": "gemma4:e2b"
+      }
+    },
+    "approvedImportScope": {
+      "scope": "full_document",
+      "scopeLabel": "Full Import",
+      "sampleOnly": false,
+      "rangeLimited": false,
+      "completePacketImported": true,
+      "pageRangeLabel": "1-3",
+      "chunkRangeLabel": "1-3",
+      "rangeLabel": "Pages 1-3",
+      "pages": [
+        1,
+        2,
+        3
+      ],
+      "chunks": [
+        1,
+        2,
+        3
+      ],
+      "textBearingPages": [
+        1,
+        2,
+        3
+      ],
+      "firstTextPage": 1,
+      "originalPageCount": 3,
+      "processedPageCount": 3,
+      "processedChunkCount": 3,
+      "processedCharacterCount": 1851,
+      "warning": ""
+    },
+    "rangeLimitedApprovedPack": false,
+    "approvalScopeWarning": ""
+  },
+  "schemaVersion": "1.0.0",
+  "packId": "draft-linear-functions-slope-c20a58bb-c87b-4036-80a4-913b1f48f344",
+  "version": "0.1.0-draft",
+  "title": "Linear Functions Slope",
+  "subject": "Teacher Uploaded Content",
+  "gradeLevel": "Teacher Review",
+  "status": "draft",
+  "reviewStatus": "pending"
+}

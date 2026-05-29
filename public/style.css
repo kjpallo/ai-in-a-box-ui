@@ -2071,15 +2071,17 @@ button:disabled {
   grid-column: 1 / -1;
   display: grid;
   gap: 12px;
-  align-content: start;
+  align-content: stretch;
+  grid-template-rows: auto auto minmax(0, 1fr);
   border-color: rgba(102, 247, 209, 0.3);
   background:
     radial-gradient(circle at 100% 0%, rgba(102, 247, 209, 0.12), transparent 34%),
     rgba(4, 14, 16, 0.78);
+  min-height: 0;
 }
 
 .teacher-content-blade-panel {
-  align-content: start;
+  align-content: stretch;
 }
 
 .teacher-content-entry-head {
@@ -2467,11 +2469,13 @@ button:disabled {
 .teacher-content-knowledge-manager-shell {
   display: grid;
   gap: 12px;
+  grid-template-rows: auto auto minmax(0, 1fr);
   border: 1px solid rgba(102, 247, 209, 0.18);
   border-radius: 14px;
   padding: 12px;
   background: rgba(2, 10, 12, 0.62);
   min-width: 0;
+  min-height: 0;
 }
 
 .teacher-content-knowledge-manager-shell .teacher-content-draft-picker {
@@ -2489,8 +2493,8 @@ button:disabled {
 }
 
 .teacher-content-blade-manager-shell {
-  max-height: min(56vh, 620px);
-  overflow: auto;
+  max-height: none;
+  overflow: hidden;
 }
 
 .teacher-content-manager-counts {
@@ -3450,17 +3454,6 @@ button:disabled {
   gap: 12px;
 }
 
-.teacher-content-review-card {
-  display: grid;
-  grid-template-columns: 36px minmax(110px, 0.42fr) minmax(220px, 1fr) auto;
-  gap: 10px;
-  align-items: center;
-  padding: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  background: rgba(0, 0, 0, 0.16);
-}
-
 .teacher-content-review-card-head {
   display: flex;
   flex-wrap: wrap;
@@ -3486,21 +3479,21 @@ button:disabled {
   background: rgba(126, 233, 255, 0.08);
 }
 
-.teacher-content-review-table-head,
-.teacher-content-review-table-row {
+.teacher-content-review-table-shell[data-review-combined-table] .teacher-content-review-table-head,
+.teacher-content-review-table-shell[data-review-combined-table] .teacher-content-review-table-row {
   display: grid;
-  grid-template-columns: minmax(108px, 0.56fr) minmax(120px, 0.65fr) minmax(140px, 0.8fr) minmax(260px, 2fr) minmax(130px, 0.7fr) minmax(80px, 0.44fr);
+  grid-template-columns: 34px minmax(170px, 1fr) minmax(120px, 0.7fr) minmax(150px, 0.8fr) minmax(250px, 1.5fr) minmax(200px, 1.1fr) auto;
   gap: 10px;
   align-items: start;
   padding: 10px;
 }
 
-.teacher-content-review-table-head {
+.teacher-content-review-table-shell[data-review-combined-table] .teacher-content-review-table-head {
   border-bottom: 1px solid rgba(102, 247, 209, 0.14);
   background: rgba(102, 247, 209, 0.06);
 }
 
-.teacher-content-review-table-head span {
+.teacher-content-review-table-shell[data-review-combined-table] .teacher-content-review-table-head span {
   color: #d9fff3;
   font-size: 0.72rem;
   font-weight: 900;
@@ -3508,31 +3501,52 @@ button:disabled {
   text-transform: uppercase;
 }
 
+.teacher-content-review-sort {
+  border: 1px solid rgba(126, 233, 255, 0.22);
+  border-radius: 999px;
+  padding: 4px 8px;
+  background: rgba(126, 233, 255, 0.08);
+  color: #d9fff3;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.teacher-content-review-sort.active {
+  border-color: rgba(102, 247, 209, 0.42);
+  background: rgba(102, 247, 209, 0.16);
+  color: #f2fff9;
+}
+
 .teacher-content-review-table-body {
   max-height: min(42vh, 430px);
   overflow: auto;
 }
 
-.teacher-content-review-table-row {
+.teacher-content-review-table-shell[data-review-combined-table] .teacher-content-review-table-row {
   border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-left: 1px solid rgba(255, 255, 255, 0.07);
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(0, 0, 0, 0.16);
 }
 
-.teacher-content-review-card.teacher-content-review-table-row {
-  grid-template-columns: 36px minmax(110px, 0.42fr) minmax(220px, 1fr) auto;
-  padding: 12px;
+.teacher-content-review-table-shell[data-review-combined-table] .teacher-content-review-table-row:last-child {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
 }
 
-.teacher-content-review-table-row.selected {
-  background: rgba(241, 159, 76, 0.08);
+.teacher-content-review-table-shell[data-review-combined-table] .teacher-content-review-table-row.selected {
+  background: rgba(241, 159, 76, 0.12);
 }
 
-.teacher-content-review-table-row.unsafe {
+.teacher-content-review-table-shell[data-review-combined-table] .teacher-content-review-table-row.unsafe {
   background: rgba(255, 132, 132, 0.05);
 }
 
-.teacher-content-review-table-row strong,
-.teacher-content-review-table-row span,
-.teacher-content-review-table-row p {
+.teacher-content-review-table-shell[data-review-combined-table] .teacher-content-review-table-row strong,
+.teacher-content-review-table-shell[data-review-combined-table] .teacher-content-review-table-row span,
+.teacher-content-review-table-shell[data-review-combined-table] .teacher-content-review-table-row p {
   margin: 0;
   color: #e7f8f3;
   overflow-wrap: anywhere;
@@ -3540,27 +3554,45 @@ button:disabled {
 
 .teacher-content-review-wording {
   display: grid;
-  gap: 6px;
+  gap: 4px;
   min-width: 0;
 }
 
-.teacher-content-review-source-details summary {
-  width: fit-content;
-  color: #9fead7;
-  font-size: 0.72rem;
-  font-weight: 800;
-  cursor: pointer;
+.teacher-content-review-wording p {
+  font-size: 0.8rem;
+  color: #dff3ee;
 }
 
-.teacher-content-review-source-details p {
-  margin: 4px 0 0;
-  color: #d8eee9;
-  font-size: 0.78rem;
+.teacher-content-review-source {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.teacher-content-review-source strong,
+.teacher-content-review-source small {
+  overflow-wrap: anywhere;
+}
+
+.teacher-content-review-status {
+  display: grid;
+  gap: 4px;
+}
+
+.teacher-content-review-table-shell[data-review-combined-table] .teacher-content-review-table-row .teacher-content-review-select-control {
+  grid-template-columns: 18px;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+}
+
+.teacher-content-review-table-shell[data-review-combined-table] .teacher-content-review-table-row .teacher-content-review-select-control span {
+  display: none;
 }
 
 .teacher-content-review-row-actions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
   flex-wrap: wrap;
   gap: 8px;
 }
@@ -5262,6 +5294,14 @@ button:disabled {
     display: none;
   }
 
+  .teacher-content-review-table-shell[data-review-combined-table] .teacher-content-review-table-head {
+    display: none;
+  }
+
+  .teacher-content-review-table-shell[data-review-combined-table] .teacher-content-review-table-row {
+    grid-template-columns: 1fr;
+  }
+
   .header-right,
   .teacher-profile-top,
   .system-health-top,
@@ -5326,7 +5366,7 @@ button:disabled {
   }
 
   .teacher-content-blade-manager-shell {
-    max-height: min(48vh, 420px);
+    max-height: none;
   }
 
   .teacher-content-tab {
@@ -5375,13 +5415,41 @@ button:disabled {
 .teacher-content-simple-pack-list {
   display: grid;
   gap: 8px;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  align-content: start;
+  padding-right: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(102, 247, 209, 0.55) rgba(3, 9, 10, 0.5);
+}
+
+.teacher-content-simple-pack-shell {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 10px;
+  min-height: 0;
 }
 
 .teacher-content-simple-pack-row {
   display: grid;
-  grid-template-columns: minmax(180px, 1.2fr) minmax(190px, 1fr) auto;
+  grid-template-columns: 28px minmax(180px, 1.2fr) minmax(190px, 1fr) auto;
   gap: 10px;
   align-items: center;
+}
+
+.teacher-content-row-select,
+.teacher-content-simple-pack-select-spacer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+
+.teacher-content-row-select input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--neon);
 }
 
 .teacher-content-simple-pack-title {
@@ -5414,12 +5482,62 @@ button:disabled {
   justify-content: flex-end;
 }
 
+.teacher-content-approved-bulk-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid rgba(102, 247, 209, 0.14);
+  border-radius: 10px;
+  padding: 10px;
+  background: rgba(102, 247, 209, 0.055);
+}
+
+.teacher-content-approved-bulk-actions strong,
+.teacher-content-approved-bulk-actions p,
+.teacher-content-approved-delete-message {
+  margin: 0;
+}
+
+.teacher-content-approved-bulk-actions strong {
+  color: #f4fffb;
+}
+
+.teacher-content-approved-bulk-actions p,
+.teacher-content-approved-delete-message {
+  color: #bad7d3;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.teacher-content-approved-bulk-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.teacher-content-select-all-control {
+  min-width: max-content;
+}
+
 @media (max-width: 760px) {
   .teacher-content-simple-pack-row {
+    grid-template-columns: 28px minmax(0, 1fr);
+  }
+
+  .teacher-content-simple-pack-title,
+  .teacher-content-simple-pack-toggle,
+  .teacher-content-simple-pack-actions {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+
+  .teacher-content-approved-bulk-actions {
     grid-template-columns: 1fr;
   }
 
-  .teacher-content-simple-pack-actions {
+  .teacher-content-approved-bulk-buttons {
     justify-content: flex-start;
   }
 }

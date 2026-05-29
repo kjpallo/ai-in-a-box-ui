@@ -1,0 +1,855 @@
+{
+  "vocabulary": [
+    {
+      "vocabId": "vocab-system-of-equations",
+      "term": "System of equations",
+      "aliases": [],
+      "studentDefinition": "two or more equations considered together",
+      "teacherDefinition": "two or more equations considered together",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "reviewStatus": "approved",
+      "confidence": "high",
+      "sourceFile": "Systems Inequalities.pptx",
+      "sourceLocation": "Slide 1 / Chunk 1",
+      "sourceTextSnippet": "- System of equations: two or more equations considered together.",
+      "sourceParse": "deterministic_vocabulary_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "vocabId": "vocab-solution",
+      "term": "Solution",
+      "aliases": [],
+      "studentDefinition": "value or ordered pair that makes all equations true",
+      "teacherDefinition": "value or ordered pair that makes all equations true",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "reviewStatus": "approved",
+      "confidence": "high",
+      "sourceFile": "Systems Inequalities.pptx",
+      "sourceLocation": "Slide 1 / Chunk 1",
+      "sourceTextSnippet": "- Solution: value or ordered pair that makes all equations true.",
+      "sourceParse": "deterministic_vocabulary_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceReferences": [
+        {
+          "sourceFile": "Systems Inequalities.pptx",
+          "sourceLocation": "Slide 1 / Chunk 1",
+          "sourceTextSnippet": "- Solution: value or ordered pair that makes all equations true."
+        },
+        {
+          "sourceFile": "Systems Inequalities.pptx",
+          "sourceLocation": "extracted text",
+          "sourceTextSnippet": "[Slide 3] Inequalities Vocabulary - Inequality: statement comparing values using symbols like <, >, <=, or >=. - Boundary line: line that separates solution regions. - Solution region: shaded area that satisfies an inequality. Core Concept ..."
+        }
+      ],
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "vocabId": "vocab-intersection",
+      "term": "Intersection",
+      "aliases": [],
+      "studentDefinition": "point where graphs cross",
+      "teacherDefinition": "point where graphs cross",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "reviewStatus": "approved",
+      "confidence": "high",
+      "sourceFile": "Systems Inequalities.pptx",
+      "sourceLocation": "Slide 1 / Chunk 1",
+      "sourceTextSnippet": "- Intersection: point where graphs cross.",
+      "sourceParse": "deterministic_vocabulary_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "vocabId": "vocab-elimination",
+      "term": "Elimination",
+      "aliases": [],
+      "studentDefinition": "combining equations to remove a variable",
+      "teacherDefinition": "combining equations to remove a variable",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "reviewStatus": "approved",
+      "confidence": "high",
+      "sourceFile": "Systems Inequalities.pptx",
+      "sourceLocation": "Slide 2 / Chunk 1",
+      "sourceTextSnippet": "- Elimination: combining equations to remove a variable.",
+      "sourceParse": "deterministic_vocabulary_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "vocabId": "vocab-boundary-line",
+      "term": "Boundary line",
+      "aliases": [],
+      "studentDefinition": "line that separates solution regions",
+      "teacherDefinition": "line that separates solution regions",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "reviewStatus": "approved",
+      "confidence": "high",
+      "sourceFile": "Systems Inequalities.pptx",
+      "sourceLocation": "Slide 3",
+      "sourceTextSnippet": "- Boundary line: line that separates solution regions.",
+      "sourceParse": "deterministic_vocabulary_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "vocabId": "vocab-solution-region",
+      "term": "Solution region",
+      "aliases": [],
+      "studentDefinition": "shaded area that satisfies an inequality",
+      "teacherDefinition": "shaded area that satisfies an inequality",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "reviewStatus": "approved",
+      "confidence": "high",
+      "sourceFile": "Systems Inequalities.pptx",
+      "sourceLocation": "Slide 3",
+      "sourceTextSnippet": "- Solution region: shaded area that satisfies an inequality.",
+      "sourceParse": "deterministic_vocabulary_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    }
+  ],
+  "concepts": [
+    {
+      "conceptId": "concept-solution-graphed-system",
+      "title": "Solution Graphed System",
+      "aliases": [],
+      "studentExplanation": "- The solution to a graphed system is the intersection point.",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Systems Inequalities.pptx",
+      "sourceLocation": "Slide 1 / Chunk 1",
+      "sourceTextSnippet": "Core Concept - The solution to a graphed system is the intersection point.",
+      "sourceParse": "deterministic_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "conceptId": "concept-system-have-one",
+      "title": "System Have One",
+      "aliases": [],
+      "studentExplanation": "A system can have one solution, no solution, or infinitely many solutions.",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Systems Inequalities.pptx",
+      "sourceLocation": "Slide 1 / Chunk 1",
+      "sourceTextSnippet": "- A system can have one solution, no solution, or infinitely many solutions.",
+      "sourceParse": "deterministic_structured_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "conceptId": "concept-math-slide-charlemagne",
+      "title": "Math Slide Charlemagne",
+      "aliases": [],
+      "studentExplanation": "Math | Slide 1 of 4 | Charlemagne subject-f",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Systems Inequalities.pptx",
+      "sourceLocation": "Slide 1 / Chunk 1",
+      "sourceTextSnippet": "Math | Slide 1 of 4 | Charlemagne subject-f",
+      "sourceParse": "deterministic_structured_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceReferences": [
+        {
+          "sourceFile": "Systems Inequalities.pptx",
+          "sourceLocation": "Slide 1 / Chunk 1",
+          "sourceTextSnippet": "Math | Slide 1 of 4 | Charlemagne subject-f"
+        },
+        {
+          "sourceFile": "Systems Inequalities.pptx",
+          "sourceLocation": "Slide 3",
+          "sourceTextSnippet": "Math | Slide 3 of 4 | Charlemagne subject-folder import stress test"
+        }
+      ],
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "conceptId": "concept-process",
+      "title": "/ Process",
+      "aliases": [],
+      "studentExplanation": "/ Process - Choose graphing when the intersection is easy to see.",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Systems Inequalities.pptx",
+      "sourceLocation": "Slide 2 / Chunk 1",
+      "sourceTextSnippet": "Procedure / Process / Process - Choose graphing when the intersection is easy to see.",
+      "sourceParse": "deterministic_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "conceptId": "concept-choose-graphing-intersection",
+      "title": "Choose Graphing Intersection",
+      "aliases": [],
+      "studentExplanation": "Choose graphing when the intersection is easy to see.",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Systems Inequalities.pptx",
+      "sourceLocation": "Slide 2 / Chunk 1",
+      "sourceTextSnippet": "- Choose graphing when the intersection is easy to see.",
+      "sourceParse": "deterministic_structured_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "conceptId": "concept-choose-substitution-one",
+      "title": "Choose Substitution One",
+      "aliases": [],
+      "studentExplanation": "Choose substitution when one variable is already isolated.",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Systems Inequalities.pptx",
+      "sourceLocation": "Slide 2 / Chunk 1",
+      "sourceTextSnippet": "- Choose substitution when one variable is already isolated.",
+      "sourceParse": "deterministic_structured_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "conceptId": "concept-choose-elimination-coefficient",
+      "title": "Choose Elimination Coefficient",
+      "aliases": [],
+      "studentExplanation": "Choose elimination when coefficients line up.",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Systems Inequalities.pptx",
+      "sourceLocation": "Slide 2 / Chunk 1",
+      "sourceTextSnippet": "- Choose elimination when coefficients line up.",
+      "sourceParse": "deterministic_structured_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "conceptId": "concept-dashed-boundary-mean",
+      "title": "Dashed Boundary Mean",
+      "aliases": [],
+      "studentExplanation": "- A dashed boundary means the line is not included.",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Systems Inequalities.pptx",
+      "sourceLocation": "Slide 3",
+      "sourceTextSnippet": "Core Concept - A dashed boundary means the line is not included.",
+      "sourceParse": "deterministic_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    }
+  ],
+  "referenceFormulas": [],
+  "problemBank": [],
+  "standardsMap": [],
+  "smokeTests": [],
+  "sourceFiles": [
+    {
+      "fileName": "Systems Inequalities.pptx",
+      "fileType": "pptx",
+      "uploadId": "527afed6-6781-47fa-b851-c7021be68d6d",
+      "storedFileName": "527afed6-6781-47fa-b851-c7021be68d6d.pptx",
+      "extractionJsonFileName": "527afed6-6781-47fa-b851-c7021be68d6d_extraction.json",
+      "characterCount": 420,
+      "pageCount": 4,
+      "chunkCount": 1,
+      "reviewStatus": "pending",
+      "confidence": "low",
+      "notes": "Added from extraction metadata for draft traceability.",
+      "sourceReferences": []
+    }
+  ],
+  "metadata": {
+    "modelMetadata": {
+      "createdBy": "charlemagne-teacher-content-import"
+    },
+    "createdBy": "charlemagne-teacher-content-import",
+    "createdAt": "2026-05-25T02:29:52.304Z",
+    "updatedAt": "2026-05-25T02:30:18.838Z",
+    "status": "draft",
+    "reviewStatus": "pending",
+    "packName": "Systems Inequalities",
+    "packId": "draft-systems-inequalities-527afed6-6781-47fa-b851-c7021be68d6d",
+    "sourceUpload": {
+      "uploadId": "527afed6-6781-47fa-b851-c7021be68d6d",
+      "originalFileName": "Systems Inequalities.pptx",
+      "storedFileName": "527afed6-6781-47fa-b851-c7021be68d6d.pptx",
+      "extractionJsonFileName": "527afed6-6781-47fa-b851-c7021be68d6d_extraction.json",
+      "importProfile": "general",
+      "fileType": "pptx",
+      "characterCount": 1568,
+      "pageCount": 4,
+      "chunkCount": 4
+    },
+    "extraction": {
+      "characterCount": 1568,
+      "pageCount": 4,
+      "chunkCount": 4
+    },
+    "importProfile": "general",
+    "importScope": {
+      "scope": "full_document",
+      "scopeLabel": "Full Import",
+      "sampleOnly": false,
+      "rangeLimited": false,
+      "completePacketImported": true,
+      "pageRangeLabel": "1-4",
+      "chunkRangeLabel": "1-4",
+      "rangeLabel": "Pages 1-4",
+      "pages": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "chunks": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "textBearingPages": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "firstTextPage": 1,
+      "originalPageCount": 4,
+      "processedPageCount": 4,
+      "processedChunkCount": 4,
+      "processedCharacterCount": 1568,
+      "warning": ""
+    },
+    "importUncertainSections": [],
+    "deduplication": {
+      "vocabulary": {
+        "raw": 10,
+        "duplicatesRemoved": 1,
+        "final": 9
+      },
+      "concepts": {
+        "raw": 9,
+        "duplicatesRemoved": 1,
+        "final": 8
+      },
+      "problemBank": {
+        "raw": 0,
+        "duplicatesRemoved": 0,
+        "final": 0
+      }
+    },
+    "importNormalization": {
+      "conceptIdsGenerated": 0,
+      "conceptTitlesGenerated": 0,
+      "vocabularyIdsGenerated": 0,
+      "vocabularyTermsGenerated": 0,
+      "problemIdsGenerated": 0,
+      "smokeTestIdsGenerated": 0,
+      "standardsMapIdsMapped": 0,
+      "sourceEvidenceFilled": 0,
+      "reviewNeededItems": 15,
+      "droppedItems": 0,
+      "totalNormalized": 0,
+      "notes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line.",
+        "Deterministically parsed from a labeled concept source section."
+      ]
+    },
+    "importBatches": 4,
+    "invalidGeneratedItems": [
+      {
+        "section": "results",
+        "index": 0,
+        "requiredField": "",
+        "reason": "Ignored unsupported top-level model output array: results."
+      },
+      {
+        "section": "vocabulary",
+        "index": 1,
+        "requiredField": "term",
+        "reason": "Missing required term."
+      },
+      {
+        "section": "vocabulary",
+        "index": 2,
+        "requiredField": "term",
+        "reason": "Missing required term."
+      },
+      {
+        "section": "vocabulary",
+        "index": 0,
+        "requiredField": "term",
+        "reason": "Vocabulary term \"Examples\" matched a section label."
+      }
+    ],
+    "importWarnings": [
+      "Removed invalid generated item vocabulary[1]: Missing required term.",
+      "Removed invalid generated item vocabulary[2]: Missing required term.",
+      "Removed invalid generated item vocabulary[0]: Vocabulary term \"Examples\" matched a section label."
+    ],
+    "importCoverage": {
+      "totalPages": 4,
+      "totalChunks": 4,
+      "processedPages": 4,
+      "processedChunks": 4,
+      "pagesWithDraftItems": 3,
+      "chunksWithDraftItems": 3,
+      "chunksWithNoExtractedKnowledge": 1,
+      "noKnowledgeChunks": [
+        "Slide 4"
+      ],
+      "sectionsDetected": [
+        "concepts",
+        "problemBank",
+        "referenceFormulas",
+        "smokeTests",
+        "vocabulary"
+      ],
+      "sourceSignals": {
+        "definitionLikeText": true,
+        "equationLikeText": false,
+        "practiceLikeText": true
+      },
+      "itemCounts": {
+        "vocabulary": 9,
+        "concepts": 8,
+        "referenceFormulas": 0,
+        "problemBank": 0,
+        "standardsMap": 0,
+        "smokeTests": 0
+      },
+      "failedBatches": [],
+      "sourceManifest": [
+        {
+          "chunkId": "chunk-1",
+          "sourceFile": "527afed6-6781-47fa-b851-c7021be68d6d.pptx",
+          "sourceLocation": "Slide 1",
+          "chunkIndex": 1,
+          "charCount": 424,
+          "status": "drafted"
+        },
+        {
+          "chunkId": "chunk-2",
+          "sourceFile": "527afed6-6781-47fa-b851-c7021be68d6d.pptx",
+          "sourceLocation": "Slide 2",
+          "chunkIndex": 2,
+          "charCount": 463,
+          "status": "drafted"
+        },
+        {
+          "chunkId": "chunk-3",
+          "sourceFile": "527afed6-6781-47fa-b851-c7021be68d6d.pptx",
+          "sourceLocation": "Slide 3",
+          "chunkIndex": 3,
+          "charCount": 394,
+          "status": "drafted"
+        },
+        {
+          "chunkId": "chunk-4",
+          "sourceFile": "527afed6-6781-47fa-b851-c7021be68d6d.pptx",
+          "sourceLocation": "Slide 4",
+          "chunkIndex": 4,
+          "charCount": 281,
+          "status": "no_items_found"
+        }
+      ],
+      "coverageSummary": {
+        "totalChunks": 4,
+        "queuedChunks": 0,
+        "draftedChunks": 3,
+        "skippedEmptyChunks": 0,
+        "noItemsFoundChunks": 1,
+        "needsReviewChunks": 0,
+        "failedChunks": 0,
+        "totalSourceChars": 1562,
+        "completedChunks": 4,
+        "allChunksTerminal": true
+      },
+      "queuedChunks": 0,
+      "allChunksTerminal": true,
+      "importComplete": true,
+      "warnings": [
+        "Practice/example question text was found but no problem bank items were drafted."
+      ]
+    },
+    "sourceEvidenceValidation": {
+      "checkedItems": 17,
+      "supportedItems": 17,
+      "weakItems": 0,
+      "unsupportedItems": 0,
+      "thinExtractionItems": 0,
+      "warnings": []
+    },
+    "partialDraft": true,
+    "autoImportPlan": {
+      "mode": "auto_full",
+      "recommendedImportScope": "full_document",
+      "batchStrategy": "sequential_batches",
+      "batchCount": 4,
+      "batches": [
+        {
+          "batchIndex": 1,
+          "sourceLocations": [
+            "Slide 1"
+          ],
+          "pageNumbers": [
+            1
+          ],
+          "estimatedCharacters": 424,
+          "estimatedTokens": 142
+        },
+        {
+          "batchIndex": 2,
+          "sourceLocations": [
+            "Slide 2"
+          ],
+          "pageNumbers": [
+            2
+          ],
+          "estimatedCharacters": 463,
+          "estimatedTokens": 155
+        },
+        {
+          "batchIndex": 3,
+          "sourceLocations": [
+            "Slide 3"
+          ],
+          "pageNumbers": [
+            3
+          ],
+          "estimatedCharacters": 394,
+          "estimatedTokens": 132
+        },
+        {
+          "batchIndex": 4,
+          "sourceLocations": [
+            "Slide 4"
+          ],
+          "pageNumbers": [
+            4
+          ],
+          "estimatedCharacters": 281,
+          "estimatedTokens": 94
+        }
+      ],
+      "limits": {
+        "maxCharactersPerBatch": 1250,
+        "maxEstimatedTokensPerBatch": 417,
+        "availableMemoryMb": 145,
+        "totalMemoryMb": 8192
+      },
+      "warnings": [
+        "Available memory is low (145 MB). Automatically using smaller sequential chunks."
+      ],
+      "reason": "Available memory is low, so the planner reduced batch size and will process 4 sequential chunks automatically.",
+      "canOverride": true,
+      "inspection": {
+        "fileType": "pptx",
+        "originalFileName": "527afed6-6781-47fa-b851-c7021be68d6d.pptx",
+        "rawFileSizeBytes": 32462,
+        "totalPageSlideSheetCount": 4,
+        "textBearingPageSlideSheetCount": 4,
+        "firstTextBearingPageSlideSheet": 1,
+        "totalExtractedCharacters": 1562,
+        "largestSectionCharacterCount": 463,
+        "estimatedTokenCount": 521,
+        "configuredImportModel": "gemma4:e2b"
+      }
+    },
+    "approvedImportScope": {
+      "scope": "full_document",
+      "scopeLabel": "Full Import",
+      "sampleOnly": false,
+      "rangeLimited": false,
+      "completePacketImported": true,
+      "pageRangeLabel": "1-4",
+      "chunkRangeLabel": "1-4",
+      "rangeLabel": "Pages 1-4",
+      "pages": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "chunks": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "textBearingPages": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "firstTextPage": 1,
+      "originalPageCount": 4,
+      "processedPageCount": 4,
+      "processedChunkCount": 4,
+      "processedCharacterCount": 1568,
+      "warning": ""
+    },
+    "rangeLimitedApprovedPack": false,
+    "approvalScopeWarning": ""
+  },
+  "schemaVersion": "1.0.0",
+  "packId": "draft-systems-inequalities-527afed6-6781-47fa-b851-c7021be68d6d",
+  "version": "0.1.0-draft",
+  "title": "Systems Inequalities",
+  "subject": "Teacher Uploaded Content",
+  "gradeLevel": "Teacher Review",
+  "status": "draft",
+  "reviewStatus": "pending"
+}

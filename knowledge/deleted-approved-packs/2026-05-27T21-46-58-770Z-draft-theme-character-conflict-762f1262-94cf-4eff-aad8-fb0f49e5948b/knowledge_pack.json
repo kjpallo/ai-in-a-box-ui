@@ -1,0 +1,403 @@
+{
+  "theme": {
+    "theme_name": "Theme",
+    "definition": "The underlying message or central idea of a story."
+  },
+  "theme_details": [
+    {
+      "term": "Theme",
+      "definition": "The underlying message or central idea of a story."
+    }
+  ],
+  "vocabulary": [],
+  "concepts": [
+    {
+      "conceptId": "concept-expected-category-vocabulary",
+      "title": "Expected Category Vocabulary",
+      "aliases": [],
+      "studentExplanation": "Expected categories: vocabulary, concepts, review facts, procedures.",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Theme Character Conflict.pptx",
+      "sourceLocation": "Slide 5 / Chunk 1",
+      "sourceTextSnippet": "Expected categories: vocabulary, concepts, review facts, procedures.",
+      "sourceParse": "deterministic_structured_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    }
+  ],
+  "referenceFormulas": [],
+  "problemBank": [],
+  "standardsMap": [],
+  "smokeTests": [],
+  "sourceFiles": [
+    {
+      "fileName": "Theme Character Conflict.pptx",
+      "fileType": "pptx",
+      "uploadId": "762f1262-94cf-4eff-aad8-fb0f49e5948b",
+      "storedFileName": "762f1262-94cf-4eff-aad8-fb0f49e5948b.pptx",
+      "extractionJsonFileName": "762f1262-94cf-4eff-aad8-fb0f49e5948b_extraction.json",
+      "characterCount": 420,
+      "pageCount": 5,
+      "chunkCount": 1,
+      "reviewStatus": "pending",
+      "confidence": "low",
+      "notes": "Added from extraction metadata for draft traceability.",
+      "sourceReferences": []
+    }
+  ],
+  "metadata": {
+    "modelMetadata": {
+      "createdBy": "charlemagne-teacher-content-import"
+    },
+    "createdBy": "charlemagne-teacher-content-import",
+    "createdAt": "2026-05-25T02:43:48.603Z",
+    "updatedAt": "2026-05-25T02:44:37.360Z",
+    "status": "draft",
+    "reviewStatus": "pending",
+    "packName": "Theme Character Conflict",
+    "packId": "draft-theme-character-conflict-762f1262-94cf-4eff-aad8-fb0f49e5948b",
+    "sourceUpload": {
+      "uploadId": "762f1262-94cf-4eff-aad8-fb0f49e5948b",
+      "originalFileName": "Theme Character Conflict.pptx",
+      "storedFileName": "762f1262-94cf-4eff-aad8-fb0f49e5948b.pptx",
+      "extractionJsonFileName": "762f1262-94cf-4eff-aad8-fb0f49e5948b_extraction.json",
+      "importProfile": "general",
+      "fileType": "pptx",
+      "characterCount": 2981,
+      "pageCount": 5,
+      "chunkCount": 5
+    },
+    "extraction": {
+      "characterCount": 2981,
+      "pageCount": 5,
+      "chunkCount": 5
+    },
+    "importProfile": "general",
+    "importScope": {
+      "scope": "full_document",
+      "scopeLabel": "Full Import",
+      "sampleOnly": false,
+      "rangeLimited": false,
+      "completePacketImported": true,
+      "pageRangeLabel": "1-5",
+      "chunkRangeLabel": "1-5",
+      "rangeLabel": "Pages 1-5",
+      "pages": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "chunks": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "textBearingPages": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "firstTextPage": 1,
+      "originalPageCount": 5,
+      "processedPageCount": 5,
+      "processedChunkCount": 5,
+      "processedCharacterCount": 2981,
+      "warning": ""
+    },
+    "importUncertainSections": [],
+    "deduplication": {
+      "vocabulary": {
+        "raw": 14,
+        "duplicatesRemoved": 1,
+        "final": 13
+      },
+      "concepts": {
+        "raw": 22,
+        "duplicatesRemoved": 0,
+        "final": 22
+      },
+      "problemBank": {
+        "raw": 0,
+        "duplicatesRemoved": 0,
+        "final": 0
+      }
+    },
+    "importNormalization": {
+      "conceptIdsGenerated": 0,
+      "conceptTitlesGenerated": 0,
+      "vocabularyIdsGenerated": 0,
+      "vocabularyTermsGenerated": 0,
+      "problemIdsGenerated": 0,
+      "smokeTestIdsGenerated": 0,
+      "standardsMapIdsMapped": 0,
+      "sourceEvidenceFilled": 0,
+      "reviewNeededItems": 34,
+      "droppedItems": 0,
+      "totalNormalized": 0,
+      "notes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line.",
+        "Deterministically parsed from a labeled concept source section."
+      ]
+    },
+    "importBatches": 5,
+    "invalidGeneratedItems": [],
+    "importWarnings": [],
+    "importCoverage": {
+      "totalPages": 5,
+      "totalChunks": 5,
+      "processedPages": 5,
+      "processedChunks": 5,
+      "pagesWithDraftItems": 5,
+      "chunksWithDraftItems": 5,
+      "chunksWithNoExtractedKnowledge": 0,
+      "noKnowledgeChunks": [],
+      "sectionsDetected": [
+        "concepts",
+        "referenceFormulas",
+        "vocabulary"
+      ],
+      "sourceSignals": {
+        "definitionLikeText": true,
+        "equationLikeText": false,
+        "practiceLikeText": false
+      },
+      "itemCounts": {
+        "vocabulary": 13,
+        "concepts": 22,
+        "referenceFormulas": 0,
+        "problemBank": 0,
+        "standardsMap": 0,
+        "smokeTests": 0
+      },
+      "failedBatches": [],
+      "sourceManifest": [
+        {
+          "chunkId": "chunk-1",
+          "sourceFile": "762f1262-94cf-4eff-aad8-fb0f49e5948b.pptx",
+          "sourceLocation": "Slide 1",
+          "chunkIndex": 1,
+          "charCount": 676,
+          "status": "drafted"
+        },
+        {
+          "chunkId": "chunk-2",
+          "sourceFile": "762f1262-94cf-4eff-aad8-fb0f49e5948b.pptx",
+          "sourceLocation": "Slide 2",
+          "chunkIndex": 2,
+          "charCount": 599,
+          "status": "drafted"
+        },
+        {
+          "chunkId": "chunk-3",
+          "sourceFile": "762f1262-94cf-4eff-aad8-fb0f49e5948b.pptx",
+          "sourceLocation": "Slide 3",
+          "chunkIndex": 3,
+          "charCount": 575,
+          "status": "drafted"
+        },
+        {
+          "chunkId": "chunk-4",
+          "sourceFile": "762f1262-94cf-4eff-aad8-fb0f49e5948b.pptx",
+          "sourceLocation": "Slide 4",
+          "chunkIndex": 4,
+          "charCount": 622,
+          "status": "drafted"
+        },
+        {
+          "chunkId": "chunk-5",
+          "sourceFile": "762f1262-94cf-4eff-aad8-fb0f49e5948b.pptx",
+          "sourceLocation": "Slide 5",
+          "chunkIndex": 5,
+          "charCount": 501,
+          "status": "drafted"
+        }
+      ],
+      "coverageSummary": {
+        "totalChunks": 5,
+        "queuedChunks": 0,
+        "draftedChunks": 5,
+        "skippedEmptyChunks": 0,
+        "noItemsFoundChunks": 0,
+        "needsReviewChunks": 0,
+        "failedChunks": 0,
+        "totalSourceChars": 2973,
+        "completedChunks": 5,
+        "allChunksTerminal": true
+      },
+      "queuedChunks": 0,
+      "allChunksTerminal": true,
+      "importComplete": true,
+      "warnings": []
+    },
+    "sourceEvidenceValidation": {
+      "checkedItems": 35,
+      "supportedItems": 33,
+      "weakItems": 0,
+      "unsupportedItems": 2,
+      "thinExtractionItems": 0,
+      "warnings": [
+        "Generated wording was not strongly supported by the extracted source text."
+      ]
+    },
+    "partialDraft": false,
+    "autoImportPlan": {
+      "mode": "auto_full",
+      "recommendedImportScope": "full_document",
+      "batchStrategy": "sequential_batches",
+      "batchCount": 5,
+      "batches": [
+        {
+          "batchIndex": 1,
+          "sourceLocations": [
+            "Slide 1"
+          ],
+          "pageNumbers": [
+            1
+          ],
+          "estimatedCharacters": 676,
+          "estimatedTokens": 226
+        },
+        {
+          "batchIndex": 2,
+          "sourceLocations": [
+            "Slide 2"
+          ],
+          "pageNumbers": [
+            2
+          ],
+          "estimatedCharacters": 599,
+          "estimatedTokens": 200
+        },
+        {
+          "batchIndex": 3,
+          "sourceLocations": [
+            "Slide 3"
+          ],
+          "pageNumbers": [
+            3
+          ],
+          "estimatedCharacters": 575,
+          "estimatedTokens": 192
+        },
+        {
+          "batchIndex": 4,
+          "sourceLocations": [
+            "Slide 4"
+          ],
+          "pageNumbers": [
+            4
+          ],
+          "estimatedCharacters": 622,
+          "estimatedTokens": 208
+        },
+        {
+          "batchIndex": 5,
+          "sourceLocations": [
+            "Slide 5"
+          ],
+          "pageNumbers": [
+            5
+          ],
+          "estimatedCharacters": 501,
+          "estimatedTokens": 167
+        }
+      ],
+      "limits": {
+        "maxCharactersPerBatch": 1250,
+        "maxEstimatedTokensPerBatch": 417,
+        "availableMemoryMb": 148,
+        "totalMemoryMb": 8192
+      },
+      "warnings": [
+        "Available memory is low (148 MB). Automatically using smaller sequential chunks."
+      ],
+      "reason": "Available memory is low, so the planner reduced batch size and will process 5 sequential chunks automatically.",
+      "canOverride": true,
+      "inspection": {
+        "fileType": "pptx",
+        "originalFileName": "762f1262-94cf-4eff-aad8-fb0f49e5948b.pptx",
+        "rawFileSizeBytes": 34918,
+        "totalPageSlideSheetCount": 5,
+        "textBearingPageSlideSheetCount": 5,
+        "firstTextBearingPageSlideSheet": 1,
+        "totalExtractedCharacters": 2973,
+        "largestSectionCharacterCount": 676,
+        "estimatedTokenCount": 991,
+        "configuredImportModel": "gemma4:e2b"
+      }
+    },
+    "approvedImportScope": {
+      "scope": "full_document",
+      "scopeLabel": "Full Import",
+      "sampleOnly": false,
+      "rangeLimited": false,
+      "completePacketImported": true,
+      "pageRangeLabel": "1-5",
+      "chunkRangeLabel": "1-5",
+      "rangeLabel": "Pages 1-5",
+      "pages": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "chunks": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "textBearingPages": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "firstTextPage": 1,
+      "originalPageCount": 5,
+      "processedPageCount": 5,
+      "processedChunkCount": 5,
+      "processedCharacterCount": 2981,
+      "warning": ""
+    },
+    "rangeLimitedApprovedPack": false,
+    "approvalScopeWarning": ""
+  },
+  "schemaVersion": "1.0.0",
+  "packId": "draft-theme-character-conflict-762f1262-94cf-4eff-aad8-fb0f49e5948b",
+  "version": "0.1.0-draft",
+  "title": "Theme Character Conflict",
+  "subject": "Teacher Uploaded Content",
+  "gradeLevel": "Teacher Review",
+  "status": "draft",
+  "reviewStatus": "pending"
+}

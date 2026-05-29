@@ -1,0 +1,1163 @@
+{
+  "vocabulary": [
+    {
+      "vocabId": "vocab-industrialization",
+      "term": "Industrialization",
+      "aliases": [],
+      "studentDefinition": "growth of machine-powered production and factories",
+      "teacherDefinition": "growth of machine-powered production and factories",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "reviewStatus": "approved",
+      "confidence": "low",
+      "sourceFile": "Industrialization Progressive Era.pptx",
+      "sourceLocation": "Slide 1 / Chunk 1",
+      "sourceTextSnippet": "- Industrialization: growth of machine-powered production and factories.",
+      "sourceParse": "deterministic_vocabulary_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line.",
+        "Generated vocabulary ID during import normalization.",
+        "Source evidence was filled from extraction defaults during import normalization; keep teacher review required."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceReferences": [
+        {
+          "sourceFile": "Industrialization Progressive Era.pptx",
+          "sourceLocation": "Slide 1 / Chunk 1",
+          "sourceTextSnippet": "- Industrialization: growth of machine-powered production and factories."
+        },
+        {
+          "sourceFile": "Industrialization Progressive Era.pptx",
+          "sourceLocation": "Slide 1 / Chunk 1 / Retry Chunk 1",
+          "sourceTextSnippet": "- Industrialization: growth of machine-powered production and factories."
+        }
+      ],
+      "notes": "Generated vocabulary ID during import normalization. Source evidence was filled from extraction defaults during import normalization; keep teacher review required.",
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": "",
+      "teacherReviewed": true,
+      "teacherVerified": true,
+      "teacherApproved": true,
+      "teacherReviewedAt": "2026-05-25T18:05:35.539Z",
+      "confidenceOverride": "teacher_verified",
+      "manuallyEdited": true,
+      "lastManualEditAt": "2026-05-25T18:05:35.539Z"
+    },
+    {
+      "vocabId": "vocab-urbanization",
+      "term": "Urbanization",
+      "aliases": [],
+      "studentDefinition": "city get big",
+      "teacherDefinition": "growth of cities as people move for jobs",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "reviewStatus": "approved",
+      "confidence": "low",
+      "sourceFile": "Industrialization Progressive Era.pptx",
+      "sourceLocation": "Slide 1 / Chunk 1",
+      "sourceTextSnippet": "- Urbanization: growth of cities as people move for jobs.",
+      "sourceParse": "deterministic_vocabulary_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line.",
+        "Generated vocabulary ID during import normalization.",
+        "Source evidence was filled from extraction defaults during import normalization; keep teacher review required."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceReferences": [
+        {
+          "sourceFile": "Industrialization Progressive Era.pptx",
+          "sourceLocation": "Slide 1 / Chunk 1",
+          "sourceTextSnippet": "- Urbanization: growth of cities as people move for jobs."
+        },
+        {
+          "sourceFile": "Industrialization Progressive Era.pptx",
+          "sourceLocation": "Slide 1 / Chunk 1 / Retry Chunk 1",
+          "sourceTextSnippet": "- Urbanization: growth of cities as people move for jobs."
+        }
+      ],
+      "notes": "Generated vocabulary ID during import normalization. Source evidence was filled from extraction defaults during import normalization; keep teacher review required.",
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": "",
+      "teacherReviewed": true,
+      "teacherVerified": true,
+      "manuallyEdited": true,
+      "teacherReviewedAt": "2026-05-25T18:30:11.496Z",
+      "lastManualEditAt": "2026-05-25T18:30:01.060Z",
+      "confidenceOverride": "teacher_verified",
+      "teacherApproved": true
+    },
+    {
+      "vocabId": "vocab-immigration",
+      "term": "Immigration",
+      "aliases": [],
+      "studentDefinition": "movement of people into a country to live",
+      "teacherDefinition": "movement of people into a country to live",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "reviewStatus": "approved",
+      "confidence": "high",
+      "sourceFile": "Industrialization Progressive Era.pptx",
+      "sourceLocation": "Slide 1 / Chunk 1",
+      "sourceTextSnippet": "- Immigration: movement of people into a country to live.",
+      "sourceParse": "deterministic_vocabulary_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceReferences": [
+        {
+          "sourceFile": "Industrialization Progressive Era.pptx",
+          "sourceLocation": "Slide 1 / Chunk 1",
+          "sourceTextSnippet": "- Immigration: movement of people into a country to live."
+        },
+        {
+          "sourceFile": "Industrialization Progressive Era.pptx",
+          "sourceLocation": "Slide 1 / Chunk 1 / Retry Chunk 1",
+          "sourceTextSnippet": "- Immigration: movement of people into a"
+        }
+      ],
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "term": "Factories",
+      "aliases": [],
+      "studentDefinition": "2",
+      "teacherDefinition": "2",
+      "source": "Slide 1 / Chunk 1",
+      "vocabId": "vocab-factories",
+      "reviewStatus": "approved",
+      "confidence": "low",
+      "notes": "Generated vocabulary ID during import normalization. Source evidence was filled from extraction defaults during import normalization; keep teacher review required.",
+      "normalizationNotes": [
+        "Generated vocabulary ID during import normalization.",
+        "Source evidence was filled from extraction defaults during import normalization; keep teacher review required."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceFile": "Industrialization Progressive Era.pptx",
+      "sourceLocation": "extracted text",
+      "sourceTextSnippet": "[Slide 1 / Chunk 1 / Retry Chunk 2] country to live. Core Concept - Factories changed where and how many people worked. - Cities grew quickly, creating jobs and problems like overcrowding. History_Civics | Slide 1 of 4 | Charlemagne su",
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 0.45454545454545453,
+        "reasons": []
+      },
+      "warningStatus": "",
+      "teacherReviewed": true,
+      "teacherVerified": true,
+      "manuallyEdited": true,
+      "teacherReviewedAt": "2026-05-25T21:44:06.524Z",
+      "lastManualEditAt": "2026-05-25T21:43:20.083Z",
+      "confidenceOverride": "teacher_verified",
+      "teacherApproved": true
+    },
+    {
+      "term": "Cities",
+      "definition": "Large settlements that grew due to population increase.",
+      "source": "Slide 1 / Chunk 1",
+      "aliases": [],
+      "vocabId": "vocab-cities",
+      "reviewStatus": "approved",
+      "confidence": "low",
+      "notes": "Generated vocabulary ID during import normalization. Source evidence was filled from extraction defaults during import normalization; keep teacher review required.",
+      "normalizationNotes": [
+        "Generated vocabulary ID during import normalization.",
+        "Source evidence was filled from extraction defaults during import normalization; keep teacher review required."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceFile": "Industrialization Progressive Era.pptx",
+      "sourceLocation": "extracted text",
+      "sourceTextSnippet": "[Slide 1 / Chunk 1 / Retry Chunk 2] country to live. Core Concept - Factories changed where and how many people worked. - Cities grew quickly, creating jobs and problems like overcrowding. History_Civics | Slide 1 of 4 | Charlemagne su",
+      "studentDefinition": "2",
+      "teacherDefinition": "Urbanization: growth of cities as people move for jobs",
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": "",
+      "teacherReviewed": true,
+      "teacherVerified": true,
+      "manuallyEdited": true,
+      "teacherReviewedAt": "2026-05-25T21:42:58.992Z",
+      "lastManualEditAt": "2026-05-25T21:42:58.991Z",
+      "confidenceOverride": "teacher_verified",
+      "teacherApproved": true
+    },
+    {
+      "vocabId": "vocab-labor-union",
+      "term": "Labor union",
+      "aliases": [],
+      "studentDefinition": "group of workers who organize for better pay and conditions",
+      "teacherDefinition": "group of workers who organize for better pay and conditions",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "reviewStatus": "rejected",
+      "confidence": "low",
+      "sourceFile": "Industrialization Progressive Era.pptx",
+      "sourceLocation": "Slide 2 / Chunk 1",
+      "sourceTextSnippet": "- Labor union: group of workers who organize for better pay and conditions.",
+      "sourceParse": "deterministic_vocabulary_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line.",
+        "Generated vocabulary ID during import normalization.",
+        "Source evidence was filled from extraction defaults during import normalization; keep teacher review required."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceReferences": [
+        {
+          "sourceFile": "Industrialization Progressive Era.pptx",
+          "sourceLocation": "Slide 2 / Chunk 1",
+          "sourceTextSnippet": "- Labor union: group of workers who organize for better pay and conditions."
+        },
+        {
+          "sourceFile": "Industrialization Progressive Era.pptx",
+          "sourceLocation": "Slide 2 / Chunk 1 / Retry Chunk 1",
+          "sourceTextSnippet": "- Labor union: group of workers who organize for better pay and conditions."
+        }
+      ],
+      "notes": "Generated vocabulary ID during import normalization. Source evidence was filled from extraction defaults during import normalization; keep teacher review required.",
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "vocabId": "vocab-strike",
+      "term": "Strike",
+      "aliases": [],
+      "studentDefinition": "workers refusing to work as a protest",
+      "teacherDefinition": "workers refusing to work as a protest",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "reviewStatus": "rejected",
+      "confidence": "low",
+      "sourceFile": "Industrialization Progressive Era.pptx",
+      "sourceLocation": "Slide 2 / Chunk 1",
+      "sourceTextSnippet": "- Strike: workers refusing to work as a protest.",
+      "sourceParse": "deterministic_vocabulary_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line.",
+        "Generated vocabulary ID during import normalization.",
+        "Source evidence was filled from extraction defaults during import normalization; keep teacher review required."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceReferences": [
+        {
+          "sourceFile": "Industrialization Progressive Era.pptx",
+          "sourceLocation": "Slide 2 / Chunk 1",
+          "sourceTextSnippet": "- Strike: workers refusing to work as a protest."
+        },
+        {
+          "sourceFile": "Industrialization Progressive Era.pptx",
+          "sourceLocation": "Slide 2 / Chunk 1 / Retry Chunk 1",
+          "sourceTextSnippet": "- Strike: workers refusing to work as a protest."
+        }
+      ],
+      "notes": "Generated vocabulary ID during import normalization. Source evidence was filled from extraction defaults during import normalization; keep teacher review required.",
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "vocabId": "vocab-progressive-reform",
+      "term": "Progressive reform",
+      "aliases": [],
+      "studentDefinition": "effort to fix problems caused by industrial society",
+      "teacherDefinition": "effort to fix problems caused by industrial society",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "reviewStatus": "approved",
+      "confidence": "high",
+      "sourceFile": "Industrialization Progressive Era.pptx",
+      "sourceLocation": "Slide 2 / Chunk 1",
+      "sourceTextSnippet": "- Progressive reform: effort to fix problems caused by industrial society.",
+      "sourceParse": "deterministic_vocabulary_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceReferences": [
+        {
+          "sourceFile": "Industrialization Progressive Era.pptx",
+          "sourceLocation": "Slide 2 / Chunk 1",
+          "sourceTextSnippet": "- Progressive reform: effort to fix problems caused by industrial society."
+        },
+        {
+          "sourceFile": "Industrialization Progressive Era.pptx",
+          "sourceLocation": "Slide 2 / Chunk 1 / Retry Chunk 1",
+          "sourceTextSnippet": "- Progressive reform: effort to fix problems ca"
+        }
+      ],
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "term": "industrial society",
+      "aliases": [],
+      "studentDefinition": "The society that was used by industrial society.",
+      "teacherDefinition": "The society that was used by industrial society.",
+      "misconception": "",
+      "source": "Slide 2 / Chunk 1 / Retry Chunk 2",
+      "vocabId": "vocab-industrial-society",
+      "reviewStatus": "rejected",
+      "confidence": "low",
+      "notes": "Generated vocabulary ID during import normalization. Source evidence was filled from extraction defaults during import normalization; keep teacher review required. Generated wording was not strongly supported by the extracted source text.",
+      "normalizationNotes": [
+        "Generated vocabulary ID during import normalization.",
+        "Source evidence was filled from extraction defaults during import normalization; keep teacher review required."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceFile": "Industrialization Progressive Era.pptx",
+      "sourceLocation": "extracted text",
+      "sourceTextSnippet": "[Slide 2 / Chunk 1 / Retry Chunk 2] used by industrial society. Core Concept - Workers organized because factory conditions could be dangerous and unfair. - Reformers pushed for laws about safety, child labor, and public health. History",
+      "sourceGrounding": {
+        "status": "unsupported",
+        "termOrTitleFound": true,
+        "explanationSupported": false,
+        "evidenceStrength": 0.5,
+        "reasons": [
+          "Cited evidence did not include a nearby source-supported definition or explanation."
+        ]
+      },
+      "warnings": [
+        "Generated wording was not strongly supported by the extracted source text."
+      ],
+      "warningStatus": "source_evidence_weak",
+      "repairStatus": "repair_needed"
+    },
+    {
+      "vocabId": "vocab-muckraker",
+      "term": "Muckraker",
+      "aliases": [],
+      "studentDefinition": "journalist who exposed social problems",
+      "teacherDefinition": "journalist who exposed social problems",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "reviewStatus": "rejected",
+      "confidence": "low",
+      "sourceFile": "Industrialization Progressive Era.pptx",
+      "sourceLocation": "Slide 3",
+      "sourceTextSnippet": "- Muckraker: journalist who exposed social problems.",
+      "sourceParse": "deterministic_vocabulary_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line.",
+        "Generated vocabulary ID during import normalization.",
+        "Source evidence was filled from extraction defaults during import normalization; keep teacher review required."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceReferences": [
+        {
+          "sourceFile": "Industrialization Progressive Era.pptx",
+          "sourceLocation": "Slide 3",
+          "sourceTextSnippet": "- Muckraker: journalist who exposed social problems."
+        },
+        {
+          "sourceFile": "Industrialization Progressive Era.pptx",
+          "sourceLocation": "extracted text",
+          "sourceTextSnippet": "[Slide 3] Civic Participation Vocabulary - Muckraker: journalist who exposed social problems. - Suffrage: the right to vote. - Public policy: government action to solve a problem. Core Concept - Citizens can influence government through vot..."
+        }
+      ],
+      "notes": "Generated vocabulary ID during import normalization. Source evidence was filled from extraction defaults during import normalization; keep teacher review required.",
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "vocabId": "vocab-suffrage",
+      "term": "Suffrage",
+      "aliases": [],
+      "studentDefinition": "the right to vote",
+      "teacherDefinition": "the right to vote",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "reviewStatus": "approved",
+      "confidence": "high",
+      "sourceFile": "Industrialization Progressive Era.pptx",
+      "sourceLocation": "Slide 3",
+      "sourceTextSnippet": "- Suffrage: the right to vote.",
+      "sourceParse": "deterministic_vocabulary_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "vocabId": "vocab-public-policy",
+      "term": "Public policy",
+      "aliases": [],
+      "studentDefinition": "government action to solve a problem",
+      "teacherDefinition": "government action to solve a problem",
+      "misconception": "",
+      "exampleQuestion": "",
+      "exampleAnswer": "",
+      "reviewStatus": "approved",
+      "confidence": "high",
+      "sourceFile": "Industrialization Progressive Era.pptx",
+      "sourceLocation": "Slide 3",
+      "sourceTextSnippet": "- Public policy: government action to solve a problem.",
+      "sourceParse": "deterministic_vocabulary_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    }
+  ],
+  "concepts": [
+    {
+      "conceptId": "concept-factory-changed-where",
+      "title": "Factory Changed Where",
+      "aliases": [],
+      "studentExplanation": "- Factories changed where and how many people worked.",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Industrialization Progressive Era.pptx",
+      "sourceLocation": "Slide 1 / Chunk 1",
+      "sourceTextSnippet": "Core Concept - Factories changed where and how many people worked.",
+      "sourceParse": "deterministic_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceReferences": [
+        {
+          "sourceFile": "Industrialization Progressive Era.pptx",
+          "sourceLocation": "Slide 1 / Chunk 1",
+          "sourceTextSnippet": "Core Concept - Factories changed where and how many people worked."
+        },
+        {
+          "sourceFile": "Industrialization Progressive Era.pptx",
+          "sourceLocation": "Slide 1 / Chunk 1 / Retry Chunk 2",
+          "sourceTextSnippet": "Core Concept - Factories changed where and how many people worked."
+        }
+      ],
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "conceptId": "concept-city-grew-quickly",
+      "title": "City Grew Quickly",
+      "aliases": [],
+      "studentExplanation": "Cities grew quickly, creating jobs and problems like overcrowding.",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Industrialization Progressive Era.pptx",
+      "sourceLocation": "Slide 1 / Chunk 1",
+      "sourceTextSnippet": "- Cities grew quickly, creating jobs and problems like overcrowding.",
+      "sourceParse": "deterministic_structured_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceReferences": [
+        {
+          "sourceFile": "Industrialization Progressive Era.pptx",
+          "sourceLocation": "Slide 1 / Chunk 1",
+          "sourceTextSnippet": "- Cities grew quickly, creating jobs and problems like overcrowding."
+        },
+        {
+          "sourceFile": "Industrialization Progressive Era.pptx",
+          "sourceLocation": "Slide 1 / Chunk 1 / Retry Chunk 2",
+          "sourceTextSnippet": "- Cities grew quickly, creating jobs and problems like overcrowding."
+        }
+      ],
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "conceptId": "concept-history-civic-slide",
+      "title": "History Civic Slide",
+      "aliases": [],
+      "studentExplanation": "History_Civics | Slide 1 of 4 | Charlemagne su",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Industrialization Progressive Era.pptx",
+      "sourceLocation": "Slide 1 / Chunk 1",
+      "sourceTextSnippet": "History_Civics | Slide 1 of 4 | Charlemagne su",
+      "sourceParse": "deterministic_structured_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceReferences": [
+        {
+          "sourceFile": "Industrialization Progressive Era.pptx",
+          "sourceLocation": "Slide 1 / Chunk 1",
+          "sourceTextSnippet": "History_Civics | Slide 1 of 4 | Charlemagne su"
+        },
+        {
+          "sourceFile": "Industrialization Progressive Era.pptx",
+          "sourceLocation": "Slide 1 / Chunk 1 / Retry Chunk 2",
+          "sourceTextSnippet": "History_Civics | Slide 1 of 4 | Charlemagne su"
+        },
+        {
+          "sourceFile": "Industrialization Progressive Era.pptx",
+          "sourceLocation": "Slide 3",
+          "sourceTextSnippet": "History_Civics | Slide 3 of 4 | Charlemagne subject-folder import stress test"
+        }
+      ],
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "conceptId": "concept-worker-organized-because",
+      "title": "Worker Organized Because",
+      "aliases": [],
+      "studentExplanation": "- Workers organized because factory conditions could be dangerous and unfair.",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Industrialization Progressive Era.pptx",
+      "sourceLocation": "Slide 2 / Chunk 1",
+      "sourceTextSnippet": "Core Concept - Workers organized because factory conditions could be dangerous and unfair.",
+      "sourceParse": "deterministic_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceReferences": [
+        {
+          "sourceFile": "Industrialization Progressive Era.pptx",
+          "sourceLocation": "Slide 2 / Chunk 1",
+          "sourceTextSnippet": "Core Concept - Workers organized because factory conditions could be dangerous and unfair."
+        },
+        {
+          "sourceFile": "Industrialization Progressive Era.pptx",
+          "sourceLocation": "Slide 2 / Chunk 1 / Retry Chunk 2",
+          "sourceTextSnippet": "Core Concept - Workers organized because factory conditions could be dangerous and unfair."
+        }
+      ],
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "conceptId": "concept-workers-organized",
+      "title": "Workers Organized",
+      "aliases": [],
+      "studentExplanation": "Workers organized because factory conditions could be dangerous and unfair.",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Industrialization Progressive Era.pptx",
+      "sourceLocation": "Slide 2 / Chunk 1",
+      "sourceTextSnippet": "- Workers organized because factory conditions could be dangerous and unfair.",
+      "sourceParse": "deterministic_structured_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceReferences": [
+        {
+          "sourceFile": "Industrialization Progressive Era.pptx",
+          "sourceLocation": "Slide 2 / Chunk 1",
+          "sourceTextSnippet": "- Workers organized because factory conditions could be dangerous and unfair."
+        },
+        {
+          "sourceFile": "Industrialization Progressive Era.pptx",
+          "sourceLocation": "Slide 2 / Chunk 1 / Retry Chunk 2",
+          "sourceTextSnippet": "- Workers organized because factory conditions could be dangerous and unfair."
+        }
+      ],
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "conceptId": "concept-reformer-pushed-law",
+      "title": "Reformer Pushed Law",
+      "aliases": [],
+      "studentExplanation": "Reformers pushed for laws about safety, child labor, and public health.",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Industrialization Progressive Era.pptx",
+      "sourceLocation": "Slide 2 / Chunk 1",
+      "sourceTextSnippet": "- Reformers pushed for laws about safety, child labor, and public health.",
+      "sourceParse": "deterministic_structured_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceReferences": [
+        {
+          "sourceFile": "Industrialization Progressive Era.pptx",
+          "sourceLocation": "Slide 2 / Chunk 1",
+          "sourceTextSnippet": "- Reformers pushed for laws about safety, child labor, and public health."
+        },
+        {
+          "sourceFile": "Industrialization Progressive Era.pptx",
+          "sourceLocation": "Slide 2 / Chunk 1 / Retry Chunk 2",
+          "sourceTextSnippet": "- Reformers pushed for laws about safety, child labor, and public health."
+        }
+      ],
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    },
+    {
+      "conceptId": "concept-citizen-influence-government",
+      "title": "Citizen Influence Government",
+      "aliases": [],
+      "studentExplanation": "- Citizens can influence government through voting, organizing, writing, and public speaking.",
+      "keyIdeas": [],
+      "examples": [],
+      "nonExamples": [],
+      "commonMisconceptions": [],
+      "reviewStatus": "approved",
+      "confidence": "medium",
+      "sourceFile": "Industrialization Progressive Era.pptx",
+      "sourceLocation": "Slide 3",
+      "sourceTextSnippet": "Core Concept - Citizens can influence government through voting, organizing, writing, and public speaking.",
+      "sourceParse": "deterministic_concept_section",
+      "normalizationNotes": [
+        "Deterministically parsed from a labeled concept source section."
+      ],
+      "standards": {
+        "linkedStandardIds": [],
+        "suggestedStandardIds": [],
+        "alignmentStatus": "not_aligned_yet",
+        "alignmentSource": "none"
+      },
+      "sourceGrounding": {
+        "status": "supported",
+        "termOrTitleFound": true,
+        "explanationSupported": true,
+        "evidenceStrength": 1,
+        "reasons": []
+      },
+      "warningStatus": ""
+    }
+  ],
+  "referenceFormulas": [],
+  "problemBank": [],
+  "standardsMap": [],
+  "smokeTests": [],
+  "sourceFiles": [
+    {
+      "fileName": "Industrialization Progressive Era.pptx",
+      "fileType": "pptx",
+      "uploadId": "f70cab4b-6840-4741-bb61-3389f1d08cf9",
+      "storedFileName": "f70cab4b-6840-4741-bb61-3389f1d08cf9.pptx",
+      "extractionJsonFileName": "f70cab4b-6840-4741-bb61-3389f1d08cf9_extraction.json",
+      "characterCount": 420,
+      "pageCount": 4,
+      "chunkCount": 1,
+      "reviewStatus": "needs_review",
+      "confidence": "low",
+      "notes": "Added from extraction metadata for draft traceability.",
+      "sourceReferences": []
+    }
+  ],
+  "metadata": {
+    "modelMetadata": {
+      "createdBy": "charlemagne-teacher-content-import"
+    },
+    "createdBy": "charlemagne-teacher-content-import",
+    "createdAt": "2026-05-25T02:38:18.599Z",
+    "updatedAt": "2026-05-25T02:39:26.299Z",
+    "status": "draft",
+    "reviewStatus": "pending",
+    "packName": "Industrialization Progressive Era",
+    "packId": "draft-industrialization-progressive-era-f70cab4b-6840-4741-bb61-3389f1d08cf9",
+    "sourceUpload": {
+      "uploadId": "f70cab4b-6840-4741-bb61-3389f1d08cf9",
+      "originalFileName": "Industrialization Progressive Era.pptx",
+      "storedFileName": "f70cab4b-6840-4741-bb61-3389f1d08cf9.pptx",
+      "extractionJsonFileName": "f70cab4b-6840-4741-bb61-3389f1d08cf9_extraction.json",
+      "importProfile": "general",
+      "fileType": "pptx",
+      "characterCount": 1514,
+      "pageCount": 4,
+      "chunkCount": 4
+    },
+    "extraction": {
+      "characterCount": 1514,
+      "pageCount": 4,
+      "chunkCount": 4
+    },
+    "importProfile": "general",
+    "importScope": {
+      "scope": "full_document",
+      "scopeLabel": "Full Import",
+      "sampleOnly": false,
+      "rangeLimited": false,
+      "completePacketImported": true,
+      "pageRangeLabel": "1-4",
+      "chunkRangeLabel": "1-4",
+      "rangeLabel": "Pages 1-4",
+      "pages": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "chunks": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "textBearingPages": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "firstTextPage": 1,
+      "originalPageCount": 4,
+      "processedPageCount": 4,
+      "processedChunkCount": 4,
+      "processedCharacterCount": 1514,
+      "warning": ""
+    },
+    "importUncertainSections": [],
+    "deduplication": {
+      "vocabulary": {
+        "raw": 12,
+        "duplicatesRemoved": 0,
+        "final": 12
+      },
+      "concepts": {
+        "raw": 8,
+        "duplicatesRemoved": 1,
+        "final": 7
+      },
+      "problemBank": {
+        "raw": 0,
+        "duplicatesRemoved": 0,
+        "final": 0
+      }
+    },
+    "importNormalization": {
+      "conceptIdsGenerated": 0,
+      "conceptTitlesGenerated": 0,
+      "vocabularyIdsGenerated": 4,
+      "vocabularyTermsGenerated": 0,
+      "problemIdsGenerated": 0,
+      "smokeTestIdsGenerated": 0,
+      "standardsMapIdsMapped": 0,
+      "sourceEvidenceFilled": 4,
+      "reviewNeededItems": 18,
+      "droppedItems": 0,
+      "totalNormalized": 8,
+      "notes": [
+        "Deterministically parsed from a Vocabulary Term: definition source line.",
+        "Generated vocabulary ID during import normalization.",
+        "Source evidence was filled from extraction defaults during import normalization; keep teacher review required.",
+        "Deterministically parsed from a labeled concept source section."
+      ]
+    },
+    "importBatches": 4,
+    "invalidGeneratedItems": [
+      {
+        "section": "vocabulary",
+        "index": 1,
+        "requiredField": "term",
+        "reason": "Missing required term."
+      },
+      {
+        "section": "vocabulary",
+        "index": 2,
+        "requiredField": "term",
+        "reason": "Missing required term."
+      },
+      {
+        "section": "vocabulary",
+        "index": 0,
+        "requiredField": "term",
+        "reason": "Vocabulary term \"Review\" matched a section label."
+      }
+    ],
+    "importWarnings": [
+      "Removed invalid generated item vocabulary[1]: Missing required term.",
+      "Removed invalid generated item vocabulary[2]: Missing required term.",
+      "Removed invalid generated item vocabulary[0]: Vocabulary term \"Review\" matched a section label."
+    ],
+    "importCoverage": {
+      "totalPages": 4,
+      "totalChunks": 4,
+      "processedPages": 4,
+      "processedChunks": 4,
+      "pagesWithDraftItems": 3,
+      "chunksWithDraftItems": 3,
+      "chunksWithNoExtractedKnowledge": 1,
+      "noKnowledgeChunks": [
+        "Slide 4"
+      ],
+      "sectionsDetected": [
+        "concepts",
+        "smokeTests",
+        "vocabulary"
+      ],
+      "sourceSignals": {
+        "definitionLikeText": false,
+        "equationLikeText": false,
+        "practiceLikeText": false
+      },
+      "itemCounts": {
+        "vocabulary": 12,
+        "concepts": 7,
+        "referenceFormulas": 0,
+        "problemBank": 0,
+        "standardsMap": 0,
+        "smokeTests": 0
+      },
+      "failedBatches": [],
+      "sourceManifest": [
+        {
+          "chunkId": "chunk-1",
+          "sourceFile": "f70cab4b-6840-4741-bb61-3389f1d08cf9.pptx",
+          "sourceLocation": "Slide 1",
+          "chunkIndex": 1,
+          "charCount": 431,
+          "status": "drafted"
+        },
+        {
+          "chunkId": "chunk-2",
+          "sourceFile": "f70cab4b-6840-4741-bb61-3389f1d08cf9.pptx",
+          "sourceLocation": "Slide 2",
+          "chunkIndex": 2,
+          "charCount": 470,
+          "status": "drafted"
+        },
+        {
+          "chunkId": "chunk-3",
+          "sourceFile": "f70cab4b-6840-4741-bb61-3389f1d08cf9.pptx",
+          "sourceLocation": "Slide 3",
+          "chunkIndex": 3,
+          "charCount": 354,
+          "status": "drafted"
+        },
+        {
+          "chunkId": "chunk-4",
+          "sourceFile": "f70cab4b-6840-4741-bb61-3389f1d08cf9.pptx",
+          "sourceLocation": "Slide 4",
+          "chunkIndex": 4,
+          "charCount": 253,
+          "status": "no_items_found"
+        }
+      ],
+      "coverageSummary": {
+        "totalChunks": 4,
+        "queuedChunks": 0,
+        "draftedChunks": 3,
+        "skippedEmptyChunks": 0,
+        "noItemsFoundChunks": 1,
+        "needsReviewChunks": 0,
+        "failedChunks": 0,
+        "totalSourceChars": 1508,
+        "completedChunks": 4,
+        "allChunksTerminal": true
+      },
+      "queuedChunks": 0,
+      "allChunksTerminal": true,
+      "importComplete": true,
+      "warnings": []
+    },
+    "sourceEvidenceValidation": {
+      "checkedItems": 19,
+      "supportedItems": 18,
+      "weakItems": 0,
+      "unsupportedItems": 1,
+      "thinExtractionItems": 0,
+      "warnings": [
+        "Generated wording was not strongly supported by the extracted source text."
+      ]
+    },
+    "partialDraft": true,
+    "autoImportPlan": {
+      "mode": "auto_full",
+      "recommendedImportScope": "full_document",
+      "batchStrategy": "sequential_batches",
+      "batchCount": 4,
+      "batches": [
+        {
+          "batchIndex": 1,
+          "sourceLocations": [
+            "Slide 1"
+          ],
+          "pageNumbers": [
+            1
+          ],
+          "estimatedCharacters": 431,
+          "estimatedTokens": 144
+        },
+        {
+          "batchIndex": 2,
+          "sourceLocations": [
+            "Slide 2"
+          ],
+          "pageNumbers": [
+            2
+          ],
+          "estimatedCharacters": 470,
+          "estimatedTokens": 157
+        },
+        {
+          "batchIndex": 3,
+          "sourceLocations": [
+            "Slide 3"
+          ],
+          "pageNumbers": [
+            3
+          ],
+          "estimatedCharacters": 354,
+          "estimatedTokens": 118
+        },
+        {
+          "batchIndex": 4,
+          "sourceLocations": [
+            "Slide 4"
+          ],
+          "pageNumbers": [
+            4
+          ],
+          "estimatedCharacters": 253,
+          "estimatedTokens": 85
+        }
+      ],
+      "limits": {
+        "maxCharactersPerBatch": 1250,
+        "maxEstimatedTokensPerBatch": 417,
+        "availableMemoryMb": 76,
+        "totalMemoryMb": 8192
+      },
+      "warnings": [
+        "Available memory is low (76 MB). Automatically using smaller sequential chunks."
+      ],
+      "reason": "Available memory is low, so the planner reduced batch size and will process 4 sequential chunks automatically.",
+      "canOverride": true,
+      "inspection": {
+        "fileType": "pptx",
+        "originalFileName": "f70cab4b-6840-4741-bb61-3389f1d08cf9.pptx",
+        "rawFileSizeBytes": 32501,
+        "totalPageSlideSheetCount": 4,
+        "textBearingPageSlideSheetCount": 4,
+        "firstTextBearingPageSlideSheet": 1,
+        "totalExtractedCharacters": 1508,
+        "largestSectionCharacterCount": 470,
+        "estimatedTokenCount": 503,
+        "configuredImportModel": "gemma4:e2b"
+      }
+    }
+  },
+  "schemaVersion": "1.0.0",
+  "packId": "draft-industrialization-progressive-era-f70cab4b-6840-4741-bb61-3389f1d08cf9",
+  "version": "0.1.0-draft",
+  "title": "Industrialization Progressive Era",
+  "subject": "Teacher Uploaded Content",
+  "gradeLevel": "Teacher Review",
+  "status": "draft",
+  "reviewStatus": "pending"
+}

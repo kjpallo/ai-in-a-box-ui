@@ -88,7 +88,7 @@
       "exampleQuestion": "",
       "exampleAnswer": "",
       "standards": [],
-      "reviewStatus": "approved",
+      "reviewStatus": "rejected",
       "confidence": "low",
       "sourceFile": "3a487ac3-fc9d-4c39-93db-6f5ea64f1465.pdf",
       "sourceLocation": "Page 2",
@@ -112,7 +112,7 @@
       "related_concept_to_other": "Potential Energy",
       "related_concept_to_other_2": "Work",
       "vocabId": "vocab-potential-energy",
-      "reviewStatus": "approved",
+      "reviewStatus": "rejected",
       "confidence": "low",
       "notes": "Generated vocabulary ID during import normalization. Source evidence was filled from extraction defaults during import normalization; keep pending review.",
       "normalizationNotes": [
