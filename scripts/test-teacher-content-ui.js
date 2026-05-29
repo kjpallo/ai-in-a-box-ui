@@ -4,12 +4,15 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
 const projectRoot = path.join(__dirname, '..');
-const uiPath = path.join(projectRoot, 'public', 'teacher-content-ui.js');
+const uiEntryPath = path.join(projectRoot, 'public', 'teacher-content-ui.js');
+const uiIndexPath = path.join(projectRoot, 'public', 'teacher-content', 'index.js');
+const uiConstantsPath = path.join(projectRoot, 'public', 'teacher-content', 'constants.js');
 const stylePath = path.join(projectRoot, 'public', 'style.css');
 const packagePath = path.join(projectRoot, 'package.json');
 const routeTestPath = path.join(projectRoot, 'scripts', 'test-teacher-content-routes.js');
 
-const ui = read(uiPath);
+const uiEntry = read(uiEntryPath);
+const ui = `${read(uiConstantsPath)}\n${read(uiIndexPath)}`;
 const style = read(stylePath);
 const routeTest = read(routeTestPath);
 const pkg = JSON.parse(read(packagePath));
@@ -20,6 +23,7 @@ main().catch((error) => {
 });
 
 async function main() {
+  assertCompatibilityEntryLoadsModules();
   assertTwoPrimaryScreens();
   assertUploadScreenIsSimple();
   assertReviewScreenIsSimpleList();
@@ -42,6 +46,12 @@ async function main() {
   assertTeacherContentRouteTestsStillPass();
 
   console.log('Teacher content UI tests passed.');
+}
+
+function assertCompatibilityEntryLoadsModules() {
+  assert.match(uiEntry, /const MODULE_SCRIPTS = \[/, 'Compatibility entry should define ordered teacher-content module scripts.');
+  assert.match(uiEntry, /'\/teacher-content\/constants\.js'/, 'Compatibility entry should load constants module first.');
+  assert.match(uiEntry, /'\/teacher-content\/index\.js'/, 'Compatibility entry should load index module.');
 }
 
 function assertTwoPrimaryScreens() {
