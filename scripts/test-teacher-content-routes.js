@@ -2936,7 +2936,7 @@ async function assertCombinedApproveDedupesAndUpdatesExistingItem(handlers) {
     vocabulary: [
       {
         ...makeVocabularyItem('combined-dedupe-term', 'pending'),
-        studentDefinition: 'Version one'
+        studentDefinition: 'Version one says net force is the total force on an object.'
       }
     ],
     concepts: [],
@@ -2958,7 +2958,10 @@ async function assertCombinedApproveDedupesAndUpdatesExistingItem(handlers) {
   const combinedPackId = first.body.data.combinedPack.packId;
   const afterFirst = readKnowledgePack(approvedPacksDir, combinedPackId);
   assert.equal(afterFirst.vocabulary.filter((item) => item.term === 'combined-dedupe-term').length, 1);
-  assert.equal(afterFirst.vocabulary.find((item) => item.term === 'combined-dedupe-term').studentDefinition, 'Version one');
+  assert.equal(
+    afterFirst.vocabulary.find((item) => item.term === 'combined-dedupe-term').studentDefinition,
+    'Version one says net force is the total force on an object.'
+  );
 
   writeKnowledgePack(draftPacksDir, makePack({
     packId,
@@ -2966,7 +2969,7 @@ async function assertCombinedApproveDedupesAndUpdatesExistingItem(handlers) {
     vocabulary: [
       {
         ...makeVocabularyItem('combined-dedupe-term', 'pending'),
-        studentDefinition: 'Version two (edited)'
+        studentDefinition: 'Version two says net force is the sum of all forces acting on an object.'
       }
     ],
     concepts: [],
@@ -2989,7 +2992,11 @@ async function assertCombinedApproveDedupesAndUpdatesExistingItem(handlers) {
   const afterSecond = readKnowledgePack(approvedPacksDir, combinedPackId);
   const dedupedRows = afterSecond.vocabulary.filter((item) => item.term === 'combined-dedupe-term');
   assert.equal(dedupedRows.length, 1, 'same section + same term should not duplicate.');
-  assert.equal(dedupedRows[0].studentDefinition, 'Version two (edited)', 'later edited data should replace stale values when accepted again.');
+  assert.equal(
+    dedupedRows[0].studentDefinition,
+    'Version two says net force is the sum of all forces acting on an object.',
+    'later edited data should replace stale values when accepted again.'
+  );
 }
 
 async function assertCombinedApproveSelectedArchivesEmptiedDraftWhenApprovedPackIdDiffers(handlers) {
@@ -3710,7 +3717,7 @@ async function assertApproveDraftItemResolvesStableItemRefWhenIndexStale(handler
       edits: [
         {
           field: 'studentDefinition',
-          value: 'Stable-item-ref teacher wording.'
+          value: 'Stable item reference wording explains net force as the total force on an object.'
         }
       ],
       itemRef: {
@@ -3733,14 +3740,14 @@ async function assertApproveDraftItemResolvesStableItemRefWhenIndexStale(handler
     assert.equal(approve.body.data.debug.request.resolvedTarget.resolvedBy, 'itemRef');
     assert.equal(approve.body.data.debug.afterSnapshot.item.term, 'stable-target-term');
     assert.equal(approve.body.data.debug.afterSnapshot.item.reviewStatus, 'approved');
-    assert.equal(approve.body.data.debug.afterSnapshot.item.studentDefinition, 'Stable-item-ref teacher wording.');
+    assert.equal(approve.body.data.debug.afterSnapshot.item.studentDefinition, 'Stable item reference wording explains net force as the total force on an object.');
 
     const editedDraft = readKnowledgePack(draftPacksDir, packId);
     assert.equal(editedDraft.vocabulary[0].term, 'stale-index-first-term');
     assert.equal(editedDraft.vocabulary[0].reviewStatus, 'pending');
     assert.equal(editedDraft.vocabulary[1].term, 'stable-target-term');
     assert.equal(editedDraft.vocabulary[1].reviewStatus, 'approved');
-    assert.equal(editedDraft.vocabulary[1].studentDefinition, 'Stable-item-ref teacher wording.');
+    assert.equal(editedDraft.vocabulary[1].studentDefinition, 'Stable item reference wording explains net force as the total force on an object.');
     assert.equal(editedDraft.vocabulary[1].teacherVerified, true);
     assert.equal(editedDraft.vocabulary[1].manuallyEdited, true);
   } finally {
@@ -3854,7 +3861,7 @@ async function assertTeacherEditClearsLowConfidencePromotionBlock(handlers) {
 
     const edit = await request(handlers, 'PATCH', '/drafts/:packId/items/:section/:index', {
       field: 'studentDefinition',
-      value: 'Teacher-edited approved wording.'
+      value: 'Teacher-edited approved wording explains net force as the sum of forces on an object.'
     }, {
       packId,
       section: 'vocabulary',
@@ -3863,7 +3870,7 @@ async function assertTeacherEditClearsLowConfidencePromotionBlock(handlers) {
 
     assert.equal(edit.statusCode, 200);
     assert.equal(edit.body.success, true);
-    assert.equal(edit.body.data.report.draftPacketItems.vocabulary[0].studentDefinition, 'Teacher-edited approved wording.');
+    assert.equal(edit.body.data.report.draftPacketItems.vocabulary[0].studentDefinition, 'Teacher-edited approved wording explains net force as the sum of forces on an object.');
     const editedDraft = readKnowledgePack(draftPacksDir, packId);
     assert.equal(editedDraft.vocabulary[0].teacherVerified, true);
     assert.equal(editedDraft.vocabulary[0].manuallyEdited, true);
@@ -3878,7 +3885,7 @@ async function assertTeacherEditClearsLowConfidencePromotionBlock(handlers) {
     assert.equal(promotion.body.success, true);
     assert.equal(promotion.body.data.approved.activationEnabled, false);
     const promotedPack = readKnowledgePack(approvedPacksDir, packId);
-    assert.equal(promotedPack.vocabulary[0].studentDefinition, 'Teacher-edited approved wording.');
+    assert.equal(promotedPack.vocabulary[0].studentDefinition, 'Teacher-edited approved wording explains net force as the sum of forces on an object.');
   } finally {
     fs.rmSync(path.join(draftPacksDir, packId), { recursive: true, force: true });
     fs.rmSync(path.join(approvedPacksDir, packId), { recursive: true, force: true });

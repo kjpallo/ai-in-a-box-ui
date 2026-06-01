@@ -606,6 +606,9 @@ function makeVocabularyItem(term) {
   return {
     term,
     aliases: [],
+    studentDefinition: `${term} is a measurable science idea that helps students explain force and motion.`,
+    teacherDefinition: `${term} is used to describe force and motion in this standards-aligned unit.`,
+    misconception: 'Students may confuse net force with the size of one individual force.',
     standards: ['SAMPLE.PS.FORCES.1'],
     reviewStatus: 'approved',
     confidence: 'high',
