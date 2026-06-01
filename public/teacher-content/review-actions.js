@@ -16,9 +16,11 @@
       reviewItemKeyForItem,
       reviewItemKey,
       isReviewItemReadyForPack,
+      isReviewItemSelectableForAcceptSelected,
       getSelectedReviewItems,
       isReviewItemBlockingPromotion,
       getPromotionBlockingReviewItems,
+      getAcceptSelectedBlockersForItem,
       getPromotableApprovedReviewItemCount,
       formatNumber,
       buildReviewItemRef,
@@ -56,6 +58,64 @@
       window
     } = deps;
 
+    function escapeSelectorValue(value) {
+        return String(value || '').replace(/["\\]/g, '\\$&');
+      }
+
+    function captureReviewScrollSnapshot() {
+        const overlay = document.querySelector('#teacherContentOverlay');
+        const activeCard = document.querySelector('.teacher-content-card.active');
+        const tableBody = document.querySelector('.teacher-content-review-table-body');
+        return {
+          windowY: window.scrollY || 0,
+          overlayScrollTop: overlay ? overlay.scrollTop : null,
+          activeCardScrollTop: activeCard ? activeCard.scrollTop : null,
+          tableBodyScrollTop: tableBody ? tableBody.scrollTop : null
+        };
+      }
+
+    function restoreReviewScrollSnapshot(snapshot = {}) {
+        requestAnimationFrame(() => {
+          const overlay = document.querySelector('#teacherContentOverlay');
+          const activeCard = document.querySelector('.teacher-content-card.active');
+          const tableBody = document.querySelector('.teacher-content-review-table-body');
+          if (typeof snapshot.overlayScrollTop === 'number' && overlay) overlay.scrollTop = snapshot.overlayScrollTop;
+          if (typeof snapshot.activeCardScrollTop === 'number' && activeCard) activeCard.scrollTop = snapshot.activeCardScrollTop;
+          if (typeof snapshot.tableBodyScrollTop === 'number' && tableBody) tableBody.scrollTop = snapshot.tableBodyScrollTop;
+          if (typeof snapshot.windowY === 'number') {
+            window.scrollTo({ top: snapshot.windowY, left: 0, behavior: 'auto' });
+          }
+        });
+      }
+
+    function renderPreservingReviewScroll(options = {}) {
+        const snapshot = captureReviewScrollSnapshot();
+        const focusItemKey = String(options.focusItemKey || '').trim();
+        render();
+        restoreReviewScrollSnapshot(snapshot);
+        if (!focusItemKey) return;
+        requestAnimationFrame(() => {
+          const selector = `[data-review-selection-item-key="${escapeSelectorValue(focusItemKey)}"]`;
+          const nextCheckbox = document.querySelector(selector);
+          if (nextCheckbox && typeof nextCheckbox.focus === 'function') {
+            nextCheckbox.focus({ preventScroll: true });
+          }
+        });
+      }
+
+    function summarizeAcceptSelectedBlockers(items) {
+        const list = Array.isArray(items) ? items : [];
+        if (!list.length) return '';
+        const messages = list.slice(0, 3).map((item) => {
+          const label = getReviewItemPrimaryLabel(item);
+          const blockers = getAcceptSelectedBlockersForItem(item);
+          return `${label}: ${blockers.join('; ')}`;
+        });
+        const extra = list.length - messages.length;
+        if (extra > 0) messages.push(`${formatNumber(extra)} more selected row${extra === 1 ? '' : 's'} blocked.`);
+        return messages.join(' | ');
+      }
+
     function toggleSelectAllVisibleReviewItems() {
         const visible = getFilteredReviewItems(getVisibleReviewItems());
         const keys = visible.map((item) => reviewItemKeyForItem(item));
@@ -67,14 +127,14 @@
         });
         state.selectedReviewItemKeys = Array.from(selected);
         state.reviewBulkMessage = '';
-        render();
+        renderPreservingReviewScroll();
       }
     
     function clearReviewSelection() {
         if (!state.selectedReviewItemKeys.length) return;
         state.selectedReviewItemKeys = [];
         state.reviewBulkMessage = '';
-        render();
+        renderPreservingReviewScroll();
       }
     
     async function openReviewItem(button) {
@@ -132,17 +192,18 @@
         }
         state.selectedReviewItemKeys = Array.from(selected);
         state.reviewBulkMessage = '';
-        render();
+        renderPreservingReviewScroll({ focusItemKey: itemKey });
       }
     
     async function acceptSelectedReviewItems() {
         const visible = getFilteredReviewItems(getVisibleReviewItems());
         const selected = visible.filter((item) => state.selectedReviewItemKeys.includes(reviewItemKeyForItem(item)));
-        const safeItems = selected.filter(isReviewItemReadyForPack);
-        const skipped = Math.max(0, selected.length - safeItems.length);
-        if (!safeItems.length) {
+        const readyItems = selected.filter(isReviewItemSelectableForAcceptSelected);
+        const blockedItems = selected.filter((item) => !isReviewItemSelectableForAcceptSelected(item));
+        if (!readyItems.length) {
+          const blockedDetails = summarizeAcceptSelectedBlockers(blockedItems);
           state.reviewBulkMessage = selected.length
-            ? 'No selected rows are currently valid for acceptance. Edit or exclude blocked rows, then try again.'
+            ? `Accept Selected is blocked by selected rows: ${blockedDetails || 'selected rows still need edits or exclusion.'}`
             : 'No rows are selected for Accept Selected.';
           setStatus(state.reviewBulkMessage);
           render();
@@ -150,25 +211,27 @@
         }
     
         const confirmed = window.confirm(
-          `Accept ${formatNumber(safeItems.length)} selected valid row${safeItems.length === 1 ? '' : 's'} into one combined knowledge pack?`
+          `Accept ${formatNumber(readyItems.length)} selected valid row${readyItems.length === 1 ? '' : 's'} into one combined knowledge pack?`
         );
         if (!confirmed) return;
-    
-        await acceptReviewItems(safeItems, {
+
+        await acceptReviewItems(readyItems, {
           actionLabel: 'Accept Selected',
           mode: 'selected',
-          skipped,
-          doneMessage: `Accepted ${formatNumber(safeItems.length)} selected valid row${safeItems.length === 1 ? '' : 's'} into one combined knowledge pack.`
+          skipped: blockedItems.length,
+          doneMessage: `Accepted ${formatNumber(readyItems.length)} selected valid row${readyItems.length === 1 ? '' : 's'} into one combined knowledge pack.`
         });
       }
-    
+
     function explainDisabledAcceptSelected() {
-        const items = getVisibleReviewItemsForPack(state.selectedDraftPackId);
-        const selected = items.filter((item) => state.selectedReviewItemKeys.includes(reviewItemKeyForItem(item)));
-        const safeItems = selected.filter(isReviewItemReadyForPack);
-        if (safeItems.length > 0) return;
+        const visible = getFilteredReviewItems(getVisibleReviewItems());
+        const selected = visible.filter((item) => state.selectedReviewItemKeys.includes(reviewItemKeyForItem(item)));
+        const readyItems = selected.filter(isReviewItemSelectableForAcceptSelected);
+        if (readyItems.length > 0) return;
+        const blockedItems = selected.filter((item) => !isReviewItemSelectableForAcceptSelected(item));
+        const blockedDetails = summarizeAcceptSelectedBlockers(blockedItems);
         state.reviewBulkMessage = selected.length
-          ? `Accept Selected is unavailable because the selected item${selected.length === 1 ? '' : 's'} cannot be included as-is. Edit missing required fields/source evidence or choose Delete.`
+          ? `Accept Selected is unavailable. Blocking selected rows: ${blockedDetails || 'selected rows still need edits or exclusion.'}`
           : 'Select at least one valid row before using Accept Selected.';
         setStatus(state.reviewBulkMessage);
         render();
@@ -356,7 +419,7 @@
         const finalPublish = mode === 'final_publish';
         const readyItems = finalPublish
           ? []
-          : (Array.isArray(items) ? items : []).filter(isReviewItemReadyForPack);
+          : (Array.isArray(items) ? items : []).filter(isReviewItemSelectableForAcceptSelected);
         if (!finalPublish && !readyItems.length) return;
         state.reviewActionLoading = true;
         state.errors = [];

@@ -44,6 +44,8 @@
       formatConfidence,
       findPendingItemByKey,
       selectedReviewItemsHaveBlockers,
+      isReviewItemSelectableForAcceptSelected,
+      getAcceptSelectedBlockersForItem,
       hasMissingRequiredReviewFields,
       isItemNeedingTeacherReview
     } = deps;
@@ -605,33 +607,34 @@
     
     function renderReviewActionBar(items, reviewState = getReviewStateSnapshot()) {
         if (isCurrentSelectedDraftAccepted()) return '';
-        const totalSelected = state.selectedReviewItemKeys.length;
         const visible = Array.isArray(items) ? items : [];
         const allRows = Array.isArray(reviewState.reviewableItems) ? reviewState.reviewableItems : getVisibleReviewItems();
         const selectedRows = allRows.filter((item) => state.selectedReviewItemKeys.includes(reviewItemKeyForItem(item)));
+        const totalSelected = selectedRows.length;
         const visibleKeys = visible.map((item) => reviewItemKeyForItem(item));
         const allVisibleSelected = visibleKeys.length > 0 && visibleKeys.every((key) => state.selectedReviewItemKeys.includes(key));
-        const safeSelected = selectedRows.filter(isReviewItemReadyForPack).length;
+        const selectedReady = selectedRows.filter(isReviewItemSelectableForAcceptSelected).length;
+        const selectedNeedsEdit = Math.max(0, selectedRows.length - selectedReady);
         const safeAll = visible.filter(isReviewItemReadyForPack).length;
-        const skippedAll = Math.max(0, visible.length - safeAll);
-        const acceptSelectedDisabled = state.reviewActionLoading || state.promotionActionLoading || selectedRows.length === 0 || safeSelected === 0;
+        const acceptSelectedDisabled = state.reviewActionLoading || state.promotionActionLoading || selectedRows.length === 0 || selectedReady === 0;
         const acceptAllDisabled = state.reviewActionLoading || state.promotionActionLoading;
-        const excludeSelectedDisabled = state.reviewActionLoading || state.promotionActionLoading || totalSelected === 0;
-        const acceptSelectedTitle = safeSelected > 0
+        const excludeSelectedDisabled = state.reviewActionLoading || state.promotionActionLoading || selectedRows.length === 0;
+        const blockingDetails = summarizeAcceptSelectedBlockingDetails(selectedRows.filter((item) => !isReviewItemSelectableForAcceptSelected(item)));
+        const acceptSelectedTitle = selectedReady > 0
           ? 'Save checked valid rows into one combined knowledge pack.'
           : selectedReviewItemsHaveBlockers()
-            ? 'Selected rows need edits or should be excluded before they can be included.'
+            ? `Accept Selected is blocked by: ${blockingDetails || 'selected rows that still need edits or exclusion.'}`
             : 'Check at least one valid row to save into one combined knowledge pack.';
         const acceptAllTitle = 'Publish this draft into one combined knowledge pack (skips rejected and structurally unusable rows).';
         return `
           <section class="teacher-content-review-action-bar" data-review-bottom-action-bar>
             <div>
               <strong data-review-selected-count>${formatNumber(totalSelected)} selected</strong>
-              <span data-review-valid-selected-count>${formatNumber(safeSelected)} selected row${safeSelected === 1 ? '' : 's'} ready for the pack</span>
+              <span data-review-valid-selected-count>${formatNumber(selectedReady)} selected row${selectedReady === 1 ? '' : 's'} ready for Accept Selected</span>
+              <span data-review-selected-needs-edit-count>${formatNumber(selectedNeedsEdit)} selected row${selectedNeedsEdit === 1 ? '' : 's'} need edit or exclusion</span>
               <span data-review-valid-all-count>${formatNumber(safeAll)} visible row${safeAll === 1 ? '' : 's'} ready for the pack</span>
-              ${skippedAll ? `<small data-review-skipped-available-count>${formatNumber(skippedAll)} visible row${skippedAll === 1 ? '' : 's'} need edit or delete before they can be included.</small>` : ''}
               <small data-review-approved-pack-note>Accept creates a saved JSON knowledge pack. It stays disabled for student answers until enabled from Saved Knowledge Packs.</small>
-              ${safeSelected === 0 && totalSelected > 0 ? `<small data-review-accept-selected-disabled-reason>${escapeHtml(acceptSelectedTitle)}</small>` : ''}
+              ${selectedReady === 0 && totalSelected > 0 ? `<small data-review-accept-selected-disabled-reason>${escapeHtml(acceptSelectedTitle)}</small>` : ''}
             </div>
             <div class="teacher-content-review-action-buttons">
               <button type="button" class="small-button secondary-small" data-review-select-all>${allVisibleSelected ? 'Unselect visible' : 'Select all visible'}</button>
@@ -643,6 +646,24 @@
             </div>
           </section>
         `;
+      }
+
+    function summarizeAcceptSelectedBlockingDetails(blockedItems) {
+        const list = Array.isArray(blockedItems) ? blockedItems : [];
+        if (!list.length) return '';
+        const details = list.slice(0, 3).map((item) => {
+          const label = getReviewItemPrimaryLabel(item);
+          const blockers = getAcceptSelectedBlockersForItem(item);
+          const reason = blockers.length
+            ? blockers.join('; ')
+            : 'needs review before acceptance';
+          return `${label}: ${reason}`;
+        });
+        const extraCount = list.length - details.length;
+        if (extraCount > 0) {
+          details.push(`${formatNumber(extraCount)} more selected row${extraCount === 1 ? '' : 's'} blocked`);
+        }
+        return details.join(' | ');
       }
     
     function getDraftItemWording(item) {

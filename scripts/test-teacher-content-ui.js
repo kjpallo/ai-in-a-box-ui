@@ -33,6 +33,8 @@ async function main() {
   assertReviewScreenIsSimpleList();
   assertReviewAggregatesAllQueuePacks();
   assertReviewScreenUsesReviewActionFooter();
+  assertReviewSelectionPreservesScroll();
+  assertSelectedLowConfidenceRowsCanBeAccepted();
   assertReviewAcceptanceRequiresApprovedCounterpart();
   assertFinalApproveUsesCombinedFinalPublish();
   assertAcceptSelectedUsesCombinedPackApproval();
@@ -111,7 +113,8 @@ function assertReviewScreenIsSimpleList() {
   assert.match(actionBar, /data-review-accept-all/, 'Bottom bar should include Accept All.');
   assert.match(actionBar, /Accept All Valid/, 'Bottom bar should include Accept All Valid copy.');
   assert.doesNotMatch(actionBar, /data-review-exclude-selected-flagged|data-review-reject-blockers-promote/, 'Bottom bar should not show old bulk technical actions.');
-  assert.match(style, /\.teacher-content-review-table-shell\[data-review-combined-table\] \.teacher-content-review-table-head,\s*\.teacher-content-review-table-shell\[data-review-combined-table\] \.teacher-content-review-table-row \{[\s\S]*grid-template-columns: 34px minmax\(170px, 1fr\) minmax\(120px, 0\.7fr\) minmax\(150px, 0\.8fr\) minmax\(250px, 1\.5fr\) minmax\(200px, 1\.1fr\) auto;/, 'Review rows should use combined table columns.');
+  assert.match(style, /\.teacher-content-review-table-shell\[data-review-combined-table\] \.teacher-content-review-table-head,\s*\.teacher-content-review-table-shell\[data-review-combined-table\] \.teacher-content-review-table-row \{[\s\S]*grid-template-columns: 30px minmax\(150px, 0\.95fr\) minmax\(96px, 0\.6fr\) minmax\(130px, 0\.78fr\) minmax\(210px, 1\.22fr\) minmax\(190px, 0\.98fr\) auto;/, 'Review rows should use compact combined table columns.');
+  assert.match(style, /\.teacher-content-review-table-body \{[\s\S]*max-height: min\(58vh, 620px\);/, 'Review list should show multiple rows with a taller scroll area.');
 }
 
 function assertReviewAggregatesAllQueuePacks() {
@@ -171,8 +174,39 @@ function assertReviewScreenUsesReviewActionFooter() {
   assert.match(selectAllVisible, /else selected\.add\(key\)/, 'Select all visible should add all visible row keys when needed.');
   assert.match(setSort, /state\.reviewSortDirection = state\.reviewSortDirection === 'asc' \? 'desc' : 'asc'/, 'Sort controls should toggle direction when the same column is selected.');
   assert.match(clearSelection, /state\.selectedReviewItemKeys = \[\]/, 'Clear selection should clear selected row keys.');
-  assert.match(actionBar, /const acceptSelectedDisabled = state\.reviewActionLoading \|\| state\.promotionActionLoading \|\| selectedRows\.length === 0 \|\| safeSelected === 0/, 'Accept Selected should stay disabled until at least one valid selected row is checked.');
+  assert.match(actionBar, /const acceptSelectedDisabled = state\.reviewActionLoading \|\| state\.promotionActionLoading \|\| selectedRows\.length === 0 \|\| selectedReady === 0/, 'Accept Selected should stay disabled until at least one selected row is ready.');
   assert.match(actionBar, /const acceptAllDisabled = state\.reviewActionLoading \|\| state\.promotionActionLoading/, 'Accept All should only be disabled while actions are in progress.');
+  assert.match(actionBar, /data-review-selected-needs-edit-count/, 'Review footer should include selected rows that still need edits/exclusion.');
+}
+
+function assertReviewSelectionPreservesScroll() {
+  const updateSelection = extractFunctionSource(reviewActions, 'updateReviewSelection');
+  const selectAllVisible = extractFunctionSource(reviewActions, 'toggleSelectAllVisibleReviewItems');
+  const clearSelection = extractFunctionSource(reviewActions, 'clearReviewSelection');
+  const renderPreservingScroll = extractFunctionSource(reviewActions, 'renderPreservingReviewScroll');
+  const captureSnapshot = extractFunctionSource(reviewActions, 'captureReviewScrollSnapshot');
+  const restoreSnapshot = extractFunctionSource(reviewActions, 'restoreReviewScrollSnapshot');
+
+  assert.match(updateSelection, /renderPreservingReviewScroll\(\{ focusItemKey: itemKey \}\)/, 'Checkbox toggles should preserve review scroll position.');
+  assert.match(selectAllVisible, /renderPreservingReviewScroll\(\)/, 'Select all visible should preserve review scroll position.');
+  assert.match(clearSelection, /renderPreservingReviewScroll\(\)/, 'Clear selection should preserve review scroll position.');
+  assert.match(captureSnapshot, /teacher-content-review-table-body/, 'Scroll snapshot should include review table body position.');
+  assert.match(restoreSnapshot, /tableBody\.scrollTop = snapshot\.tableBodyScrollTop/, 'Scroll restore should reset review table body position.');
+  assert.match(restoreSnapshot, /window\.scrollTo\(\{ top: snapshot\.windowY/, 'Scroll-preserving render should restore window scroll position.');
+}
+
+function assertSelectedLowConfidenceRowsCanBeAccepted() {
+  const acceptSelected = extractFunctionSource(reviewActions, 'acceptSelectedReviewItems');
+  const acceptReviewItems = extractFunctionSource(reviewActions, 'acceptReviewItems');
+  const explainDisabled = extractFunctionSource(reviewActions, 'explainDisabledAcceptSelected');
+  const selectableHelper = extractFunctionSource(ui, 'isReviewItemSelectableForAcceptSelected');
+  const blockersHelper = extractFunctionSource(ui, 'getAcceptSelectedBlockersForItem');
+
+  assert.match(acceptSelected, /selected\.filter\(isReviewItemSelectableForAcceptSelected\)/, 'Accept Selected should treat selected low-confidence-only rows as ready after teacher selection.');
+  assert.match(acceptReviewItems, /\.filter\(isReviewItemSelectableForAcceptSelected\)/, 'Combined selected acceptance should use the selected-row readiness helper.');
+  assert.match(blockersHelper, /isLowConfidenceOnlyPromotionBlockers\(approvalTargetBlockers\)/, 'Accept-selected blockers should clear low-confidence-only rows for teacher-verified selection.');
+  assert.match(selectableHelper, /return getAcceptSelectedBlockersForItem\(item\)\.length === 0/, 'Row readiness for Accept Selected should depend on selected-row blocker helper.');
+  assert.match(explainDisabled, /Blocking selected rows:/, 'Disabled Accept Selected message should name the selected blocking rows.');
 }
 
 function assertReviewAcceptanceRequiresApprovedCounterpart() {

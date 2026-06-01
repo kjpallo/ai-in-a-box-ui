@@ -96,6 +96,8 @@
       formatConfidence,
       findPendingItemByKey,
       selectedReviewItemsHaveBlockers,
+      isReviewItemSelectableForAcceptSelected,
+      getAcceptSelectedBlockersForItem,
       hasMissingRequiredReviewFields,
       isItemNeedingTeacherReview
     })
@@ -199,9 +201,11 @@
       reviewItemKeyForItem,
       reviewItemKey,
       isReviewItemReadyForPack,
+      isReviewItemSelectableForAcceptSelected,
       getSelectedReviewItems,
       isReviewItemBlockingPromotion,
       getPromotionBlockingReviewItems,
+      getAcceptSelectedBlockersForItem,
       getPromotableApprovedReviewItemCount,
       formatNumber,
       buildReviewItemRef,
@@ -3950,6 +3954,36 @@
     return isReviewItemSafeToAccept(item) || isApprovedReviewItemSafeForPromotion(item);
   }
 
+  function isLowConfidenceOnlyPromotionBlockers(blockers) {
+    return Array.isArray(blockers)
+      && blockers.length > 0
+      && blockers.every((blocker) => /teacher verification:\s*low confidence/i.test(String(blocker || '')));
+  }
+
+  function getAcceptSelectedBlockersForItem(item) {
+    if (!item || typeof item !== 'object') return ['Draft item is not valid for acceptance.'];
+    if (isReviewItemReadyForPack(item)) return [];
+
+    const status = getItemReviewWorkflowStatus(item);
+    if (isPendingReviewStatus(status)) {
+      const approvalTargetBlockers = getReviewItemPromotionBlockers({ ...item, reviewStatus: 'approved' });
+      if (isLowConfidenceOnlyPromotionBlockers(approvalTargetBlockers)) {
+        return [];
+      }
+      return approvalTargetBlockers;
+    }
+
+    if (status === 'approved') {
+      return getReviewItemPromotionBlockers(item);
+    }
+
+    return ['Row is not ready for acceptance yet.'];
+  }
+
+  function isReviewItemSelectableForAcceptSelected(item) {
+    return getAcceptSelectedBlockersForItem(item).length === 0;
+  }
+
   function canTeacherApproveBlockedItem(item) {
     if (!item || !isPendingReviewStatus(getItemReviewWorkflowStatus(item))) return false;
     const blockers = getReviewItemPromotionBlockers({ ...item, reviewStatus: 'approved' });
@@ -3996,7 +4030,7 @@
 
   function selectedReviewItemsHaveBlockers() {
     const selected = getSelectedReviewItems();
-    return selected.some((item) => getReviewItemPromotionBlockers(item).length > 0 || !isReviewItemSafeToAccept(item));
+    return selected.some((item) => getAcceptSelectedBlockersForItem(item).length > 0);
   }
 
   function getSelectedReviewItems() {

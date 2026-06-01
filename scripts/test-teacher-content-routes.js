@@ -145,6 +145,8 @@ async function main() {
     await assertSelectedOnlyPromotionUsesOnlySelectedRows(handlers);
     await assertCombinedApproveAllValidAcrossMultipleDrafts(handlers);
     await assertCombinedApproveSelectedAcrossMultipleDrafts(handlers);
+    await assertCombinedApproveSelectedAllowsTeacherVerifiedLowConfidenceRows(handlers);
+    await assertCombinedApproveSelectedStillBlocksMissingRequiredOrUnsafeRows(handlers);
     await assertCombinedApproveSelectedArchivesEmptiedDraftWhenApprovedPackIdDiffers(handlers);
     await assertCombinedApproveDedupesAndUpdatesExistingItem(handlers);
     await assertCombinedApproveRejectsUnsafePackIds(handlers);
@@ -2975,6 +2977,114 @@ async function assertCombinedApproveSelectedAcrossMultipleDrafts(handlers) {
     'selected combined approval should archive source drafts that are fully emptied by accepted rows.'
   );
   assert.equal(fs.existsSync(path.join(draftPacksDir, packTwoId, 'knowledge_pack.json')), false, 'fully accepted source draft should be archived from active draft-packs.');
+}
+
+async function assertCombinedApproveSelectedAllowsTeacherVerifiedLowConfidenceRows(handlers) {
+  const packId = 'route-combined-selected-low-confidence-pack';
+  writeKnowledgePack(draftPacksDir, makePack({
+    packId,
+    title: 'Combined Low Confidence',
+    vocabulary: [
+      {
+        ...makeVocabularyItem('dna', 'pending'),
+        studentDefinition: 'Molecule that stores genetic instructions.',
+        confidence: 'low',
+        sourceGrounding: {
+          status: 'supported',
+          termOrTitleFound: true,
+          explanationSupported: true
+        }
+      },
+      makeVocabularyItem('gene', 'pending')
+    ],
+    concepts: [],
+    referenceFormulas: [],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+
+  const response = await request(handlers, 'POST', '/review/approve-combined', {
+    mode: 'selected',
+    reviewBatchName: 'Combined Low Confidence Batch',
+    reviewBatchPackIds: [packId],
+    rows: [
+      { draftPackId: packId, section: 'vocabulary', index: 0 }
+    ]
+  });
+
+  assert.equal(response.statusCode, 200, JSON.stringify(response.body));
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.data.acceptedCount, 1);
+  assert.equal(response.body.data.skipped.blocked, 0, 'low-confidence-only selected rows should be teacher-verifiable on acceptance.');
+  const combinedPackId = response.body.data.combinedPack.packId;
+  const combined = readKnowledgePack(approvedPacksDir, combinedPackId);
+  const acceptedDna = combined.vocabulary.find((item) => item.term === 'dna');
+  assert.ok(acceptedDna, 'selected low-confidence row should be in the combined pack.');
+  assert.equal(acceptedDna.teacherVerified, true, 'selected low-confidence row should be stamped as teacher verified.');
+  assert.equal(String(acceptedDna.confidenceOverride || '').toLowerCase(), 'teacher_verified');
+
+  const remainingDraft = readKnowledgePack(draftPacksDir, packId);
+  assert.equal(remainingDraft.vocabulary.some((item) => item.term === 'dna'), false, 'accepted selected row should be removed from active draft queue.');
+  assert.equal(remainingDraft.vocabulary.some((item) => item.term === 'gene'), true, 'unselected rows should remain in draft queue.');
+}
+
+async function assertCombinedApproveSelectedStillBlocksMissingRequiredOrUnsafeRows(handlers) {
+  const packId = 'route-combined-selected-blocked-rows-pack';
+  writeKnowledgePack(draftPacksDir, makePack({
+    packId,
+    title: 'Combined Blocked Rows',
+    vocabulary: [
+      {
+        ...makeVocabularyItem('codon', 'pending'),
+        confidence: 'low',
+        sourceGrounding: {
+          status: 'supported',
+          termOrTitleFound: true,
+          explanationSupported: true
+        }
+      },
+      {
+        ...makeVocabularyItem('sequence-notes', 'pending'),
+        sourceTextSnippet: ''
+      },
+      {
+        ...makeVocabularyItem('depending-on-the-situation', 'pending'),
+        repairStatus: 'repair_failed'
+      }
+    ],
+    concepts: [],
+    referenceFormulas: [],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+
+  const response = await request(handlers, 'POST', '/review/approve-combined', {
+    mode: 'selected',
+    reviewBatchName: 'Combined Blocked Rows Batch',
+    reviewBatchPackIds: [packId],
+    rows: [
+      { draftPackId: packId, section: 'vocabulary', index: 0 },
+      { draftPackId: packId, section: 'vocabulary', index: 1 },
+      { draftPackId: packId, section: 'vocabulary', index: 2 }
+    ]
+  });
+
+  assert.equal(response.statusCode, 200, JSON.stringify(response.body));
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.data.acceptedCount, 1, 'only low-confidence-only selected row should pass.');
+  assert.equal(response.body.data.skipped.blocked, 2, 'rows with real blockers must still be blocked.');
+  const combinedPackId = response.body.data.combinedPack.packId;
+  const combined = readKnowledgePack(approvedPacksDir, combinedPackId);
+  assert.equal(combined.vocabulary.some((item) => item.term === 'codon'), true);
+  assert.equal(combined.vocabulary.some((item) => item.term === 'sequence-notes'), false, 'missing-source rows must remain blocked.');
+  assert.equal(combined.vocabulary.some((item) => item.term === 'depending-on-the-situation'), false, 'repair-failed rows must remain blocked.');
+
+  const remainingDraft = readKnowledgePack(draftPacksDir, packId);
+  assert.equal(remainingDraft.vocabulary.some((item) => item.term === 'codon'), false);
+  assert.equal(remainingDraft.vocabulary.some((item) => item.term === 'sequence-notes'), true);
+  assert.equal(remainingDraft.vocabulary.some((item) => item.term === 'depending-on-the-situation'), true);
 }
 
 async function assertCombinedApproveDedupesAndUpdatesExistingItem(handlers) {

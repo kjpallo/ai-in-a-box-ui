@@ -3482,10 +3482,10 @@ button:disabled {
 .teacher-content-review-table-shell[data-review-combined-table] .teacher-content-review-table-head,
 .teacher-content-review-table-shell[data-review-combined-table] .teacher-content-review-table-row {
   display: grid;
-  grid-template-columns: 34px minmax(170px, 1fr) minmax(120px, 0.7fr) minmax(150px, 0.8fr) minmax(250px, 1.5fr) minmax(200px, 1.1fr) auto;
-  gap: 10px;
+  grid-template-columns: 30px minmax(150px, 0.95fr) minmax(96px, 0.6fr) minmax(130px, 0.78fr) minmax(210px, 1.22fr) minmax(190px, 0.98fr) auto;
+  gap: 8px;
   align-items: start;
-  padding: 10px;
+  padding: 8px 10px;
 }
 
 .teacher-content-review-table-shell[data-review-combined-table] .teacher-content-review-table-head {
@@ -3521,7 +3521,7 @@ button:disabled {
 }
 
 .teacher-content-review-table-body {
-  max-height: min(42vh, 430px);
+  max-height: min(58vh, 620px);
   overflow: auto;
 }
 
@@ -3530,6 +3530,7 @@ button:disabled {
   border-left: 1px solid rgba(255, 255, 255, 0.07);
   border-right: 1px solid rgba(255, 255, 255, 0.07);
   background: rgba(0, 0, 0, 0.16);
+  line-height: 1.25;
 }
 
 .teacher-content-review-table-shell[data-review-combined-table] .teacher-content-review-table-row:last-child {
@@ -3559,8 +3560,12 @@ button:disabled {
 }
 
 .teacher-content-review-wording p {
-  font-size: 0.8rem;
+  font-size: 0.76rem;
   color: #dff3ee;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .teacher-content-review-source {
@@ -3576,7 +3581,8 @@ button:disabled {
 
 .teacher-content-review-status {
   display: grid;
-  gap: 4px;
+  gap: 3px;
+  font-size: 0.74rem;
 }
 
 .teacher-content-review-table-shell[data-review-combined-table] .teacher-content-review-table-row .teacher-content-review-select-control {
@@ -3594,7 +3600,7 @@ button:disabled {
   display: flex;
   justify-content: flex-start;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 
 .teacher-content-review-advanced-details {
@@ -3750,19 +3756,19 @@ button:disabled {
   position: static;
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
   justify-content: space-between;
   border: 1px solid rgba(241, 159, 76, 0.32);
   border-radius: 12px;
-  padding: 12px;
+  padding: 10px 12px;
   background: rgba(20, 18, 14, 0.82);
   box-shadow: none;
 }
 
 .teacher-content-review-action-bar > div:first-child {
   display: grid;
-  gap: 4px;
+  gap: 3px;
   min-width: 220px;
 }
 
@@ -3773,6 +3779,7 @@ button:disabled {
 .teacher-content-review-action-bar span,
 .teacher-content-review-action-bar small {
   color: #d8eee9;
+  font-size: 0.76rem;
 }
 
 .teacher-content-review-action-buttons {
