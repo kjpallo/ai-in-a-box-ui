@@ -797,19 +797,38 @@ async function storeAndExtractUpload(upload, options = {}) {
   fs.writeFileSync(storedFilePath, upload.buffer);
 
   const extraction = await extractTextFromFile(storedFilePath);
+  const extractionWithOriginalSource = {
+    ...extraction,
+    sections: Array.isArray(extraction.sections)
+      ? extraction.sections.map((section) => ({
+          ...section,
+          sourceFile: firstNonEmptyString(originalFileName, section && section.sourceFile)
+        }))
+      : [],
+    pages: Array.isArray(extraction.pages)
+      ? extraction.pages.map((page) => ({
+          ...page,
+          sourceFile: firstNonEmptyString(originalFileName, page && page.sourceFile)
+        }))
+      : [],
+    metadata: {
+      ...(extraction.metadata || {}),
+      originalFileName
+    }
+  };
   const extractionWarnings = [
     ...(detection.warnings || []),
     ...(extraction.warnings || [])
   ];
   const autoImportPlan = planTeacherContentImport({
-    extraction,
+    extraction: extractionWithOriginalSource,
     fileSizeBytes: upload.buffer.length,
     settings: options,
     memory: options.systemMemory
   });
-  const sourceManifest = makeSourceManifestFromExtraction(extraction);
+  const sourceManifest = makeSourceManifestFromExtraction(extractionWithOriginalSource);
   const extractionWithUploadMetadata = {
-    ...extraction,
+    ...extractionWithOriginalSource,
     upload: {
       uploadId,
       originalFileName,
@@ -830,10 +849,10 @@ async function storeAndExtractUpload(upload, options = {}) {
       storedFileName,
       extractionJsonFileName,
       fileType: detection.type,
-      characterCount: extraction.text.length,
-      pageCount: Number(extraction.metadata && extraction.metadata.pageCount || 0),
-      sectionsCount: extraction.sections.length,
-      tablesCount: extraction.tables.length,
+      characterCount: extractionWithOriginalSource.text.length,
+      pageCount: Number(extractionWithOriginalSource.metadata && extractionWithOriginalSource.metadata.pageCount || 0),
+      sectionsCount: extractionWithOriginalSource.sections.length,
+      tablesCount: extractionWithOriginalSource.tables.length,
       sourceManifest,
       warnings: extractionWarnings,
       errors: extraction.errors || [],

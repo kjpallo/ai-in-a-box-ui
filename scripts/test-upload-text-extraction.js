@@ -34,6 +34,7 @@ async function main() {
     await assertBlankPdfWarning();
     await assertUnsupportedExtension();
     await assertShortExtractionWarning();
+    await assertCleanupRemovesJunkAndKeepsTeachingContent();
   } finally {
     cleanupTempRoot();
   }
@@ -51,10 +52,11 @@ async function assertTxtExtraction() {
   assert.equal(result.extension, '.txt');
   assert.equal(result.mimeGuess, 'text/plain');
   assert.ok(result.text.includes('Balanced forces'));
-  assert.deepEqual(result.sections[0], {
-    label: 'Full Text',
-    text: result.text
-  });
+  assert.equal(result.sections[0].label, 'Full Text');
+  assert.equal(result.sections[0].sourceLocation, 'Full Text');
+  assert.equal(result.sections[0].sourceFile, 'sample.txt');
+  assert.equal(result.sections[0].chunkIndex, 1);
+  assert.equal(result.sections[0].text, result.text);
 }
 
 async function assertCsvExtraction() {
@@ -102,7 +104,8 @@ async function assertXlsxExtraction() {
 
   assert.equal(result.success, true, result.errors.join('\n'));
   assert.equal(result.extension, '.xlsx');
-  assert.ok(result.text.includes('Sheet: Physics'));
+  assert.ok(result.text.includes('Force | newton'));
+  assert.equal(result.sections[0].label, 'Physics');
   assert.equal(result.tables.length, 1);
   assert.equal(result.tables[0].label, 'Physics');
   assert.deepEqual(result.tables[0].rows[2], ['Mass', 'kilogram']);
@@ -160,12 +163,11 @@ async function assertPptxExtraction() {
   assert.equal(result.metadata.firstTextSlide, 2);
   assert.equal(result.metadata.hasImagesOrMedia, true);
   assert.equal(result.sections.length, 3);
-  assert.deepEqual(result.sections[0], {
-    label: 'Slide 1',
-    sourceLocation: 'Slide 1',
-    pageNumber: 1,
-    text: ''
-  });
+  assert.equal(result.sections[0].label, 'Slide 1');
+  assert.equal(result.sections[0].sourceLocation, 'Slide 1');
+  assert.equal(result.sections[0].sourceFile, 'sample.pptx');
+  assert.equal(result.sections[0].pageNumber, 1);
+  assert.equal(result.sections[0].text, '');
   assert.equal(result.pages[1].label, 'Slide 2');
   assert.ok(result.text.indexOf('Kinetic energy') < result.text.indexOf('Potential energy'));
   assert.ok(result.text.includes('Formula: KE = 1/2mv^2.'));
@@ -254,6 +256,45 @@ async function assertShortExtractionWarning() {
 
   assert.equal(result.success, true, result.errors.join('\n'));
   assert.ok(result.warnings.some((warning) => warning.includes('very short')));
+}
+
+async function assertCleanupRemovesJunkAndKeepsTeachingContent() {
+  const sourcePath = path.join(tempRoot, 'cleanup-chunking.txt');
+  fs.writeFileSync(sourcePath, [
+    'Unit 3 Motion and Forces',
+    'Page 1',
+    'UNIT 3 MOTION AND FORCES',
+    '',
+    'VOCABULARY',
+    'Net force: The total force acting on an object.',
+    '',
+    'Page 2',
+    'UNIT 3 MOTION AND FORCES',
+    '',
+    'WORKSHEET SECTION:',
+    'Balanced forces cancel and result in no acceleration.',
+    '1',
+    '',
+    'Page 3',
+    'UNIT 3 MOTION AND FORCES',
+    '',
+    'CORE CONCEPT',
+    'Unbalanced forces change an object\'s motion.'
+  ].join('\n'));
+
+  const result = await extractTextFromFile(sourcePath);
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  assert.equal(result.sections.length >= 2, true, 'cleanup should create meaningful heading sections when present');
+  assert.ok(result.text.includes('Net force: The total force acting on an object.'));
+  assert.ok(result.text.includes('Balanced forces cancel and result in no acceleration.'));
+  assert.ok(result.text.includes('Unbalanced forces change an object\'s motion.'));
+  assert.equal(result.text.includes('Page 1'), false, 'standalone page labels should be removed');
+  assert.equal(result.text.includes('Page 2'), false, 'standalone page labels should be removed');
+  assert.equal(result.text.includes('UNIT 3 MOTION AND FORCES'), false, 'repeated title rows should be removed');
+  assert.equal(result.text.includes('\n1\n'), false, 'standalone page number fragments should be removed');
+  assert.equal(result.sections.every((section, index) => section.chunkIndex === index + 1), true);
+  assert.equal(result.sections.every((section) => section.sourceFile === 'cleanup-chunking.txt'), true);
 }
 
 async function writeMinimalDocx(filePath, paragraphs) {

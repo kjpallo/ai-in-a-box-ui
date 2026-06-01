@@ -84,6 +84,7 @@ async function main() {
   try {
     await assertDashboardEndpoint(handlers);
     await assertSuccessfulTxtUploadExtraction(handlers);
+    await assertUploadExtractionCleanupAndChunkMetadata(handlers);
     await assertUnsupportedUploadExtensionFails(handlers);
     await assertUnsafeUploadFilenameIsSanitized(handlers);
     await assertDraftsEndpoint(handlers);
@@ -1592,6 +1593,54 @@ async function assertSuccessfulTxtUploadExtraction(handlers) {
 
   assert.deepEqual(snapshotFiles(draftPacksDir), draftFilesBefore, 'upload extraction should not create or modify draft packs');
   assert.deepEqual(snapshotFiles(realApprovedPacksDir), approvedFilesBefore, 'upload extraction should not modify real approved packs');
+}
+
+async function assertUploadExtractionCleanupAndChunkMetadata(handlers) {
+  const response = await requestMultipart(handlers, '/uploads/extract', {
+    fileName: 'cleanup_teacher_packet.txt',
+    contentType: 'text/plain',
+    content: [
+      'Unit 3 Motion and Forces',
+      'Page 1',
+      'UNIT 3 MOTION AND FORCES',
+      '',
+      'VOCABULARY',
+      'Net force: The total force acting on an object.',
+      '',
+      'Page 2',
+      'UNIT 3 MOTION AND FORCES',
+      '',
+      'WORKSHEET SECTION:',
+      'Balanced forces cancel and result in no acceleration.',
+      '2',
+      '',
+      'Page 3',
+      'UNIT 3 MOTION AND FORCES',
+      '',
+      'CORE CONCEPT',
+      'Unbalanced forces change an object\'s motion.'
+    ].join('\n')
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.data.originalFileName, 'cleanup_teacher_packet.txt');
+  assert.equal(response.body.data.fileType, 'txt');
+  assert.equal(response.body.data.sectionsCount >= 2, true, 'cleanup should split heading sections into multiple chunks.');
+
+  const extractionPath = path.join(uploadExtractedDir, response.body.data.extractionJsonFileName);
+  const extractionJson = JSON.parse(fs.readFileSync(extractionPath, 'utf8'));
+  assert.equal(extractionJson.success, true);
+  assert.ok(extractionJson.text.includes('Net force: The total force acting on an object.'));
+  assert.ok(extractionJson.text.includes('Balanced forces cancel and result in no acceleration.'));
+  assert.ok(extractionJson.text.includes('Unbalanced forces change an object\'s motion.'));
+  assert.equal(extractionJson.text.includes('Page 1'), false);
+  assert.equal(extractionJson.text.includes('Page 2'), false);
+  assert.equal(extractionJson.text.includes('UNIT 3 MOTION AND FORCES'), false);
+  assert.equal(Array.isArray(extractionJson.sections), true);
+  assert.equal(extractionJson.sections.length >= 2, true);
+  assert.equal(extractionJson.sections.every((section, index) => section.chunkIndex === index + 1), true);
+  assert.equal(extractionJson.sections.every((section) => section.sourceFile === 'cleanup_teacher_packet.txt'), true);
 }
 
 async function assertUploadHistoryEndpoint(handlers) {
