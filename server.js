@@ -6,6 +6,7 @@ const {
   loadTeacherKnowledge,
   findRelevantKnowledge
 } = require('./lib/knowledge/teacherKnowledge');
+const { loadEnabledApprovedKnowledgeItems } = require('./lib/knowledge/loadEnabledApprovedKnowledgeItems');
 const { createOllamaClient } = require('./lib/ollama/client');
 const { createTtsService } = require('./lib/tts/piper');
 const {
@@ -64,6 +65,7 @@ const voicesDir = path.join(__dirname, 'voices');
 const audioDir = path.join(__dirname, 'audio');
 const knowledgeDir = path.join(__dirname, 'knowledge');
 const teacherFactsFile = path.join(knowledgeDir, 'teacher_facts.json');
+const approvedPacksDir = path.join(knowledgeDir, 'approved-packs');
 const studentInteractionsFile = path.join(__dirname, 'logs', 'student_interactions.json');
 const MAX_KNOWLEDGE_ITEMS = Number(process.env.MAX_KNOWLEDGE_ITEMS || 6);
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'qwen2.5:0.5b';
@@ -109,17 +111,24 @@ const tts = createTtsService({
 });
 
 ensureDir(knowledgeDir);
+ensureDir(approvedPacksDir);
+
+function loadStudentKnowledge() {
+  const teacherFacts = loadTeacherKnowledge(teacherFactsFile);
+  const enabledApprovedPackItems = loadEnabledApprovedKnowledgeItems({ approvedPacksDir });
+  return [...teacherFacts, ...enabledApprovedPackItems];
+}
 
 const questionAnswer = createQuestionAnswerService({
   teacherFactsFile,
   maxKnowledgeItems: MAX_KNOWLEDGE_ITEMS,
-  loadTeacherKnowledge,
+  loadTeacherKnowledge: loadStudentKnowledge,
   findRelevantKnowledge,
   routeStudentQuestion,
   ollama,
   logProblem,
   logStudentInteraction,
-  initialTeacherKnowledge: loadTeacherKnowledge(teacherFactsFile)
+  initialTeacherKnowledge: loadStudentKnowledge()
 });
 
 tts.pruneAudioDir();

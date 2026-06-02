@@ -5,6 +5,7 @@ const path = require('node:path');
 const { registerTeacherContentRoutes } = require('../routes/teacherContentRoutes');
 const { planTeacherContentImport } = require('../lib/uploads/planTeacherContentImport');
 const { loadApprovedKnowledgePacks } = require('../lib/knowledge/loadApprovedKnowledgePacks');
+const { loadEnabledApprovedKnowledgeItems } = require('../lib/knowledge/loadEnabledApprovedKnowledgeItems');
 
 const projectRoot = path.join(__dirname, '..');
 const tempRoot = path.join(projectRoot, 'tmp', 'test-teacher-content-routes');
@@ -2986,7 +2987,7 @@ async function assertCombinedApproveSelectedAllowsTeacherVerifiedLowConfidenceRo
     title: 'Combined Low Confidence',
     vocabulary: [
       {
-        ...makeVocabularyItem('dna', 'pending'),
+        ...makeVocabularyItem('DNA', 'pending'),
         studentDefinition: 'Molecule that stores genetic instructions.',
         confidence: 'low',
         sourceGrounding: {
@@ -3019,13 +3020,21 @@ async function assertCombinedApproveSelectedAllowsTeacherVerifiedLowConfidenceRo
   assert.equal(response.body.data.skipped.blocked, 0, 'low-confidence-only selected rows should be teacher-verifiable on acceptance.');
   const combinedPackId = response.body.data.combinedPack.packId;
   const combined = readKnowledgePack(approvedPacksDir, combinedPackId);
-  const acceptedDna = combined.vocabulary.find((item) => item.term === 'dna');
+  assert.equal(response.body.data.activation.activationEnabled, true, 'selected combined approval should enable activation immediately.');
+  const activation = JSON.parse(fs.readFileSync(activationRegistryPath, 'utf8'));
+  assert.equal(activation.packs[combinedPackId].enabled, true, 'selected combined approval should persist enabled activation.');
+  assert.equal(response.body.data.approvedSummary.approvedPacks.find((pack) => pack.packId === combinedPackId).activationEnabled, true);
+
+  const acceptedDna = combined.vocabulary.find((item) => item.term === 'DNA');
   assert.ok(acceptedDna, 'selected low-confidence row should be in the combined pack.');
   assert.equal(acceptedDna.teacherVerified, true, 'selected low-confidence row should be stamped as teacher verified.');
   assert.equal(String(acceptedDna.confidenceOverride || '').toLowerCase(), 'teacher_verified');
 
+  const enabledApproved = loadEnabledApprovedKnowledgeItems({ approvedPacksDir });
+  assert.equal(enabledApproved.some((item) => item.title === 'DNA'), true, 'enabled approved loader should include the selected approved DNA row.');
+
   const remainingDraft = readKnowledgePack(draftPacksDir, packId);
-  assert.equal(remainingDraft.vocabulary.some((item) => item.term === 'dna'), false, 'accepted selected row should be removed from active draft queue.');
+  assert.equal(remainingDraft.vocabulary.some((item) => item.term === 'DNA'), false, 'accepted selected row should be removed from active draft queue.');
   assert.equal(remainingDraft.vocabulary.some((item) => item.term === 'gene'), true, 'unselected rows should remain in draft queue.');
 }
 
