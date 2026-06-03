@@ -1,4 +1,5 @@
 const assert = require('node:assert/strict');
+const childProcess = require('node:child_process');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -8,6 +9,8 @@ const { loadApprovedKnowledgePacks } = require('../lib/knowledge/loadApprovedKno
 
 const projectRoot = path.join(__dirname, '..');
 const exampleApprovedPacksDir = path.join(projectRoot, 'knowledge', 'approved-packs');
+
+assertRuntimeLogsAreLocalRuntimeArtifacts();
 
 const loadedExample = loadApprovedKnowledgePacks({
   approvedPacksDir: exampleApprovedPacksDir,
@@ -179,6 +182,28 @@ function makeMinimalPack(overrides = {}) {
     metadata: {},
     ...overrides
   };
+}
+
+function assertRuntimeLogsAreLocalRuntimeArtifacts() {
+  const runtimeLogPaths = [
+    'logs/problem_questions.json',
+    'logs/student_interactions.json'
+  ];
+  const gitignoreText = fs.readFileSync(path.join(projectRoot, '.gitignore'), 'utf8');
+  assert.match(gitignoreText, /^logs\/?$/m, 'runtime logs directory should be ignored by git.');
+
+  if (!fs.existsSync(path.join(projectRoot, '.git'))) return;
+
+  try {
+    const tracked = childProcess.execFileSync('git', ['ls-files', ...runtimeLogPaths], {
+      cwd: projectRoot,
+      encoding: 'utf8'
+    }).trim();
+    assert.equal(tracked, '', 'runtime log files should not be tracked as source fixtures.');
+  } catch (error) {
+    if (error && error.code === 'ENOENT') return;
+    throw error;
+  }
 }
 
 console.log('Approved knowledge pack loader tests passed.');

@@ -2919,6 +2919,8 @@ async function assertCombinedApproveAllValidAcrossMultipleDrafts(handlers) {
     true,
     'all-valid combined approval may archive a source draft once accepted rows are fully cleared.'
   );
+  const archivedPackTwo = response.body.data.archivedDrafts.find((entry) => entry.packId === packTwoId);
+  assert.ok(String(archivedPackTwo.archivedPath || '').startsWith(path.join(draftPacksDir, '_accepted')), 'fully accepted all-valid drafts should archive under _accepted.');
   const draftsAfter = await request(handlers, 'GET', '/drafts');
   assert.equal(draftsAfter.body.data.draftPacks.some((pack) => pack.packId === packTwoId), false, 'archived source drafts should leave the active review queue.');
 }
@@ -2977,6 +2979,8 @@ async function assertCombinedApproveSelectedAcrossMultipleDrafts(handlers) {
     true,
     'selected combined approval should archive source drafts that are fully emptied by accepted rows.'
   );
+  const archivedPackTwo = response.body.data.archivedDrafts.find((entry) => entry.packId === packTwoId);
+  assert.ok(String(archivedPackTwo.archivedPath || '').startsWith(path.join(draftPacksDir, '_accepted')), 'fully accepted selected drafts should archive under _accepted.');
   assert.equal(fs.existsSync(path.join(draftPacksDir, packTwoId, 'knowledge_pack.json')), false, 'fully accepted source draft should be archived from active draft-packs.');
 }
 
@@ -3036,6 +3040,7 @@ async function assertCombinedApproveSelectedAllowsTeacherVerifiedLowConfidenceRo
   const remainingDraft = readKnowledgePack(draftPacksDir, packId);
   assert.equal(remainingDraft.vocabulary.some((item) => item.term === 'DNA'), false, 'accepted selected row should be removed from active draft queue.');
   assert.equal(remainingDraft.vocabulary.some((item) => item.term === 'gene'), true, 'unselected rows should remain in draft queue.');
+  assert.equal(response.body.data.archivedDrafts.length, 0, 'drafts with unselected visible rows should remain active instead of being archived.');
 }
 
 async function assertCombinedApproveSelectedStillBlocksMissingRequiredOrUnsafeRows(handlers) {
@@ -3202,6 +3207,8 @@ async function assertCombinedApproveSelectedArchivesEmptiedDraftWhenApprovedPack
     true,
     'selected combined approval should archive a draft that is fully emptied by accepted rows.'
   );
+  const archivedDraft = response.body.data.archivedDrafts.find((entry) => entry.packId === draftPackId);
+  assert.ok(String(archivedDraft.archivedPath || '').startsWith(path.join(draftPacksDir, '_accepted')), 'fully accepted selected draft should archive under _accepted even when the approved pack ID differs.');
   assert.equal(fs.existsSync(path.join(draftPacksDir, draftPackId, 'knowledge_pack.json')), false, 'emptied draft should be archived from active draft-packs.');
   assert.equal(fs.existsSync(path.join(approvedPacksDir, combinedPackId, 'knowledge_pack.json')), true, 'approved combined pack should remain saved.');
 

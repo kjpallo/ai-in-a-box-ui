@@ -134,6 +134,7 @@ async function assertSelectedApprovalWorkflowCreatesEnabledStudentKnowledge() {
   assert.equal(activationState.packs[approval.combinedPack.packId].enabled, true, 'selected approval should enable activation.');
   assert.equal(fs.existsSync(path.join(workflowDraftPacksDir, draftPackId, 'knowledge_pack.json')), false, 'accepted draft should leave active draft-packs once approved rows are fully accepted.');
   assert.equal(Array.isArray(approval.archivedDrafts) && approval.archivedDrafts.length === 1, true, 'accepted draft copy should be archived after approval.');
+  assert.match(approval.archivedDrafts[0].archivedPath, /draft-packs[/\\]_accepted[/\\]/, 'fully accepted selected draft should archive under _accepted.');
   assert.equal(fs.existsSync(path.join(approval.archivedDrafts[0].archivedPath, 'knowledge_pack.json')), true, 'archived accepted draft should be preserved.');
 
   const enabledApproved = loadEnabledApprovedKnowledgeItems({ approvedPacksDir: workflowApprovedPacksDir });
