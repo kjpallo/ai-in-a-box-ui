@@ -35,6 +35,7 @@ async function main() {
     await assertUnsupportedExtension();
     await assertShortExtractionWarning();
     await assertCleanupRemovesJunkAndKeepsTeachingContent();
+    await assertRealisticTeacherUploadCleanupScenarios();
   } finally {
     cleanupTempRoot();
   }
@@ -295,6 +296,108 @@ async function assertCleanupRemovesJunkAndKeepsTeachingContent() {
   assert.equal(result.text.includes('\n1\n'), false, 'standalone page number fragments should be removed');
   assert.equal(result.sections.every((section, index) => section.chunkIndex === index + 1), true);
   assert.equal(result.sections.every((section) => section.sourceFile === 'cleanup-chunking.txt'), true);
+}
+
+async function assertRealisticTeacherUploadCleanupScenarios() {
+  const cleanVocabularyPath = path.join(tempRoot, 'dna-protein-synthesis-vocab.txt');
+  fs.writeFileSync(cleanVocabularyPath, [
+    'DNA: A molecule that stores genetic instructions for living things.',
+    'Gene: A section of DNA that carries instructions for a trait or protein.',
+    'Ribosome: The cell structure where proteins are assembled during translation.',
+    'Protein synthesis: Cells use transcription and translation to build proteins from genetic instructions.'
+  ].join('\n'));
+
+  const cleanVocabulary = await extractTextFromFile(cleanVocabularyPath);
+  assert.equal(cleanVocabulary.success, true, cleanVocabulary.errors.join('\n'));
+  assert.ok(cleanVocabulary.text.includes('DNA: A molecule that stores genetic instructions'));
+  assert.ok(cleanVocabulary.text.includes('Protein synthesis: Cells use transcription and translation'));
+  assert.equal(cleanVocabulary.sections[0].sourceFile, 'dna-protein-synthesis-vocab.txt');
+
+  const messySlidePath = path.join(tempRoot, 'messy-slide-export.txt');
+  fs.writeFileSync(messySlidePath, [
+    'Protein Synthesis Unit',
+    'Slide 1',
+    'PROTEIN SYNTHESIS UNIT',
+    '',
+    '- DNA stores genetic instructions in the sequence of bases.',
+    '- Transcription copies a gene into messenger RNA.',
+    '7',
+    '',
+    'Slide 2',
+    'PROTEIN SYNTHESIS UNIT',
+    'Speaker Notes',
+    '- Translation happens at ribosomes.',
+    '- tRNA brings amino acids to the ribosome in the correct order.',
+    '',
+    'Slide 3',
+    'PROTEIN SYNTHESIS UNIT',
+    'l Translation',
+    '- Proteins are chains of amino acids that fold into useful shapes.'
+  ].join('\n'));
+
+  const messySlides = await extractTextFromFile(messySlidePath);
+  assert.equal(messySlides.success, true, messySlides.errors.join('\n'));
+  assert.equal(messySlides.text.includes('Slide 1'), false, 'standalone slide labels should be removed from messy exports.');
+  assert.equal(messySlides.text.includes('PROTEIN SYNTHESIS UNIT'), false, 'repeated deck headers should be removed.');
+  assert.equal(messySlides.text.includes('\n7\n'), false, 'orphan page-number fragments should be removed.');
+  assert.ok(messySlides.text.includes('DNA stores genetic instructions in the sequence of bases.'));
+  assert.ok(messySlides.text.includes('Translation happens at ribosomes.'));
+  assert.ok(messySlides.text.includes('Proteins are chains of amino acids'));
+
+  const physicalSciencePath = path.join(tempRoot, 'physical-science-reference-formulas.txt');
+  fs.writeFileSync(physicalSciencePath, [
+    'Physical Science Study Notes',
+    'Vocabulary',
+    'Density: The amount of mass in a given volume.',
+    'Reference formulas',
+    'Density = mass / volume',
+    'Speed = distance / time',
+    'These formulas are references for the teacher-uploaded pack and should not create new executable solvers.'
+  ].join('\n'));
+
+  const physicalScience = await extractTextFromFile(physicalSciencePath);
+  assert.equal(physicalScience.success, true, physicalScience.errors.join('\n'));
+  assert.ok(physicalScience.text.includes('Density: The amount of mass in a given volume.'));
+  assert.ok(physicalScience.text.includes('Density = mass / volume'));
+  assert.ok(physicalScience.text.includes('should not create new executable solvers'));
+
+  const worksheetPath = path.join(tempRoot, 'study-guide-review-questions.txt');
+  fs.writeFileSync(worksheetPath, [
+    'Name: ____________________',
+    'Study Guide: Cells and Energy',
+    'Review Questions',
+    '1. What organelle releases usable energy from food?',
+    'Answer: Mitochondria release usable energy from food during cellular respiration.',
+    '2. What does chlorophyll help plants do?',
+    'Answer: Chlorophyll helps plants absorb light energy for photosynthesis.'
+  ].join('\n'));
+
+  const worksheet = await extractTextFromFile(worksheetPath);
+  assert.equal(worksheet.success, true, worksheet.errors.join('\n'));
+  assert.ok(worksheet.text.includes('What organelle releases usable energy from food?'));
+  assert.ok(worksheet.text.includes('Mitochondria release usable energy from food'));
+  assert.ok(worksheet.text.includes('Chlorophyll helps plants absorb light energy'));
+
+  const junkPath = path.join(tempRoot, 'junk-fragments.txt');
+  fs.writeFileSync(junkPath, [
+    'Page 1',
+    '*',
+    '??',
+    'l Key term',
+    'Vocabulary',
+    'Codon: A three-base sequence on mRNA that matches an amino acid during translation.',
+    'Page 2',
+    'PROTEIN SYNTHESIS UNIT',
+    'depending on the',
+    'Answer:'
+  ].join('\n'));
+
+  const junk = await extractTextFromFile(junkPath);
+  assert.equal(junk.success, true, junk.errors.join('\n'));
+  assert.equal(junk.text.includes('Page 1'), false);
+  assert.equal(junk.text.includes('*'), false);
+  assert.ok(junk.text.includes('Codon: A three-base sequence on mRNA'));
+  assert.ok(junk.text.includes('depending on the'), 'cleanup should preserve ambiguous content for review instead of auto-approving or deleting every suspicious row.');
 }
 
 async function writeMinimalDocx(filePath, paragraphs) {

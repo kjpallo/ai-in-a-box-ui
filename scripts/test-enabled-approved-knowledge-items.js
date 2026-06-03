@@ -4,6 +4,7 @@ const path = require('node:path');
 
 const { loadEnabledApprovedKnowledgeItems } = require('../lib/knowledge/loadEnabledApprovedKnowledgeItems');
 const { approveCombinedReviewRows } = require('../lib/knowledge/approveCombinedReviewRows');
+const { diagnoseApprovedKnowledgePipeline } = require('../lib/knowledge/diagnoseApprovedKnowledgePipeline');
 const { loadTeacherKnowledge, findRelevantKnowledge } = require('../lib/knowledge/teacherKnowledge');
 const { routeStudentQuestion } = require('../lib/router/questionRouter');
 const { createQuestionAnswerService } = require('../lib/server/questionAnswerService');
@@ -77,6 +78,7 @@ async function main() {
     assert.doesNotMatch(dnaRoute.directAnswer, /I do not have a trusted local fact/i);
 
     await assertSelectedApprovalWorkflowCreatesEnabledStudentKnowledge();
+    await assertRealContentSmokeApprovalScenarios();
     await assertHotReloadBehavior();
   } finally {
     cleanupTempRoot();
@@ -167,6 +169,307 @@ async function assertSelectedApprovalWorkflowCreatesEnabledStudentKnowledge() {
   assert.equal(answer.routeType, 'definition');
   assert.equal(answer.confidence, 'strong');
   assert.match(answer.response, /In 9th-grade science, DNA is a molecule that stores genetic instructions\./);
+}
+
+async function assertRealContentSmokeApprovalScenarios() {
+  const workflowRoot = path.join(tempRoot, 'real-content-smoke-workflow');
+  const workflowApprovedPacksDir = path.join(workflowRoot, 'approved-packs');
+  const workflowDraftPacksDir = path.join(workflowRoot, 'draft-packs');
+  fs.mkdirSync(workflowApprovedPacksDir, { recursive: true });
+  fs.mkdirSync(workflowDraftPacksDir, { recursive: true });
+
+  const cleanPackId = 'smoke-clean-dna-protein-synthesis';
+  writePack(workflowDraftPacksDir, makePack({
+    packId: cleanPackId,
+    title: 'DNA Protein Synthesis Vocabulary',
+    sourceFiles: [makeSourceFile('dna-protein-synthesis-vocab.txt', 'txt')],
+    vocabulary: [
+      {
+        ...makeVocabulary('DNA', 'molecule that stores genetic instructions for living things.', 'pending', ['deoxyribonucleic acid']),
+        sourceFile: 'dna-protein-synthesis-vocab.txt',
+        sourceLocation: 'Full Text',
+        sourceTextSnippet: 'DNA: A molecule that stores genetic instructions for living things.',
+        confidence: 'low',
+        sourceGrounding: {
+          status: 'supported',
+          termOrTitleFound: true,
+          explanationSupported: true
+        }
+      },
+      {
+        ...makeVocabulary('Ribosome', 'cell structure where proteins are assembled during translation.', 'pending'),
+        sourceFile: 'dna-protein-synthesis-vocab.txt',
+        sourceLocation: 'Full Text',
+        sourceTextSnippet: 'Ribosome: The cell structure where proteins are assembled during translation.'
+      }
+    ],
+    concepts: [
+      {
+        ...makeConcept('Protein synthesis', 'Cells use transcription and translation to build proteins from genetic instructions.', 'pending'),
+        sourceFile: 'dna-protein-synthesis-vocab.txt',
+        sourceLocation: 'Full Text',
+        sourceTextSnippet: 'Protein synthesis: Cells use transcription and translation to build proteins from genetic instructions.'
+      }
+    ],
+    referenceFormulas: [],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+
+  const cleanApproval = approveScenario({
+    approvedPacksDir: workflowApprovedPacksDir,
+    draftPacksDir: workflowDraftPacksDir,
+    draftPackId: cleanPackId,
+    reviewBatchName: 'Smoke Clean DNA Protein Synthesis',
+    rows: [
+      { draftPackId: cleanPackId, section: 'vocabulary', index: 0 },
+      { draftPackId: cleanPackId, section: 'concepts', index: 0 }
+    ]
+  });
+  const cleanPack = readPack(workflowApprovedPacksDir, cleanApproval.combinedPack.packId);
+  const approvedDna = cleanPack.vocabulary.find((item) => item.term === 'DNA');
+  assert.ok(approvedDna, 'clean vocabulary row should be approved.');
+  assert.equal(approvedDna.teacherVerified, true, 'low-confidence clean row should be teacher verified when selected.');
+  assert.equal(approvedDna.sourceTextSnippet, 'DNA: A molecule that stores genetic instructions for living things.');
+  assert.equal(cleanPack.vocabulary.some((item) => item.term === 'Ribosome'), false, 'unselected clean vocabulary row should remain out of student knowledge.');
+  assert.equal(readPack(workflowDraftPacksDir, cleanPackId).vocabulary.some((item) => item.term === 'Ribosome'), true, 'unselected clean row should stay in the active draft.');
+  assertApprovedRouteReady({
+    approvedPacksDir: workflowApprovedPacksDir,
+    packId: cleanApproval.combinedPack.packId,
+    question: 'what is dna',
+    answerPattern: /DNA is a molecule that stores genetic instructions for living things\./
+  });
+
+  const messyPackId = 'smoke-messy-slide-export';
+  writePack(workflowDraftPacksDir, makePack({
+    packId: messyPackId,
+    title: 'Messy Slide Export',
+    sourceFiles: [makeSourceFile('messy-slide-export.pdf', 'pdf')],
+    vocabulary: [],
+    concepts: [
+      {
+        ...makeConcept('Translation', 'Translation happens at ribosomes, where tRNA brings amino acids in the correct order.', 'pending'),
+        sourceFile: 'messy-slide-export.pdf',
+        sourceLocation: 'Slide 2',
+        sourceTextSnippet: 'Translation happens at ribosomes. tRNA brings amino acids to the ribosome in the correct order.'
+      }
+    ],
+    referenceFormulas: [],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+  const messyApproval = approveScenario({
+    approvedPacksDir: workflowApprovedPacksDir,
+    draftPacksDir: workflowDraftPacksDir,
+    draftPackId: messyPackId,
+    reviewBatchName: 'Smoke Messy Slide Export',
+    rows: [{ draftPackId: messyPackId, section: 'concepts', index: 0 }]
+  });
+  const messyPack = readPack(workflowApprovedPacksDir, messyApproval.combinedPack.packId);
+  assert.equal(messyPack.concepts[0].sourceLocation, 'Slide 2');
+  assert.match(messyPack.concepts[0].sourceTextSnippet, /tRNA brings amino acids/);
+  assertApprovedRouteReady({
+    approvedPacksDir: workflowApprovedPacksDir,
+    packId: messyApproval.combinedPack.packId,
+    question: 'explain translation',
+    answerPattern: /Translation happens at ribosomes/
+  });
+
+  const physicalPackId = 'smoke-physical-science-formulas';
+  writePack(workflowDraftPacksDir, makePack({
+    packId: physicalPackId,
+    title: 'Physical Science Vocabulary and Reference Formulas',
+    subject: 'Physical Science',
+    gradeLevel: '8',
+    sourceFiles: [makeSourceFile('physical-science-reference-formulas.txt', 'txt')],
+    vocabulary: [
+      {
+        ...makeVocabulary('Density', 'amount of mass in a given volume.', 'pending'),
+        standards: [],
+        sourceFile: 'physical-science-reference-formulas.txt',
+        sourceLocation: 'Vocabulary',
+        sourceTextSnippet: 'Density: The amount of mass in a given volume.'
+      }
+    ],
+    concepts: [],
+    referenceFormulas: [
+      makeReferenceFormula({
+        formulaId: 'density-reference',
+        title: 'Density reference',
+        equation: 'density = mass / volume',
+        sourceFile: 'physical-science-reference-formulas.txt',
+        sourceLocation: 'Reference formulas',
+        sourceTextSnippet: 'Density = mass / volume'
+      })
+    ],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+  const physicalApproval = approveScenario({
+    approvedPacksDir: workflowApprovedPacksDir,
+    draftPacksDir: workflowDraftPacksDir,
+    draftPackId: physicalPackId,
+    reviewBatchName: 'Smoke Physical Science Formula References',
+    rows: [
+      { draftPackId: physicalPackId, section: 'vocabulary', index: 0 },
+      { draftPackId: physicalPackId, section: 'referenceFormulas', index: 0 }
+    ]
+  });
+  const physicalPack = readPack(workflowApprovedPacksDir, physicalApproval.combinedPack.packId);
+  assert.equal(physicalPack.referenceFormulas[0].solverStatus, 'reference_only', 'uploaded formulas must remain reference-only.');
+  const enabledAfterPhysical = loadEnabledApprovedKnowledgeItems({ approvedPacksDir: workflowApprovedPacksDir });
+  assert.equal(
+    enabledAfterPhysical.some((item) => String(item.id || '').includes(':referenceFormulas:') || item.category === 'approved_reference_formula'),
+    false,
+    'enabled student knowledge should not expose reference formulas as executable formula items.'
+  );
+  assertApprovedRouteReady({
+    approvedPacksDir: workflowApprovedPacksDir,
+    packId: physicalApproval.combinedPack.packId,
+    question: 'what is density',
+    answerPattern: /Density is an amount of mass in a given volume\./
+  });
+  const formulaRoute = routeStudentQuestion('A 3 kg cart accelerates at 2 m/s^2. What force is needed?', []);
+  assert.equal(formulaRoute.type, 'science_formula', 'existing built-in formula solver behavior should remain unchanged.');
+  assert.equal(formulaRoute.confidence, 'strong');
+
+  const worksheetPackId = 'smoke-worksheet-study-guide';
+  writePack(workflowDraftPacksDir, makePack({
+    packId: worksheetPackId,
+    title: 'Cells and Energy Study Guide',
+    sourceFiles: [makeSourceFile('study-guide-review-questions.txt', 'txt')],
+    vocabulary: [],
+    concepts: [],
+    referenceFormulas: [],
+    problemBank: [
+      {
+        ...makeProblem('mitochondria-study-guide', 'What organelle releases usable energy from food?', 'Mitochondria release usable energy from food during cellular respiration.', 'pending'),
+        sourceFile: 'study-guide-review-questions.txt',
+        sourceLocation: 'Review Questions',
+        sourceTextSnippet: 'Answer: Mitochondria release usable energy from food during cellular respiration.'
+      }
+    ],
+    standardsMap: [],
+    smokeTests: []
+  }));
+  const worksheetApproval = approveScenario({
+    approvedPacksDir: workflowApprovedPacksDir,
+    draftPacksDir: workflowDraftPacksDir,
+    draftPackId: worksheetPackId,
+    reviewBatchName: 'Smoke Worksheet Study Guide',
+    rows: [{ draftPackId: worksheetPackId, section: 'problemBank', index: 0 }]
+  });
+  assertApprovedRouteReady({
+    approvedPacksDir: workflowApprovedPacksDir,
+    packId: worksheetApproval.combinedPack.packId,
+    question: 'What organelle releases usable energy from food?',
+    answerPattern: /Mitochondria release usable energy from food during cellular respiration\./
+  });
+
+  const junkPackId = 'smoke-junk-fragment-review';
+  writePack(workflowDraftPacksDir, makePack({
+    packId: junkPackId,
+    title: 'Junk Fragment Review',
+    sourceFiles: [makeSourceFile('junk-fragments.txt', 'txt')],
+    vocabulary: [
+      {
+        ...makeVocabulary('Codon', 'three-base sequence on mRNA that matches an amino acid during translation.', 'pending'),
+        sourceFile: 'junk-fragments.txt',
+        sourceLocation: 'Page 1',
+        sourceTextSnippet: 'Codon: A three-base sequence on mRNA that matches an amino acid during translation.',
+        confidence: 'low',
+        sourceGrounding: {
+          status: 'supported',
+          termOrTitleFound: true,
+          explanationSupported: true
+        }
+      },
+      {
+        ...makeVocabulary('depending on the', 'depending on the', 'pending'),
+        sourceFile: 'junk-fragments.txt',
+        sourceLocation: 'Page 2',
+        sourceTextSnippet: ''
+      },
+      {
+        ...makeVocabulary('answer', '', 'pending'),
+        sourceFile: 'junk-fragments.txt',
+        sourceLocation: 'Page 2',
+        sourceTextSnippet: 'Answer:',
+        repairStatus: 'repair_failed'
+      },
+      makeVocabulary('discarded fragment', 'fragment row rejected by teacher.', 'rejected')
+    ],
+    concepts: [],
+    referenceFormulas: [],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+  const junkApproval = approveCombinedReviewRows({
+    mode: 'selected',
+    reviewBatchName: 'Smoke Junk Fragment Review',
+    reviewBatchPackIds: [junkPackId],
+    rows: [
+      { draftPackId: junkPackId, section: 'vocabulary', index: 0 },
+      { draftPackId: junkPackId, section: 'vocabulary', index: 1 },
+      { draftPackId: junkPackId, section: 'vocabulary', index: 2 },
+      { draftPackId: junkPackId, section: 'vocabulary', index: 3 }
+    ]
+  }, {
+    approvedPacksDir: workflowApprovedPacksDir,
+    draftPacksDir: workflowDraftPacksDir
+  });
+  assert.equal(junkApproval.success, true, JSON.stringify(junkApproval));
+  assert.equal(junkApproval.acceptedCount, 1, 'only teacher-verified low-confidence row should be accepted from junk-heavy upload.');
+  assert.equal(junkApproval.skipped.blocked, 2, 'real junk blockers should remain blocked.');
+  assert.equal(junkApproval.skipped.rejected, 1, 'teacher-rejected junk should stay out.');
+  const junkPack = readPack(workflowApprovedPacksDir, junkApproval.combinedPack.packId);
+  assert.equal(junkPack.vocabulary.some((item) => item.term === 'Codon'), true);
+  assert.equal(junkPack.vocabulary.some((item) => item.term === 'depending on the'), false);
+  assert.equal(junkPack.vocabulary.some((item) => item.term === 'answer'), false);
+  const remainingJunkDraft = readPack(workflowDraftPacksDir, junkPackId);
+  assert.equal(remainingJunkDraft.vocabulary.some((item) => item.term === 'depending on the'), true, 'blocked junk row should remain available for teacher review.');
+  assert.equal(remainingJunkDraft.vocabulary.some((item) => item.term === 'answer'), true, 'repair-failed junk row should remain available for teacher action.');
+  assertApprovedRouteReady({
+    approvedPacksDir: workflowApprovedPacksDir,
+    packId: junkApproval.combinedPack.packId,
+    question: 'what is codon',
+    answerPattern: /Codon is a three-base sequence on mRNA/
+  });
+  const junkEnabledItems = loadEnabledApprovedKnowledgeItems({ approvedPacksDir: workflowApprovedPacksDir });
+  assert.equal(junkEnabledItems.some((item) => item.title === 'depending on the'), false, 'blocked junk row must not become student knowledge.');
+  assert.equal(junkEnabledItems.some((item) => item.title === 'answer'), false, 'repair-failed junk row must not become student knowledge.');
+}
+
+function approveScenario({ approvedPacksDir, draftPacksDir, draftPackId, reviewBatchName, rows }) {
+  const approval = approveCombinedReviewRows({
+    mode: 'selected',
+    reviewBatchName,
+    reviewBatchPackIds: [draftPackId],
+    rows
+  }, {
+    approvedPacksDir,
+    draftPacksDir
+  });
+  assert.equal(approval.success, true, JSON.stringify(approval));
+  assert.equal(approval.activation.activationEnabled, true, 'approved pack should be activated immediately.');
+  assert.equal(fs.existsSync(approval.combinedPack.outputPath), true, 'approved pack should be durable.');
+  return approval;
+}
+
+function assertApprovedRouteReady({ approvedPacksDir, packId, question, answerPattern }) {
+  const diagnostic = diagnoseApprovedKnowledgePipeline({
+    approvedPacksDir,
+    packId,
+    question,
+    findRelevantKnowledge,
+    routeStudentQuestion
+  });
+  assert.equal(diagnostic.ok, true, JSON.stringify(diagnostic, null, 2));
+  assert.match(diagnostic.route.directAnswer, answerPattern, JSON.stringify(diagnostic, null, 2));
 }
 
 function assertHotReloadBehavior() {
@@ -292,6 +595,20 @@ function writePack(rootDir, pack) {
   fs.writeFileSync(path.join(packDir, 'knowledge_pack.json'), `${JSON.stringify(pack, null, 2)}\n`);
 }
 
+function readPack(rootDir, packId) {
+  return JSON.parse(fs.readFileSync(path.join(rootDir, packId, 'knowledge_pack.json'), 'utf8'));
+}
+
+function makeSourceFile(fileName, fileType) {
+  return {
+    fileName,
+    fileType,
+    reviewStatus: 'approved',
+    confidence: 'high',
+    notes: 'Synthetic teacher-upload smoke fixture.'
+  };
+}
+
 function makePack(overrides = {}) {
   return {
     packId: 'sample-pack',
@@ -370,6 +687,23 @@ function makeProblem(problemId, question, expectedAnswer, reviewStatus) {
     sourceFile: 'source_file_a.pdf',
     sourceLocation: 'p. 4',
     sourceTextSnippet: `${problemId} source snippet.`
+  };
+}
+
+function makeReferenceFormula(overrides = {}) {
+  return {
+    formulaId: 'reference-formula',
+    title: 'Reference Formula',
+    equation: 'value = numerator / denominator',
+    variables: [],
+    solverStatus: 'reference_only',
+    standards: [],
+    reviewStatus: 'pending',
+    confidence: 'medium',
+    sourceFile: 'source_file_a.pdf',
+    sourceLocation: 'p. 5',
+    sourceTextSnippet: 'Reference formula source snippet.',
+    ...overrides
   };
 }
 
