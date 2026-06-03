@@ -466,11 +466,11 @@
         const data = unwrap(payload);
         state.approvedActivationMessages = {
           ...state.approvedActivationMessages,
-          [packId]: data?.message || 'Activation setting saved. This does not change student answers yet.'
+          [packId]: data?.message || 'Activation setting saved. Enabled packs are available for student answers.'
         };
         if (data?.approvedSummary) applyApprovedSummary(data.approvedSummary);
         await refreshTeacherContentSummaries();
-        setStatus('Activation setting saved. This does not change student answers yet.');
+        setStatus('Activation setting saved. Enabled packs are available for student answers.');
       } catch (error) {
         state.approvedActivationMessages = {
           ...state.approvedActivationMessages,

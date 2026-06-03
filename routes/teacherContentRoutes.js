@@ -469,6 +469,7 @@ function registerTeacherContentRoutes(app, options = {}) {
           packId: promotion.packId,
           message: 'Draft promoted to approved knowledge pack.',
           outputPath: promotion.outputPath,
+          activation: promotion.activation || null,
           approved,
           archivedDraft,
           dashboard,
@@ -695,7 +696,7 @@ function registerTeacherContentRoutes(app, options = {}) {
           activationEnabled: activation.activationEnabled,
           activationStatus: activation.activationStatus,
           activationUpdatedAt: activation.activationUpdatedAt,
-          message: 'Activation setting saved. This does not change student answers yet.',
+          message: 'Activation setting saved. Enabled packs are available for student answers.',
           approved,
           approvedSummary
         },

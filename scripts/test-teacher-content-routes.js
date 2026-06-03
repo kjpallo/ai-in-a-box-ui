@@ -2317,8 +2317,8 @@ async function assertApprovedEndpoint(handlers) {
   assert.equal(approvedPack.validationStatus, 'Passed');
   assert.equal(approvedPack.sourceSummary, 'teacher_force_notes.txt');
   assert.deepEqual(approvedPack.sourceFileNames, ['teacher_force_notes.txt']);
-  assert.equal(approvedPack.activationEnabled, false);
-  assert.equal(approvedPack.activationStatus, 'disabled');
+  assert.equal(approvedPack.activationEnabled, true);
+  assert.equal(approvedPack.activationStatus, 'enabled');
   assert.ok(response.body.data.indexedCounts.vocabularyTerms >= 1);
 }
 
@@ -2336,7 +2336,7 @@ async function assertApprovedActivationEndpointEnablesPack(handlers) {
   assert.equal(response.body.data.packId, 'route-approved-pack');
   assert.equal(response.body.data.activationEnabled, true);
   assert.equal(response.body.data.activationStatus, 'enabled');
-  assert.equal(response.body.data.message, 'Activation setting saved. This does not change student answers yet.');
+  assert.equal(response.body.data.message, 'Activation setting saved. Enabled packs are available for student answers.');
   assert.equal(response.body.data.approved.activationEnabled, true);
   assert.equal(response.body.data.approvedSummary.approvedPacks.find((pack) => pack.packId === 'route-approved-pack').activationEnabled, true);
   assert.equal(fs.existsSync(activationRegistryPath), true, 'activation registry file should be written in the temp approved packs dir');
@@ -2762,9 +2762,11 @@ async function assertPromoteDraftEndpointSucceeds(handlers) {
   assert.equal(response.body.data.packId, 'route-promote-ready-pack');
   assert.equal(response.body.data.message, 'Draft promoted to approved knowledge pack.');
   assert.equal(response.body.data.approved.packId, 'route-promote-ready-pack');
-  assert.equal(response.body.data.approved.activationEnabled, false, 'newly approved packs should stay disabled until explicitly enabled.');
-  assert.equal(response.body.data.approved.activationStatus, 'disabled');
-  assert.equal(response.body.data.approvedSummary.approvedPacks.find((pack) => pack.packId === 'route-promote-ready-pack').activationEnabled, false);
+  assert.equal(response.body.data.activation.activationEnabled, true, 'draft promotion should enable activation immediately.');
+  assert.equal(response.body.data.approved.activationEnabled, true, 'newly approved packs should be available to student answers.');
+  assert.equal(response.body.data.approved.activationStatus, 'enabled');
+  assert.equal(response.body.data.approvedSummary.approvedPacks.find((pack) => pack.packId === 'route-promote-ready-pack').activationEnabled, true);
+  assert.equal(JSON.parse(fs.readFileSync(activationRegistryPath, 'utf8')).packs['route-promote-ready-pack'].enabled, true);
   assert.equal(response.body.data.dashboard.draftPacks, beforeDraftCount, 'active draft count should drop back after source draft is archived.');
   assert.equal(response.body.data.dashboard.approvedPacks, beforeApprovedCount + 1, 'approved count should increase after promotion.');
   assert.ok(response.body.data.outputPath.startsWith(approvedPacksDir));
@@ -3382,8 +3384,9 @@ async function assertExistingDraftBlockersCanBeRejectedAndPromoted(handlers) {
   assert.equal(promotion.statusCode, 200);
   assert.equal(promotion.body.success, true);
   assert.equal(promotion.body.data.approved.packId, packId);
-  assert.equal(promotion.body.data.approved.activationEnabled, false);
-  assert.equal(promotion.body.data.approved.activationStatus, 'disabled');
+  assert.equal(promotion.body.data.activation.activationEnabled, true);
+  assert.equal(promotion.body.data.approved.activationEnabled, true);
+  assert.equal(promotion.body.data.approved.activationStatus, 'enabled');
   assert.equal(promotion.body.data.approvedSummary.approvedPacks.some((pack) => pack.packId === packId), true);
   assert.equal(promotion.body.data.dashboard.draftPacks, beforeDraftCount - 1, 'visible draft count should decrease after approval.');
   assert.equal(promotion.body.data.dashboard.approvedPacks, beforeApprovedCount + 1, 'approved count should increase after approval.');
@@ -3854,7 +3857,7 @@ async function assertApproveDraftItemWithInlineEdits(handlers) {
     const promotion = await request(handlers, 'POST', '/drafts/:packId/promote', {}, { packId });
     assert.equal(promotion.statusCode, 200);
     assert.equal(promotion.body.success, true);
-    assert.equal(promotion.body.data.approved.activationEnabled, false);
+    assert.equal(promotion.body.data.approved.activationEnabled, true);
     const promotedPack = readKnowledgePack(approvedPacksDir, packId);
     assert.equal(promotedPack.vocabulary[0].studentDefinition, 'Teacher-edited wording approved from one click.');
   } finally {
@@ -4058,7 +4061,7 @@ async function assertTeacherEditClearsLowConfidencePromotionBlock(handlers) {
     const promotion = await request(handlers, 'POST', '/drafts/:packId/promote', {}, { packId });
     assert.equal(promotion.statusCode, 200);
     assert.equal(promotion.body.success, true);
-    assert.equal(promotion.body.data.approved.activationEnabled, false);
+    assert.equal(promotion.body.data.approved.activationEnabled, true);
     const promotedPack = readKnowledgePack(approvedPacksDir, packId);
     assert.equal(promotedPack.vocabulary[0].studentDefinition, 'Teacher-edited approved wording explains net force as the sum of forces on an object.');
   } finally {

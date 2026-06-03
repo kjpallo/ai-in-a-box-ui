@@ -5,6 +5,7 @@ const path = require('node:path');
 const { loadEnabledApprovedKnowledgeItems } = require('../lib/knowledge/loadEnabledApprovedKnowledgeItems');
 const { approveCombinedReviewRows } = require('../lib/knowledge/approveCombinedReviewRows');
 const { diagnoseApprovedKnowledgePipeline } = require('../lib/knowledge/diagnoseApprovedKnowledgePipeline');
+const { deleteApprovedKnowledgePack } = require('../lib/knowledge/deleteApprovedKnowledgePack');
 const { loadTeacherKnowledge, findRelevantKnowledge } = require('../lib/knowledge/teacherKnowledge');
 const { routeStudentQuestion } = require('../lib/router/questionRouter');
 const { createQuestionAnswerService } = require('../lib/server/questionAnswerService');
@@ -79,12 +80,195 @@ async function main() {
 
     await assertSelectedApprovalWorkflowCreatesEnabledStudentKnowledge();
     await assertRealContentSmokeApprovalScenarios();
+    await assertDisabledApprovedPackDoesNotAnswerStudentQuestion();
+    await assertDeletedApprovedPackNoLongerAnswers();
+    await assertEditedReapprovedContentWinsOverArchivedDraftCopy();
+    await assertTeacherFactsStillAnswerWithEnabledApprovedPacks();
     await assertHotReloadBehavior();
   } finally {
     cleanupTempRoot();
   }
 
   console.log('Enabled approved knowledge item tests passed.');
+}
+
+async function assertDisabledApprovedPackDoesNotAnswerStudentQuestion() {
+  const loadCombinedKnowledge = () => [
+    ...loadTeacherKnowledge(teacherFactsFile),
+    ...loadEnabledApprovedKnowledgeItems({ approvedPacksDir })
+  ];
+  const questionAnswer = makeQuestionAnswerService({
+    teacherFactsFile,
+    loadCombinedKnowledge,
+    fallbackMessage: 'Disabled approved pack should not call AI fallback.'
+  });
+
+  const answer = await questionAnswer.answerStudentMessage('What is RNA?');
+  assert.equal(answer.routeType, 'no_match', 'disabled approved pack should not route as local knowledge.');
+  assert.doesNotMatch(answer.response, /RNA is a molecule involved in protein synthesis\./);
+  assert.match(answer.response, /I do not have a trusted local (science )?fact for that yet\./i);
+}
+
+async function assertDeletedApprovedPackNoLongerAnswers() {
+  const workflowRoot = path.join(tempRoot, 'deleted-approved-workflow');
+  const workflowApprovedPacksDir = path.join(workflowRoot, 'approved-packs');
+  const workflowDraftPacksDir = path.join(workflowRoot, 'draft-packs');
+  const workflowTeacherFactsFile = path.join(workflowRoot, 'teacher_facts.json');
+  fs.mkdirSync(workflowApprovedPacksDir, { recursive: true });
+  fs.mkdirSync(workflowDraftPacksDir, { recursive: true });
+  fs.writeFileSync(workflowTeacherFactsFile, `${JSON.stringify({ items: [] }, null, 2)}\n`);
+
+  writePack(workflowApprovedPacksDir, makePack({
+    packId: 'delete-me-approved-pack',
+    title: 'Delete Me Approved Pack',
+    vocabulary: [makeVocabulary('Finalium', 'classroom-only mineral used in a deletion test.', 'approved')],
+    concepts: [],
+    referenceFormulas: [],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+  fs.writeFileSync(path.join(workflowApprovedPacksDir, '_activation.json'), `${JSON.stringify({
+    version: 1,
+    packs: {
+      'delete-me-approved-pack': { enabled: true, updatedAt: '2026-06-01T00:00:00.000Z' }
+    }
+  }, null, 2)}\n`);
+
+  const loadCombinedKnowledge = () => [
+    ...loadTeacherKnowledge(workflowTeacherFactsFile),
+    ...loadEnabledApprovedKnowledgeItems({ approvedPacksDir: workflowApprovedPacksDir })
+  ];
+  const questionAnswer = makeQuestionAnswerService({
+    teacherFactsFile: workflowTeacherFactsFile,
+    loadCombinedKnowledge,
+    fallbackMessage: 'Deleted approved pack workflow should not call AI fallback.'
+  });
+
+  const beforeDelete = await questionAnswer.answerStudentMessage('What is Finalium?');
+  assert.equal(beforeDelete.routeType, 'definition');
+  assert.match(beforeDelete.response, /Finalium is a classroom-only mineral used in a deletion test\./);
+
+  const deletion = deleteApprovedKnowledgePack('delete-me-approved-pack', {
+    approvedPacksDir: workflowApprovedPacksDir,
+    draftPacksDir: workflowDraftPacksDir,
+    confirmed: true
+  });
+  assert.equal(deletion.success, true, JSON.stringify(deletion));
+  assert.equal(fs.existsSync(path.join(workflowApprovedPacksDir, 'delete-me-approved-pack', 'knowledge_pack.json')), false);
+
+  const afterDelete = await questionAnswer.answerStudentMessage('What is Finalium?');
+  assert.equal(afterDelete.routeType, 'no_match');
+  assert.doesNotMatch(afterDelete.response, /classroom-only mineral used in a deletion test/);
+  assert.match(afterDelete.response, /I do not have a trusted local (science )?fact for that yet\./i);
+}
+
+async function assertEditedReapprovedContentWinsOverArchivedDraftCopy() {
+  const workflowRoot = path.join(tempRoot, 'edited-reapproved-workflow');
+  const workflowApprovedPacksDir = path.join(workflowRoot, 'approved-packs');
+  const workflowDraftPacksDir = path.join(workflowRoot, 'draft-packs');
+  const workflowTeacherFactsFile = path.join(workflowRoot, 'teacher_facts.json');
+  fs.mkdirSync(workflowApprovedPacksDir, { recursive: true });
+  fs.mkdirSync(workflowDraftPacksDir, { recursive: true });
+  fs.writeFileSync(workflowTeacherFactsFile, `${JSON.stringify({ items: [] }, null, 2)}\n`);
+
+  const draftPackId = 'revisionterm-draft-pack';
+  writePack(workflowDraftPacksDir, makePack({
+    packId: draftPackId,
+    title: 'RevisionTerm Draft Pack',
+    vocabulary: [makeVocabulary('RevisionTerm', 'old archived wording that should not answer students.', 'pending')],
+    concepts: [],
+    referenceFormulas: [],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+
+  const firstApproval = approveCombinedReviewRows({
+    mode: 'selected',
+    reviewBatchName: 'RevisionTerm Batch',
+    reviewBatchPackIds: [draftPackId],
+    rows: [{ draftPackId, section: 'vocabulary', index: 0 }]
+  }, {
+    approvedPacksDir: workflowApprovedPacksDir,
+    draftPacksDir: workflowDraftPacksDir
+  });
+  assert.equal(firstApproval.success, true, JSON.stringify(firstApproval));
+  assert.equal(firstApproval.archivedDrafts.length, 1, 'first fully accepted draft should be archived.');
+  writePack(path.join(workflowDraftPacksDir, '_accepted', 'old-accepted-copy'), makePack({
+    packId: draftPackId,
+    title: 'Old Archived RevisionTerm Copy',
+    vocabulary: [makeVocabulary('RevisionTerm', 'old archived wording that should not answer students.', 'approved')],
+    concepts: [],
+    referenceFormulas: [],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+
+  writePack(workflowDraftPacksDir, makePack({
+    packId: draftPackId,
+    title: 'RevisionTerm Draft Pack',
+    vocabulary: [makeVocabulary('RevisionTerm', 'newest teacher-approved wording that should answer students.', 'pending')],
+    concepts: [],
+    referenceFormulas: [],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+
+  const secondApproval = approveCombinedReviewRows({
+    mode: 'selected',
+    reviewBatchName: 'RevisionTerm Batch',
+    reviewBatchPackIds: [draftPackId],
+    rows: [{ draftPackId, section: 'vocabulary', index: 0 }]
+  }, {
+    approvedPacksDir: workflowApprovedPacksDir,
+    draftPacksDir: workflowDraftPacksDir
+  });
+  assert.equal(secondApproval.success, true, JSON.stringify(secondApproval));
+  assert.equal(secondApproval.combinedPack.packId, firstApproval.combinedPack.packId, 're-approval should update the same combined approved pack.');
+
+  const enabledItems = loadEnabledApprovedKnowledgeItems({ approvedPacksDir: workflowApprovedPacksDir });
+  const revisionItem = enabledItems.find((item) => item.title === 'RevisionTerm');
+  assert.ok(revisionItem, 're-approved item should remain enabled.');
+  assert.match(revisionItem.fact, /newest teacher-approved wording/);
+  assert.doesNotMatch(revisionItem.fact, /old archived wording/);
+
+  const loadCombinedKnowledge = () => [
+    ...loadTeacherKnowledge(workflowTeacherFactsFile),
+    ...loadEnabledApprovedKnowledgeItems({ approvedPacksDir: workflowApprovedPacksDir })
+  ];
+  const questionAnswer = makeQuestionAnswerService({
+    teacherFactsFile: workflowTeacherFactsFile,
+    loadCombinedKnowledge,
+    fallbackMessage: 'Re-approved approved pack workflow should not call AI fallback.'
+  });
+
+  const answer = await questionAnswer.answerStudentMessage('What is RevisionTerm?');
+  assert.equal(answer.routeType, 'definition');
+  assert.match(answer.response, /newest teacher-approved wording that should answer students\./);
+  assert.doesNotMatch(answer.response, /old archived wording/);
+}
+
+async function assertTeacherFactsStillAnswerWithEnabledApprovedPacks() {
+  const loadCombinedKnowledge = () => [
+    ...loadTeacherKnowledge(teacherFactsFile),
+    ...loadEnabledApprovedKnowledgeItems({ approvedPacksDir })
+  ];
+  const questionAnswer = makeQuestionAnswerService({
+    teacherFactsFile,
+    loadCombinedKnowledge,
+    fallbackMessage: 'Teacher facts alongside enabled packs should not call AI fallback.'
+  });
+
+  const massAnswer = await questionAnswer.answerStudentMessage('What is mass?');
+  assert.equal(massAnswer.routeType, 'definition');
+  assert.match(massAnswer.response, /Mass is the amount of matter in an object\./);
+
+  const dnaAnswer = await questionAnswer.answerStudentMessage('What is DNA?');
+  assert.equal(dnaAnswer.routeType, 'definition');
+  assert.match(dnaAnswer.response, /DNA is a molecule that stores genetic instructions\./);
 }
 
 async function assertSelectedApprovalWorkflowCreatesEnabledStudentKnowledge() {
@@ -470,6 +654,27 @@ function assertApprovedRouteReady({ approvedPacksDir, packId, question, answerPa
   });
   assert.equal(diagnostic.ok, true, JSON.stringify(diagnostic, null, 2));
   assert.match(diagnostic.route.directAnswer, answerPattern, JSON.stringify(diagnostic, null, 2));
+}
+
+function makeQuestionAnswerService({ teacherFactsFile, loadCombinedKnowledge, fallbackMessage }) {
+  return createQuestionAnswerService({
+    teacherFactsFile,
+    maxKnowledgeItems: 6,
+    loadTeacherKnowledge: loadCombinedKnowledge,
+    findRelevantKnowledge,
+    routeStudentQuestion,
+    ollama: {
+      async stream() {
+        throw new Error(fallbackMessage || 'Approved knowledge tests should not need AI fallback.');
+      },
+      buildTeacherPrompt() {
+        return '';
+      }
+    },
+    logProblem() {},
+    logStudentInteraction() {},
+    initialTeacherKnowledge: loadCombinedKnowledge()
+  });
 }
 
 function assertHotReloadBehavior() {

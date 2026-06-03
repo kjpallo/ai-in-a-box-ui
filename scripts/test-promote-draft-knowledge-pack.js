@@ -3,6 +3,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const { promoteDraftKnowledgePack } = require('../lib/knowledge/promoteDraftKnowledgePack');
+const { loadApprovedPackActivation } = require('../lib/knowledge/approvedPackActivationStore');
+const { loadEnabledApprovedKnowledgeItems } = require('../lib/knowledge/loadEnabledApprovedKnowledgeItems');
 const { editDraftItemField } = require('../lib/knowledge/reviewDraftKnowledgePack');
 
 const projectRoot = path.join(__dirname, '..');
@@ -30,6 +32,7 @@ try {
   assertBlocksInvalidStandardReferenceWithBank();
   assertStrictFinalValidationBlocksInvalidApprovedOutput();
   assertPromotesApprovedOnlyPackToTempOutput();
+  assertPromotionEnablesApprovedPackForStudentLoader();
   assertPromotionPreservesStandardsMetadata();
   assertPromotionNormalizesOlderApprovedItemsWithoutStandardsMetadata();
   assertPromotionPreservesRangeLimitedScopeWarning();
@@ -481,6 +484,38 @@ function assertPromotesApprovedOnlyPackToTempOutput() {
   const promotedPack = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
   assert.deepEqual(promotedPack.metadata, pack.metadata, 'metadata should be preserved');
   assert.deepEqual(promotedPack.vocabulary[0].sourceFile, pack.vocabulary[0].sourceFile, 'source tracking should be preserved');
+}
+
+function assertPromotionEnablesApprovedPackForStudentLoader() {
+  writeDraftPack(makePack({
+    packId: 'auto-enabled-promotion-pack',
+    vocabulary: [makeVocabularyItem('student-visible-term')],
+    concepts: [],
+    referenceFormulas: [],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+
+  const result = promoteDraftKnowledgePack('auto-enabled-promotion-pack', {
+    draftPacksDir,
+    approvedPacksDir,
+    standardsBank
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  assert.equal(result.activation.activationEnabled, true, 'final draft promotion should enable the approved pack.');
+  assert.equal(result.activation.activationStatus, 'enabled');
+
+  const activation = loadApprovedPackActivation({ approvedPacksDir });
+  assert.equal(activation.packs['auto-enabled-promotion-pack'].enabled, true, 'activation registry should persist enabled promotion.');
+
+  const enabledItems = loadEnabledApprovedKnowledgeItems({ approvedPacksDir });
+  assert.equal(
+    enabledItems.some((item) => item.title === 'student-visible-term'),
+    true,
+    'student loader should include auto-enabled promoted content.'
+  );
 }
 
 function assertPromotionPreservesRangeLimitedScopeWarning() {
