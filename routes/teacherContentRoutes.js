@@ -467,7 +467,7 @@ function registerTeacherContentRoutes(app, options = {}) {
         success: true,
         data: {
           packId: promotion.packId,
-          message: 'Draft promoted to approved knowledge pack.',
+          message: 'Saved and enabled for student answers.',
           outputPath: promotion.outputPath,
           activation: promotion.activation || null,
           approved,
@@ -534,6 +534,7 @@ function registerTeacherContentRoutes(app, options = {}) {
           draftPackId: approval.draftPackId || null,
           archivedDrafts: approval.archivedDrafts || [],
           updatedDraftPackIds: approval.updatedDraftPackIds || [],
+          message: 'Saved and enabled for student answers.',
           dashboard,
           drafts: drafts.draftPacks,
           draftSummary: drafts,
@@ -696,7 +697,9 @@ function registerTeacherContentRoutes(app, options = {}) {
           activationEnabled: activation.activationEnabled,
           activationStatus: activation.activationStatus,
           activationUpdatedAt: activation.activationUpdatedAt,
-          message: 'Activation setting saved. Enabled packs are available for student answers.',
+          message: activation.activationEnabled
+            ? 'Enabled for student answers.'
+            : 'Disabled for student answers.',
           approved,
           approvedSummary
         },

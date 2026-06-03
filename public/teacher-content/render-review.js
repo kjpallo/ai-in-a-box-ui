@@ -129,15 +129,18 @@
           ? 'No visible draft rows remain in this review queue.'
           : 'No visible draft rows are available for review.';
         if (packApproved) {
+          const approvedPack = (Array.isArray(state.approved) ? state.approved : []).find((pack) => String(pack?.packId || '').trim() === packId) || {};
+          const packName = approvedPack.title || draft?.title || packId || 'Approved knowledge pack';
+          const approvedItemCount = getDraftItemCount(approvedPack || draft || {});
           return `
             <section class="teacher-content-review-action-bar" data-review-empty-approved-state>
               <div>
-                <strong>Review complete.</strong>
-                <small>${escapeHtml(noVisibleRowsMessage)} The matching approved knowledge pack exists.</small>
+                <strong>Saved and enabled for student answers.</strong>
+                <small>${escapeHtml(packName)}${approvedItemCount ? ` · ${escapeHtml(formatNumber(approvedItemCount))} item${approvedItemCount === 1 ? '' : 's'}` : ''}. ${escapeHtml(noVisibleRowsMessage)}</small>
               </div>
               <div class="teacher-content-review-action-buttons">
-                <button type="button" class="small-button" data-review-done-view-knowledge-packs>Done</button>
-                <button type="button" class="small-button secondary-small" data-review-pack-open-approved data-review-pack-id="${escapeAttr(packId)}">Saved Knowledge Packs</button>
+                <button type="button" class="small-button" data-review-pack-open-approved data-review-pack-id="${escapeAttr(packId)}">View in Saved Knowledge Packs</button>
+                <button type="button" class="small-button secondary-small" data-review-done-view-knowledge-packs>Done</button>
                 <button type="button" class="small-button secondary-small" data-review-pack-remove data-review-pack-id="${escapeAttr(packId)}">Remove accepted draft copy</button>
               </div>
             </section>
@@ -169,15 +172,15 @@
             <div class="teacher-content-card-head">
               <div>
                 <h4>Done</h4>
-                <p>${packApproved ? 'Knowledge pack approved.' : 'Import review is complete for this draft session.'}</p>
+                <p>${packApproved ? 'Saved and enabled for student answers.' : 'Import review is complete for this draft session.'}</p>
               </div>
               <span class="teacher-content-pill ready">Complete</span>
             </div>
             <p>${packApproved ? 'Approved knowledge pack:' : 'Reviewed draft pack:'} <strong data-review-done-pack-name>${escapeHtml(donePackName || 'Current review draft')}</strong></p>
-            <p>${packApproved ? 'It is saved in the Knowledge blade. Enable it for student answers from the Knowledge blade when you are ready.' : 'This draft is still in review until you approve it.'}</p>
+            <p>${packApproved ? 'It is saved in Saved Knowledge Packs and available to student answers.' : 'This draft is still in review until you approve it.'}</p>
             <div class="teacher-content-done-actions">
               ${!packApproved && canApproveNow ? `<button type="button" class="small-button" data-promote-draft data-review-create-approved-pack ${state.promotionActionLoading ? 'disabled' : ''}>${escapeHtml(state.promotionActionLoading ? 'Approving...' : 'Approve Pack')}</button>` : ''}
-              <button type="button" class="small-button secondary-small" data-review-done-view-knowledge-packs>Manage Knowledge Packs</button>
+              <button type="button" class="small-button secondary-small" data-review-done-view-knowledge-packs>View in Saved Knowledge Packs</button>
             </div>
           </section>
         `;
@@ -261,11 +264,11 @@
             ${selectedAccepted ? `
               <section class="teacher-content-review-action-bar" data-review-accepted-pack-state>
                 <div>
-                  <strong>This pack has already been accepted.</strong>
-                  <small>Use Done to finish, review another draft, or clear this accepted draft copy from the queue.</small>
+                  <strong>Saved and enabled for student answers.</strong>
+                  <small>This accepted pack is in Saved Knowledge Packs. Review another draft or clear this accepted draft copy from the queue.</small>
                 </div>
                 <div class="teacher-content-review-action-buttons">
-                  <button type="button" class="small-button" data-review-pack-open-approved data-review-pack-id="${escapeAttr(state.selectedDraftPackId || '')}">Saved Knowledge Packs</button>
+                  <button type="button" class="small-button" data-review-pack-open-approved data-review-pack-id="${escapeAttr(state.selectedDraftPackId || '')}">View in Saved Knowledge Packs</button>
                   <button type="button" class="small-button secondary-small" data-review-pack-next-pending>Review another draft</button>
                   <button type="button" class="small-button secondary-small" data-review-pack-remove data-review-pack-id="${escapeAttr(state.selectedDraftPackId || '')}">Remove accepted draft copy from active drafts</button>
                 </div>

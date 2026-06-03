@@ -5472,6 +5472,15 @@ button:disabled {
   overflow-wrap: anywhere;
 }
 
+.teacher-content-simple-pack-meta {
+  display: flex;
+  flex-basis: 100%;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  color: #bad7d3;
+  font-size: 0.74rem;
+}
+
 .teacher-content-simple-pack-toggle {
   display: grid;
   gap: 4px;

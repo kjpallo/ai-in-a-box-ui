@@ -482,8 +482,8 @@
           const skippedText = skipped > 0
             ? ` ${formatNumber(skipped)} selected row${skipped === 1 ? '' : 's'} were skipped because they are invalid, blocked, or excluded.`
             : '';
-          state.reviewBulkMessage = `${options.doneMessage || `Accepted ${formatNumber(acceptedCount)} valid row${acceptedCount === 1 ? '' : 's'} into one combined knowledge pack.`} Saved as "${combinedName}".${skippedText}`;
-          state.promotionMessage = 'Combined knowledge pack saved.';
+          state.reviewBulkMessage = `Saved and enabled for student answers: "${combinedName}" (${formatNumber(acceptedCount)} item${acceptedCount === 1 ? '' : 's'}).${skippedText} View it in Saved Knowledge Packs.`;
+          state.promotionMessage = 'Saved and enabled for student answers.';
           state.reviewCompleted = true;
           setStatus(state.reviewBulkMessage);
           focusKnowledgeManager(state.reviewBulkMessage);

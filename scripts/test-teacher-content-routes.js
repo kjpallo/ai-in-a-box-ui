@@ -2336,7 +2336,7 @@ async function assertApprovedActivationEndpointEnablesPack(handlers) {
   assert.equal(response.body.data.packId, 'route-approved-pack');
   assert.equal(response.body.data.activationEnabled, true);
   assert.equal(response.body.data.activationStatus, 'enabled');
-  assert.equal(response.body.data.message, 'Activation setting saved. Enabled packs are available for student answers.');
+  assert.equal(response.body.data.message, 'Enabled for student answers.');
   assert.equal(response.body.data.approved.activationEnabled, true);
   assert.equal(response.body.data.approvedSummary.approvedPacks.find((pack) => pack.packId === 'route-approved-pack').activationEnabled, true);
   assert.equal(fs.existsSync(activationRegistryPath), true, 'activation registry file should be written in the temp approved packs dir');
@@ -2760,7 +2760,7 @@ async function assertPromoteDraftEndpointSucceeds(handlers) {
   assert.equal(response.statusCode, 200);
   assert.equal(response.body.success, true);
   assert.equal(response.body.data.packId, 'route-promote-ready-pack');
-  assert.equal(response.body.data.message, 'Draft promoted to approved knowledge pack.');
+  assert.equal(response.body.data.message, 'Saved and enabled for student answers.');
   assert.equal(response.body.data.approved.packId, 'route-promote-ready-pack');
   assert.equal(response.body.data.activation.activationEnabled, true, 'draft promotion should enable activation immediately.');
   assert.equal(response.body.data.approved.activationEnabled, true, 'newly approved packs should be available to student answers.');

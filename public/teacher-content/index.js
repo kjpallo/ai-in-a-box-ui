@@ -2816,10 +2816,11 @@
       }
 
       const data = promotion.data || {};
-      state.promotionMessage = 'Knowledge pack approved.';
-      state.reviewBulkMessage = blockers.length > 0
-        ? `Excluded ${formatNumber(blockers.length)} flagged item${blockers.length === 1 ? '' : 's'} and approved the remaining valid content. The approved pack is now live for student answers.`
-        : 'Approved reviewed valid items and created an approved pack. The approved pack is now live for student answers.';
+      const approvedPack = data.approved || data.approvedSummary?.approvedPacks?.find((pack) => String(pack?.packId || '').trim() === String(data.packId || draftPackIdAtStart || '').trim()) || {};
+      const approvedName = approvedPack.title || approvedPack.packId || data.packId || draftPackIdAtStart || 'Approved knowledge pack';
+      const approvedCount = getDraftItemCount(approvedPack);
+      state.promotionMessage = 'Saved and enabled for student answers.';
+      state.reviewBulkMessage = `Saved and enabled for student answers: "${approvedName}"${approvedCount ? ` (${formatNumber(approvedCount)} item${approvedCount === 1 ? '' : 's'})` : ''}. View it in Saved Knowledge Packs.`;
       if (data?.dashboard) state.dashboard = data.dashboard;
       if (Array.isArray(data?.drafts)) state.drafts = data.drafts;
       state.report = data && Object.prototype.hasOwnProperty.call(data, 'report') ? data.report : state.report;
@@ -2827,7 +2828,7 @@
       await refreshTeacherContentSummaries();
       state.reviewCompleted = true;
       state.activeTab = 'complete';
-      setStatus('Knowledge pack approved.');
+      setStatus(state.reviewBulkMessage);
     } catch (error) {
       state.errors.push(`Approve valid items only failed: ${error.message || 'Route error'}`);
       state.reviewBulkMessage = formatPromotionFailureMessage(state.report?.promotionReadiness, visibleItems);
@@ -2942,7 +2943,10 @@
         return;
       }
       const data = promotion.data || {};
-      state.promotionMessage = 'Knowledge pack approved.';
+      const approvedPack = data.approved || data.approvedSummary?.approvedPacks?.find((pack) => String(pack?.packId || '').trim() === String(data.packId || state.selectedDraftPackId || '').trim()) || {};
+      const approvedName = approvedPack.title || approvedPack.packId || data.packId || draft?.title || 'Approved knowledge pack';
+      const approvedCount = getDraftItemCount(approvedPack);
+      state.promotionMessage = 'Saved and enabled for student answers.';
       if (data?.dashboard) state.dashboard = data.dashboard;
       if (Array.isArray(data?.drafts)) state.drafts = data.drafts;
       const archivedPackIds = new Set((Array.isArray(data?.archivedDrafts) ? data.archivedDrafts : []).map((entry) => String(entry?.packId || '').trim()).filter(Boolean));
@@ -2956,7 +2960,7 @@
       if (data?.approvedSummary) applyApprovedSummary(data.approvedSummary);
       await refreshTeacherContentSummaries();
       state.reviewCompleted = true;
-      focusKnowledgeManager('Knowledge pack approved and live for student answers. It is saved in Saved Knowledge Packs.');
+      focusKnowledgeManager(`Saved and enabled for student answers: "${approvedName}"${approvedCount ? ` (${formatNumber(approvedCount)} item${approvedCount === 1 ? '' : 's'})` : ''}. View it in Saved Knowledge Packs.`);
     } catch (error) {
       const routeErrors = Array.isArray(error.errors) && error.errors.length ? error.errors : [error.message || 'Route error'];
       state.errors.push(...routeErrors);
@@ -3863,7 +3867,9 @@
 
   function isItemVisibleInSimpleReviewList(item) {
     const status = getItemReviewWorkflowStatus(item);
-    return status !== 'rejected';
+    if (status === 'rejected') return false;
+    if (status === 'approved') return getReviewItemPromotionBlockers(item).length > 0;
+    return true;
   }
 
   function isPendingReviewStatus(reviewStatus) {

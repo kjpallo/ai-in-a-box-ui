@@ -40,6 +40,7 @@ async function main() {
   assertAcceptSelectedUsesCombinedPackApproval();
   assertAcceptAllUsesCombinedPackApproval();
   assertDeleteMarksRejectedAndHidesRows();
+  assertPostApprovalTeacherFriendlyCopy();
   assertExcludeSelectedRoutesAcrossDraftPacks();
   assertEditActionKeepsDraftPackIdentity();
   assertEditUsesSafeFields();
@@ -47,6 +48,7 @@ async function main() {
   assertSuccessReturnsToKnowledgeManager();
   assertPrimaryFlowHidesTechnicalImportControls();
   assertSavedKnowledgePackBulkDeleteUi();
+  assertSavedKnowledgePacksShowEnabledStatus();
   assertSavedKnowledgePacksHideApprovedDraftDuplicates();
   await assertSavedKnowledgePackBulkDeleteBehavior();
   assertRouterAndFormulaGuardsRemainInRouteTests();
@@ -258,7 +260,35 @@ function assertDeleteMarksRejectedAndHidesRows() {
   assert.match(excludeSelected, /reviewStatus: 'rejected'/, 'Exclude selected should set selected rows to rejected.');
   assert.match(excludeSelected, /const selected = getSelectedReviewItems\(\)/, 'Exclude selected should use selected rows.');
   assert.match(visibleItems, /isItemVisibleInSimpleReviewList/, 'Visible review rows should use simple visibility filtering.');
-  assert.match(simpleVisibility, /status !== 'rejected'/, 'Rejected rows should be hidden from the simple review list.');
+  assert.match(simpleVisibility, /status === 'rejected'[\s\S]*return false/, 'Rejected rows should be hidden from the simple review list.');
+  assert.match(simpleVisibility, /status === 'approved'[\s\S]*getReviewItemPromotionBlockers\(item\)\.length > 0/, 'Accepted promotion-ready rows should leave the active review list while blocked approved rows remain visible.');
+}
+
+function assertPostApprovalTeacherFriendlyCopy() {
+  const acceptReview = extractFunctionSource(ui, 'acceptReviewItems');
+  const promoteSelectedDraft = extractFunctionSource(ui, 'promoteSelectedDraft');
+  const rejectBlockersPromote = extractFunctionSource(ui, 'rejectBlockingItemsAndPromote');
+  const doneCard = extractFunctionSource(ui, 'renderReviewDoneCard');
+  const emptyActionBar = extractFunctionSource(ui, 'renderReviewEmptyQueueActionBar');
+  const queueList = extractFunctionSource(ui, 'renderReviewQueueList');
+  const routeSource = routeTest;
+
+  assert.match(acceptReview, /Saved and enabled for student answers/, 'Accept Selected/Accept All success should say saved and enabled for student answers.');
+  assert.match(acceptReview, /formatNumber\(acceptedCount\)/, 'Combined approval success should include accepted item count.');
+  assert.match(acceptReview, /View it in Saved Knowledge Packs/, 'Combined approval success should point teachers to Saved Knowledge Packs.');
+  assert.match(promoteSelectedDraft, /Saved and enabled for student answers/, 'Final approve success should say saved and enabled for student answers.');
+  assert.match(promoteSelectedDraft, /focusKnowledgeManager\(`Saved and enabled for student answers/, 'Final approve should return teachers to Saved Knowledge Packs with success copy.');
+  assert.match(rejectBlockersPromote, /Saved and enabled for student answers/, 'Approve valid items only success should use the same teacher-friendly copy.');
+  assert.match(doneCard, /Saved and enabled for student answers/, 'Done state should confirm the pack is enabled for student answers.');
+  assert.doesNotMatch(doneCard, /Enable it for student answers from the Knowledge blade when you are ready/, 'Done state should not use stale enable-later wording.');
+  assert.match(emptyActionBar, /data-review-empty-approved-state[\s\S]*Saved and enabled for student answers/, 'Approved empty queue should show a completion message.');
+  assert.match(emptyActionBar, /View in Saved Knowledge Packs/, 'Approved empty queue should offer Saved Knowledge Packs as the next action.');
+  assert.match(queueList, /data-review-accepted-pack-state[\s\S]*Saved and enabled for student answers/, 'Accepted queue state should not look like active review.');
+  assert.match(queueList, /View in Saved Knowledge Packs/, 'Accepted queue state should expose the saved-pack destination.');
+  assert.doesNotMatch(ui, /does not change student answers yet/i, 'Teacher UI should not contain stale not-live wording.');
+  assert.doesNotMatch(ui, /activation registry/i, 'Teacher UI should avoid technical activation-registry wording.');
+  assert.match(read(path.join(projectRoot, 'routes', 'teacherContentRoutes.js')), /message: 'Saved and enabled for student answers\.'/, 'Promotion and combined route responses should include teacher-facing success copy.');
+  assert.doesNotMatch(routeSource, /does not change student answers yet/i, 'Route tests should not preserve stale activation wording.');
 }
 
 function assertExcludeSelectedRoutesAcrossDraftPacks() {
@@ -391,10 +421,36 @@ function assertSavedKnowledgePackBulkDeleteUi() {
   assert.match(routeTest, /assertApprovedBulkDeletePathTraversalRejectedBeforeMutation/, 'Route tests should cover path traversal rejection before mutation.');
 }
 
+function assertSavedKnowledgePacksShowEnabledStatus() {
+  const manager = extractFunctionSource(ui, 'renderKnowledgeManager');
+  const approvedRow = extractFunctionSource(ui, 'renderApprovedPack');
+  const draftRow = extractFunctionSource(ui, 'renderDraftPack');
+  const countItems = extractFunctionSource(ui, 'countPackItems');
+  const updatedAt = extractFunctionSource(ui, 'formatPackUpdatedAt');
+  const activationToggle = extractFunctionSource(ui, 'toggleApprovedPackActivation');
+  const routeSource = read(path.join(projectRoot, 'routes', 'teacherContentRoutes.js'));
+
+  assert.match(manager, /Approved packs here can be available to student answers/, 'Saved Knowledge Packs header should explain student-answer availability.');
+  assert.match(approvedRow, /data-approved-pack-enabled-badge/, 'Approved rows should show an enabled/disabled badge.');
+  assert.match(approvedRow, /data-approved-pack-item-count/, 'Approved rows should show item count.');
+  assert.match(approvedRow, /data-approved-pack-updated/, 'Approved rows should show last updated when available.');
+  assert.match(approvedRow, /Available to student answers/, 'Enabled approved rows should say available to student answers.');
+  assert.match(approvedRow, /Not available to student answers/, 'Disabled approved rows should say not available to student answers.');
+  assert.match(draftRow, /data-draft-pack-item-count/, 'Draft rows should show item count.');
+  assert.match(draftRow, /data-draft-pack-enabled-status/, 'Draft rows should show that they are not available to student answers.');
+  assert.match(countItems, /Object\.values\(counts\)/, 'Saved pack item count helper should use itemCounts when available.');
+  assert.match(updatedAt, /pack\.updatedAt \|\| pack\.activationUpdatedAt \|\| pack\.createdAt/, 'Saved pack updated helper should use existing timestamps.');
+  assert.match(activationToggle, /Enabled for student answers\./, 'Enable route status should use teacher-facing enabled wording.');
+  assert.match(activationToggle, /Disabled for student answers\./, 'Disable route status should use teacher-facing disabled wording.');
+  assert.match(routeSource, /message: activation\.activationEnabled[\s\S]*Enabled for student answers\.[\s\S]*Disabled for student answers\./, 'Activation route response should avoid technical activation-setting success copy.');
+}
+
 function assertSavedKnowledgePacksHideApprovedDraftDuplicates() {
   const renderSimpleRowsSource = extractFunctionSource(ui, 'renderSimpleKnowledgePackRows');
   const renderApprovedRowSource = extractFunctionSource(ui, 'renderApprovedPack');
   const renderDraftRowSource = extractFunctionSource(ui, 'renderDraftPack');
+  const countPackItemsSource = extractFunctionSource(ui, 'countPackItems');
+  const formatPackUpdatedAtSource = extractFunctionSource(ui, 'formatPackUpdatedAt');
   const hiddenDraftMatcherSource = extractFunctionSource(ui, 'buildHiddenDraftPackIdSetForSavedList');
   const hasStrongSourceMetadataSource = extractFunctionSource(ui, 'hasStrongSourceMetadata');
   const collectComparablePackSourceMetadataSource = extractFunctionSource(ui, 'collectComparablePackSourceMetadata');
@@ -409,7 +465,9 @@ function assertSavedKnowledgePacksHideApprovedDraftDuplicates() {
     'getVisibleDraftPacks',
     'escapeHtml',
     'escapeAttr',
-    `${renderApprovedRowSource}\n${renderDraftRowSource}\n${hasStrongSourceMetadataSource}\n${collectComparablePackSourceMetadataSource}\n${collectComparableSetSource}\n${matchesByComparableSourceMetadataSource}\n${hasComparableSetOverlapSource}\n${canFallbackToFileNameOverlapSource}\n${normalizeComparableTitleSource}\n${hiddenDraftMatcherSource}\n${renderSimpleRowsSource}\nreturn { renderSimpleKnowledgePackRows };`
+    'formatNumber',
+    'formatDate',
+    `${countPackItemsSource}\n${formatPackUpdatedAtSource}\n${renderApprovedRowSource}\n${renderDraftRowSource}\n${hasStrongSourceMetadataSource}\n${collectComparablePackSourceMetadataSource}\n${collectComparableSetSource}\n${matchesByComparableSourceMetadataSource}\n${hasComparableSetOverlapSource}\n${canFallbackToFileNameOverlapSource}\n${normalizeComparableTitleSource}\n${hiddenDraftMatcherSource}\n${renderSimpleRowsSource}\nreturn { renderSimpleKnowledgePackRows };`
   );
 
   const escapeHtml = (value) => String(value ?? '')
@@ -419,6 +477,8 @@ function assertSavedKnowledgePacksHideApprovedDraftDuplicates() {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
   const escapeAttr = (value) => escapeHtml(value);
+  const formatNumber = (value) => String(Number(value || 0));
+  const formatDate = (value) => String(value || '').slice(0, 10);
   const countMatches = (text, pattern) => (String(text || '').match(pattern) || []).length;
 
   {
@@ -430,7 +490,7 @@ function assertSavedKnowledgePacksHideApprovedDraftDuplicates() {
       approvedDeleteSaving: {},
       approvedBulkDeleteSaving: false
     };
-    const harness = renderHarnessFactory(state, () => state.drafts, escapeHtml, escapeAttr);
+    const harness = renderHarnessFactory(state, () => state.drafts, escapeHtml, escapeAttr, formatNumber, formatDate);
     const html = harness.renderSimpleKnowledgePackRows();
     assert.equal(countMatches(html, /data-approved-pack-card/g), 1, 'Matching approved+draft packId should render one approved row.');
     assert.equal(countMatches(html, /data-draft-pack-card/g), 0, 'Matching approved+draft packId should not render a duplicate draft row.');
@@ -448,7 +508,7 @@ function assertSavedKnowledgePacksHideApprovedDraftDuplicates() {
       approvedDeleteSaving: {},
       approvedBulkDeleteSaving: false
     };
-    const harness = renderHarnessFactory(state, () => state.drafts, escapeHtml, escapeAttr);
+    const harness = renderHarnessFactory(state, () => state.drafts, escapeHtml, escapeAttr, formatNumber, formatDate);
     const html = harness.renderSimpleKnowledgePackRows();
     assert.equal(countMatches(html, /data-approved-pack-card/g), 1, 'Approved row should still render once when duplicate draft has padded packId.');
     assert.equal(countMatches(html, /data-draft-pack-card/g), 1, 'Unapproved draft rows should still render as Draft.');
@@ -476,7 +536,7 @@ function assertSavedKnowledgePacksHideApprovedDraftDuplicates() {
       approvedDeleteSaving: {},
       approvedBulkDeleteSaving: false
     };
-    const harness = renderHarnessFactory(state, () => state.drafts, escapeHtml, escapeAttr);
+    const harness = renderHarnessFactory(state, () => state.drafts, escapeHtml, escapeAttr, formatNumber, formatDate);
     const html = harness.renderSimpleKnowledgePackRows();
     assert.equal(countMatches(html, /data-approved-pack-card/g), 1, 'Approved row should render for real uploadId overlap cases.');
     assert.equal(countMatches(html, /data-draft-pack-card/g), 0, 'Draft row should hide when approved and draft share source uploadId even with different pack IDs.');
@@ -502,7 +562,7 @@ function assertSavedKnowledgePacksHideApprovedDraftDuplicates() {
       approvedDeleteSaving: {},
       approvedBulkDeleteSaving: false
     };
-    const harness = renderHarnessFactory(state, () => state.drafts, escapeHtml, escapeAttr);
+    const harness = renderHarnessFactory(state, () => state.drafts, escapeHtml, escapeAttr, formatNumber, formatDate);
     const html = harness.renderSimpleKnowledgePackRows();
     assert.equal(countMatches(html, /data-approved-pack-card/g), 1, 'Approved row should render for filename fallback cases.');
     assert.equal(countMatches(html, /data-draft-pack-card/g), 0, 'Draft row should hide when one side is missing upload IDs but source file names overlap.');
@@ -528,7 +588,7 @@ function assertSavedKnowledgePacksHideApprovedDraftDuplicates() {
       approvedDeleteSaving: {},
       approvedBulkDeleteSaving: false
     };
-    const harness = renderHarnessFactory(state, () => state.drafts, escapeHtml, escapeAttr);
+    const harness = renderHarnessFactory(state, () => state.drafts, escapeHtml, escapeAttr, formatNumber, formatDate);
     const html = harness.renderSimpleKnowledgePackRows();
     assert.equal(countMatches(html, /data-approved-pack-card/g), 1, 'Approved row should render for the accepted pack.');
     assert.equal(countMatches(html, /data-draft-pack-card/g), 0, 'Same-title blank-source draft duplicates should be hidden even when pack IDs differ.');
@@ -554,7 +614,7 @@ function assertSavedKnowledgePacksHideApprovedDraftDuplicates() {
       approvedDeleteSaving: {},
       approvedBulkDeleteSaving: false
     };
-    const harness = renderHarnessFactory(state, () => state.drafts, escapeHtml, escapeAttr);
+    const harness = renderHarnessFactory(state, () => state.drafts, escapeHtml, escapeAttr, formatNumber, formatDate);
     const html = harness.renderSimpleKnowledgePackRows();
     assert.equal(countMatches(html, /data-approved-pack-card/g), 1, 'Approved row should render.');
     assert.equal(countMatches(html, /data-draft-pack-card/g), 1, 'Draft with stronger distinct source metadata should remain visible even with same normalized title.');

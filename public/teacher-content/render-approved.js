@@ -35,7 +35,7 @@
         <div class="teacher-content-card-head">
           <div>
             <h4>Saved Knowledge Packs</h4>
-            <p>Draft packs need review and approval first. Approved packs can be enabled for student answers here.</p>
+            <p>Approved packs here can be available to student answers. Draft packs still need review first.</p>
           </div>
         </div>
         ${hasPacks ? `
@@ -210,7 +210,7 @@
       return `
         <section class="teacher-content-approved-status" data-approved-pack-status-language>
           <span>Approved</span>
-          <span>Use Enable for student answers to control student-answer access.</span>
+          <span>Enabled packs are available to student answers.</span>
         </section>
         ${renderApprovedBulkActions({ selectedCount, approvedCount })}
         <div class="teacher-content-approved-list" data-knowledge-packs-blade>
@@ -229,7 +229,7 @@
         <section class="teacher-content-approved-bulk-actions" data-approved-pack-bulk-delete-panel>
           <div>
             <strong>Selected for deletion: <span data-approved-pack-selected-count>${selectedCount}</span> of ${visibleCount}</strong>
-            <p>Delete removes selected visible packs from saved teacher-content locations. Activation checkboxes only control student-answer availability on approved packs.</p>
+            <p>Delete removes selected visible packs from saved teacher-content locations. Enable controls whether approved packs are available to student answers.</p>
           </div>
           <div class="teacher-content-approved-bulk-buttons">
             <label class="teacher-content-checkbox-control teacher-content-select-all-control">
@@ -287,6 +287,8 @@
       const packId = String(draft?.packId || '');
       const title = draft?.title || packId || 'Draft pack';
       const pending = Number(draft?.totalPending || draft?.reviewCounts?.pending || 0);
+      const itemCount = countPackItems(draft);
+      const updatedAt = formatPackUpdatedAt(draft);
       const actionLabel = pending > 0 ? 'Continue Review' : 'Review / Approve';
       const selected = state.selectedApprovedPackIds.includes(packId);
       const deleteSaving = state.approvedDeleteSaving[packId] === true;
@@ -304,9 +306,13 @@
           <div class="teacher-content-simple-pack-title">
             <strong data-draft-pack-title>${escapeHtml(title)}</strong>
             <span class="teacher-content-pill muted" data-draft-pack-badge>Draft</span>
+            <div class="teacher-content-simple-pack-meta" data-draft-pack-meta>
+              <span data-draft-pack-item-count>${escapeHtml(formatNumber(itemCount))} item${itemCount === 1 ? '' : 's'}</span>
+              ${updatedAt ? `<span data-draft-pack-updated>Updated ${escapeHtml(updatedAt)}</span>` : ''}
+            </div>
           </div>
           <div class="teacher-content-simple-pack-toggle">
-            <span>Disabled</span>
+            <span data-draft-pack-enabled-status>Not available to student answers</span>
             <small>Enable for student answers appears after approval.</small>
           </div>
           <div class="teacher-content-simple-pack-actions">
@@ -325,9 +331,11 @@
       const activationSaving = state.approvedActivationSaving[packId] === true;
       const deleteSaving = state.approvedDeleteSaving[packId] === true;
       const selected = state.selectedApprovedPackIds.includes(packId);
+      const itemCount = countPackItems(pack);
+      const updatedAt = formatPackUpdatedAt(pack);
       const activationLabel = activationSaving
         ? 'Saving...'
-        : (activationEnabled ? 'Enabled for student answers' : 'Disabled for student answers');
+        : (activationEnabled ? 'Available to student answers' : 'Not available to student answers');
       return `
         <section class="teacher-content-simple-pack-row" data-approved-pack-card data-knowledge-pack-row>
           <label class="teacher-content-row-select" aria-label="Select ${escapeAttr(pack.title || pack.packId || 'approved pack')} for deletion">
@@ -342,6 +350,11 @@
           <div class="teacher-content-simple-pack-title">
             <strong data-approved-pack-title>${escapeHtml(pack.title || pack.packId || 'Approved pack')}</strong>
             <span class="teacher-content-pill ready">Approved</span>
+            <span class="teacher-content-pill ${activationEnabled ? 'ready' : 'muted'}" data-approved-pack-enabled-badge>${activationEnabled ? 'Enabled' : 'Disabled'}</span>
+            <div class="teacher-content-simple-pack-meta" data-approved-pack-meta>
+              <span data-approved-pack-item-count>${escapeHtml(formatNumber(itemCount))} item${itemCount === 1 ? '' : 's'}</span>
+              ${updatedAt ? `<span data-approved-pack-updated>Updated ${escapeHtml(updatedAt)}</span>` : ''}
+            </div>
           </div>
           <div class="teacher-content-simple-pack-toggle">
             <label class="teacher-content-checkbox-control">
@@ -355,7 +368,7 @@
               >
               <span>Enable for student answers</span>
             </label>
-            <small data-approved-pack-activation-status>${escapeHtml(activationEnabled ? 'Enabled' : 'Disabled')} · ${escapeHtml(activationLabel)}</small>
+            <small data-approved-pack-activation-status>${escapeHtml(activationLabel)}</small>
           </div>
           <div class="teacher-content-simple-pack-actions">
             <button type="button" class="small-button secondary-small" data-approved-pack-view-edit-action data-approved-pack-id="${escapeAttr(packId)}">Edit</button>
@@ -365,6 +378,19 @@
           </div>
         </section>
       `;
+    }
+
+    function countPackItems(pack = {}) {
+      const counts = pack && typeof pack.itemCounts === 'object' && pack.itemCounts ? pack.itemCounts : {};
+      const fromCounts = Object.values(counts).reduce((sum, value) => sum + Number(value || 0), 0);
+      if (fromCounts > 0) return fromCounts;
+      const indexed = pack && typeof pack.indexedCounts === 'object' && pack.indexedCounts ? pack.indexedCounts : {};
+      return Object.values(indexed).reduce((sum, value) => sum + Number(value || 0), 0);
+    }
+
+    function formatPackUpdatedAt(pack = {}) {
+      const value = pack.updatedAt || pack.activationUpdatedAt || pack.createdAt || '';
+      return value ? formatDate(value) : '';
     }
 
     function renderUploadedSourcesHistory() {
@@ -453,8 +479,8 @@
       const pack = state.approved.find((item) => item.packId === packId);
       const enabled = button.matches?.('input[type="checkbox"]') ? button.checked === true : !(pack && pack.activationEnabled === true);
       state.approvedActivationSaving = { ...state.approvedActivationSaving, [packId]: true };
-      state.approvedActivationMessages = { ...state.approvedActivationMessages, [packId]: 'Saving activation setting...' };
-      setStatus('Saving activation setting...');
+      state.approvedActivationMessages = { ...state.approvedActivationMessages, [packId]: 'Saving student-answer availability...' };
+      setStatus('Saving student-answer availability...');
       render();
 
       try {
@@ -466,17 +492,17 @@
         const data = unwrap(payload);
         state.approvedActivationMessages = {
           ...state.approvedActivationMessages,
-          [packId]: data?.message || 'Activation setting saved. Enabled packs are available for student answers.'
+          [packId]: data?.message || (enabled ? 'Enabled for student answers.' : 'Disabled for student answers.')
         };
         if (data?.approvedSummary) applyApprovedSummary(data.approvedSummary);
         await refreshTeacherContentSummaries();
-        setStatus('Activation setting saved. Enabled packs are available for student answers.');
+        setStatus(data?.message || (enabled ? 'Enabled for student answers.' : 'Disabled for student answers.'));
       } catch (error) {
         state.approvedActivationMessages = {
           ...state.approvedActivationMessages,
-          [packId]: `Activation setting failed: ${error.message || 'Route error'}`
+          [packId]: `Student-answer availability failed: ${error.message || 'Route error'}`
         };
-        setStatus('Activation setting failed.');
+        setStatus('Student-answer availability failed.');
       } finally {
         state.approvedActivationSaving = { ...state.approvedActivationSaving, [packId]: false };
         render();
