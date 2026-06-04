@@ -119,6 +119,8 @@ async function main() {
     await assertAwkwardConceptTitlesAreCleanedToReadableTitles();
     await assertBiologyKrebsCycleNotesProduceConceptRecovery();
     await assertPlateTectonicsNotesProduceCauseEffectEvidenceConcepts();
+    await assertEarthScienceDefinitionsAndConceptCleanup();
+    await assertEarthScienceReviewSlideMetadataIsRejected();
     await assertHistoryPeopleEventsDatesProduceConcepts();
     await assertUsefulSectionLabelsAndFragmentsAreRejectedAsVocabularyTerms();
     await assertCodeExamplesAreRejectedAsReferenceFormulas();
@@ -3359,6 +3361,167 @@ async function assertPlateTectonicsNotesProduceCauseEffectEvidenceConcepts() {
   assert.match(conceptText, /convection.{0,40}(move|motion).{0,40}plate/);
   assert.match(conceptText, /(fossils|rock layers|magnetic stripes|seafloor spreading).{0,80}(plate motion|new crust)/);
   assert.match(conceptText, /(convergent|transform).{0,80}(earthquake|volcano|mountain)/);
+}
+
+async function assertEarthScienceDefinitionsAndConceptCleanup() {
+  const plateText = [
+    'Page 1 of 4 - Charlemagne bulk subject test',
+    'Vocabulary',
+    'Lithosphere is the rigid outer layer of Earth that includes the crust and upper mantle.',
+    'Asthenosphere is the softer, flowing part of the upper mantle below the lithosphere.',
+    'Tectonic plate is a large piece of lithosphere that moves slowly.',
+    'Core Concept',
+    'Plates move because of processes inside Earth, including mantle convection, slab pull, and ridge push.',
+    'Students should connect boundary type to landforms and hazards.',
+    'Page 2 of 4 - Charlemagne bulk subject test',
+    'Plate Boundaries',
+    'Divergent boundary: plates move apart and new crust can form.',
+    'Convergent boundary: plates move together and one plate may subduct.',
+    'Transform boundary: plates slide past each other.',
+    'Cause and Effect',
+    'Divergent boundaries can form mid-ocean ridges or rift valleys.',
+    'Convergent boundaries can form mountains, volcanoes, trenches, or earthquakes.',
+    'Transform boundaries often cause earthquakes along faults.',
+    'Page 3 of 4 - Charlemagne bulk subject test',
+    'Evidence and History',
+    'Alfred Wegener proposed continental drift.',
+    'Evidence included matching coastlines, similar fossils on different continents, matching rock layers, and signs of past climates.',
+    'Seafloor spreading later helped explain how continents could move.',
+    'Core Concept',
+    'A scientific explanation becomes stronger when multiple types of evidence support it.',
+    'Page 4 of 4 - Charlemagne bulk subject test',
+    'Review Items',
+    'Useful terms: lithosphere, asthenosphere, tectonic plate, mantle convection, divergent boundary, convergent boundary, transform boundary, subduction, earthquake, fault, volcano.'
+  ].join('\n');
+  const extraction = writeTempExtraction('earth_science_plate_quality_cleanup.json', {
+    ...makeExtraction(),
+    fileName: 'plate_tectonics_notes.pdf',
+    extension: '.pdf',
+    mimeGuess: 'application/pdf',
+    text: plateText,
+    sections: [{
+      label: 'Pages 1-4',
+      sourceLocation: 'Pages 1-4',
+      pageNumber: 1,
+      text: plateText
+    }],
+    metadata: { detectedType: 'pdf', characterCount: plateText.length, pageCount: 4 }
+  });
+
+  const result = await generateDraftKnowledgePack({
+    extractionJsonPath: extraction,
+    outputDraftDir: path.join(tempRoot, 'earth-science-plate-quality-drafts'),
+    modelClient: async () => JSON.stringify(makeGeneratedPack({
+      vocabulary: [
+        { ...makeVocabularyItem(), term: 'Lithosphere', aliases: [], confidence: 'low' },
+        { ...makeVocabularyItem(), term: 'Asthenosphere', aliases: [], confidence: 'low' },
+        { ...makeVocabularyItem(), term: 'Tectonic plate', aliases: [], confidence: 'low' },
+        { ...makeVocabularyItem(), term: 'Divergent boundary', aliases: [], confidence: 'low' }
+      ],
+      concepts: [
+        { ...makeConceptItem(), title: 'Plate Movement Causes', studentExplanation: 'Plates move because of processes inside Earth, including mantle convection, slab pull, and rising.', sourceLocation: 'Pages 1-4', sourceTextSnippet: plateText },
+        { ...makeConceptItem(), title: 'Plate Move Because', studentExplanation: 'Plates move because of processes inside Earth, including mantle convection, slab pull, and ri', sourceLocation: 'Pages 1-4', sourceTextSnippet: plateText },
+        { ...makeConceptItem(), title: 'Plates Move', studentExplanation: 'Plates move because of processes inside Earth, including mantle convection, slab pull, and ri', sourceLocation: 'Pages 1-4', sourceTextSnippet: plateText },
+        { ...makeConceptItem(), title: 'Scientific Explanation Become', studentExplanation: 'A scientific explanation becomes stronger when multiple types of evidence support', sourceLocation: 'Pages 1-4', sourceTextSnippet: plateText }
+      ],
+      referenceFormulas: [],
+      problemBank: [],
+      standardsMap: [],
+      smokeTests: []
+    }))
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  const generated = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
+  const terms = new Map(generated.vocabulary.map((item) => [normalizeLoose(item.term), item]));
+  ['lithosphere', 'asthenosphere', 'tectonic plate', 'divergent boundary'].forEach((term) => {
+    assert.ok(terms.has(term), `Expected source-derived vocabulary term: ${term}`);
+    assert.notEqual(terms.get(term).confidence, 'low', `${term} should not stay low confidence with an explicit source definition.`);
+    assert.equal(terms.get(term).sourceGrounding.status, 'supported');
+  });
+
+  const titles = generated.concepts.map((item) => item.title);
+  assert.equal(titles.filter((title) => title === 'Plate Movement').length, 1, `Expected one Plate Movement concept. Got: ${titles.join(', ')}`);
+  assert.ok(titles.includes('Scientific Evidence'), `Expected cleaned Scientific Evidence title. Got: ${titles.join(', ')}`);
+  assert.ok(titles.includes('Plate Tectonics'), `Expected broad Plate Tectonics concept. Got: ${titles.join(', ')}`);
+  assert.equal(titles.includes('Plate Move Because'), false);
+  assert.equal(titles.includes('Plates Move'), false);
+  assert.equal(titles.includes('Scientific Explanation Become'), false);
+  generated.concepts.forEach((item) => {
+    assert.equal(/\bri$/iu.test(item.studentExplanation), false, `${item.title} ended with a truncated ri fragment.`);
+  });
+}
+
+async function assertEarthScienceReviewSlideMetadataIsRejected() {
+  const slideText = [
+    'Earth Layers',
+    '- Crust: thin outer layer of Earth.',
+    '- Mantle: thick layer of hot, slowly moving rock.',
+    'Core Concept',
+    '- Earth\'s layers are identified by composition and physical properties.',
+    '- Heat inside Earth drives many geologic processes.',
+    'Earth_Science | Slide 1 of 4 | Charlemagne subject-folder import stress test',
+    'Rock Types',
+    '- Igneous rock: rock formed from cooled magma or lava.',
+    '- Sedimentary rock: rock formed from compacted sediments.',
+    '- Metamorphic rock: rock changed by heat and pressure.',
+    'Core Concept',
+    '- Rocks can change from one type to another over long periods of time.',
+    'Earth_Science | Slide 2 of 4 | Charlemagne subject-folder import stress test',
+    'Review',
+    'Review Check',
+    '- Extract layers, rock types, and rock cycle processes.',
+    '- Do not create formula code.',
+    'Earth_Science | Slide 4 of 4 | Charlemagne subject-folder import stress test'
+  ].join('\n');
+  const extraction = writeTempExtraction('earth_science_review_slide_metadata.json', {
+    ...makeExtraction(),
+    fileName: 'rock_cycle_earth_layers.pptx',
+    extension: '.pptx',
+    mimeGuess: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    text: slideText,
+    sections: [{
+      label: 'Slides 1-4',
+      sourceLocation: 'Slides 1-4',
+      pageNumber: 1,
+      text: slideText
+    }],
+    metadata: { detectedType: 'pptx', characterCount: slideText.length, pageCount: 4 }
+  });
+
+  const result = await generateDraftKnowledgePack({
+    extractionJsonPath: extraction,
+    outputDraftDir: path.join(tempRoot, 'earth-science-review-slide-metadata-drafts'),
+    modelClient: async () => JSON.stringify(makeGeneratedPack({
+      vocabulary: [
+        { ...makeVocabularyItem(), term: 'Crust', aliases: [], confidence: 'low' },
+        { ...makeVocabularyItem(), term: 'Mantle', aliases: [], confidence: 'low' }
+      ],
+      concepts: [
+        { ...makeConceptItem(), title: 'Earth Layer Identified', studentExplanation: '- Earth\'s layers are identified by composition and physical properties.', sourceLocation: 'Slides 1-4', sourceTextSnippet: slideText },
+        { ...makeConceptItem(), title: 'Rock Change One', studentExplanation: '- Rocks can change from one type to another over long periods of time.', sourceLocation: 'Slides 1-4', sourceTextSnippet: slideText },
+        { ...makeConceptItem(), title: 'Earth Science Slide', studentExplanation: 'Earth_Science | Slide 1 of 4 | Charlemagne subject-folder import stress test', sourceLocation: 'Slides 1-4', sourceTextSnippet: 'Earth_Science | Slide 1 of 4 | Charlemagne subject-folder import stress test' },
+        { ...makeConceptItem(), title: 'Review Check', studentExplanation: '- Extract layers, rock types, and rock cycle processes.', sourceLocation: 'Slides 1-4', sourceTextSnippet: 'Review Check - Extract layers, rock types, and rock cycle processes.' }
+      ],
+      referenceFormulas: [],
+      problemBank: [],
+      standardsMap: [],
+      smokeTests: []
+    }))
+  });
+
+  assert.equal(result.success, true, result.errors.join('\n'));
+  const generated = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
+  const titles = new Set(generated.concepts.map((item) => item.title));
+  assert.ok(titles.has('Earth’s Layers'), `Expected cleaned Earth’s Layers title. Got: ${Array.from(titles).join(', ')}`);
+  assert.ok(titles.has('Rock Cycle'), `Expected cleaned Rock Cycle title. Got: ${Array.from(titles).join(', ')}`);
+  assert.equal(titles.has('Earth Science Slide'), false);
+  assert.equal(titles.has('Review Check'), false);
+  assert.equal(titles.has('Earth Layer Identified'), false);
+  assert.equal(titles.has('Rock Change One'), false);
+  const terms = new Map(generated.vocabulary.map((item) => [normalizeLoose(item.term), item]));
+  assert.notEqual(terms.get('crust').confidence, 'low');
+  assert.notEqual(terms.get('mantle').confidence, 'low');
 }
 
 async function assertHistoryPeopleEventsDatesProduceConcepts() {
