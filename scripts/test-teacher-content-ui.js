@@ -118,8 +118,10 @@ function assertReviewScreenIsSimpleList() {
   assert.match(actionBar, /data-review-accept-all/, 'Bottom bar should include Accept All.');
   assert.match(actionBar, /Accept All Valid/, 'Bottom bar should include Accept All Valid copy.');
   assert.doesNotMatch(actionBar, /data-review-exclude-selected-flagged|data-review-reject-blockers-promote/, 'Bottom bar should not show old bulk technical actions.');
-  assert.match(style, /\.teacher-content-review-table-shell\[data-review-combined-table\] \.teacher-content-review-table-head,\s*\.teacher-content-review-table-shell\[data-review-combined-table\] \.teacher-content-review-table-row \{[\s\S]*grid-template-columns: 30px minmax\(180px, 1\.05fr\) minmax\(120px, 0\.6fr\) minmax\(180px, 0\.9fr\) minmax\(280px, 1\.3fr\) minmax\(220px, 1fr\) minmax\(150px, auto\);/, 'Review rows should use wider combined table columns.');
+  assert.match(style, /\.teacher-content-review-table-shell\[data-review-combined-table\] \.teacher-content-review-table-head,\s*\.teacher-content-review-table-shell\[data-review-combined-table\] \.teacher-content-review-table-row \{[\s\S]*grid-template-columns: 32px minmax\(140px, 0\.95fr\) minmax\(96px, 0\.55fr\) minmax\(140px, 0\.85fr\) minmax\(220px, 1\.3fr\) minmax\(170px, 1fr\) minmax\(120px, 0\.62fr\);/, 'Review rows should use wide but shrinkable combined table columns.');
   assert.match(style, /\.teacher-content-review-table-body \{[\s\S]*max-height: min\(64vh, 760px\);/, 'Review list should show multiple rows with a taller scroll area.');
+  assert.match(style, /\.teacher-content-review-table-body \{[\s\S]*overflow-x: hidden;/, 'Review list should not force horizontal scrolling inside the table body.');
+  assert.match(style, /@media \(max-width: 980px\) \{[\s\S]*\.teacher-content-review-table-shell\[data-review-combined-table\] \.teacher-content-review-table-row \{[\s\S]*grid-template-columns: minmax\(0, 1fr\);/, 'Review rows should stack before tablet widths can overflow sideways.');
 }
 
 function assertReviewAggregatesAllQueuePacks() {
@@ -384,11 +386,17 @@ function assertPrimaryFlowHidesTechnicalImportControls() {
 }
 
 function assertTeacherContentLayoutUsesWideReviewSpace() {
-  assert.match(style, /\.teacher-content-blade \{[\s\S]*width: min\(1560px, calc\(100vw - 28px\)\);/, 'Teacher content blade should use substantially more browser width.');
+  assert.match(style, /\.teacher-content-overlay \{[\s\S]*align-items: stretch;/, 'Teacher content overlay should stretch the workspace vertically instead of centering a modal-sized card.');
+  assert.match(style, /\.teacher-content-blade \{[\s\S]*width: min\(96vw, 1700px\);/, 'Teacher content blade should use substantially more browser width.');
+  assert.match(style, /\.teacher-content-blade \{[\s\S]*height: calc\(100vh - 24px\);/, 'Teacher content blade should use the available browser height.');
   assert.doesNotMatch(style, /\.teacher-content-blade \{[\s\S]*width: min\(980px, calc\(100vw - 28px\)\);/, 'Teacher content blade should not force the old narrow modal width.');
-  assert.match(style, /\.teacher-content-card \{[\s\S]*min-height: min\(620px, calc\(100vh - 320px\)\);/, 'Teacher content cards should have more vertical review room.');
-  assert.match(style, /\.teacher-content-card\.active \{[\s\S]*max-height: min\(620px, calc\(100vh - 320px\)\);/, 'Active teacher content cards should keep the wider review surface scrollable.');
-  assert.match(style, /\.teacher-content-deck \{[\s\S]*padding: 14px 10px 18px;/, 'Teacher content deck should not burn horizontal space with wide side padding.');
+  assert.doesNotMatch(style, /\.teacher-content-blade \{[\s\S]*width: min\(1560px, calc\(100vw - 28px\)\);/, 'Teacher content blade should not keep the previous smaller cap.');
+  assert.match(style, /\.teacher-content-deck \{[\s\S]*display: grid;[\s\S]*padding: 10px 4px 12px;/, 'Teacher content deck should fill available space without burning horizontal padding.');
+  assert.match(style, /\.teacher-content-card \{[\s\S]*min-height: 0;/, 'Teacher content cards should not reserve old modal-like minimum heights.');
+  assert.match(style, /\.teacher-content-card\.active \{[\s\S]*height: 100%;[\s\S]*max-height: none;/, 'Active teacher content cards should fill and scroll inside the workspace.');
+  assert.match(style, /\.teacher-content-upload-row \{[\s\S]*grid-template-columns: repeat\(12, minmax\(0, 1fr\)\);/, 'Upload controls should spread across the full workspace grid.');
+  assert.match(style, /\.teacher-content-file-placeholder \{[\s\S]*grid-column: span 8;/, 'Upload file label should use the wide row instead of being squeezed between buttons.');
+  assert.match(style, /\.teacher-content-card\.active > \.teacher-content-card-head \{[\s\S]*position: sticky;/, 'Teacher workflow headers should stay reachable while cards scroll.');
 }
 
 function assertSavedKnowledgePackBulkDeleteUi() {
@@ -445,7 +453,8 @@ function assertSavedKnowledgePackBulkDeleteUi() {
   assert.match(style, /\.teacher-content-blade-manager-shell \{[\s\S]*max-height: none;[\s\S]*overflow: hidden;/, 'Saved Knowledge Packs manager should stretch inside the blade.');
   assert.match(style, /\.teacher-content-simple-pack-shell \{[\s\S]*grid-template-rows: minmax\(0, 1fr\) auto;/, 'Saved Knowledge Packs should reserve bottom space for bulk controls.');
   assert.match(style, /\.teacher-content-simple-pack-list \{[\s\S]*overflow-y: auto;/, 'Saved Knowledge Packs rows should scroll inside the card.');
-  assert.match(style, /\.teacher-content-simple-pack-row \{[\s\S]*grid-template-columns: 28px minmax\(240px, 1\.3fr\) minmax\(260px, 1fr\) minmax\(190px, auto\);/, 'Approved rows should align checkbox, title, activation, and actions with wider columns.');
+  assert.match(style, /\.teacher-content-simple-pack-row \{[\s\S]*grid-template-columns: 28px minmax\(0, 1\.35fr\) minmax\(180px, 0\.9fr\) minmax\(160px, auto\);/, 'Approved rows should align checkbox, title, activation, and actions without forcing wide minimum columns.');
+  assert.match(style, /@media \(max-width: 980px\) \{[\s\S]*\.teacher-content-simple-pack-row \{[\s\S]*grid-template-columns: 28px minmax\(0, 1fr\);/, 'Saved Knowledge rows should stack before they can cause horizontal scrolling.');
   assert.match(routeTest, /assertDeleteSelectedRemovesApprovedAndDraftPacks/, 'Route tests should cover bulk deleting selected draft and approved packs.');
   assert.match(routeTest, /assertDeleteAllRemovesEveryVisiblePack/, 'Route tests should cover deleting all visible saved packs.');
   assert.match(routeTest, /assertDraftOnlyDeleteRemovesPackFromVisibleList/, 'Route tests should cover deleting draft-only rows.');
@@ -501,6 +510,8 @@ function assertSavedKnowledgePackItemEditUi() {
   assert.match(editableItem, /data-approved-pack-item-save/, 'Approved editor should include per-item save actions.');
   assert.match(editableField, /data-approved-pack-edit-field/, 'Approved editor fields should use editable field data attributes.');
   assert.match(editableField, /formatApprovedFieldValue/, 'Approved editor should render saved field values, including arrays.');
+  assert.match(style, /\.teacher-content-approved-edit-fields \{[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 360px\), 1fr\)\);/, 'Approved item editor fields should remain readable while wrapping to available width.');
+  assert.match(style, /\.teacher-content-approved-edit-field textarea \{[\s\S]*max-width: 100%;[\s\S]*overflow-wrap: anywhere;/, 'Approved editor textareas should not force horizontal overflow with long metadata.');
   assert.match(saveItem, /ENDPOINTS\.approvedItem\(packId, section, index\)/, 'Approved item save should patch the approved pack item endpoint.');
   assert.match(saveItem, /Saved changes to approved knowledge\. This pack remains enabled for student answers\./, 'Approved item save should show teacher-friendly enabled confirmation.');
   assert.match(closeEditor, /state\.activeApprovedPackDetail = null/, 'Approved editor close should return to saved pack list.');
