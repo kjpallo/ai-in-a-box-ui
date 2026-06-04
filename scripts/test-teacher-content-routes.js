@@ -183,7 +183,9 @@ async function main() {
     await assertInvalidReviewStatusRejected(handlers);
     await assertSolverStatusEditRejected(handlers);
     await assertApprovedEndpoint(handlers);
+    await assertApprovedPackDetailEndpointShowsSavedItems(handlers);
     await assertApprovedActivationEndpointEnablesPack(handlers);
+    await assertApprovedPackItemEditPersistsAndKeepsEnabled(handlers);
     await assertApprovedActivationEndpointDisablesPack(handlers);
     await assertInvalidApprovedActivationPathTraversalRejected(handlers);
     await assertMissingApprovedActivationPackRejected(handlers);
@@ -2410,6 +2412,20 @@ async function assertApprovedEndpoint(handlers) {
   assert.ok(response.body.data.indexedCounts.vocabularyTerms >= 1);
 }
 
+async function assertApprovedPackDetailEndpointShowsSavedItems(handlers) {
+  const response = await request(handlers, 'GET', '/approved/:packId', {}, {
+    packId: 'route-approved-pack'
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.data.pack.packId, 'route-approved-pack');
+  assert.equal(Array.isArray(response.body.data.pack.vocabulary), true);
+  assert.equal(response.body.data.pack.vocabulary.length > 0, true, 'approved pack detail should include actual saved items.');
+  assert.equal(response.body.data.pack.vocabulary[0].term, 'net-force');
+  assert.equal(response.body.data.approved.activationEnabled, true);
+}
+
 async function assertApprovedActivationEndpointEnablesPack(handlers) {
   const approvedBefore = snapshotKnowledgePackFiles(approvedPacksDir);
   const draftBefore = snapshotFiles(draftPacksDir);
@@ -2431,6 +2447,47 @@ async function assertApprovedActivationEndpointEnablesPack(handlers) {
   assert.equal(JSON.parse(fs.readFileSync(activationRegistryPath, 'utf8')).packs['route-approved-pack'].enabled, true);
   assert.deepEqual(snapshotKnowledgePackFiles(approvedPacksDir), approvedBefore, 'activation should not modify approved knowledge_pack.json files');
   assert.deepEqual(snapshotFiles(draftPacksDir), draftBefore, 'activation should not modify draft packs');
+}
+
+async function assertApprovedPackItemEditPersistsAndKeepsEnabled(handlers) {
+  const response = await request(handlers, 'PATCH', '/approved/:packId/items/:section/:index', {
+    edits: [
+      {
+        field: 'studentDefinition',
+        value: 'Edited approved wording says net force is the overall force acting on an object.'
+      },
+      {
+        field: 'sourceLocation',
+        value: 'Edited page 4'
+      }
+    ]
+  }, {
+    packId: 'route-approved-pack',
+    section: 'vocabulary',
+    index: '0'
+  });
+
+  assert.equal(response.statusCode, 200, JSON.stringify(response.body));
+  assert.equal(response.body.success, true);
+  assert.equal(response.body.data.message, 'Saved changes to approved knowledge. This pack remains enabled for student answers.');
+  assert.equal(response.body.data.activationEnabled, true, 'approved pack should remain enabled after item editing.');
+  assert.equal(response.body.data.approved.activationEnabled, true);
+  assert.equal(response.body.data.pack.vocabulary[0].studentDefinition, 'Edited approved wording says net force is the overall force acting on an object.');
+  assert.equal(response.body.data.pack.vocabulary[0].sourceLocation, 'Edited page 4');
+
+  const savedPack = readKnowledgePack(approvedPacksDir, 'route-approved-pack');
+  assert.equal(savedPack.vocabulary[0].studentDefinition, 'Edited approved wording says net force is the overall force acting on an object.');
+  assert.equal(savedPack.vocabulary[0].sourceLocation, 'Edited page 4');
+  assert.equal(savedPack.vocabulary[0].manuallyEdited, true);
+  assert.ok(savedPack.metadata.updatedAt, 'approved pack edit should update pack metadata.');
+
+  const activation = JSON.parse(fs.readFileSync(activationRegistryPath, 'utf8'));
+  assert.equal(activation.packs['route-approved-pack'].enabled, true, 'edit should not disable the approved pack.');
+
+  const enabledItems = loadEnabledApprovedKnowledgeItems({ approvedPacksDir });
+  const editedItem = enabledItems.find((item) => item.title === 'net-force');
+  assert.ok(editedItem, 'student approved-knowledge loader should still see edited enabled pack item.');
+  assert.match(editedItem.fact, /edited approved wording says net force is the overall force acting on an object/i);
 }
 
 async function assertApprovedActivationEndpointDisablesPack(handlers) {

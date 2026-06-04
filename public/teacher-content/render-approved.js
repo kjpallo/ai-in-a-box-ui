@@ -21,12 +21,18 @@
       collectApiIssues,
       renderChipList,
       countPill,
+      SECTION_LABELS = {},
+      EDITABLE_FIELDS = {},
       window
     } = deps;
 
     function renderKnowledgeManager() {
       const manager = byId('teacherContentKnowledgeManager');
       if (!manager) return;
+      if (state.activeApprovedPackId || state.activeApprovedPackDetail || state.approvedPackLoading) {
+        manager.innerHTML = renderApprovedPackEditor();
+        return;
+      }
       const visiblePacks = getVisibleKnowledgePackRows();
       const hasPacks = visiblePacks.length > 0;
       const selectedCount = state.selectedApprovedPackIds.length;
@@ -371,7 +377,7 @@
             <small data-approved-pack-activation-status>${escapeHtml(activationLabel)}</small>
           </div>
           <div class="teacher-content-simple-pack-actions">
-            <button type="button" class="small-button secondary-small" data-approved-pack-view-edit-action data-approved-pack-id="${escapeAttr(packId)}">Edit</button>
+            <button type="button" class="small-button secondary-small" data-approved-pack-view-edit-action data-approved-pack-id="${escapeAttr(packId)}">View / Edit Items</button>
             <button type="button" class="small-button danger-small" ${deleteSaving || !packId ? 'disabled' : ''} data-approved-pack-delete-action data-approved-pack-id="${escapeAttr(packId)}" data-approved-pack-title-confirm="${escapeAttr(pack.title || pack.packId || '')}">
               ${deleteSaving ? 'Deleting...' : 'Delete'}
             </button>
@@ -461,6 +467,139 @@
           </div>
         </section>
       `;
+    }
+
+    function renderApprovedPackEditor() {
+      const pack = state.activeApprovedPackDetail || {};
+      const packId = String(pack.packId || state.activeApprovedPackId || '').trim();
+      const title = pack.title || packId || 'Approved knowledge pack';
+      const activationEnabled = findApprovedSummary(packId)?.activationEnabled === true;
+      const sections = buildApprovedEditableSections(pack);
+      const itemCount = sections.reduce((sum, section) => sum + section.items.length, 0);
+      return `
+        <div class="teacher-content-card-head">
+          <div>
+            <h4>View / Edit Items</h4>
+            <p>${escapeHtml(title)}${itemCount ? ` · ${escapeHtml(formatNumber(itemCount))} saved item${itemCount === 1 ? '' : 's'}` : ''}</p>
+          </div>
+          <div class="teacher-content-approved-editor-head-actions">
+            <span class="teacher-content-pill ready">Approved</span>
+            <span class="teacher-content-pill ${activationEnabled ? 'ready' : 'muted'}" data-approved-pack-editor-enabled>${activationEnabled ? 'Enabled' : 'Disabled'}</span>
+            <button type="button" class="small-button secondary-small" data-approved-pack-editor-close>Back to Packs</button>
+          </div>
+        </div>
+        ${state.approvedPackLoading ? '<p class="profile-empty-state" data-approved-pack-editor-loading>Loading approved items...</p>' : ''}
+        ${state.approvedPackEditMessage ? `<p class="teacher-content-approved-edit-message" data-approved-pack-edit-message>${escapeHtml(state.approvedPackEditMessage)}</p>` : ''}
+        ${!state.approvedPackLoading && !itemCount ? '<p class="profile-empty-state" data-approved-pack-editor-empty>No approved items were found in this saved pack.</p>' : ''}
+        ${sections.map(renderApprovedEditableSection).join('')}
+      `;
+    }
+
+    function findApprovedSummary(packId) {
+      return (Array.isArray(state.approved) ? state.approved : []).find((pack) => String(pack?.packId || '') === packId) || null;
+    }
+
+    function buildApprovedEditableSections(pack = {}) {
+      return Object.keys(EDITABLE_FIELDS).map((sectionName) => {
+        const items = Array.isArray(pack[sectionName]) ? pack[sectionName] : [];
+        return {
+          sectionName,
+          label: SECTION_LABELS[sectionName] || titleCase(sectionName),
+          items
+        };
+      }).filter((section) => section.items.length > 0);
+    }
+
+    function renderApprovedEditableSection(section) {
+      return `
+        <section class="teacher-content-approved-edit-section" data-approved-pack-editor-section="${escapeAttr(section.sectionName)}">
+          <div class="teacher-content-review-group-head">
+            <h5>${escapeHtml(section.label)}</h5>
+            <span>${escapeHtml(formatNumber(section.items.length))} item${section.items.length === 1 ? '' : 's'}</span>
+          </div>
+          <div class="teacher-content-approved-edit-list">
+            ${section.items.map((item, index) => renderApprovedEditableItem(section.sectionName, section.label, item, index)).join('')}
+          </div>
+        </section>
+      `;
+    }
+
+    function renderApprovedEditableItem(sectionName, sectionLabel, item = {}, index) {
+      const packId = String(state.activeApprovedPackId || state.activeApprovedPackDetail?.packId || '').trim();
+      const savingKey = `${sectionName}:${index}`;
+      const saving = state.approvedPackSaving[savingKey] === true;
+      const primary = getApprovedItemPrimaryLabel(sectionName, item, index);
+      const fieldNames = getApprovedEditableFieldsForItem(sectionName, item);
+      return `
+        <article class="teacher-content-approved-edit-item" data-approved-pack-edit-item data-approved-pack-section="${escapeAttr(sectionName)}" data-approved-pack-index="${escapeAttr(index)}">
+          <div class="teacher-content-approved-edit-item-head">
+            <div>
+              <strong data-approved-pack-edit-item-title>${escapeHtml(primary)}</strong>
+              <span data-approved-pack-edit-item-type>${escapeHtml(sectionLabel)}</span>
+            </div>
+            <span class="teacher-content-pill ${item.reviewStatus === 'approved' ? 'ready' : 'muted'}">${escapeHtml(item.reviewStatus || 'saved')}</span>
+          </div>
+          <div class="teacher-content-approved-edit-fields">
+            ${fieldNames.map((fieldName) => renderApprovedEditableField(sectionName, fieldName, item[fieldName])).join('')}
+          </div>
+          <div class="teacher-content-approved-edit-actions">
+            <button
+              type="button"
+              class="small-button"
+              ${saving || !packId ? 'disabled' : ''}
+              data-approved-pack-item-save
+              data-approved-pack-id="${escapeAttr(packId)}"
+              data-approved-pack-section="${escapeAttr(sectionName)}"
+              data-approved-pack-index="${escapeAttr(index)}"
+            >${saving ? 'Saving...' : 'Save Item'}</button>
+          </div>
+        </article>
+      `;
+    }
+
+    function getApprovedEditableFieldsForItem(sectionName, item = {}) {
+      const fields = EDITABLE_FIELDS[sectionName] || [];
+      return fields.filter((fieldName) => {
+        if (Object.prototype.hasOwnProperty.call(item, fieldName)) return true;
+        return ['sourceFile', 'sourceLocation', 'sourceTextSnippet'].includes(fieldName)
+          && [item.sourceFile, item.sourceLocation, item.sourceTextSnippet].some((value) => String(value || '').trim());
+      });
+    }
+
+    function renderApprovedEditableField(sectionName, fieldName, value) {
+      const rows = ['studentDefinition', 'teacherDefinition', 'studentExplanation', 'expectedAnswer', 'sourceTextSnippet', 'keyIdeas', 'question', 'description'].includes(fieldName) ? 4 : 2;
+      return `
+        <label class="teacher-content-approved-edit-field">
+          <span>${escapeHtml(formatApprovedFieldLabel(fieldName))}</span>
+          <textarea
+            rows="${rows}"
+            data-approved-pack-edit-field="${escapeAttr(fieldName)}"
+            data-approved-pack-edit-section="${escapeAttr(sectionName)}"
+          >${escapeHtml(formatApprovedFieldValue(value))}</textarea>
+        </label>
+      `;
+    }
+
+    function getApprovedItemPrimaryLabel(sectionName, item = {}, index = 0) {
+      return String(item.term || item.title || item.question || item.equation || item.standardId || item.conceptId || item.problemId || `${SECTION_LABELS[sectionName] || 'Item'} ${index + 1}`).trim();
+    }
+
+    function formatApprovedFieldLabel(fieldName) {
+      return String(fieldName || '')
+        .replace(/([a-z])([A-Z])/g, '$1 $2')
+        .replace(/^./, (letter) => letter.toUpperCase());
+    }
+
+    function formatApprovedFieldValue(value) {
+      if (Array.isArray(value)) return value.join(' | ');
+      return String(value ?? '');
+    }
+
+    function titleCase(value) {
+      return String(value || '')
+        .replace(/([a-z])([A-Z])/g, '$1 $2')
+        .replace(/[_-]+/g, ' ')
+        .replace(/\b\w/g, (letter) => letter.toUpperCase());
     }
 
     function metadataPill(label, value, dataAttr = '') {
@@ -628,18 +767,77 @@
       await deleteApprovedPacksById(getVisibleKnowledgePackRows().map((pack) => pack.packId).filter(Boolean), { all: true });
     }
 
-    function toggleApprovedPackDetails(button) {
+    async function toggleApprovedPackDetails(button) {
       const packId = button.getAttribute('data-approved-pack-id') || '';
       if (!packId) return;
-      const matchingDraft = state.drafts.find((draft) => String(draft?.packId || '') === packId);
-      if (matchingDraft) {
-        openDraftPackForReview(packId);
-        return;
-      }
-      openOverlay().then(() => {
-        setStatus('This approved pack is view-only here. Edit draft content before approval.');
+      state.activeApprovedPackId = packId;
+      state.activeApprovedPackDetail = null;
+      state.approvedPackEditMessage = '';
+      state.approvedPackLoading = true;
+      setStatus('Loading approved knowledge items...');
+      render();
+      try {
+        const payload = await fetchJson(ENDPOINTS.approvedPack(packId));
+        const data = unwrap(payload);
+        state.activeApprovedPackDetail = data?.pack || data || null;
+        state.approvedPackEditMessage = '';
+        setStatus('Approved knowledge items loaded.');
+      } catch (error) {
+        state.approvedPackEditMessage = `Approved knowledge could not be loaded: ${error.message || 'Route error'}`;
+        setStatus('Approved knowledge could not be loaded.');
+      } finally {
+        state.approvedPackLoading = false;
         render();
-      });
+      }
+    }
+
+    function closeApprovedPackEditor() {
+      state.activeApprovedPackId = '';
+      state.activeApprovedPackDetail = null;
+      state.approvedPackEditMessage = '';
+      state.approvedPackLoading = false;
+      state.approvedPackSaving = {};
+      render();
+    }
+
+    async function saveApprovedPackItem(button) {
+      const packId = button.getAttribute('data-approved-pack-id') || state.activeApprovedPackId || '';
+      const section = button.getAttribute('data-approved-pack-section') || '';
+      const index = Number(button.getAttribute('data-approved-pack-index'));
+      if (!packId || !section || !Number.isInteger(index)) return;
+
+      const card = button.closest('[data-approved-pack-edit-item]');
+      const edits = Array.from(card?.querySelectorAll('[data-approved-pack-edit-field]') || [])
+        .map((field) => ({
+          field: field.getAttribute('data-approved-pack-edit-field') || '',
+          value: field.value || ''
+        }))
+        .filter((edit) => edit.field);
+      const savingKey = `${section}:${index}`;
+      state.approvedPackSaving = { ...state.approvedPackSaving, [savingKey]: true };
+      state.approvedPackEditMessage = 'Saving approved knowledge changes...';
+      setStatus('Saving approved knowledge changes...');
+      render();
+
+      try {
+        const payload = await fetchJson(ENDPOINTS.approvedItem(packId, section, index), {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ edits })
+        });
+        const data = unwrap(payload);
+        state.activeApprovedPackDetail = data?.pack || state.activeApprovedPackDetail;
+        state.approvedPackEditMessage = data?.message || 'Saved changes to approved knowledge. This pack remains enabled for student answers.';
+        if (data?.approvedSummary) applyApprovedSummary(data.approvedSummary);
+        await refreshTeacherContentSummaries();
+        setStatus(state.approvedPackEditMessage);
+      } catch (error) {
+        state.approvedPackEditMessage = `Could not save approved knowledge changes: ${error.message || 'Route error'}`;
+        setStatus('Could not save approved knowledge changes.');
+      } finally {
+        state.approvedPackSaving = { ...state.approvedPackSaving, [savingKey]: false };
+        render();
+      }
     }
 
     function applyApprovedSummary(data) {
@@ -668,6 +866,7 @@
       renderUploadedSourcesHistory,
       renderUploadedSourceHistoryItem,
       renderApprovedSearchableSummary,
+      renderApprovedPackEditor,
       toggleApprovedPackActivation,
       deleteApprovedPack,
       toggleApprovedPackSelection,
@@ -676,6 +875,8 @@
       deleteSelectedApprovedPacks,
       deleteAllApprovedPacks,
       toggleApprovedPackDetails,
+      closeApprovedPackEditor,
+      saveApprovedPackItem,
       applyApprovedSummary,
       pruneSelectedApprovedPackIds
     };

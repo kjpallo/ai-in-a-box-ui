@@ -159,6 +159,8 @@
       collectApiIssues,
       renderChipList,
       countPill,
+      SECTION_LABELS,
+      EDITABLE_FIELDS,
       window
     })
     : {};
@@ -182,6 +184,8 @@
     deleteSelectedApprovedPacks: deleteSelectedApprovedPacksFromModule = async () => {},
     deleteAllApprovedPacks: deleteAllApprovedPacksFromModule = async () => {},
     toggleApprovedPackDetails: toggleApprovedPackDetailsFromModule = () => {},
+    closeApprovedPackEditor: closeApprovedPackEditorFromModule = () => {},
+    saveApprovedPackItem: saveApprovedPackItemFromModule = async () => {},
     applyApprovedSummary: applyApprovedSummaryFromModule = () => {},
     pruneSelectedApprovedPackIds: pruneSelectedApprovedPackIdsFromModule = () => {}
   } = renderApprovedModule;
@@ -695,6 +699,20 @@
       if (approvedViewEdit) {
         event.preventDefault();
         toggleApprovedPackDetails(approvedViewEdit);
+        return;
+      }
+
+      const approvedEditorClose = event.target.closest('[data-approved-pack-editor-close]');
+      if (approvedEditorClose) {
+        event.preventDefault();
+        closeApprovedPackEditor();
+        return;
+      }
+
+      const approvedItemSave = event.target.closest('[data-approved-pack-item-save]');
+      if (approvedItemSave) {
+        event.preventDefault();
+        saveApprovedPackItem(approvedItemSave);
       }
     });
 
@@ -3613,8 +3631,16 @@
     return deleteAllApprovedPacksFromModule(...args);
   }
 
-  function toggleApprovedPackDetails(...args) {
+  async function toggleApprovedPackDetails(...args) {
     return toggleApprovedPackDetailsFromModule(...args);
+  }
+
+  function closeApprovedPackEditor(...args) {
+    return closeApprovedPackEditorFromModule(...args);
+  }
+
+  async function saveApprovedPackItem(...args) {
+    return saveApprovedPackItemFromModule(...args);
   }
 
   function applyApprovedSummary(...args) {

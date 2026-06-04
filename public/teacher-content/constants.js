@@ -21,6 +21,8 @@
     draftItem: (packId, section, index) => `/api/teacher-content/drafts/${encodeURIComponent(packId)}/items/${encodeURIComponent(section)}/${encodeURIComponent(index)}`,
     draftItemStatus: (packId, section, index) => `/api/teacher-content/drafts/${encodeURIComponent(packId)}/items/${encodeURIComponent(section)}/${encodeURIComponent(index)}/status`,
     approved: '/api/teacher-content/approved',
+    approvedPack: (packId) => `/api/teacher-content/approved/${encodeURIComponent(packId)}`,
+    approvedItem: (packId, section, index) => `/api/teacher-content/approved/${encodeURIComponent(packId)}/items/${encodeURIComponent(section)}/${encodeURIComponent(index)}`,
     approvedActivation: (packId) => `/api/teacher-content/approved/${encodeURIComponent(packId)}/activation`,
     approvedDelete: (packId) => `/api/teacher-content/approved/${encodeURIComponent(packId)}`,
     approvedBulkDelete: '/api/teacher-content/approved'

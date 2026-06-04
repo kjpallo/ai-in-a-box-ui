@@ -48,8 +48,10 @@ async function main() {
   assertFocusedEditRefreshesBeforeApproval();
   assertSuccessReturnsToKnowledgeManager();
   assertPrimaryFlowHidesTechnicalImportControls();
+  assertTeacherContentLayoutUsesWideReviewSpace();
   assertSavedKnowledgePackBulkDeleteUi();
   assertSavedKnowledgePacksShowEnabledStatus();
+  assertSavedKnowledgePackItemEditUi();
   assertSavedKnowledgePacksHideApprovedDraftDuplicates();
   await assertSavedKnowledgePackBulkDeleteBehavior();
   assertRouterAndFormulaGuardsRemainInRouteTests();
@@ -116,8 +118,8 @@ function assertReviewScreenIsSimpleList() {
   assert.match(actionBar, /data-review-accept-all/, 'Bottom bar should include Accept All.');
   assert.match(actionBar, /Accept All Valid/, 'Bottom bar should include Accept All Valid copy.');
   assert.doesNotMatch(actionBar, /data-review-exclude-selected-flagged|data-review-reject-blockers-promote/, 'Bottom bar should not show old bulk technical actions.');
-  assert.match(style, /\.teacher-content-review-table-shell\[data-review-combined-table\] \.teacher-content-review-table-head,\s*\.teacher-content-review-table-shell\[data-review-combined-table\] \.teacher-content-review-table-row \{[\s\S]*grid-template-columns: 30px minmax\(150px, 0\.95fr\) minmax\(96px, 0\.6fr\) minmax\(130px, 0\.78fr\) minmax\(210px, 1\.22fr\) minmax\(190px, 0\.98fr\) auto;/, 'Review rows should use compact combined table columns.');
-  assert.match(style, /\.teacher-content-review-table-body \{[\s\S]*max-height: min\(58vh, 620px\);/, 'Review list should show multiple rows with a taller scroll area.');
+  assert.match(style, /\.teacher-content-review-table-shell\[data-review-combined-table\] \.teacher-content-review-table-head,\s*\.teacher-content-review-table-shell\[data-review-combined-table\] \.teacher-content-review-table-row \{[\s\S]*grid-template-columns: 30px minmax\(180px, 1\.05fr\) minmax\(120px, 0\.6fr\) minmax\(180px, 0\.9fr\) minmax\(280px, 1\.3fr\) minmax\(220px, 1fr\) minmax\(150px, auto\);/, 'Review rows should use wider combined table columns.');
+  assert.match(style, /\.teacher-content-review-table-body \{[\s\S]*max-height: min\(64vh, 760px\);/, 'Review list should show multiple rows with a taller scroll area.');
 }
 
 function assertReviewAggregatesAllQueuePacks() {
@@ -381,6 +383,14 @@ function assertPrimaryFlowHidesTechnicalImportControls() {
   assert.match(uploadCard, /<details class="teacher-content-upload-details" data-upload-technical-details>/, 'Technical details should remain collapsed.');
 }
 
+function assertTeacherContentLayoutUsesWideReviewSpace() {
+  assert.match(style, /\.teacher-content-blade \{[\s\S]*width: min\(1560px, calc\(100vw - 28px\)\);/, 'Teacher content blade should use substantially more browser width.');
+  assert.doesNotMatch(style, /\.teacher-content-blade \{[\s\S]*width: min\(980px, calc\(100vw - 28px\)\);/, 'Teacher content blade should not force the old narrow modal width.');
+  assert.match(style, /\.teacher-content-card \{[\s\S]*min-height: min\(620px, calc\(100vh - 320px\)\);/, 'Teacher content cards should have more vertical review room.');
+  assert.match(style, /\.teacher-content-card\.active \{[\s\S]*max-height: min\(620px, calc\(100vh - 320px\)\);/, 'Active teacher content cards should keep the wider review surface scrollable.');
+  assert.match(style, /\.teacher-content-deck \{[\s\S]*padding: 14px 10px 18px;/, 'Teacher content deck should not burn horizontal space with wide side padding.');
+}
+
 function assertSavedKnowledgePackBulkDeleteUi() {
   const manager = extractFunctionSource(ui, 'renderKnowledgeManager');
   const approvedRow = extractFunctionSource(ui, 'renderApprovedPack');
@@ -435,7 +445,7 @@ function assertSavedKnowledgePackBulkDeleteUi() {
   assert.match(style, /\.teacher-content-blade-manager-shell \{[\s\S]*max-height: none;[\s\S]*overflow: hidden;/, 'Saved Knowledge Packs manager should stretch inside the blade.');
   assert.match(style, /\.teacher-content-simple-pack-shell \{[\s\S]*grid-template-rows: minmax\(0, 1fr\) auto;/, 'Saved Knowledge Packs should reserve bottom space for bulk controls.');
   assert.match(style, /\.teacher-content-simple-pack-list \{[\s\S]*overflow-y: auto;/, 'Saved Knowledge Packs rows should scroll inside the card.');
-  assert.match(style, /\.teacher-content-simple-pack-row \{[\s\S]*grid-template-columns: 28px minmax\(180px, 1\.2fr\) minmax\(190px, 1fr\) auto;/, 'Approved rows should align checkbox, title, activation, and actions.');
+  assert.match(style, /\.teacher-content-simple-pack-row \{[\s\S]*grid-template-columns: 28px minmax\(240px, 1\.3fr\) minmax\(260px, 1fr\) minmax\(190px, auto\);/, 'Approved rows should align checkbox, title, activation, and actions with wider columns.');
   assert.match(routeTest, /assertDeleteSelectedRemovesApprovedAndDraftPacks/, 'Route tests should cover bulk deleting selected draft and approved packs.');
   assert.match(routeTest, /assertDeleteAllRemovesEveryVisiblePack/, 'Route tests should cover deleting all visible saved packs.');
   assert.match(routeTest, /assertDraftOnlyDeleteRemovesPackFromVisibleList/, 'Route tests should cover deleting draft-only rows.');
@@ -464,6 +474,42 @@ function assertSavedKnowledgePacksShowEnabledStatus() {
   assert.match(activationToggle, /Enabled for student answers\./, 'Enable route status should use teacher-facing enabled wording.');
   assert.match(activationToggle, /Disabled for student answers\./, 'Disable route status should use teacher-facing disabled wording.');
   assert.match(routeSource, /message: activation\.activationEnabled[\s\S]*Enabled for student answers\.[\s\S]*Disabled for student answers\./, 'Activation route response should avoid technical activation-setting success copy.');
+}
+
+function assertSavedKnowledgePackItemEditUi() {
+  const endpoints = read(uiConstantsPath);
+  const manager = extractFunctionSource(ui, 'renderKnowledgeManager');
+  const approvedRow = extractFunctionSource(ui, 'renderApprovedPack');
+  const editor = extractFunctionSource(ui, 'renderApprovedPackEditor');
+  const editableItem = extractFunctionSource(ui, 'renderApprovedEditableItem');
+  const editableField = extractFunctionSource(ui, 'renderApprovedEditableField');
+  const openDetails = extractFunctionSource(ui, 'toggleApprovedPackDetails');
+  const saveItem = extractFunctionSource(ui, 'saveApprovedPackItem');
+  const closeEditor = extractFunctionSource(ui, 'closeApprovedPackEditor');
+  const routeSource = read(path.join(projectRoot, 'routes', 'teacherContentRoutes.js'));
+
+  assert.match(endpoints, /approvedPack: \(packId\) =>/, 'Approved pack detail endpoint should be available to the UI.');
+  assert.match(endpoints, /approvedItem: \(packId, section, index\) =>/, 'Approved item edit endpoint should be available to the UI.');
+  assert.match(manager, /state\.activeApprovedPackId \|\| state\.activeApprovedPackDetail \|\| state\.approvedPackLoading/, 'Saved manager should switch into approved-pack editor mode.');
+  assert.match(approvedRow, /View \/ Edit Items/, 'Approved pack action should clearly say View / Edit Items.');
+  assert.match(approvedRow, /data-approved-pack-view-edit-action/, 'Approved rows should include the view/edit action.');
+  assert.match(openDetails, /ENDPOINTS\.approvedPack\(packId\)/, 'Approved view/edit action should load actual saved approved pack details.');
+  assert.doesNotMatch(openDetails, /view-only here/, 'Approved view/edit action should not show the old view-only message.');
+  assert.match(editor, /data-approved-pack-editor-empty/, 'Approved editor should have an explicit empty state if a pack has no items.');
+  assert.match(editor, /sections\.map\(renderApprovedEditableSection\)/, 'Approved editor should render actual saved item sections.');
+  assert.match(editableItem, /data-approved-pack-edit-item/, 'Approved editor should render editable item cards.');
+  assert.match(editableItem, /data-approved-pack-item-save/, 'Approved editor should include per-item save actions.');
+  assert.match(editableField, /data-approved-pack-edit-field/, 'Approved editor fields should use editable field data attributes.');
+  assert.match(editableField, /formatApprovedFieldValue/, 'Approved editor should render saved field values, including arrays.');
+  assert.match(saveItem, /ENDPOINTS\.approvedItem\(packId, section, index\)/, 'Approved item save should patch the approved pack item endpoint.');
+  assert.match(saveItem, /Saved changes to approved knowledge\. This pack remains enabled for student answers\./, 'Approved item save should show teacher-friendly enabled confirmation.');
+  assert.match(closeEditor, /state\.activeApprovedPackDetail = null/, 'Approved editor close should return to saved pack list.');
+  assert.match(routeSource, /app\.get\('\/approved\/:packId'/, 'Routes should expose approved pack detail loading.');
+  assert.match(routeSource, /app\.patch\('\/approved\/:packId\/items\/:section\/:index'/, 'Routes should expose approved pack item editing.');
+  assert.match(routeSource, /Saved changes to approved knowledge\. This pack remains enabled for student answers\./, 'Route response should use teacher-friendly approved edit confirmation.');
+  assert.match(routeTest, /assertApprovedPackDetailEndpointShowsSavedItems/, 'Route tests should cover approved edit opening actual saved items.');
+  assert.match(routeTest, /assertApprovedPackItemEditPersistsAndKeepsEnabled/, 'Route tests should cover approved item edit persistence and enabled state.');
+  assert.match(routeTest, /loadEnabledApprovedKnowledgeItems/, 'Route tests should verify student approved-knowledge loader sees edited wording.');
 }
 
 function assertSavedKnowledgePacksHideApprovedDraftDuplicates() {
