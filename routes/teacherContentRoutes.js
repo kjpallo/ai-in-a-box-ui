@@ -38,7 +38,8 @@ const {
   generateDraftKnowledgePack,
   identifyTextBearingPages,
   isModelCrashMessage,
-  isModelTimeoutMessage
+  isModelTimeoutMessage,
+  isModelUnavailableMessage
 } = require('../lib/uploads/generateDraftKnowledgePack');
 const { planTeacherContentImport } = require('../lib/uploads/planTeacherContentImport');
 const {
@@ -1039,21 +1040,16 @@ async function prepareReviewDraftFromUpload(uploadId, body = {}, options = {}) {
   });
 
   if (!generation.success) {
-    const teacherFriendlyError = isModelTimeoutGenerationFailure(generation)
-      ? 'Local Gemma took too long while reading this batch.'
-      : isModelCrashGenerationFailure(generation)
-      ? 'Local Gemma crashed while reading this batch.'
-      : previewOnly && isNoUsablePreviewFailure(generation)
-      ? 'Gemma did not return any usable preview items from this range.'
-      : firstError(generation.errors, 'Review draft preparation failed.');
-    const technicalErrors = (generation.errors || []).filter((error) => error !== teacherFriendlyError);
+    const friendlyFailure = isTeacherContentAnalysisGenerationFailure(generation)
+      ? makeTeacherContentAnalysisFailure(generation)
+      : makeDefaultPrepareReviewFailure(generation, { previewOnly });
     return makePrepareReviewFailurePayload({
       success: false,
-      errors: generation.errors || ['Review draft preparation failed.'],
-      teacherFriendlyError,
-      technicalErrors,
+      errors: friendlyFailure.errors,
+      teacherFriendlyError: friendlyFailure.teacherFriendlyError,
+      technicalErrors: friendlyFailure.technicalErrors,
       warnings: generation.warnings || [],
-      validationErrors: generation.validationErrors || generation.errors || [],
+      validationErrors: generation.validationErrors || [],
       invalidItems: generation.invalidItems || [],
       repairNeeded: generation.repairNeeded || generation.invalidItems || [],
       autoImportPlan,
@@ -1065,7 +1061,8 @@ async function prepareReviewDraftFromUpload(uploadId, body = {}, options = {}) {
       coverageReport: generation.coverageReport,
       failedBatches: generation.failedBatches || [],
       modelTimeout: generation.modelTimeout === true,
-      modelCrash: generation.modelCrash === true
+      modelCrash: generation.modelCrash === true,
+      modelUnavailable: generation.modelUnavailable === true
     }, { uploadId, body, extraction, importSelection, importEstimate });
   }
 
@@ -1496,12 +1493,88 @@ function isModelCrashGenerationFailure(generation = {}) {
     )));
 }
 
+function isModelUnavailableGenerationFailure(generation = {}) {
+  return generation.modelUnavailable === true
+    || (Array.isArray(generation.errors) && generation.errors.some((error) => isModelUnavailableMessage(error)))
+    || (Array.isArray(generation.failedBatches) && generation.failedBatches.some((batch) => (
+      Array.isArray(batch.errors) && batch.errors.some((error) => isModelUnavailableMessage(error))
+    )));
+}
+
 function isModelTimeoutGenerationFailure(generation = {}) {
   return generation.modelTimeout === true
     || (Array.isArray(generation.errors) && generation.errors.some((error) => isModelTimeoutMessage(error)))
     || (Array.isArray(generation.failedBatches) && generation.failedBatches.some((batch) => (
       Array.isArray(batch.errors) && batch.errors.some((error) => isModelTimeoutMessage(error))
     )));
+}
+
+function isInvalidModelJsonGenerationFailure(generation = {}) {
+  const details = [
+    ...(Array.isArray(generation.errors) ? generation.errors : []),
+    ...(Array.isArray(generation.failedBatches) ? generation.failedBatches.flatMap((batch) => (
+      Array.isArray(batch && batch.errors) ? batch.errors : []
+    )) : [])
+  ].join(' ').toLowerCase();
+  return details.includes('model response was not valid json')
+    || details.includes('model response was empty and not valid json')
+    || details.includes('response did not contain a complete json object');
+}
+
+function isTeacherContentAnalysisGenerationFailure(generation = {}) {
+  return isModelUnavailableGenerationFailure(generation)
+    || isModelTimeoutGenerationFailure(generation)
+    || isModelCrashGenerationFailure(generation)
+    || isInvalidModelJsonGenerationFailure(generation);
+}
+
+function makeTeacherContentAnalysisFailure(generation = {}) {
+  const technicalErrors = uniqueMessages([
+    ...(Array.isArray(generation.errors) ? generation.errors : []),
+    ...(Array.isArray(generation.failedBatches) ? generation.failedBatches.flatMap((batch) => (
+      Array.isArray(batch && batch.errors) ? batch.errors : []
+    )) : [])
+  ]);
+  const teacherFriendlyError = 'Charlemagne had trouble analyzing this file.';
+  const guidance = [
+    'The file was uploaded, but review items could not be created yet.',
+    'Try a smaller file, fewer pages, or text-only notes.',
+    'You can retry analysis or remove this file from the queue.'
+  ];
+  if (isModelUnavailableGenerationFailure(generation)) {
+    guidance.splice(1, 0, 'Check that Ollama is running, then retry analysis.');
+  } else if (isModelTimeoutGenerationFailure(generation)) {
+    guidance.splice(1, 0, 'The local model took too long on this file.');
+  } else if (isModelCrashGenerationFailure(generation)) {
+    guidance.splice(1, 0, 'The local model stopped while reading part of this file.');
+  } else if (isInvalidModelJsonGenerationFailure(generation)) {
+    guidance.splice(1, 0, 'The local model returned an answer Charlemagne could not turn into review items.');
+  }
+  return {
+    teacherFriendlyError,
+    errors: uniqueMessages([teacherFriendlyError, ...guidance]),
+    technicalErrors
+  };
+}
+
+function makeDefaultPrepareReviewFailure(generation = {}, context = {}) {
+  const errors = Array.isArray(generation.errors) && generation.errors.length
+    ? generation.errors
+    : ['Review draft preparation failed.'];
+  const teacherFriendlyError = context.previewOnly && isNoUsablePreviewFailure(generation)
+    ? 'Gemma did not return any usable preview items from this range.'
+    : firstError(errors, 'Review draft preparation failed.');
+  return {
+    teacherFriendlyError,
+    errors,
+    technicalErrors: errors.filter((error) => error !== teacherFriendlyError)
+  };
+}
+
+function uniqueMessages(messages = []) {
+  return Array.from(new Set((Array.isArray(messages) ? messages : [])
+    .map((message) => String(message || '').trim())
+    .filter(Boolean)));
 }
 
 function resolvePrepareReviewGenerationTimeoutMs({

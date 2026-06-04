@@ -2479,21 +2479,15 @@
 
   function makeUploadProgressTeacherMessage(error) {
     const data = error?.data || {};
-    if (isModelRuntimeTimeoutPayload(data) || isModelRuntimeTimeoutPayload(error)) {
-      return 'Local Gemma took too long while reading this batch.';
-    }
-    if (isModelRuntimeCrashPayload(data) || isModelRuntimeCrashPayload(error)) {
-      return 'Local Gemma crashed while reading this batch.';
+    if (isTeacherContentAnalysisFailurePayload(data) || isTeacherContentAnalysisFailurePayload(error)) {
+      return 'Charlemagne had trouble analyzing this file.';
     }
     return data.teacherFriendlyError || data.message || error?.message || error || 'Something went wrong.';
   }
 
   function normalizeUploadProgressSuggestions(error, suggestions = []) {
-    if (isModelRuntimeTimeoutPayload(error?.data || error)) {
-      return ['Try a smaller preview range or lower character limit.'];
-    }
-    if (isModelRuntimeCrashPayload(error?.data || error)) {
-      return ['Try a smaller preview range, lower character limit, or a lighter local model.'];
+    if (isTeacherContentAnalysisFailurePayload(error?.data || error)) {
+      return ['Try a smaller file, fewer pages, or text-only notes.', 'You can retry analysis or remove this file from the queue.'];
     }
     return suggestions;
   }
@@ -4631,6 +4625,16 @@
 
   function normalizePrepareReviewFailureMessage(message, errors = []) {
     const combined = [message, ...(Array.isArray(errors) ? errors : [])].join(' ').toLowerCase();
+    if (combined.includes('charlemagne had trouble analyzing this file')
+      || combined.includes('model response was not valid json')
+      || combined.includes('model response was empty')
+      || combined.includes('local gemma took too long')
+      || combined.includes('local gemma crashed')
+      || combined.includes('ollama returned http')
+      || combined.includes('econnrefused')
+      || combined.includes('connection refused')) {
+      return 'Charlemagne had trouble analyzing this file.';
+    }
     if (combined.includes('no usable preview items')) {
       return 'Gemma did not return any usable preview items from this range.';
     }
@@ -4671,10 +4675,9 @@
     if (failure.mode === 'preview' && firstTextPage > 1 && errors.includes('no extractable text')) {
       suggestions.push(`Page 1 has no extractable text. Try Page ${firstTextPage}, the first page with extracted text.`);
     }
-    if (isModelRuntimeTimeoutPayload(failure)) {
-      suggestions.push('Try a smaller preview range or lower character limit.');
-    } else if (isModelRuntimeCrashPayload(failure)) {
-      suggestions.push('Try a smaller preview range, lower character limit, or a lighter local model.');
+    if (isTeacherContentAnalysisFailurePayload(failure)) {
+      suggestions.push('Try a smaller file, fewer pages, or text-only notes.');
+      suggestions.push('You can retry analysis or remove this file from the queue.');
     } else if (Array.isArray(failure.failedBatches) && failure.failedBatches.length) {
       suggestions.push('Try a smaller page range or lower max preview chars for the failed range.');
     }
@@ -4803,6 +4806,44 @@
       || text.includes('signal arrived during cgo execution')
       || text.includes('model runner has unexpectedly stopped')
       || text.includes('resource limitations');
+  }
+
+  function isTeacherContentAnalysisFailurePayload(payload) {
+    return isModelRuntimeTimeoutPayload(payload)
+      || isModelRuntimeCrashPayload(payload)
+      || isModelUnavailablePayload(payload)
+      || isInvalidModelResponsePayload(payload)
+      || String(payload?.teacherFriendlyError || payload?.message || '').toLowerCase().includes('charlemagne had trouble analyzing this file');
+  }
+
+  function isModelUnavailablePayload(payload) {
+    const text = [
+      payload?.teacherFriendlyError,
+      payload?.message,
+      payload?.details,
+      ...(Array.isArray(payload?.errors) ? payload.errors : []),
+      ...(Array.isArray(payload?.technicalErrors) ? payload.technicalErrors : []),
+      ...(Array.isArray(payload?.failedBatches) ? payload.failedBatches.flatMap((batch) => batch && Array.isArray(batch.errors) ? batch.errors : []) : [])
+    ].map(formatBackendDetail).join(' ').toLowerCase();
+    return text.includes('econnrefused')
+      || text.includes('connection refused')
+      || text.includes('ollama is not running')
+      || text.includes('could not connect to ollama')
+      || text.includes('fetch failed');
+  }
+
+  function isInvalidModelResponsePayload(payload) {
+    const text = [
+      payload?.teacherFriendlyError,
+      payload?.message,
+      payload?.details,
+      ...(Array.isArray(payload?.errors) ? payload.errors : []),
+      ...(Array.isArray(payload?.technicalErrors) ? payload.technicalErrors : []),
+      ...(Array.isArray(payload?.failedBatches) ? payload.failedBatches.flatMap((batch) => batch && Array.isArray(batch.errors) ? batch.errors : []) : [])
+    ].map(formatBackendDetail).join(' ').toLowerCase();
+    return text.includes('model response was not valid json')
+      || text.includes('model response was empty')
+      || text.includes('response did not contain a complete json object');
   }
 
   function isModelRuntimeTimeoutPayload(payload) {

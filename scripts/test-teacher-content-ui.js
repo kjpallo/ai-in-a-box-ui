@@ -41,6 +41,7 @@ async function main() {
   assertAcceptAllUsesCombinedPackApproval();
   assertDeleteMarksRejectedAndHidesRows();
   assertPostApprovalTeacherFriendlyCopy();
+  assertTeacherFriendlyModelFailureUi();
   assertExcludeSelectedRoutesAcrossDraftPacks();
   assertEditActionKeepsDraftPackIdentity();
   assertEditUsesSafeFields();
@@ -289,6 +290,26 @@ function assertPostApprovalTeacherFriendlyCopy() {
   assert.doesNotMatch(ui, /activation registry/i, 'Teacher UI should avoid technical activation-registry wording.');
   assert.match(read(path.join(projectRoot, 'routes', 'teacherContentRoutes.js')), /message: 'Saved and enabled for student answers\.'/, 'Promotion and combined route responses should include teacher-facing success copy.');
   assert.doesNotMatch(routeSource, /does not change student answers yet/i, 'Route tests should not preserve stale activation wording.');
+}
+
+function assertTeacherFriendlyModelFailureUi() {
+  const progressMessage = extractFunctionSource(ui, 'makeUploadProgressTeacherMessage');
+  const normalizeFailure = extractFunctionSource(ui, 'normalizePrepareReviewFailureMessage');
+  const suggestions = extractFunctionSource(ui, 'makePrepareReviewRecoverySuggestions');
+  const analysisPredicate = extractFunctionSource(ui, 'isTeacherContentAnalysisFailurePayload');
+  const invalidPredicate = extractFunctionSource(ui, 'isInvalidModelResponsePayload');
+  const unavailablePredicate = extractFunctionSource(ui, 'isModelUnavailablePayload');
+
+  assert.match(progressMessage, /Charlemagne had trouble analyzing this file\./, 'Upload progress should use friendly model-analysis failure copy.');
+  assert.doesNotMatch(progressMessage, /Local Gemma took too long while reading this batch|Local Gemma crashed while reading this batch/, 'Technical model runtime detail should not be the primary progress message.');
+  assert.match(normalizeFailure, /model response was not valid json/, 'Prepare-review failures should recognize invalid model JSON.');
+  assert.match(normalizeFailure, /Charlemagne had trouble analyzing this file\./, 'Prepare-review failures should normalize model issues to friendly copy.');
+  assert.match(suggestions, /Try a smaller file, fewer pages, or text-only notes\./, 'Recovery guidance should suggest smaller/text-only content.');
+  assert.match(suggestions, /retry analysis or remove this file from the queue/, 'Recovery guidance should explain retry/remove options.');
+  assert.match(analysisPredicate, /isModelUnavailablePayload/, 'Teacher-friendly analysis failure detection should include unavailable Ollama.');
+  assert.match(analysisPredicate, /isInvalidModelResponsePayload/, 'Teacher-friendly analysis failure detection should include bad model output.');
+  assert.match(invalidPredicate, /model response was empty/, 'UI should recognize empty model results.');
+  assert.match(unavailablePredicate, /econnrefused/, 'UI should recognize local Ollama connection failures.');
 }
 
 function assertExcludeSelectedRoutesAcrossDraftPacks() {

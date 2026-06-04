@@ -134,6 +134,8 @@ async function main() {
     await assertBulkQueuePackNamesDoNotCollide(handlers);
     await assertBulkQueueFormulasRemainReferenceOnly(handlers);
     await assertUploadAndPrepareModelFailureReturnsClearJson(handlers);
+    await assertPrepareReviewModelUnavailableReturnsFriendlyJson(handlers);
+    await assertPrepareReviewEmptyModelResultReturnsFriendlyJson(handlers);
     await assertLaterBatchCrashReturnsPartialReviewDraft(handlers);
     await assertUploadAndPrepareModelCrashShowsBatchSizeRecovery(handlers);
     await assertPrepareReviewModelTimeoutPreservesPlan(handlers);
@@ -1554,7 +1556,9 @@ async function assertPrepareReviewModelFailureDoesNotWriteDraft(handlers) {
 
   assert.equal(response.statusCode, 400);
   assert.equal(response.body.success, false);
-  assert.ok(response.body.errors.some((error) => error.includes('Model response was not valid JSON')));
+  assert.equal(response.body.errors[0], 'Charlemagne had trouble analyzing this file.');
+  assert.ok(!response.body.errors.some((error) => error.includes('Model response was not valid JSON')), 'invalid JSON detail should not be primary teacher-facing copy');
+  assert.ok(response.body.technicalErrors.some((error) => error.includes('Model response was not valid JSON')));
   assert.ok(response.body.rawModelResponsePath, 'invalid model output should return the raw model response path when available');
   assert.deepEqual(snapshotFiles(draftPacksDir), draftFilesBefore, 'invalid draft output should not write a draft pack');
 
@@ -2098,10 +2102,86 @@ async function assertUploadAndPrepareModelFailureReturnsClearJson(handlers) {
 
   assert.equal(response.statusCode, 400);
   assert.equal(response.body.success, false);
-  assert.ok(response.body.errors.some((error) => error.includes('Model response was not valid JSON')));
+  assert.equal(response.body.teacherFriendlyError, 'Charlemagne had trouble analyzing this file.');
+  assert.equal(response.body.error, 'Charlemagne had trouble analyzing this file.');
+  assert.equal(response.body.message, 'Charlemagne had trouble analyzing this file.');
+  assert.equal(response.body.errors[0], 'Charlemagne had trouble analyzing this file.');
+  assert.ok(response.body.errors.some((error) => error.includes('review items could not be created yet')));
+  assert.ok(response.body.errors.some((error) => error.includes('Try a smaller file, fewer pages, or text-only notes.')));
+  assert.ok(response.body.errors.some((error) => error.includes('retry analysis or remove this file')));
+  assert.ok(!response.body.errors.some((error) => error.includes('Model response was not valid JSON')), 'technical JSON detail should not be a primary teacher-facing error');
+  assert.ok(response.body.technicalErrors.some((error) => error.includes('Model response was not valid JSON')));
+  assert.ok(Array.isArray(response.body.failedBatches));
+  assert.ok(response.body.failedBatches.length >= 1);
   assert.ok(Array.isArray(response.body.timeline));
   assert.ok(response.body.timeline.some((event) => event.type === 'error' && event.message.includes('Model response was not valid JSON')));
   assert.deepEqual(snapshotFiles(draftPacksDir), draftFilesBefore, 'model failure should not write a draft pack');
+
+  mockDraftModelClient = async () => JSON.stringify(makeGeneratedPack());
+}
+
+async function assertPrepareReviewModelUnavailableReturnsFriendlyJson(handlers) {
+  const draftFilesBefore = snapshotFiles(draftPacksDir);
+  const uploadId = 'prepare-model-unavailable';
+  fs.writeFileSync(path.join(uploadExtractedDir, `${uploadId}_extraction.json`), `${JSON.stringify(makeExtraction({
+    uploadId,
+    originalFileName: 'teacher_model_unavailable_notes.txt'
+  }), null, 2)}\n`);
+  mockDraftModelClient = async () => {
+    throw new Error('connect ECONNREFUSED 127.0.0.1:11434');
+  };
+
+  const response = await request(handlers, 'POST', '/uploads/:uploadId/prepare-review', {
+    packName: 'Energy Model Unavailable',
+    importMode: 'full',
+    confirmFullImport: true
+  }, {
+    uploadId
+  });
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.success, false);
+  assert.equal(response.body.teacherFriendlyError, 'Charlemagne had trouble analyzing this file.');
+  assert.equal(response.body.errors[0], 'Charlemagne had trouble analyzing this file.');
+  assert.ok(response.body.errors.some((error) => error.includes('Check that Ollama is running')));
+  assert.ok(!response.body.errors.some((error) => error.includes('ECONNREFUSED')), 'Ollama connection detail should not be primary teacher-facing copy');
+  assert.ok(response.body.technicalErrors.some((error) => error.includes('ECONNREFUSED')));
+  assert.ok(response.body.modelUnavailable);
+  assert.ok(Array.isArray(response.body.failedBatches));
+  assert.ok(response.body.failedBatches.length >= 1);
+  assert.deepEqual(snapshotFiles(draftPacksDir), draftFilesBefore, 'unavailable model should not write a draft pack');
+
+  mockDraftModelClient = async () => JSON.stringify(makeGeneratedPack());
+}
+
+async function assertPrepareReviewEmptyModelResultReturnsFriendlyJson(handlers) {
+  const draftFilesBefore = snapshotFiles(draftPacksDir);
+  const uploadId = 'prepare-empty-model-result';
+  fs.writeFileSync(path.join(uploadExtractedDir, `${uploadId}_extraction.json`), `${JSON.stringify(makeExtraction({
+    uploadId,
+    originalFileName: 'teacher_empty_model_result_notes.txt'
+  }), null, 2)}\n`);
+  mockDraftModelClient = async () => '';
+
+  const response = await request(handlers, 'POST', '/uploads/:uploadId/prepare-review', {
+    packName: 'Energy Empty Model Result',
+    retryInvalidJson: false,
+    importMode: 'full',
+    confirmFullImport: true
+  }, {
+    uploadId
+  });
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.success, false);
+  assert.equal(response.body.teacherFriendlyError, 'Charlemagne had trouble analyzing this file.');
+  assert.equal(response.body.errors[0], 'Charlemagne had trouble analyzing this file.');
+  assert.ok(response.body.errors.some((error) => error.includes('could not turn into review items')));
+  assert.ok(!response.body.errors.some((error) => error.includes('empty and not valid JSON')), 'empty-response detail should not be primary teacher-facing copy');
+  assert.ok(response.body.technicalErrors.some((error) => error.includes('empty and not valid JSON')));
+  assert.ok(Array.isArray(response.body.failedBatches));
+  assert.ok(response.body.failedBatches.length >= 1);
+  assert.deepEqual(snapshotFiles(draftPacksDir), draftFilesBefore, 'empty model result should not write a draft pack');
 
   mockDraftModelClient = async () => JSON.stringify(makeGeneratedPack());
 }
@@ -2200,14 +2280,18 @@ async function assertUploadAndPrepareModelCrashShowsBatchSizeRecovery(handlers) 
 
   assert.equal(response.statusCode, 400);
   assert.equal(response.body.success, false);
-  assert.equal(response.body.teacherFriendlyError, 'Local Gemma crashed while reading this batch.');
-  assert.equal(response.body.error, 'Local Gemma crashed while reading this batch.');
-  assert.ok(response.body.errors.some((error) => error.includes('Local Gemma crashed while reading batch 1')));
-  assert.ok(response.body.errors.some((error) => error.includes('Retry failed after a smaller batch.')));
+  assert.equal(response.body.teacherFriendlyError, 'Charlemagne had trouble analyzing this file.');
+  assert.equal(response.body.error, 'Charlemagne had trouble analyzing this file.');
+  assert.equal(response.body.errors[0], 'Charlemagne had trouble analyzing this file.');
+  assert.ok(response.body.errors.some((error) => error.includes('The local model stopped while reading part of this file.')));
+  assert.ok(response.body.errors.some((error) => error.includes('Try a smaller file, fewer pages, or text-only notes.')));
+  assert.ok(!response.body.errors.some((error) => error.includes('Ollama returned HTTP 500')), 'raw Ollama crash detail should not be primary teacher-facing copy');
+  assert.ok(response.body.technicalErrors.some((error) => error.includes('Local Gemma crashed while reading batch 1')));
+  assert.ok(response.body.technicalErrors.some((error) => error.includes('Retry failed after a smaller batch.')));
   assert.equal(
-    response.body.errors.filter((error) => error.includes('Ollama returned HTTP 500')).length,
+    response.body.technicalErrors.filter((error) => error.includes('Ollama returned HTTP 500')).length,
     1,
-    'raw Ollama crash detail should not repeat in route errors'
+    'raw Ollama crash detail should be preserved once in technical errors'
   );
   assert.ok(response.body.technicalErrors.some((error) => error.includes('Ollama returned HTTP 500')));
   assert.ok(Array.isArray(response.body.timeline));
@@ -2248,8 +2332,11 @@ async function assertPrepareReviewModelTimeoutPreservesPlan(handlers) {
 
   assert.equal(response.statusCode, 400);
   assert.equal(response.body.success, false);
-  assert.equal(response.body.teacherFriendlyError, 'Local Gemma took too long while reading this batch.');
-  assert.equal(response.body.error, 'Local Gemma took too long while reading this batch.');
+  assert.equal(response.body.teacherFriendlyError, 'Charlemagne had trouble analyzing this file.');
+  assert.equal(response.body.error, 'Charlemagne had trouble analyzing this file.');
+  assert.equal(response.body.errors[0], 'Charlemagne had trouble analyzing this file.');
+  assert.ok(response.body.errors.some((error) => error.includes('The local model took too long on this file.')));
+  assert.ok(!response.body.errors.some((error) => error.includes('Local Gemma took too long while reading this batch.')), 'timeout detail should not be primary teacher-facing copy');
   assert.equal(response.body.uploadId, uploadId);
   assert.equal(response.body.originalFileName, 'teacher_model_timeout_notes.pdf');
   assert.equal(response.body.modelTimeout, true);
@@ -2269,6 +2356,7 @@ async function assertPrepareReviewModelTimeoutPreservesPlan(handlers) {
   assert.ok(response.body.timeline.some((event) => event.type === 'error' && event.message.includes('Local Gemma took too long')));
   assert.ok(Array.isArray(response.body.failedBatches));
   assert.ok(response.body.failedBatches[0].errors.includes('Local Gemma took too long while reading this batch.'));
+  assert.ok(response.body.technicalErrors.some((error) => error.includes('Local Gemma took too long while reading this batch.')));
   assert.deepEqual(snapshotFiles(draftPacksDir), draftFilesBefore, 'model timeout failure should not write a partial draft pack');
 
   mockDraftModelClient = async () => JSON.stringify(makeGeneratedPack());
