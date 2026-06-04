@@ -20,6 +20,9 @@ node_modules/
 logs/
 audio/*
 !audio/.gitkeep
+coverage/
+dist/
+build/
 voices/*.onnx
 voices/*.json
 models/
@@ -27,6 +30,9 @@ vendor/
 backups/
 tmp/
 tmp/model-responses/
+.cache/
+.pytest_cache/
+.npm/
 
 # Backup/scratch
 *.bak
@@ -43,6 +49,10 @@ knowledge/uploads/page-images/*
 !knowledge/uploads/page-images/.gitkeep
 knowledge/uploads/ocr/*
 !knowledge/uploads/ocr/.gitkeep
+knowledge/deleted-approved-packs/
+knowledge/draft-packs/_accepted/
+knowledge/draft-packs/_removed/
 
 # Review handoff artifacts
 review-handoff/
+*.zip

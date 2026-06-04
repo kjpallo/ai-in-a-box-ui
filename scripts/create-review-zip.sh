@@ -3,8 +3,8 @@ set -euo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DOWNLOADS_DIR="${HOME}/Downloads"
-TIMESTAMP="$(date +"%Y%m%d-%H%M%S")"
-ZIP_PATH="${DOWNLOADS_DIR}/ai-in-a-box-review-${TIMESTAMP}.zip"
+TIMESTAMP="$(date +"%Y-%m-%d-%H%M")"
+ZIP_PATH="${DOWNLOADS_DIR}/ai-in-a-box-ui-review-${TIMESTAMP}.zip"
 
 mkdir -p "${DOWNLOADS_DIR}"
 
@@ -21,11 +21,21 @@ INCLUDE_PATHS=(
   "lib"
   "scripts"
   "tests"
-  "knowledge"
+  "knowledge/approved-packs"
+  "knowledge/draft-packs"
+  "knowledge/packs"
+  "knowledge/schema"
+  "knowledge/standards"
+  "knowledge/standards-banks"
+  "knowledge/periodic_table.json"
+  "knowledge/chemistry_compounds.json"
+  "knowledge/teacher_facts.json"
   "charlemagne_motion_force_knowledge_pack"
 )
 
 EXCLUDE_PATTERNS=(
+  ".DS_Store"
+  "*/.DS_Store"
   ".git/*"
   "*/.git/*"
   "node_modules/*"
@@ -38,6 +48,12 @@ EXCLUDE_PATTERNS=(
   "*/logs/*"
   "audio/*"
   "*/audio/*"
+  "coverage/*"
+  "*/coverage/*"
+  "dist/*"
+  "*/dist/*"
+  "build/*"
+  "*/build/*"
   "voices/*.onnx"
   "*/voices/*.onnx"
   "voices/*.json"
@@ -50,6 +66,24 @@ EXCLUDE_PATTERNS=(
   "*/tmp/*"
   "backups/*"
   "*/backups/*"
+  "review-handoff/*"
+  "*/review-handoff/*"
+  "*.zip"
+  "*.log"
+  "*.bak"
+  "*.bak-*"
+  "*~"
+  "*.tmp"
+  "*.temp"
+  ".cache/*"
+  "*/.cache/*"
+  ".pytest_cache/*"
+  "*/.pytest_cache/*"
+  ".npm/*"
+  "*/.npm/*"
+  "knowledge/deleted-approved-packs/*"
+  "knowledge/draft-packs/_accepted/*"
+  "knowledge/draft-packs/_removed/*"
   "knowledge/uploads/incoming/*"
   "knowledge/uploads/extracted/*"
   "knowledge/uploads/page-images/*"
@@ -82,7 +116,7 @@ trap 'rm -f "${ENTRY_LIST_FILE}"' EXIT
 zipinfo -1 "${ZIP_PATH}" > "${ENTRY_LIST_FILE}"
 
 SUSPICIOUS_PATHS="$(
-  grep -E -i '(^|/)\.env($|[.])|(^|/)logs/|(^|/)audio/|(^|/)models/|(^|/)vendor/|(^|/)backups/|(^|/)tmp/|(^|/)knowledge/uploads/(incoming|extracted|page-images|ocr)/|(^|/)[^/]*(token|secret|oauth|gmail[_-]?auth|teacher[_-]?auth)[^/]*\.(json|txt|key|pem|env|ini|yaml|yml)$|(^|/)[^/]*auth[^/]*\.(json|txt|key|pem|env|ini|yaml|yml)$|(^|/)[^/]*\.(pem|key|p12|pfx)$|(^|/)voices/[^/]*\.(onnx|json)$' "${ENTRY_LIST_FILE}" || true
+  grep -E -i '(^|/)\.env($|[.])|(^|/)\.DS_Store$|(^|/)logs/|(^|/)audio/|(^|/)coverage/|(^|/)dist/|(^|/)build/|(^|/)models/|(^|/)vendor/|(^|/)backups/|(^|/)review-handoff/|(^|/)tmp/|(^|/)knowledge/(uploads/(incoming|extracted|page-images|ocr)|deleted-approved-packs|draft-packs/_(accepted|removed))/|(^|/)[^/]*(token|secret|oauth|gmail[_-]?auth|teacher[_-]?auth)[^/]*\.(json|txt|key|pem|env|ini|yaml|yml)$|(^|/)[^/]*auth[^/]*\.(json|txt|key|pem|env|ini|yaml|yml)$|(^|/)[^/]*\.(pem|key|p12|pfx|zip|log|bak|tmp|temp)$|(^|/)voices/[^/]*\.(onnx|json)$' "${ENTRY_LIST_FILE}" || true
 )"
 
 if [[ -n "${SUSPICIOUS_PATHS}" ]]; then

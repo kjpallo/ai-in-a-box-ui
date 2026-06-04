@@ -107,7 +107,7 @@ Use the safe export command below to create a timestamped review zip in `~/Downl
 npm run review:zip
 ```
 
-This command includes app/source review files and excludes local secrets/artifacts such as `.env*`, `logs/`, `node_modules/`, uploaded source caches, model response temp files, and other token/secret/auth-named files. It also runs a suspicious-path check and fails if any risky path is still present.
+This command includes app/source review files, tests, public UI files, package files, docs, and review-safe knowledge definitions. It excludes local secrets/artifacts such as `.env*`, `logs/`, `node_modules/`, uploads/extracted upload caches, archived review history, model response temp files, build outputs, and other token/secret/auth-named files. It also runs a suspicious-path check and fails if any risky path is still present.
 
 ## Before running on the Pi
 

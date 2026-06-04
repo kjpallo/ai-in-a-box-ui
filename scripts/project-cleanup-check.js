@@ -12,7 +12,25 @@ const DUP_MAX_TOTAL_BYTES = Number(process.env.CLEANUP_DUP_MAX_TOTAL_BYTES || 1 
 const DUP_MAX_FILE_BYTES = Number(process.env.CLEANUP_DUP_MAX_FILE_BYTES || 200 * 1024 * 1024);
 
 const WALK_SKIP_DIRS = new Set(['.git', 'node_modules']);
-const SOURCE_SKIP_DIRS = new Set(['.git', 'node_modules', '.venv', 'vendor', 'backups', 'tmp', 'logs', 'audio', 'models', 'voices', 'uploads']);
+const SOURCE_SKIP_DIRS = new Set([
+  '.git',
+  'node_modules',
+  '.venv',
+  '.cache',
+  '.pytest_cache',
+  'vendor',
+  'backups',
+  'tmp',
+  'logs',
+  'audio',
+  'coverage',
+  'dist',
+  'build',
+  'models',
+  'voices',
+  'uploads',
+  'review-handoff'
+]);
 const SOURCE_EXTENSIONS = new Set([
   '.js', '.cjs', '.mjs', '.ts', '.tsx', '.jsx',
   '.css', '.scss', '.html', '.md',
@@ -22,15 +40,23 @@ const SOURCE_EXTENSIONS = new Set([
 const REVIEW_SAFETY_RULES = [
   { name: '.git', gitignore: [/^\.git\/?$/m], zip: [/\.git\/\*/] },
   { name: 'node_modules', gitignore: [/^node_modules\/?$/m], zip: [/node_modules\/\*/] },
+  { name: '.DS_Store', gitignore: [/^\.DS_Store$/m], zip: [/\.DS_Store/] },
   { name: '.env and .env.*', gitignore: [/^\.env$/m, /^\.env\.\*$/m], zip: [/\.env/, /\.env\.\*/] },
   { name: 'logs', gitignore: [/^logs\/?$/m], zip: [/logs\/\*/] },
   { name: 'audio', gitignore: [/^audio\/\*$/m], zip: [/audio\/\*/] },
+  { name: 'coverage', gitignore: [/^coverage\/?$/m], zip: [/coverage\/\*/] },
+  { name: 'dist', gitignore: [/^dist\/?$/m], zip: [/dist\/\*/] },
+  { name: 'build', gitignore: [/^build\/?$/m], zip: [/build\/\*/] },
   { name: 'voices/*.onnx', gitignore: [/^voices\/\*\.onnx$/m], zip: [/voices\/\*\.onnx/] },
   { name: 'voices/*.json', gitignore: [/^voices\/\*\.json$/m], zip: [/voices\/\*\.json/] },
   { name: 'models', gitignore: [/^models\/?$/m], zip: [/models\/\*/] },
   { name: 'vendor', gitignore: [/^vendor\/?$/m], zip: [/vendor\/\*/] },
   { name: 'backups', gitignore: [/^backups\/?$/m], zip: [/backups\/\*/] },
   { name: 'tmp', gitignore: [/^tmp\/?$/m], zip: [/tmp\/\*/] },
+  { name: 'review-handoff', gitignore: [/^review-handoff\/?$/m], zip: [/review-handoff\/\*/] },
+  { name: 'knowledge/deleted-approved-packs', gitignore: [/^knowledge\/deleted-approved-packs\/?$/m], zip: [/knowledge\/deleted-approved-packs\/\*/] },
+  { name: 'knowledge/draft-packs/_accepted', gitignore: [/^knowledge\/draft-packs\/_accepted\/?$/m], zip: [/knowledge\/draft-packs\/_accepted\/\*/] },
+  { name: 'knowledge/draft-packs/_removed', gitignore: [/^knowledge\/draft-packs\/_removed\/?$/m], zip: [/knowledge\/draft-packs\/_removed\/\*/] },
   { name: 'knowledge/uploads/incoming', gitignore: [/^knowledge\/uploads\/incoming\/\*$/m], zip: [/knowledge\/uploads\/incoming\/\*/] },
   { name: 'knowledge/uploads/extracted', gitignore: [/^knowledge\/uploads\/extracted\/\*$/m], zip: [/knowledge\/uploads\/extracted\/\*/] },
   { name: 'knowledge/uploads/page-images', gitignore: [/^knowledge\/uploads\/page-images\/\*$/m], zip: [/knowledge\/uploads\/page-images\/\*/] },
@@ -42,15 +68,21 @@ const SUSPICIOUS_PATH_PATTERNS = [
   /(^|\/)\.env($|[.])/i,
   /(^|\/)logs\//i,
   /(^|\/)audio\//i,
+  /(^|\/)coverage\//i,
+  /(^|\/)dist\//i,
+  /(^|\/)build\//i,
   /(^|\/)models\//i,
   /(^|\/)vendor\//i,
   /(^|\/)backups\//i,
+  /(^|\/)review-handoff\//i,
   /(^|\/)tmp\//i,
+  /(^|\/)knowledge\/deleted-approved-packs\//i,
+  /(^|\/)knowledge\/draft-packs\/_(accepted|removed)\//i,
   /(^|\/)knowledge\/uploads\/(incoming|extracted|page-images|ocr)\//i,
   /(^|\/)voices\/[^/]*\.(onnx|json)$/i,
   /(^|\/)[^/]*(token|secret|oauth|gmail[_-]?auth|teacher[_-]?auth)[^/]*\.(json|txt|key|pem|env|ini|yaml|yml)$/i,
   /(^|\/)[^/]*auth[^/]*\.(json|txt|key|pem|env|ini|yaml|yml)$/i,
-  /(^|\/)[^/]*\.(pem|key|p12|pfx)$/i
+  /(^|\/)[^/]*\.(pem|key|p12|pfx|zip|log|bak|tmp|temp)$/i
 ];
 
 const UPLOAD_DIRS = [
@@ -231,6 +263,35 @@ function checkReviewSafetyAlignment(gitignoreText, zipScriptText) {
   return { aligned, missingInGitignore, missingInZipScript };
 }
 
+function checkReviewZipShape(zipScriptText) {
+  const findings = [];
+  if (!/ai-in-a-box-ui-review-\$\{TIMESTAMP\}\.zip/.test(zipScriptText)) {
+    findings.push('review zip name should use ai-in-a-box-ui-review-${TIMESTAMP}.zip');
+  }
+  if (!/date\s+\+"\%Y-\%m-\%d-\%H\%M"/.test(zipScriptText)) {
+    findings.push('review zip timestamp should use YYYY-MM-DD-HHMM');
+  }
+  if (!/DOWNLOADS_DIR="\$\{HOME\}\/Downloads"/.test(zipScriptText)) {
+    findings.push('review zip should write to ~/Downloads');
+  }
+  if (/"knowledge"\s*(\n|\))/.test(zipScriptText)) {
+    findings.push('review zip should include explicit knowledge subpaths instead of all of knowledge/');
+  }
+  for (const requiredPath of [
+    'knowledge/approved-packs',
+    'knowledge/draft-packs',
+    'knowledge/packs',
+    'knowledge/schema',
+    'knowledge/standards',
+    'knowledge/standards-banks'
+  ]) {
+    if (!zipScriptText.includes(`"${requiredPath}"`)) {
+      findings.push(`review zip include set is missing ${requiredPath}`);
+    }
+  }
+  return findings;
+}
+
 function printSection(title, lines, emptyMessage) {
   console.log(`\n${title}`);
   console.log('-'.repeat(title.length));
@@ -272,6 +333,7 @@ async function main() {
   const gitignoreText = fs.existsSync(gitignorePath) ? fs.readFileSync(gitignorePath, 'utf8') : '';
   const zipScriptText = fs.existsSync(zipScriptPath) ? fs.readFileSync(zipScriptPath, 'utf8') : '';
   const alignment = checkReviewSafetyAlignment(gitignoreText, zipScriptText);
+  const zipShapeFindings = checkReviewZipShape(zipScriptText);
 
   console.log('Project cleanup check');
   console.log('Read-only report. No files were changed or deleted.');
@@ -298,13 +360,15 @@ async function main() {
   printSection('Review zip vs .gitignore alignment: covered in both', alignment.aligned, 'No shared safety rules matched.');
   printSection('Review safety rules missing in .gitignore', alignment.missingInGitignore, 'None.');
   printSection('Review safety rules missing in create-review-zip.sh', alignment.missingInZipScript, 'None.');
+  printSection('Review zip shape warnings', zipShapeFindings, 'None.');
 
   const totalFindings =
     largeFiles.length +
     suspiciousFilesAll.length +
     duplicateReport.duplicateGroups.length +
     alignment.missingInGitignore.length +
-    alignment.missingInZipScript.length;
+    alignment.missingInZipScript.length +
+    zipShapeFindings.length;
   console.log(`\nTotal reported items: ${totalFindings}`);
 }
 
