@@ -288,7 +288,8 @@ async function assertCivicsResponsibilityQuestionsUseApprovedKnowledge() {
     vocabulary: [
       makeVocabulary('Judicial branch', 'interprets laws', 'approved'),
       makeVocabulary('Legislative branch', 'makes laws', 'approved'),
-      makeVocabulary('Executive branch', 'carries out laws', 'approved')
+      makeVocabulary('Executive branch', 'carries out laws', 'approved'),
+      makeVocabulary('Checks and balances', 'ways each branch can limit the power of the others', 'approved')
     ],
     concepts: [
       makeConcept('Judicial review', 'Judicial review is the power of courts to decide whether laws or government actions follow the Constitution.', 'approved'),
@@ -310,6 +311,10 @@ async function assertCivicsResponsibilityQuestionsUseApprovedKnowledge() {
   assert.ok(judicialBranch, 'enabled civics branch vocabulary should load');
   assert.equal(judicialBranch.fact, 'The judicial branch interprets laws.');
   assert.ok(judicialBranch.terms.includes('interprets laws'), 'definition action phrase should be searchable');
+
+  const checksAndBalances = enabledItems.find((item) => item.title === 'Checks and balances');
+  assert.ok(checksAndBalances, 'enabled checks and balances vocabulary should load');
+  assert.equal(checksAndBalances.fact, 'Checks and balances is ways each branch can limit the power of the others.');
 
   const loadCombinedKnowledge = () => [
     ...loadTeacherKnowledge(workflowTeacherFactsFile),
@@ -347,6 +352,18 @@ async function assertCivicsResponsibilityQuestionsUseApprovedKnowledge() {
   });
   await assertQuestionAnswer({
     questionAnswer,
+    question: 'ways each branch can limit the power?',
+    routeType: 'class_fact',
+    answer: 'Checks and balances is ways each branch can limit the power of the others.'
+  });
+  await assertQuestionAnswer({
+    questionAnswer,
+    question: 'what are checks and balances?',
+    routeType: 'definition',
+    answer: 'Checks and balances is ways each branch can limit the power of the others.'
+  });
+  await assertQuestionAnswer({
+    questionAnswer,
     question: 'what is judicial review?',
     routeType: 'definition',
     answerPattern: /Judicial review is the power of courts to decide whether laws or government actions follow the Constitution\./
@@ -362,6 +379,16 @@ async function assertCivicsResponsibilityQuestionsUseApprovedKnowledge() {
   assert.equal(unsupported.routeType, 'no_match', 'unsupported responsibility question should still fail safely.');
   assert.match(unsupported.response, /I do not have a trusted local fact for that yet\./);
   assert.doesNotMatch(unsupported.response, /judicial branch|legislative branch|executive branch/i);
+
+  const barePower = await questionAnswer.answerStudentMessage('what is power?');
+  assert.equal(barePower.routeType, 'definition', 'bare power should keep the built-in science definition without civics context.');
+  assert.match(barePower.response, /Power is the rate at which a device converts electrical energy|Power is how quickly work is done/i);
+  assert.doesNotMatch(barePower.response, /checks and balances/i);
+
+  const powerFormula = await questionAnswer.answerStudentMessage('what is the formula for power?');
+  assert.equal(powerFormula.routeType, 'formula_only', 'power formula should keep formula routing without civics context.');
+  assert.match(powerFormula.response, /P = W \/ t/);
+  assert.doesNotMatch(powerFormula.response, /checks and balances/i);
 }
 
 async function assertQuestionAnswer({ questionAnswer, question, routeType, answer = '', answerPattern = null }) {
