@@ -5,6 +5,7 @@ const path = require('path');
 
 const projectDir = path.resolve(__dirname, '..');
 const LARGE_FILE_BYTES = Number(process.env.CLEANUP_LARGE_FILE_BYTES || 5 * 1024 * 1024);
+const LARGE_SOURCE_LINES = Number(process.env.CLEANUP_LARGE_SOURCE_LINES || 1000);
 const TOP_FILE_LIMIT = Number(process.env.CLEANUP_TOP_FILE_LIMIT || 20);
 const SUSPICIOUS_LIST_LIMIT = Number(process.env.CLEANUP_SUSPICIOUS_LIST_LIMIT || 50);
 const DUP_MAX_FILES = Number(process.env.CLEANUP_DUP_MAX_FILES || 2000);
@@ -24,13 +25,18 @@ const SOURCE_SKIP_DIRS = new Set([
   'logs',
   'audio',
   'coverage',
+  'deleted-approved-packs',
   'dist',
   'build',
   'models',
   'voices',
-  'uploads',
+  '_accepted',
+  '_removed',
   'review-handoff'
 ]);
+const SOURCE_SKIP_REL_PREFIXES = [
+  'knowledge/uploads'
+];
 const SOURCE_EXTENSIONS = new Set([
   '.js', '.cjs', '.mjs', '.ts', '.tsx', '.jsx',
   '.css', '.scss', '.html', '.md',
@@ -92,6 +98,31 @@ const UPLOAD_DIRS = [
   'knowledge/uploads/ocr'
 ];
 
+const LOCAL_ARTIFACT_DIRS = [
+  { path: 'backups', reason: 'backup snapshots' },
+  { path: 'tmp', reason: 'scratch/debug output' },
+  { path: 'review-handoff', reason: 'review/export handoff output' },
+  { path: 'logs', reason: 'local logs and auth state' },
+  { path: 'audio', reason: 'generated TTS audio' },
+  { path: 'knowledge/uploads/incoming', reason: 'original uploaded teacher files' },
+  { path: 'knowledge/uploads/extracted', reason: 'extracted upload text/cache' },
+  { path: 'knowledge/uploads/page-images', reason: 'upload page images' },
+  { path: 'knowledge/uploads/ocr', reason: 'upload OCR cache' },
+  { path: 'knowledge/deleted-approved-packs', reason: 'deleted approved-pack archive' },
+  { path: 'knowledge/draft-packs/_accepted', reason: 'accepted draft-pack archive' },
+  { path: 'knowledge/draft-packs/_removed', reason: 'removed draft-pack archive' },
+  { path: 'voices', reason: 'local Piper voice models/metadata' },
+  { path: 'models', reason: 'local model files' },
+  { path: 'vendor', reason: 'local third-party tool checkouts' }
+];
+
+const DUPLICATE_BASENAME_IGNORE = new Set([
+  'index.js',
+  'README.md',
+  'package.json',
+  'package-lock.json'
+]);
+
 function toRelative(filePath) {
   return path.relative(projectDir, filePath).split(path.sep).join('/');
 }
@@ -107,6 +138,7 @@ function formatBytes(bytes) {
 
 function walkFiles(startDir, options = {}) {
   const skipDirs = options.skipDirs || new Set();
+  const skipRelPrefixes = options.skipRelPrefixes || [];
   const files = [];
 
   function walk(currentDir) {
@@ -120,7 +152,9 @@ function walkFiles(startDir, options = {}) {
     for (const entry of entries) {
       const fullPath = path.join(currentDir, entry.name);
       if (entry.isDirectory()) {
-        if (!skipDirs.has(entry.name)) {
+        const relPath = toRelative(fullPath);
+        const skipRelPath = skipRelPrefixes.some((prefix) => relPath === prefix || relPath.startsWith(`${prefix}/`));
+        if (!skipDirs.has(entry.name) && !skipRelPath) {
           walk(fullPath);
         }
         continue;
@@ -156,6 +190,105 @@ function isSourceFile(relPath) {
 
 function isSuspiciousPath(relPath) {
   return SUSPICIOUS_PATH_PATTERNS.some((pattern) => pattern.test(relPath));
+}
+
+function resolveRequireTarget(fromFile, request) {
+  if (!request.startsWith('.')) return '';
+  let targetPath = path.resolve(path.dirname(fromFile), request);
+  if (fs.existsSync(targetPath) && fs.statSync(targetPath).isFile()) return targetPath;
+
+  const extensions = ['.js', '.cjs', '.mjs', '.json'];
+  for (const ext of extensions) {
+    if (fs.existsSync(`${targetPath}${ext}`)) return `${targetPath}${ext}`;
+  }
+
+  const indexPath = path.join(targetPath, 'index.js');
+  if (fs.existsSync(indexPath)) return indexPath;
+  return '';
+}
+
+function findCompatibilityWrappers(sourceFiles) {
+  return sourceFiles
+    .filter((file) => {
+      const parts = file.rel.split('/');
+      return parts.length === 2 && parts[0] === 'lib' && path.extname(file.rel) === '.js';
+    })
+    .map((file) => {
+      let text = '';
+      try {
+        text = fs.readFileSync(file.path, 'utf8').trim();
+      } catch {
+        return null;
+      }
+
+      const match = text.match(/^module\.exports\s*=\s*require\(['"](.+)['"]\);?$/);
+      if (!match) return null;
+
+      const targetPath = resolveRequireTarget(file.path, match[1]);
+      if (!targetPath) return null;
+      const targetRel = toRelative(targetPath);
+      if (targetRel === file.rel) return null;
+
+      return `${file.rel} -> ${targetRel}`;
+    })
+    .filter(Boolean)
+    .sort();
+}
+
+function summarizeLocalArtifactDirs(allFiles) {
+  return LOCAL_ARTIFACT_DIRS
+    .map((entry) => {
+      const absDir = path.join(projectDir, entry.path);
+      if (!fs.existsSync(absDir)) return null;
+
+      const files = allFiles.filter((file) => file.rel === entry.path || file.rel.startsWith(`${entry.path}/`));
+      const nonKeepFiles = files.filter((file) => path.basename(file.rel) !== '.gitkeep');
+      const totalBytes = nonKeepFiles.reduce((sum, file) => sum + file.size, 0);
+      const countLabel = nonKeepFiles.length === 1 ? '1 file' : `${nonKeepFiles.length} files`;
+      const sizeLabel = nonKeepFiles.length ? `, ${formatBytes(totalBytes)}` : '';
+      const sample = nonKeepFiles
+        .slice()
+        .sort((a, b) => b.size - a.size)
+        .slice(0, 2)
+        .map((file) => file.rel)
+        .join(', ');
+      const sampleLabel = sample ? `; sample: ${sample}` : '';
+      return `${entry.path} (${entry.reason}): ${countLabel}${sizeLabel}${sampleLabel}`;
+    })
+    .filter(Boolean);
+}
+
+function findDuplicateLookingSourceFiles(sourceFiles) {
+  const byName = new Map();
+  for (const file of sourceFiles) {
+    const name = path.basename(file.rel);
+    if (DUPLICATE_BASENAME_IGNORE.has(name)) continue;
+    if (!byName.has(name)) byName.set(name, []);
+    byName.get(name).push(file);
+  }
+
+  const duplicateGroups = [];
+  for (const [name, files] of byName.entries()) {
+    if (files.length < 2) continue;
+
+    const enriched = files
+      .map((file) => ({ ...file, lines: countLinesSafe(file.path) }))
+      .sort((a, b) => a.rel.localeCompare(b.rel));
+    const lineCounts = enriched.map((file) => file.lines).filter((lines) => typeof lines === 'number' && lines > 0);
+    const minLines = lineCounts.length ? Math.min(...lineCounts) : 0;
+    const maxLines = lineCounts.length ? Math.max(...lineCounts) : 0;
+    const similarSize = minLines > 0 && maxLines > 0 && minLines / maxLines >= 0.8;
+    const rootWrapper = enriched.some((file) => file.rel.split('/').length === 2 && file.lines <= 3);
+    const reason = similarSize ? 'same basename, similar size' : rootWrapper ? 'same basename, includes root wrapper' : 'same basename';
+    const entries = enriched
+      .slice(0, 5)
+      .map((file) => `${file.rel} (${typeof file.lines === 'number' ? `${file.lines} lines` : formatBytes(file.size)})`)
+      .join(' | ');
+    const extra = enriched.length > 5 ? ` | +${enriched.length - 5} more` : '';
+    duplicateGroups.push(`${name}: ${reason}; ${entries}${extra}`);
+  }
+
+  return duplicateGroups.sort();
 }
 
 async function sha256File(filePath) {
@@ -306,7 +439,10 @@ function printSection(title, lines, emptyMessage) {
 
 async function main() {
   const allFiles = walkFiles(projectDir, { skipDirs: WALK_SKIP_DIRS });
-  const sourceFiles = walkFiles(projectDir, { skipDirs: SOURCE_SKIP_DIRS }).filter((file) => isSourceFile(file.rel));
+  const sourceFiles = walkFiles(projectDir, {
+    skipDirs: SOURCE_SKIP_DIRS,
+    skipRelPrefixes: SOURCE_SKIP_REL_PREFIXES
+  }).filter((file) => isSourceFile(file.rel));
 
   const largeFiles = allFiles
     .filter((file) => file.size >= LARGE_FILE_BYTES)
@@ -337,10 +473,28 @@ async function main() {
 
   console.log('Project cleanup check');
   console.log('Read-only report. No files were changed or deleted.');
-  console.log(`Thresholds: large file >= ${formatBytes(LARGE_FILE_BYTES)}, top list limit = ${TOP_FILE_LIMIT}`);
+  console.log(
+    `Thresholds: large file >= ${formatBytes(LARGE_FILE_BYTES)}, oversized source >= ${LARGE_SOURCE_LINES} lines, top list limit = ${TOP_FILE_LIMIT}`
+  );
 
   printSection('Largest files over threshold', largeFiles, `None found over ${formatBytes(LARGE_FILE_BYTES)}.`);
+
+  const oversizedSourceFiles = largestSourceByLines.filter((line) => {
+    const match = line.match(/\((\d+) lines,/);
+    return match && Number(match[1]) >= LARGE_SOURCE_LINES;
+  });
+  printSection('Oversized source files', oversizedSourceFiles, `None found over ${LARGE_SOURCE_LINES} lines.`);
   printSection('Largest source files by line count', largestSourceByLines, 'No source files scanned.');
+
+  const duplicateLookingSourceFiles = findDuplicateLookingSourceFiles(sourceFiles).slice(0, TOP_FILE_LIMIT);
+  printSection('Duplicate-looking source files', duplicateLookingSourceFiles, 'No duplicate-looking source names detected.');
+
+  const compatibilityWrappers = findCompatibilityWrappers(sourceFiles);
+  printSection('Stale root compatibility wrappers', compatibilityWrappers, 'No root compatibility wrappers detected.');
+
+  const localArtifactDirs = summarizeLocalArtifactDirs(allFiles);
+  printSection('Backup/local artifact folders', localArtifactDirs, 'No configured local artifact folders found.');
+
   printSection('Suspicious files (not for commit/share)', suspiciousMatches, 'None detected by current rules.');
   console.log(`Suspicious file matches: ${suspiciousFilesAll.length} (showing up to ${SUSPICIOUS_LIST_LIMIT})`);
 
@@ -364,6 +518,10 @@ async function main() {
 
   const totalFindings =
     largeFiles.length +
+    oversizedSourceFiles.length +
+    duplicateLookingSourceFiles.length +
+    compatibilityWrappers.length +
+    localArtifactDirs.length +
     suspiciousFilesAll.length +
     duplicateReport.duplicateGroups.length +
     alignment.missingInGitignore.length +
