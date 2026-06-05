@@ -25,6 +25,7 @@ try {
   assertCoverageReportIncludesFailedBatchWarnings();
   assertStandardsBankEnrichmentAndUnknowns();
   assertReadyWhenAllReviewableItemsApproved();
+  assertContentItemsWithoutSourceTrackingBlockPromotionReadiness();
   assertReferenceFormulasRemainReferenceOnly();
   assertIndexPreviewFromPromotedTempApprovedPack();
   assertRealApprovedPacksAreNotModified();
@@ -305,6 +306,36 @@ function assertReadyWhenAllReviewableItemsApproved() {
   assert.deepEqual(report.promotionReadiness.blockedReasons, []);
 }
 
+function assertContentItemsWithoutSourceTrackingBlockPromotionReadiness() {
+  [
+    ['vocabulary', makeVocabularyItem('missing-source-vocab', 'approved')],
+    ['concepts', makeConceptItem('missing-source-concept', 'approved')],
+    ['referenceFormulas', makeReferenceFormula('missing-source-formula', 'approved')],
+    ['problemBank', makeProblemItem('missing-source-problem', 'approved')]
+  ].forEach(([sectionName, item]) => {
+    removeSourceTracking(item);
+    writeDraftPack(makePack({
+      packId: `report-missing-source-${sectionName.toLowerCase()}`,
+      [sectionName]: [item]
+    }));
+
+    const report = buildImportPipelineReport({
+      packId: `report-missing-source-${sectionName.toLowerCase()}`,
+      draftPacksDir,
+      standardsBank,
+      extraction: makeExtraction()
+    });
+
+    assert.equal(report.promotionReadiness.ready, false, `${sectionName} without source tracking should block promotion`);
+    assert.ok(
+      report.promotionReadiness.blockedReasons.some((reason) => {
+        return reason.includes(`${sectionName}[0]`) && reason.includes('missing required source tracking');
+      }),
+      `${sectionName} should report missing source tracking`
+    );
+  });
+}
+
 function assertReferenceFormulasRemainReferenceOnly() {
   writeDraftPack(makePack({
     packId: 'report-formula-pack',
@@ -482,6 +513,13 @@ function makeSmokeTest(reviewStatus) {
     reviewStatus,
     confidence: reviewStatus === 'approved' ? 'high' : 'medium'
   };
+}
+
+function removeSourceTracking(item) {
+  delete item.sourceFile;
+  delete item.sourceLocation;
+  delete item.sourceTextSnippet;
+  return item;
 }
 
 function makeExtraction() {
