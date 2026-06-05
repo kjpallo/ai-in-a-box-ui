@@ -55,7 +55,7 @@ This map is for cleanup/refactor prep. It documents current structure only; it i
 - `lib/scienceFormulaTools.js` -> `lib/formulas/scienceFormulaTools.js`
 - `lib/chemistryTools.js` -> `lib/knowledge/chemistryTools.js`
 - `lib/periodicTableTools.js` -> `lib/knowledge/periodicTableTools.js`
-- `public/voice-input.js` looks like an old duplicate of `public/voice/voice-input.js`; the active teacher page loads `/voice/voice-input.js`.
+- `public/voice-input.js` is a compatibility loader for the canonical `public/voice/voice-input.js`; the active teacher page loads `/voice/voice-input.js`.
 
 ## Protected areas
 

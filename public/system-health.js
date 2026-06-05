@@ -40,7 +40,7 @@
     }
 
     if (id.includes("mic")) {
-      return ["public/system-health.js", "public/voice-input.js", "routes/whisperRoutes.js"];
+      return ["public/system-health.js", "public/voice/voice-input.js", "routes/whisperRoutes.js"];
     }
 
     if (id.includes("knowledge") || id.includes("teacher_facts")) {

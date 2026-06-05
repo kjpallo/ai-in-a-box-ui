@@ -28,6 +28,7 @@
     "test:teacher-content-adapter": "node scripts/test-teacher-content-adapter.js",
     "test:teacher-content-routes": "node scripts/test-teacher-content-routes.js",
     "test:teacher-content-ui": "node scripts/test-teacher-content-ui.js",
+    "test:voice-input": "node scripts/test-voice-input-organization.js",
     "test:upload-extraction": "node scripts/test-upload-text-extraction.js",
     "test:upload-text-extraction": "node scripts/test-upload-text-extraction.js",
     "test:generate-draft-pack": "node scripts/test-generate-draft-knowledge-pack.js",
@@ -37,7 +38,7 @@
     "audit:motion-force-overlap": "node scripts/audit-motion-force-overlap.js",
     "audit:standards-metadata": "node scripts/audit-standards-metadata.js",
     "test:all": "npm test && npm run test:bank",
-    "check:cleanup": "node scripts/project-cleanup-check.js",
+    "check:cleanup": "node scripts/test-voice-input-organization.js && node scripts/project-cleanup-check.js",
     "review:zip": "bash scripts/create-review-zip.sh"
   },
   "dependencies": {

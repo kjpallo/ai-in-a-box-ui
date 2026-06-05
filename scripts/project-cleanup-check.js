@@ -270,6 +270,7 @@ function findDuplicateLookingSourceFiles(sourceFiles) {
   const duplicateGroups = [];
   for (const [name, files] of byName.entries()) {
     if (files.length < 2) continue;
+    if (isKnownBrowserCompatibilityPair(name, files)) continue;
 
     const enriched = files
       .map((file) => ({ ...file, lines: countLinesSafe(file.path) }))
@@ -289,6 +290,22 @@ function findDuplicateLookingSourceFiles(sourceFiles) {
   }
 
   return duplicateGroups.sort();
+}
+
+function isKnownBrowserCompatibilityPair(name, files) {
+  if (name !== 'voice-input.js') return false;
+
+  const relPaths = files.map((file) => file.rel).sort();
+  if (relPaths.length !== 2) return false;
+  if (relPaths[0] !== 'public/voice-input.js' || relPaths[1] !== 'public/voice/voice-input.js') return false;
+
+  try {
+    const legacyText = fs.readFileSync(path.join(projectDir, 'public', 'voice-input.js'), 'utf8');
+    return legacyText.includes("const CANONICAL_VOICE_INPUT_SRC = '/voice/voice-input.js';")
+      && legacyText.includes("document.createElement('script')");
+  } catch {
+    return false;
+  }
 }
 
 async function sha256File(filePath) {
