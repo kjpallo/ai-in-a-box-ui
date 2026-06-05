@@ -1,0 +1,81 @@
+:root {
+  --bg: #030809;
+  --panel: rgba(5, 15, 17, 0.9);
+  --panel-strong: rgba(6, 18, 21, 0.96);
+  --panel-border: rgba(88, 233, 204, 0.28);
+  --panel-border-blue: rgba(110, 211, 255, 0.24);
+  --panel-shadow: 0 22px 52px rgba(0, 0, 0, 0.42), 0 0 28px rgba(65, 255, 204, 0.1);
+  --line: rgba(255, 255, 255, 0.08);
+  --text: #edfdf8;
+  --muted: #9eb8b6;
+  --soft: #c8dfdc;
+  --neon: #66f7d1;
+  --neon-2: #7ee9ff;
+  --answer-bg: #eef9fd;
+  --answer-fg: #102b3a;
+  --radius-lg: 22px;
+  --radius-md: 16px;
+  --radius-sm: 10px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  min-height: 100vh;
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(102, 247, 209, 0.14), transparent 30%),
+    radial-gradient(circle at 78% 12%, rgba(126, 233, 255, 0.1), transparent 24%),
+    linear-gradient(180deg, #061112 0%, var(--bg) 100%);
+  color: var(--text);
+  font-family: Inter, Arial, Helvetica, sans-serif;
+}
+
+button,
+textarea,
+select,
+input {
+  font: inherit;
+}
+
+button {
+  appearance: none;
+  border: 0;
+  cursor: pointer;
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
+}
+
+button:hover {
+  transform: translateY(-1px);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+  transform: none;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+

@@ -1,0 +1,270 @@
+.teacher-content-simple-pack-list {
+  display: grid;
+  gap: 8px;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  align-content: start;
+  padding-right: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(102, 247, 209, 0.55) rgba(3, 9, 10, 0.5);
+}
+
+.teacher-content-simple-pack-shell {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 10px;
+  min-width: 0;
+  min-height: 0;
+}
+
+.teacher-content-simple-pack-row {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1.35fr) minmax(180px, 0.9fr) minmax(160px, auto);
+  gap: 14px;
+  align-items: center;
+  min-width: 0;
+}
+
+.teacher-content-row-select,
+.teacher-content-simple-pack-select-spacer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+
+.teacher-content-row-select input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--neon);
+}
+
+.teacher-content-simple-pack-title {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.teacher-content-simple-pack-title strong {
+  color: #effcf8;
+  overflow-wrap: anywhere;
+}
+
+.teacher-content-simple-pack-meta {
+  display: flex;
+  flex-basis: 100%;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  color: #bad7d3;
+  font-size: 0.74rem;
+}
+
+.teacher-content-simple-pack-toggle {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.teacher-content-simple-pack-toggle small {
+  color: #bad7d3;
+  font-size: 0.74rem;
+}
+
+.teacher-content-simple-pack-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.teacher-content-approved-bulk-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid rgba(102, 247, 209, 0.14);
+  border-radius: 10px;
+  padding: 10px;
+  background: rgba(102, 247, 209, 0.055);
+  min-width: 0;
+}
+
+.teacher-content-approved-bulk-actions strong,
+.teacher-content-approved-bulk-actions p,
+.teacher-content-approved-delete-message {
+  margin: 0;
+}
+
+.teacher-content-approved-bulk-actions strong {
+  color: #f4fffb;
+}
+
+.teacher-content-approved-bulk-actions p,
+.teacher-content-approved-delete-message {
+  color: #bad7d3;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.teacher-content-approved-bulk-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.teacher-content-select-all-control {
+  min-width: max-content;
+}
+
+.teacher-content-approved-editor-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.teacher-content-approved-edit-message {
+  margin: 0;
+  color: #cafff0;
+  font-weight: 800;
+}
+
+.teacher-content-approved-edit-section {
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgba(102, 247, 209, 0.14);
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.035);
+  min-width: 0;
+}
+
+.teacher-content-approved-edit-list {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.teacher-content-approved-edit-item {
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgba(126, 233, 255, 0.16);
+  border-radius: 10px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.18);
+  min-width: 0;
+}
+
+.teacher-content-approved-edit-item-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.teacher-content-approved-edit-item-head > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.teacher-content-approved-edit-item-head strong,
+.teacher-content-approved-edit-item-head span {
+  overflow-wrap: anywhere;
+}
+
+.teacher-content-approved-edit-item-head strong {
+  color: #effcf8;
+}
+
+.teacher-content-approved-edit-item-head span {
+  color: #bad7d3;
+  font-size: 0.78rem;
+}
+
+.teacher-content-approved-edit-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+  gap: 10px;
+  min-width: 0;
+}
+
+.teacher-content-approved-edit-field {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.teacher-content-approved-edit-field span {
+  color: #b7d1cf;
+  font-size: 0.74rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.teacher-content-approved-edit-field textarea {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  resize: vertical;
+  border: 1px solid rgba(102, 247, 209, 0.2);
+  border-radius: 9px;
+  padding: 9px 10px;
+  color: #effff8;
+  background: rgba(2, 9, 10, 0.72);
+  line-height: 1.35;
+  outline: none;
+}
+
+.teacher-content-approved-edit-field textarea:focus {
+  border-color: rgba(102, 247, 209, 0.62);
+  box-shadow: 0 0 0 2px rgba(102, 247, 209, 0.12);
+}
+
+.teacher-content-approved-edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+@media (max-width: 760px) {
+  .teacher-content-simple-pack-row {
+    grid-template-columns: 28px minmax(0, 1fr);
+  }
+
+  .teacher-content-simple-pack-title,
+  .teacher-content-simple-pack-toggle,
+  .teacher-content-simple-pack-actions {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+
+  .teacher-content-approved-bulk-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .teacher-content-approved-bulk-buttons {
+    justify-content: flex-start;
+  }
+
+  .teacher-content-approved-editor-head-actions,
+  .teacher-content-approved-edit-item-head,
+  .teacher-content-approved-edit-actions {
+    justify-content: flex-start;
+  }
+
+  .teacher-content-approved-edit-fields {
+    grid-template-columns: 1fr;
+  }
+}
+
+

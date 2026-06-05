@@ -1,0 +1,133 @@
+.profile-student-session-head,
+.profile-student-session-row {
+  display: grid;
+  gap: 8px;
+}
+
+.profile-student-session-head {
+  grid-template-columns: minmax(0, 1fr) auto;
+  color: #f4fffb;
+}
+
+.profile-student-session-row {
+  grid-template-columns: minmax(0, 1fr) minmax(7rem, auto);
+  align-items: center;
+}
+
+.profile-student-session-row strong,
+.profile-student-session-row span,
+.profile-student-session-row time {
+  color: #dff4ef;
+  font-size: 0.78rem;
+}
+
+.profile-student-debug {
+  margin-top: 6px;
+  color: #9fb9b3;
+  font-size: 0.72rem;
+}
+
+.profile-student-debug summary {
+  cursor: pointer;
+}
+
+.profile-student-debug code {
+  display: block;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+  color: #cbece4;
+}
+
+.profile-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.profile-table-shell {
+  border: 1px solid rgba(255, 255, 255, 0.065);
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(2, 9, 10, 0.58);
+}
+
+.profile-table-head,
+.profile-table-row {
+  display: grid;
+  grid-template-columns: 0.6fr 0.9fr 1.3fr 1.4fr 0.9fr 0.8fr;
+  gap: 8px;
+  padding: 9px 10px;
+}
+
+.profile-table-head {
+  background: rgba(102, 247, 209, 0.055);
+  border-bottom: 1px solid rgba(102, 247, 209, 0.1);
+}
+
+.profile-table-row {
+  border-top: 1px solid rgba(255, 255, 255, 0.045);
+}
+
+.profile-table-row span {
+  min-width: 0;
+  color: #effcf8;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.profile-empty-state {
+  padding: 10px;
+}
+
+.topic-summary-placeholder {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.topic-ring-placeholder {
+  width: 76px;
+  aspect-ratio: 1;
+  border-radius: 999px;
+  border: 9px solid rgba(102, 247, 209, 0.18);
+  box-shadow: inset 0 0 18px rgba(102, 247, 209, 0.1), 0 0 16px rgba(102, 247, 209, 0.1);
+}
+
+.topic-summary-list {
+  display: grid;
+  gap: 8px;
+}
+
+.profile-topic-copy {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.profile-topic-copy strong {
+  color: #f4fffb;
+}
+
+.profile-topic-copy span {
+  color: #b7d1cf;
+  font-size: 0.8rem;
+}
+
+.profile-topic-bar {
+  height: 9px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.profile-topic-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--neon), var(--neon-2));
+}
+

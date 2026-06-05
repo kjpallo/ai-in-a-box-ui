@@ -1,0 +1,646 @@
+.teacher-content-standard-detail {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  position: sticky;
+  bottom: 12px;
+  z-index: 16;
+  min-width: 0;
+  border: 1px solid rgba(126, 233, 255, 0.18);
+  border-radius: 16px;
+  padding: 14px;
+  background:
+    linear-gradient(180deg, rgba(10, 31, 34, 0.98), rgba(4, 13, 15, 0.98));
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.42), 0 0 24px rgba(126, 233, 255, 0.08);
+}
+
+.teacher-content-standard-detail h5 {
+  margin: 0;
+  color: #f4fffb;
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.teacher-content-standard-detail p {
+  margin: 0;
+  color: #e5f6f2;
+  overflow-wrap: anywhere;
+}
+
+.teacher-content-issues ul {
+  margin: 0;
+  padding-left: 18px;
+  color: #d8eee9;
+}
+
+.teacher-content-failed-batches ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  color: #ffd7d7;
+}
+
+.teacher-content-review-group {
+  display: grid;
+  gap: 8px;
+}
+
+.teacher-content-review-group-head {
+  align-items: center;
+}
+
+.teacher-content-review-group-head span {
+  color: var(--neon);
+  font-weight: 900;
+}
+
+.teacher-content-review-empty,
+.teacher-content-edit-section {
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgba(102, 247, 209, 0.14);
+  border-radius: 10px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.teacher-content-review-empty h5,
+.teacher-content-edit-section h5 {
+  margin: 0;
+  color: #f4fffb;
+}
+
+.teacher-content-review-empty p,
+.teacher-content-edit-section p {
+  margin: 0;
+  color: #d8eee9;
+}
+
+.teacher-content-review-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.teacher-content-review-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.teacher-content-review-filter {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid rgba(132, 211, 194, 0.25);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.2);
+  color: #d8eee9;
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.teacher-content-review-filter.active {
+  border-color: rgba(102, 247, 209, 0.55);
+  background: rgba(102, 247, 209, 0.16);
+  color: #f1fff9;
+}
+
+.teacher-content-review-needs-review {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(255, 205, 87, 0.32);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: rgba(255, 205, 87, 0.08);
+}
+
+.teacher-content-review-needs-review p {
+  margin: 0;
+  color: #fff3ce;
+}
+
+.teacher-content-review-needs-review ul {
+  margin: 0;
+  padding-left: 18px;
+  color: #ffe9bb;
+}
+
+.teacher-content-review-table-shell {
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.teacher-content-review-card-list {
+  display: grid;
+  gap: 12px;
+}
+
+.teacher-content-review-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.teacher-content-review-chip {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(102, 247, 209, 0.32);
+  border-radius: 999px;
+  padding: 3px 8px;
+  color: #ddfff7;
+  background: rgba(102, 247, 209, 0.08);
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.teacher-content-review-chip.status {
+  border-color: rgba(126, 233, 255, 0.32);
+  color: #e3f7ff;
+  background: rgba(126, 233, 255, 0.08);
+}
+
+.teacher-content-review-table-shell[data-review-combined-table] .teacher-content-review-table-head,
+.teacher-content-review-table-shell[data-review-combined-table] .teacher-content-review-table-row {
+  display: grid;
+  grid-template-columns: 32px minmax(140px, 0.95fr) minmax(96px, 0.55fr) minmax(140px, 0.85fr) minmax(220px, 1.3fr) minmax(170px, 1fr) minmax(120px, 0.62fr);
+  gap: 12px;
+  align-items: start;
+  padding: 8px 10px;
+}
+
+.teacher-content-review-table-shell[data-review-combined-table] .teacher-content-review-table-head {
+  border-bottom: 1px solid rgba(102, 247, 209, 0.14);
+  background: rgba(102, 247, 209, 0.06);
+}
+
+.teacher-content-review-table-shell[data-review-combined-table] .teacher-content-review-table-head span {
+  color: #d9fff3;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.teacher-content-review-sort {
+  border: 1px solid rgba(126, 233, 255, 0.22);
+  border-radius: 999px;
+  padding: 4px 8px;
+  background: rgba(126, 233, 255, 0.08);
+  color: #d9fff3;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.teacher-content-review-sort.active {
+  border-color: rgba(102, 247, 209, 0.42);
+  background: rgba(102, 247, 209, 0.16);
+  color: #f2fff9;
+}
+
+.teacher-content-review-table-body {
+  max-height: min(64vh, 760px);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.teacher-content-review-table-shell[data-review-combined-table] .teacher-content-review-table-row {
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-left: 1px solid rgba(255, 255, 255, 0.07);
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(0, 0, 0, 0.16);
+  line-height: 1.25;
+}
+
+.teacher-content-review-table-shell[data-review-combined-table] .teacher-content-review-table-row:last-child {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.teacher-content-review-table-shell[data-review-combined-table] .teacher-content-review-table-row.selected {
+  background: rgba(241, 159, 76, 0.12);
+}
+
+.teacher-content-review-table-shell[data-review-combined-table] .teacher-content-review-table-row.unsafe {
+  background: rgba(255, 132, 132, 0.05);
+}
+
+.teacher-content-review-table-shell[data-review-combined-table] .teacher-content-review-table-row strong,
+.teacher-content-review-table-shell[data-review-combined-table] .teacher-content-review-table-row span,
+.teacher-content-review-table-shell[data-review-combined-table] .teacher-content-review-table-row p {
+  margin: 0;
+  color: #e7f8f3;
+  overflow-wrap: anywhere;
+}
+
+.teacher-content-review-wording {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.teacher-content-review-wording p {
+  font-size: 0.76rem;
+  color: #dff3ee;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.teacher-content-review-source {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.teacher-content-review-source strong,
+.teacher-content-review-source small {
+  overflow-wrap: anywhere;
+}
+
+.teacher-content-review-status {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  font-size: 0.74rem;
+}
+
+.teacher-content-review-table-shell[data-review-combined-table] .teacher-content-review-table-row .teacher-content-review-select-control {
+  grid-template-columns: 18px;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+}
+
+.teacher-content-review-table-shell[data-review-combined-table] .teacher-content-review-table-row .teacher-content-review-select-control span {
+  display: none;
+}
+
+.teacher-content-review-row-actions {
+  display: flex;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.teacher-content-review-advanced-details {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.teacher-content-review-advanced-details summary {
+  color: #aeece0;
+  cursor: pointer;
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.teacher-content-review-advanced-details pre {
+  margin: 8px 0 0;
+  max-height: 160px;
+  overflow: auto;
+  padding: 8px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.24);
+  color: #daefea;
+  font-size: 0.72rem;
+}
+
+.teacher-content-review-done {
+  display: grid;
+  gap: 8px;
+}
+
+.teacher-content-review-done p {
+  margin: 0;
+  color: #e7f8f3;
+  font-size: 0.96rem;
+}
+
+.teacher-content-review-item {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.38fr) minmax(0, 1fr) auto auto;
+  gap: 10px;
+  align-items: start;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.teacher-content-review-item.selected {
+  border-color: rgba(241, 159, 76, 0.42);
+  background: rgba(241, 159, 76, 0.08);
+}
+
+.teacher-content-review-item.unsafe {
+  border-color: rgba(255, 132, 132, 0.28);
+}
+
+.teacher-content-review-select-control {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  color: #f7e6ca;
+  font-size: 0.76rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.teacher-content-review-select-control input {
+  width: 18px;
+  height: 18px;
+  accent-color: #f19f4c;
+}
+
+.teacher-content-review-item-main,
+.teacher-content-review-item-evidence {
+  display: grid;
+  gap: 6px;
+}
+
+.teacher-content-review-item strong,
+.teacher-content-approved-head strong {
+  color: #f4fffb;
+}
+
+.teacher-content-review-item p {
+  margin: 0;
+  color: #e5f6f2;
+}
+
+.teacher-content-review-item [data-review-item-standards] {
+  width: fit-content;
+  border: 1px solid rgba(132, 211, 194, 0.28);
+  border-radius: 999px;
+  padding: 3px 8px;
+  color: #d8eee9;
+  background: rgba(132, 211, 194, 0.08);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.teacher-content-confidence {
+  width: max-content;
+  border: 1px solid rgba(126, 233, 255, 0.26);
+  border-radius: 999px;
+  padding: 4px 8px;
+  color: #e6f7ff;
+  background: rgba(126, 233, 255, 0.1);
+  font-size: 0.7rem;
+  font-weight: 900;
+}
+
+.teacher-content-confidence.high {
+  color: #dffff3;
+  border-color: rgba(102, 247, 209, 0.34);
+  background: rgba(102, 247, 209, 0.12);
+}
+
+.teacher-content-confidence.low {
+  color: #dce8ec;
+  border-color: rgba(220, 232, 236, 0.28);
+  background: rgba(220, 232, 236, 0.08);
+}
+
+.teacher-content-review-actions,
+.teacher-content-review-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.teacher-content-review-bulk-message {
+  margin: 0;
+  border: 1px solid rgba(241, 159, 76, 0.25);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: #fff4df;
+  background: rgba(241, 159, 76, 0.1);
+}
+
+.teacher-content-review-edit-mode-note {
+  margin: 0;
+  border: 1px solid rgba(126, 233, 255, 0.24);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: #e6f7ff;
+  background: rgba(126, 233, 255, 0.08);
+}
+
+.teacher-content-review-action-bar {
+  position: static;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid rgba(241, 159, 76, 0.32);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: rgba(20, 18, 14, 0.82);
+  box-shadow: none;
+}
+
+.teacher-content-review-action-bar > div:first-child {
+  display: grid;
+  gap: 3px;
+  min-width: min(100%, 220px);
+}
+
+.teacher-content-review-action-bar strong {
+  color: #f4fffb;
+}
+
+.teacher-content-review-action-bar span,
+.teacher-content-review-action-bar small {
+  color: #d8eee9;
+  font-size: 0.76rem;
+}
+
+.teacher-content-review-action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.teacher-content-review-detail {
+  display: grid;
+  gap: 12px;
+  position: static;
+  border: 1px solid rgba(102, 247, 209, 0.24);
+  border-radius: 12px;
+  padding: 14px;
+  background: rgba(8, 29, 27, 0.68);
+  box-shadow: none;
+}
+
+.teacher-content-review-focused-fix {
+  display: grid;
+  gap: 14px;
+  position: static;
+  border: 1px solid rgba(102, 247, 209, 0.3);
+  border-radius: 16px;
+  padding: 16px;
+  background:
+    linear-gradient(145deg, rgba(9, 36, 33, 0.92), rgba(8, 18, 22, 0.94)),
+    radial-gradient(circle at top right, rgba(126, 233, 255, 0.12), transparent 34%);
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.28);
+}
+
+.teacher-content-review-focused-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.teacher-content-review-focused-head h4,
+.teacher-content-review-focused-head p {
+  margin: 0;
+}
+
+.teacher-content-review-focused-head p {
+  margin-top: 4px;
+  color: #d8eee9;
+}
+
+.teacher-content-review-focused-fix .teacher-content-edit-field,
+.teacher-content-review-focused-fix .teacher-content-edit-field textarea {
+  width: 100%;
+}
+
+.teacher-content-review-focused-fix [data-review-focused-blockers] ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.teacher-content-review-issues-to-fix {
+  border: 1px solid rgba(241, 159, 76, 0.3);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: rgba(241, 159, 76, 0.08);
+}
+
+.teacher-content-review-issues-to-fix h5 {
+  margin: 0 0 8px;
+}
+
+.teacher-content-review-issues-to-fix ul {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.teacher-content-review-issues-to-fix li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-start;
+  justify-content: space-between;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 8px;
+  overflow-wrap: anywhere;
+}
+
+.teacher-content-review-issues-to-fix li button {
+  margin-left: auto;
+  align-self: center;
+  flex-shrink: 0;
+}
+
+.teacher-content-review-issues-to-fix p {
+  margin: 2px 0 0;
+  line-height: 1.4;
+}
+
+.teacher-content-review-queue {
+  margin: 8px 0 10px;
+  padding: 8px 10px;
+  border: 1px solid rgba(102, 247, 209, 0.24);
+  border-radius: 10px;
+  background: rgba(102, 247, 209, 0.05);
+}
+
+.teacher-content-review-queue-list {
+  margin: 8px 0 0;
+  padding-left: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+
+.teacher-content-review-evidence-card {
+  position: static;
+  border-color: rgba(126, 233, 255, 0.28);
+  background:
+    linear-gradient(180deg, rgba(10, 31, 34, 0.98), rgba(4, 13, 15, 0.98));
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.42), 0 0 24px rgba(126, 233, 255, 0.08);
+}
+
+[data-review-item-real-status],
+[data-review-detail-real-status] {
+  margin: 0;
+  color: #cde6e2;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.teacher-content-review-inline-message {
+  margin: 0;
+  border: 1px solid rgba(241, 159, 76, 0.35);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: #fff4df;
+  background: rgba(241, 159, 76, 0.1);
+}
+
+.teacher-content-edit-fields {
+  display: grid;
+  gap: 10px;
+}
+
+.teacher-content-edit-field {
+  display: grid;
+  gap: 6px;
+}
+
+.teacher-content-edit-field span {
+  color: var(--neon);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.teacher-content-edit-field textarea {
+  width: 100%;
+  min-height: 92px;
+  resize: vertical;
+  border: 1px solid rgba(102, 247, 209, 0.18);
+  border-radius: 10px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--text);
+  line-height: 1.45;
+}
+
+.teacher-content-edit-field textarea:focus {
+  outline: 2px solid rgba(102, 247, 209, 0.42);
+  outline-offset: 1px;
+}
+

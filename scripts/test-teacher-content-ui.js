@@ -29,11 +29,27 @@ const teacherContentModulePaths = [
 const stylePath = path.join(projectRoot, 'public', 'style.css');
 const packagePath = path.join(projectRoot, 'package.json');
 const routeTestPath = path.join(projectRoot, 'scripts', 'test-teacher-content-routes.js');
+const requiredStyleImports = [
+  'base.css',
+  'app-shell.css',
+  'login.css',
+  'blades.css',
+  'teacher-content.css',
+  'teacher-content-import.css',
+  'teacher-content-review.css',
+  'teacher-content-approved.css',
+  'student.css',
+  'teacher-dashboard.css',
+  'responsive.css',
+  'teacher-content-management.css',
+  'voice.css'
+];
 
 const uiEntry = read(uiEntryPath);
 const reviewActions = read(uiReviewActionsPath);
 const ui = teacherContentModulePaths.map(read).join('\n');
-const style = read(stylePath);
+const styleManifest = read(stylePath);
+const style = readCssBundle(stylePath);
 const routeTest = read(routeTestPath);
 const pkg = JSON.parse(read(packagePath));
 
@@ -44,6 +60,7 @@ main().catch((error) => {
 
 async function main() {
   assertCompatibilityEntryLoadsModules();
+  assertCssSplitReferencesRequiredFiles();
   assertTwoPrimaryScreens();
   assertUploadScreenIsSimple();
   assertReviewScreenIsSimpleList();
@@ -104,6 +121,17 @@ function assertCompatibilityEntryLoadsModules() {
   ].forEach((factoryName) => {
     assert.match(ui, new RegExp(`ns\\.${factoryName}\\s*=\\s*${factoryName}`), `Expected ${factoryName} to be exported on the teacher-content namespace.`);
   });
+}
+
+function assertCssSplitReferencesRequiredFiles() {
+  const importPattern = /@import\s+url\("\.\/styles\/([^"]+)"\);/g;
+  const imports = [...styleManifest.matchAll(importPattern)].map((match) => match[1]);
+  assert.deepEqual(imports, requiredStyleImports, 'public/style.css should reference the split CSS files in cascade order.');
+
+  for (const fileName of requiredStyleImports) {
+    const filePath = path.join(projectRoot, 'public', 'styles', fileName);
+    assert.ok(fs.existsSync(filePath), `Expected public/styles/${fileName} to exist.`);
+  }
 }
 
 function assertTwoPrimaryScreens() {
@@ -865,6 +893,27 @@ function assertTeacherContentRouteTestsStillPass() {
 
 function read(filePath) {
   return fs.readFileSync(filePath, 'utf8');
+}
+
+function readCssBundle(entryPath, seen = new Set()) {
+  assert.ok(!seen.has(entryPath), `CSS import cycle detected at ${entryPath}.`);
+  seen.add(entryPath);
+
+  const source = read(entryPath);
+  const importPattern = /@import\s+url\("([^"]+)"\);/g;
+  let output = '';
+  let lastIndex = 0;
+
+  for (const match of source.matchAll(importPattern)) {
+    output += source.slice(lastIndex, match.index);
+    const importedPath = path.resolve(path.dirname(entryPath), match[1]);
+    output += readCssBundle(importedPath, seen);
+    lastIndex = match.index + match[0].length;
+  }
+
+  output += source.slice(lastIndex);
+  seen.delete(entryPath);
+  return output;
 }
 
 function escapeRegExp(value) {
