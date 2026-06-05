@@ -2,6 +2,17 @@
 
 Local classroom assistant UI for a Raspberry Pi.
 
+## Start the app
+
+Install dependencies once, then start the local server:
+
+```bash
+npm install
+npm start
+```
+
+The teacher console runs at `http://localhost:3000/`. The student classroom page runs at `http://localhost:3000/student.html`.
+
 ## What this version does
 
 - Streams text back from Ollama as it is generated.
@@ -12,44 +23,51 @@ Local classroom assistant UI for a Raspberry Pi.
 - Uses local router/formula rules and local knowledge files for trusted classroom answers.
 - Includes a 400-question router test bank for accuracy checks before adding more UI or formula families.
 
-## Files to care about
+## Major code areas
 
-- `public/index.html` = what is on the page
-- `public/style.css` = what it looks like
-- `public/app.js` = main teacher app startup wiring
-- `public/api-client.js` = browser API calls
-- `public/question-input.js` = teacher question form and streamed answer events
-- `public/answer-renderer.js` = answer panel rendering
-- `public/recent-questions.js` = recent question list
-- `public/blade-ui.js` = side/bottom blade shell UI
-- `public/voice/` = voice input, commands, status, and TTS playback modules
-- `public/student/student-ui.js` = student page/session flow
-- `public/audio-stream-processor.js` = low-latency browser audio playback for Piper PCM chunks
-- `server.js` = local HTTP server and streaming chat endpoint
-- `lib/router/questionRouter.js` = local router that decides which trusted tool should answer
-- `lib/formulas/` = local science formula rules, being split one formula family at a time
-- `lib/knowledge/` = local chemistry, periodic table, and teacher knowledge helpers
-- `lib/ollama/client.js` = local Ollama client
-- `lib/tts/piper.js` = local Piper TTS service
+- `server.js` wires the Express app, static files, auth/session middleware, and API route modules.
+- `routes/` contains backend route modules for auth, chat/router, student sessions, classroom controls, teacher content, voice/Whisper, profile, health, and AI-improvement endpoints.
+- `public/` contains the teacher console, student page, shared browser modules, voice modules, and split teacher-content frontend modules.
+- `public/teacher-content/` contains the teacher content dashboard modules for uploads, review, approved packs, standards panels, and status/render helpers.
+- `lib/router/` contains the active classroom question router. The root `lib/questionRouter.js` file is only a compatibility wrapper.
+- `lib/formulas/` contains formula parsing, answer formatting, and formula-family tools. The root `lib/scienceFormulaTools.js` file is only a compatibility wrapper.
+- `lib/knowledge/` contains teacher knowledge pack loading, review, promotion, approval, chemistry, periodic table, and pack quality helpers. Root `lib/chemistryTools.js` and `lib/periodicTableTools.js` are compatibility wrappers.
+- `lib/uploads/` contains teacher upload detection, extraction, draft-pack generation, source evidence, import reports, and storage helpers.
+- `lib/standards/` and `knowledge/standards*/` contain standards matching, bank validation, profile config, and standards data.
+- `scripts/` contains regression tests, cleanup/review utilities, upload/knowledge pack tools, and audit helpers.
+- `tests/routerTestBank.js` contains the large classroom router regression bank.
+- `docs/refactor-map.md` documents compatibility wrappers, protected areas, local artifact folders, and oversized files for future cleanup.
 
-## Router tests
+## Core test commands
 
-Run the small regression suite:
+Run the core classroom prototype regression suite:
+
+```bash
+npm run test:classroom-core
+```
+
+Run teacher content/upload regression checks:
+
+```bash
+npm run test:teacher-content
+```
+
+Run the smaller default classroom smoke suite:
 
 ```bash
 npm test
 ```
 
-Run the full 400-question teacher test bank:
+Run the 400-question teacher router bank:
 
 ```bash
 npm run test:bank
 ```
 
-Run both:
+Run cleanup/review safety checks:
 
 ```bash
-npm run test:all
+npm run check:cleanup
 ```
 
 ## Teacher Auth
@@ -95,7 +113,8 @@ Phase 7D separates concept confidence from standards confidence in completed int
 ## Before pushing to GitHub
 
 ```bash
-npm run test:all
+npm run test:classroom-core
+npm run test:teacher-content
 npm run check:cleanup
 ```
 
@@ -108,6 +127,28 @@ npm run review:zip
 ```
 
 This command includes app/source review files, tests, public UI files, package files, docs, and review-safe knowledge definitions. It excludes local secrets/artifacts such as `.env*`, `logs/`, `node_modules/`, uploads/extracted upload caches, archived review history, model response temp files, build outputs, and other token/secret/auth-named files. It also runs a suspicious-path check and fails if any risky path is still present.
+
+Review zips are intentionally built from an explicit include list in `scripts/create-review-zip.sh`. They do not include local logs, auth files, upload originals/extractions, backup folders, scratch output, deleted/accepted/removed draft archives, model files, voice files, or previous review handoff output.
+
+## Package scripts
+
+`package.json` keeps scripts grouped by purpose: app startup, core classroom tests, auth, router/standards tests, knowledge-pack tests, teacher-content tests, upload/import tests, voice organization, inspection/audit utilities, cleanup checks, and review zip export.
+
+The most common commands are:
+
+```bash
+npm start
+npm run test:classroom-core
+npm run test:teacher-content
+npm run review:zip
+npm run check:cleanup
+```
+
+## Cleanup audit notes
+
+The cleanup checker is read-only. It reports local artifact folders and oversized files so cleanup can happen deliberately without changing classroom behavior during audit passes.
+
+Oversized data/test files are currently documented rather than split when splitting would risk router, knowledge, or teacher-content behavior. The compatibility wrappers listed in `docs/refactor-map.md` stay in place for old require paths and legacy browser paths until a future compatibility-removal pass confirms no external consumers need them.
 
 ## Before running on the Pi
 

@@ -38,16 +38,18 @@ This map is for cleanup/refactor prep. It documents current structure only; it i
 
 ## Known large files for later splitting
 
-- `public/style.css`
 - `public/teacher-content/index.js`
-- `routes/teacherContentRoutes.js`
 - `public/voice/voice-input.js`
 - `public/student.html`
 - `lib/standards/standardsFollowUp.js`
 - `lib/knowledge/electricity-magnetism/electricityMagnetismKnowledgePack.js`
-- `lib/uploads/generateDraftKnowledgePack.js`
+- `lib/uploads/draftPackNormalizer.js`
+- `routes/studentRoutes.js`
 - Large regression fixtures/scripts: `tests/routerTestBank.js`, `scripts/test-router.js`, `scripts/test-teacher-content-routes.js`, `scripts/test-generate-draft-knowledge-pack.js`
 - Large data files: `knowledge/standards/missouri_science_6_12_standards.json`, `knowledge/teacher_facts.json`, `standards_metadata_overlay.phase7a3.json`
+- `package-lock.json` is generated dependency metadata and is expected to exceed the source-line threshold.
+
+These files are intentionally documented instead of split during final audit cleanup because splitting them can change module load order, route coverage, fixtures, or knowledge data review behavior. Future splits should move one behavior area at a time with matching regression coverage.
 
 ## Compatibility wrappers and duplicate-looking files
 
@@ -56,6 +58,8 @@ This map is for cleanup/refactor prep. It documents current structure only; it i
 - `lib/chemistryTools.js` -> `lib/knowledge/chemistryTools.js`
 - `lib/periodicTableTools.js` -> `lib/knowledge/periodicTableTools.js`
 - `public/voice-input.js` is a compatibility loader for the canonical `public/voice/voice-input.js`; the active teacher page loads `/voice/voice-input.js`.
+- `knowledge/approved-packs/_example/knowledge_pack.json` and `knowledge/draft-packs/_example/knowledge_pack.json` share a basename but represent different example states.
+- `lib/server/utils.js` and `public/teacher-content/utils.js` share a basename but live on opposite sides of the app boundary.
 
 ## Protected areas
 
