@@ -9,6 +9,13 @@
     '/teacher-content/render-review.js',
     '/teacher-content/render-approved.js',
     '/teacher-content/review-actions.js',
+    '/teacher-content/overlay.js',
+    '/teacher-content/tabs.js',
+    '/teacher-content/status.js',
+    '/teacher-content/standards-panel.js',
+    '/teacher-content/upload-controller.js',
+    '/teacher-content/review-controller.js',
+    '/teacher-content/approved-controller.js',
     '/teacher-content/index.js'
   ];
 

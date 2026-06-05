@@ -5,18 +5,34 @@ const { spawnSync } = require('node:child_process');
 
 const projectRoot = path.join(__dirname, '..');
 const uiEntryPath = path.join(projectRoot, 'public', 'teacher-content-ui.js');
-const uiIndexPath = path.join(projectRoot, 'public', 'teacher-content', 'index.js');
 const uiConstantsPath = path.join(projectRoot, 'public', 'teacher-content', 'constants.js');
-const uiRenderReviewPath = path.join(projectRoot, 'public', 'teacher-content', 'render-review.js');
-const uiRenderApprovedPath = path.join(projectRoot, 'public', 'teacher-content', 'render-approved.js');
 const uiReviewActionsPath = path.join(projectRoot, 'public', 'teacher-content', 'review-actions.js');
+const teacherContentModulePaths = [
+  uiConstantsPath,
+  path.join(projectRoot, 'public', 'teacher-content', 'state.js'),
+  path.join(projectRoot, 'public', 'teacher-content', 'utils.js'),
+  path.join(projectRoot, 'public', 'teacher-content', 'api.js'),
+  path.join(projectRoot, 'public', 'teacher-content', 'upload-queue.js'),
+  path.join(projectRoot, 'public', 'teacher-content', 'render-upload.js'),
+  path.join(projectRoot, 'public', 'teacher-content', 'render-review.js'),
+  path.join(projectRoot, 'public', 'teacher-content', 'render-approved.js'),
+  uiReviewActionsPath,
+  path.join(projectRoot, 'public', 'teacher-content', 'overlay.js'),
+  path.join(projectRoot, 'public', 'teacher-content', 'tabs.js'),
+  path.join(projectRoot, 'public', 'teacher-content', 'status.js'),
+  path.join(projectRoot, 'public', 'teacher-content', 'standards-panel.js'),
+  path.join(projectRoot, 'public', 'teacher-content', 'upload-controller.js'),
+  path.join(projectRoot, 'public', 'teacher-content', 'review-controller.js'),
+  path.join(projectRoot, 'public', 'teacher-content', 'approved-controller.js'),
+  path.join(projectRoot, 'public', 'teacher-content', 'index.js')
+];
 const stylePath = path.join(projectRoot, 'public', 'style.css');
 const packagePath = path.join(projectRoot, 'package.json');
 const routeTestPath = path.join(projectRoot, 'scripts', 'test-teacher-content-routes.js');
 
 const uiEntry = read(uiEntryPath);
 const reviewActions = read(uiReviewActionsPath);
-const ui = `${read(uiConstantsPath)}\n${read(uiRenderReviewPath)}\n${read(uiRenderApprovedPath)}\n${read(uiReviewActionsPath)}\n${read(uiIndexPath)}`;
+const ui = teacherContentModulePaths.map(read).join('\n');
 const style = read(stylePath);
 const routeTest = read(routeTestPath);
 const pkg = JSON.parse(read(packagePath));
@@ -65,6 +81,29 @@ function assertCompatibilityEntryLoadsModules() {
   assert.match(uiEntry, /const MODULE_SCRIPTS = \[/, 'Compatibility entry should define ordered teacher-content module scripts.');
   assert.match(uiEntry, /'\/teacher-content\/constants\.js'/, 'Compatibility entry should load constants module first.');
   assert.match(uiEntry, /'\/teacher-content\/index\.js'/, 'Compatibility entry should load index module.');
+  [
+    '/teacher-content/overlay.js',
+    '/teacher-content/tabs.js',
+    '/teacher-content/status.js',
+    '/teacher-content/standards-panel.js',
+    '/teacher-content/upload-controller.js',
+    '/teacher-content/review-controller.js',
+    '/teacher-content/approved-controller.js'
+  ].forEach((modulePath) => {
+    assert.match(uiEntry, new RegExp(`'${escapeRegExp(modulePath)}'`), `Compatibility entry should load ${modulePath}.`);
+    assert.ok(uiEntry.indexOf(`'${modulePath}'`) < uiEntry.indexOf("'/teacher-content/index.js'"), `${modulePath} should load before index.js.`);
+  });
+  [
+    'createOverlayModule',
+    'createTabsModule',
+    'createStatusModule',
+    'createStandardsPanelModule',
+    'createUploadControllerModule',
+    'createReviewControllerModule',
+    'createApprovedControllerModule'
+  ].forEach((factoryName) => {
+    assert.match(ui, new RegExp(`ns\\.${factoryName}\\s*=\\s*${factoryName}`), `Expected ${factoryName} to be exported on the teacher-content namespace.`);
+  });
 }
 
 function assertTwoPrimaryScreens() {
@@ -826,6 +865,10 @@ function assertTeacherContentRouteTestsStillPass() {
 
 function read(filePath) {
   return fs.readFileSync(filePath, 'utf8');
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function extractFunctionSource(source, functionName) {
