@@ -6,9 +6,37 @@ const { registerTeacherContentRoutes } = require('../routes/teacherContentRoutes
 const { planTeacherContentImport } = require('../lib/uploads/planTeacherContentImport');
 const { loadApprovedKnowledgePacks } = require('../lib/knowledge/loadApprovedKnowledgePacks');
 const { loadEnabledApprovedKnowledgeItems } = require('../lib/knowledge/loadEnabledApprovedKnowledgeItems');
+const {
+  cleanupDir,
+  ensureDirs,
+  makeTempRoot,
+  projectRoot,
+  readKnowledgePack,
+  snapshotFileStats,
+  snapshotKnowledgePackFiles,
+  snapshotTextFiles,
+  writeKnowledgePack,
+  writeStandardsBank
+} = require('./test-helpers/fileSystem');
+const {
+  createApp,
+  request,
+  requestMultipart
+} = require('./test-helpers/httpHarness');
+const {
+  makeTeacherContentConceptItem: makeConceptItem,
+  makeTeacherContentGeneratedPack: makeGeneratedPack,
+  makeTeacherContentPack: makePack,
+  makeTeacherContentProblemItem: makeProblemItem,
+  makeTeacherContentReferenceFormula: makeReferenceFormula,
+  makeTeacherContentSmokeTest: makeSmokeTest,
+  makeTeacherContentStandardsBank: makeStandardsBank,
+  makeTeacherContentStandardsMapItem: makeStandardsMapItem,
+  makeTeacherContentVocabularyItem: makeVocabularyItem
+} = require('./test-helpers/classroomFixtures');
 
-const projectRoot = path.join(__dirname, '..');
-const tempRoot = path.join(projectRoot, 'tmp', 'test-teacher-content-routes');
+const tempRoot = makeTempRoot('test-teacher-content-routes', { insideProject: true });
+const snapshotFiles = snapshotTextFiles;
 const draftPacksDir = path.join(tempRoot, 'draft-packs');
 const approvedPacksDir = path.join(tempRoot, 'approved-packs');
 const deletedApprovedPacksDir = path.join(tempRoot, 'deleted-approved-packs');
@@ -22,15 +50,17 @@ const standardsBank = makeStandardsBank();
 let mockDraftModelClient = async () => JSON.stringify(makeGeneratedPack());
 
 cleanupTempRoot();
-fs.mkdirSync(draftPacksDir, { recursive: true });
-fs.mkdirSync(approvedPacksDir, { recursive: true });
-fs.mkdirSync(deletedApprovedPacksDir, { recursive: true });
-fs.mkdirSync(uploadIncomingDir, { recursive: true });
-fs.mkdirSync(uploadExtractedDir, { recursive: true });
-fs.mkdirSync(rawModelResponsesDir, { recursive: true });
-fs.mkdirSync(standardsBanksDir, { recursive: true });
+ensureDirs(
+  draftPacksDir,
+  approvedPacksDir,
+  deletedApprovedPacksDir,
+  uploadIncomingDir,
+  uploadExtractedDir,
+  rawModelResponsesDir,
+  standardsBanksDir
+);
 
-const approvedPacksBefore = snapshotFiles(realApprovedPacksDir);
+const approvedPacksBefore = snapshotTextFiles(realApprovedPacksDir);
 const routerStudentFilesBefore = snapshotRouterAndStudentFiles();
 
 main().catch((error) => {
@@ -4405,121 +4435,12 @@ function assertNoRouterOrStudentModulesImported() {
   assert.deepEqual(forbidden, [], `teacher content routes should not import router/student/formula modules: ${forbidden.join(', ')}`);
 }
 
-function createApp(handlers) {
-  return {
-    get(route, handler) {
-      handlers.set(`GET ${route}`, handler);
-    },
-    patch(route, handler) {
-      handlers.set(`PATCH ${route}`, handler);
-    },
-    delete(route, handler) {
-      handlers.set(`DELETE ${route}`, handler);
-    },
-    post(route, handler) {
-      handlers.set(`POST ${route}`, handler);
-    }
-  };
-}
-
-async function request(handlers, method, route, body = {}, params = {}, query = {}) {
-  const handler = handlers.get(`${method} ${route}`);
-  assert.ok(handler, `Missing handler: ${method} ${route}`);
-
-  const req = { body, params, query, headers: {} };
-  const res = createResponse();
-  await handler(req, res);
-  return res;
-}
-
-async function requestMultipart(handlers, route, file) {
-  const handler = handlers.get(`POST ${route}`);
-  assert.ok(handler, `Missing handler: POST ${route}`);
-
-  const boundary = `test-boundary-${Date.now()}`;
-  const rawBody = makeMultipartBody(boundary, file);
-  const req = {
-    body: {},
-    params: {},
-    query: {},
-    headers: {
-      'content-type': `multipart/form-data; boundary=${boundary}`,
-      'content-length': String(rawBody.length)
-    },
-    rawBody
-  };
-  const res = createResponse();
-  await handler(req, res);
-  return res;
-}
-
-function makeMultipartBody(boundary, file) {
-  const parts = [];
-
-  if (file.fileName) {
-    parts.push(
-      Buffer.from(`--${boundary}\r\n`),
-      Buffer.from(`Content-Disposition: form-data; name="${file.fieldName || 'sourceFile'}"; filename="${file.fileName}"\r\n`),
-      Buffer.from(`Content-Type: ${file.contentType || 'application/octet-stream'}\r\n\r\n`),
-      Buffer.isBuffer(file.content) ? file.content : Buffer.from(String(file.content || '')),
-      Buffer.from('\r\n')
-    );
-  }
-
-  Object.entries(file.fields || {}).forEach(([name, value]) => {
-    parts.push(
-      Buffer.from(`--${boundary}\r\n`),
-      Buffer.from(`Content-Disposition: form-data; name="${name}"\r\n\r\n`),
-      Buffer.from(String(value)),
-      Buffer.from('\r\n')
-    );
-  });
-
-  parts.push(Buffer.from(`--${boundary}--\r\n`));
-  return Buffer.concat(parts);
-}
-
-function createResponse() {
-  return {
-    statusCode: 200,
-    body: null,
-    status(code) {
-      this.statusCode = code;
-      return this;
-    },
-    json(payload) {
-      this.body = payload;
-      return this;
-    }
-  };
-}
-
-function writeKnowledgePack(rootDir, pack) {
-  const packDir = path.join(rootDir, pack.packId);
-  const packPath = path.join(packDir, 'knowledge_pack.json');
-  fs.mkdirSync(packDir, { recursive: true });
-  fs.writeFileSync(packPath, `${JSON.stringify(pack, null, 2)}\n`);
-  return packPath;
-}
-
-function writeStandardsBank(rootDir, bank) {
-  const bankDir = path.join(rootDir, bank.standardsBankId);
-  const bankPath = path.join(bankDir, 'standards_bank.json');
-  fs.mkdirSync(bankDir, { recursive: true });
-  fs.writeFileSync(bankPath, `${JSON.stringify(bank, null, 2)}\n`);
-  return bankPath;
-}
-
 function writeExtractionFixture(uploadId, extraction) {
   fs.mkdirSync(uploadExtractedDir, { recursive: true });
   fs.writeFileSync(
     path.join(uploadExtractedDir, `${uploadId}_extraction.json`),
     `${JSON.stringify(extraction, null, 2)}\n`
   );
-}
-
-function readKnowledgePack(rootDir, packId) {
-  return JSON.parse(fs.readFileSync(path.join(rootDir, packId, 'knowledge_pack.json'), 'utf8'));
 }
 
 function makeExtraction(overrides = {}) {
@@ -4667,34 +4588,6 @@ function makeAdaptiveLoopRouteExtraction(overrides = {}) {
   };
 }
 
-function makeGeneratedPack(overrides = {}) {
-  return makePack({
-    packId: 'prepared-review-draft',
-    title: 'Prepared Review Draft',
-    sourceFiles: [
-      {
-        fileName: 'teacher_prepare_review_notes.txt',
-        fileType: 'txt',
-        reviewStatus: 'approved',
-        confidence: 'high',
-        notes: 'Model output is normalized back to pending.'
-      }
-    ],
-    vocabulary: [makeVocabularyItem('net-force', 'approved')],
-    concepts: [makeConceptItem('balanced-forces', 'approved')],
-    referenceFormulas: [
-      {
-        ...makeReferenceFormula('force-reference', 'approved'),
-        solverStatus: 'ready'
-      }
-    ],
-    problemBank: [makeProblemItem('balanced-force-problem', 'approved')],
-    standardsMap: [makeStandardsMapItem('SAMPLE.PS.FORCES.1', 'approved')],
-    smokeTests: [makeSmokeTest('approved')],
-    ...overrides
-  });
-}
-
 function makeMinimalPdf(text) {
   const escapedText = String(text).replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
   const content = escapedText
@@ -4724,159 +4617,6 @@ function makeMinimalPdf(text) {
   pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`;
 
   return pdf;
-}
-
-function makePack(overrides = {}) {
-  return {
-    packId: 'route-pack',
-    title: 'Route Pack',
-    version: '0.1.0-draft',
-    subject: 'Physical Science',
-    gradeLevel: '8',
-    sourceFiles: [
-      {
-        fileName: 'teacher_force_notes.txt',
-        fileType: 'txt',
-        reviewStatus: 'approved',
-        confidence: 'high',
-        notes: 'Teacher uploaded notes.'
-      }
-    ],
-    vocabulary: [makeVocabularyItem('net-force', 'approved')],
-    concepts: [makeConceptItem('balanced-forces', 'approved')],
-    referenceFormulas: [makeReferenceFormula('force-reference', 'approved')],
-    problemBank: [makeProblemItem('balanced-force-problem', 'approved')],
-    standardsMap: [makeStandardsMapItem('SAMPLE.PS.FORCES.1', 'approved')],
-    smokeTests: [makeSmokeTest('approved')],
-    metadata: {
-      createdBy: 'test-suite',
-      createdAt: '2026-05-14T00:00:00.000Z'
-    },
-    ...overrides
-  };
-}
-
-function makeVocabularyItem(term, reviewStatus) {
-  return {
-    term,
-    aliases: [],
-    studentDefinition: 'Net force is the total force on an object.',
-    teacherDefinition: 'Net force is the vector sum of forces acting on an object.',
-    misconception: 'Students may think balanced forces always mean no forces exist.',
-    standards: ['SAMPLE.PS.FORCES.1'],
-    reviewStatus,
-    confidence: reviewStatus === 'approved' ? 'high' : 'medium',
-    sourceFile: 'teacher_force_notes.txt',
-    sourceLocation: 'Full Text',
-    sourceTextSnippet: 'Net force is the total force on an object.'
-  };
-}
-
-function makeConceptItem(conceptId, reviewStatus) {
-  return {
-    conceptId,
-    title: 'Balanced Forces',
-    aliases: [],
-    studentExplanation: 'Balanced forces do not change motion.',
-    keyIdeas: ['Balanced forces do not change motion.'],
-    examples: ['Equal pushes from opposite sides.'],
-    nonExamples: ['A stronger push from one side.'],
-    commonMisconceptions: ['Balanced forces mean no forces exist.'],
-    standards: ['SAMPLE.PS.FORCES.1'],
-    reviewStatus,
-    confidence: reviewStatus === 'approved' ? 'high' : 'medium',
-    sourceFile: 'teacher_force_notes.txt',
-    sourceLocation: 'Full Text',
-    sourceTextSnippet: 'Balanced forces do not change motion.'
-  };
-}
-
-function makeReferenceFormula(formulaId, reviewStatus) {
-  return {
-    formulaId,
-    title: 'Net Force Reference',
-    equation: 'net force = sum of forces',
-    variables: [],
-    solverStatus: 'reference_only',
-    reviewStatus,
-    confidence: reviewStatus === 'approved' ? 'high' : 'medium',
-    sourceFile: 'teacher_force_notes.txt',
-    sourceLocation: 'Full Text',
-    sourceTextSnippet: 'Net force is the sum of forces.'
-  };
-}
-
-function makeProblemItem(problemId, reviewStatus) {
-  return {
-    problemId,
-    question: 'A box has equal forces from both sides. What happens to its motion?',
-    expectedAnswer: 'The balanced forces do not change its motion.',
-    standards: ['SAMPLE.PS.FORCES.1'],
-    reviewStatus,
-    confidence: reviewStatus === 'approved' ? 'high' : 'medium',
-    sourceFile: 'teacher_force_notes.txt',
-    sourceLocation: 'Full Text',
-    sourceTextSnippet: 'Balanced forces do not change motion.'
-  };
-}
-
-function makeStandardsMapItem(standardId, reviewStatus) {
-  return {
-    standardId,
-    description: 'Describe how balanced and unbalanced forces affect motion.',
-    relatedVocabulary: ['net-force'],
-    relatedConcepts: ['balanced-forces'],
-    reviewStatus,
-    confidence: reviewStatus === 'approved' ? 'high' : 'medium',
-    sourceFile: 'teacher_force_notes.txt',
-    sourceLocation: 'Full Text',
-    sourceTextSnippet: 'Describe how balanced and unbalanced forces affect motion.'
-  };
-}
-
-function makeSmokeTest(reviewStatus) {
-  return {
-    question: 'What do balanced forces do?',
-    expectedAnswer: 'They do not change motion.',
-    reviewStatus,
-    confidence: reviewStatus === 'approved' ? 'high' : 'medium',
-    sourceFile: 'teacher_force_notes.txt',
-    sourceLocation: 'Full Text',
-    sourceTextSnippet: 'Balanced forces do not change motion.'
-  };
-}
-
-function makeStandardsBank() {
-  return {
-    standardsBankId: 'sample_physical_science_standards',
-    title: 'Sample Physical Science Standards Bank',
-    version: '0.1.0',
-    subject: 'Physical Science',
-    gradeLevel: '8',
-    jurisdiction: 'Local Sample',
-    sourceFiles: [],
-    standards: [
-      {
-        standardId: 'SAMPLE.PS.FORCES.1',
-        code: 'PS.FORCES.1',
-        title: 'Balanced and Unbalanced Forces',
-        officialText: 'Describe how balanced and unbalanced forces affect motion.',
-        studentFriendlyText: 'I can explain how balanced and unbalanced forces change motion.',
-        strand: 'Physical Science',
-        topic: 'Forces and Motion',
-        keywords: ['balanced forces'],
-        questionTriggers: ['net force'],
-        prerequisiteStandards: [],
-        relatedStandards: [],
-        reviewStatus: 'approved',
-        confidence: 'high',
-        sourceFile: 'sample_standards_source.pdf',
-        sourceLocation: 'p. 1',
-        sourceTextSnippet: 'Describe how balanced and unbalanced forces affect motion.'
-      }
-    ],
-    metadata: {}
-  };
 }
 
 function makePlannerExtraction(pageTexts, metadata = {}) {
@@ -4909,58 +4649,16 @@ function makePlannerMemory(availableMb, totalMb) {
   };
 }
 
-function snapshotFiles(rootDir) {
-  const snapshot = {};
-  walkFiles(rootDir).forEach((filePath) => {
-    snapshot[path.relative(rootDir, filePath)] = fs.readFileSync(filePath, 'utf8');
-  });
-  return snapshot;
-}
-
-function snapshotKnowledgePackFiles(rootDir) {
-  const snapshot = {};
-  walkFiles(rootDir).filter((filePath) => path.basename(filePath) === 'knowledge_pack.json').forEach((filePath) => {
-    snapshot[path.relative(rootDir, filePath)] = fs.readFileSync(filePath, 'utf8');
-  });
-  return snapshot;
-}
-
 function snapshotRouterAndStudentFiles() {
-  const files = walkFiles(projectRoot).filter((filePath) => {
-    const relativePath = path.relative(projectRoot, filePath);
+  return snapshotFileStats(projectRoot, (relativePath) => {
     return relativePath.startsWith('lib/router/')
       || relativePath.startsWith('lib/formulas/')
       || relativePath === 'lib/questionRouter.js'
       || relativePath.startsWith('routes/student')
       || relativePath === 'lib/server/questionAnswerService.js';
   });
-
-  const snapshot = {};
-  files.forEach((filePath) => {
-    const stat = fs.statSync(filePath);
-    snapshot[path.relative(projectRoot, filePath)] = {
-      size: stat.size,
-      mtimeMs: stat.mtimeMs
-    };
-  });
-  return snapshot;
-}
-
-function walkFiles(rootDir) {
-  if (!fs.existsSync(rootDir)) return [];
-
-  const results = [];
-  fs.readdirSync(rootDir, { withFileTypes: true }).forEach((entry) => {
-    const entryPath = path.join(rootDir, entry.name);
-    if (entry.isDirectory()) {
-      results.push(...walkFiles(entryPath));
-    } else if (entry.isFile()) {
-      results.push(entryPath);
-    }
-  });
-  return results.sort();
 }
 
 function cleanupTempRoot() {
-  fs.rmSync(tempRoot, { recursive: true, force: true });
+  cleanupDir(tempRoot);
 }

@@ -32,6 +32,8 @@
     "test:upload-extraction": "node scripts/test-upload-text-extraction.js",
     "test:upload-text-extraction": "node scripts/test-upload-text-extraction.js",
     "test:generate-draft-pack": "node scripts/test-generate-draft-knowledge-pack.js",
+    "test:classroom-core": "npm test && npm run test:bank && npm run test:approved-knowledge-pack-loader && npm run test:standards-summary",
+    "test:teacher-content": "npm run test:teacher-content-adapter && npm run test:teacher-content-routes && npm run test:teacher-content-ui && npm run test:upload-text-extraction && npm run test:generate-draft-pack",
     "extract:upload-text": "node scripts/extract-upload-text.js",
     "inspect:approved-packs": "node scripts/inspect-approved-knowledge-packs.js",
     "inspect:draft-packs": "node scripts/inspect-draft-knowledge-packs.js",

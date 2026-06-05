@@ -2,7 +2,6 @@ const assert = require('node:assert/strict');
 const { EventEmitter } = require('node:events');
 const fs = require('node:fs');
 const http = require('node:http');
-const os = require('node:os');
 const path = require('node:path');
 
 const { loadApprovedKnowledgePacks } = require('../lib/knowledge/loadApprovedKnowledgePacks');
@@ -23,9 +22,23 @@ const {
   makeSelectedExtraction,
   resolveImportModel
 } = require('../lib/uploads/generateDraftKnowledgePack');
+const {
+  cleanupDir,
+  makeTempRoot,
+  projectRoot,
+  snapshotTextFiles
+} = require('./test-helpers/fileSystem');
+const {
+  makeDefaultStandardsMetadata,
+  makeDraftConceptItem: makeConceptItem,
+  makeDraftGeneratedPack: makeGeneratedPack,
+  makeDraftProblemItem: makeProblemItem,
+  makeDraftReferenceFormula: makeReferenceFormula,
+  makeDraftVocabularyItem: makeVocabularyItem,
+  makeStandardsBank
+} = require('./test-helpers/classroomFixtures');
 
-const projectRoot = path.join(__dirname, '..');
-const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'generate-draft-pack-'));
+const tempRoot = makeTempRoot('generate-draft-pack');
 const draftPacksDir = path.join(tempRoot, 'draft-packs');
 const extractionPath = path.join(tempRoot, 'example_extraction.json');
 const standardsBankPath = path.join(tempRoot, 'standards_bank.json');
@@ -4289,25 +4302,7 @@ function assertApprovedPacksAreNotModified() {
 }
 
 function snapshotApprovedPacks() {
-  const snapshot = {};
-  walkFiles(approvedPacksDir).forEach((filePath) => {
-    snapshot[path.relative(approvedPacksDir, filePath)] = fs.readFileSync(filePath, 'utf8');
-  });
-  return snapshot;
-}
-
-function walkFiles(rootDir) {
-  if (!fs.existsSync(rootDir)) return [];
-  const results = [];
-  fs.readdirSync(rootDir, { withFileTypes: true }).forEach((entry) => {
-    const entryPath = path.join(rootDir, entry.name);
-    if (entry.isDirectory()) {
-      results.push(...walkFiles(entryPath));
-    } else if (entry.isFile()) {
-      results.push(entryPath);
-    }
-  });
-  return results.sort();
+  return snapshotTextFiles(approvedPacksDir);
 }
 
 function mockHttpRequest(handler) {
@@ -4657,54 +4652,6 @@ function makePptxExtraction() {
   };
 }
 
-function makeGeneratedPack(overrides = {}) {
-  return {
-    packId: 'generated-force-draft',
-    title: 'Generated Force Draft',
-    version: '0.1.0-draft',
-    subject: 'Physical Science',
-    gradeLevel: '8',
-    sourceFiles: [
-      {
-        fileName: 'teacher_force_notes.txt',
-        fileType: 'txt',
-        reviewStatus: 'pending',
-        confidence: 'medium',
-        notes: 'Generated from extracted text for teacher review.'
-      }
-    ],
-    vocabulary: [makeVocabularyItem()],
-    concepts: [makeConceptItem()],
-    referenceFormulas: [makeReferenceFormula()],
-    problemBank: [makeProblemItem()],
-    standardsMap: [
-      {
-        standardId: 'SAMPLE.PS.FORCES.1',
-        description: 'Describe how balanced and unbalanced forces affect motion.',
-        relatedVocabulary: ['force'],
-        relatedConcepts: ['net-force-changes-motion'],
-        reviewStatus: 'pending',
-        confidence: 'medium'
-      }
-    ],
-    smokeTests: [
-      {
-        question: 'What is force?',
-        expectedAnswer: 'Force is a push or pull.',
-        reviewStatus: 'pending',
-        confidence: 'medium'
-      }
-    ],
-    metadata: {
-      createdBy: 'test-model-client',
-      createdAt: '2026-05-13T00:00:00.000Z',
-      updatedAt: '2026-05-13T00:00:00.000Z',
-      notes: 'Generated draft. Requires teacher review before promotion.'
-    },
-    ...overrides
-  };
-}
-
 function makeVocabularyItemForPage(page) {
   return {
     ...makeVocabularyItem(),
@@ -4727,24 +4674,6 @@ function makeConceptItemForPage(page) {
   };
 }
 
-function makeVocabularyItem() {
-  return {
-    term: 'force',
-    aliases: ['push or pull'],
-    studentDefinition: 'A force is a push or pull.',
-    teacherDefinition: 'A force is an interaction that can change motion.',
-    misconception: '',
-    exampleQuestion: 'What can change motion?',
-    exampleAnswer: 'A force can change motion.',
-    standards: ['SAMPLE.PS.FORCES.1'],
-    reviewStatus: 'pending',
-    confidence: 'medium',
-    sourceFile: 'teacher_force_notes.txt',
-    sourceLocation: 'Full Text',
-    sourceTextSnippet: 'Force is a push or pull.'
-  };
-}
-
 function makeVocabularyItemForChunk(index) {
   return {
     ...makeVocabularyItem(),
@@ -4757,25 +4686,6 @@ function makeVocabularyItemForChunk(index) {
     sourceFile: 'synthetic_packet.txt',
     sourceLocation: `Chunk ${index}`,
     sourceTextSnippet: `Chunk ${index} term means the first source-supported idea.`
-  };
-}
-
-function makeConceptItem() {
-  return {
-    conceptId: 'net-force-changes-motion',
-    title: 'Net Force Changes Motion',
-    aliases: [],
-    studentExplanation: 'Net force can change how an object moves.',
-    keyIdeas: ['Net force can change motion.'],
-    examples: ['A push can start an object moving.'],
-    nonExamples: [],
-    commonMisconceptions: [],
-    standards: ['SAMPLE.PS.FORCES.1'],
-    reviewStatus: 'pending',
-    confidence: 'medium',
-    sourceFile: 'teacher_force_notes.txt',
-    sourceLocation: 'Full Text',
-    sourceTextSnippet: 'Net force can change motion.'
   };
 }
 
@@ -4794,49 +4704,6 @@ function makeConceptItemForChunk(index) {
   };
 }
 
-function makeReferenceFormula() {
-  return {
-    formulaId: 'force-reference',
-    title: 'Force Reference',
-    equation: 'F = m * a',
-    variables: [
-      {
-        symbol: 'F',
-        meaning: 'force'
-      },
-      {
-        symbol: 'm',
-        meaning: 'mass'
-      },
-      {
-        symbol: 'a',
-        meaning: 'acceleration'
-      }
-    ],
-    studentExplanation: 'The formula relates force, mass, and acceleration.',
-    solverStatus: 'reference_only',
-    reviewStatus: 'pending',
-    confidence: 'medium',
-    sourceFile: 'teacher_force_notes.txt',
-    sourceLocation: 'Full Text',
-    sourceTextSnippet: 'The formula F = m * a relates force, mass, and acceleration.'
-  };
-}
-
-function makeProblemItem() {
-  return {
-    problemId: 'force-definition-problem',
-    question: 'What is a force?',
-    expectedAnswer: 'A force is a push or pull.',
-    standards: ['SAMPLE.PS.FORCES.1'],
-    reviewStatus: 'pending',
-    confidence: 'medium',
-    sourceFile: 'teacher_force_notes.txt',
-    sourceLocation: 'Full Text',
-    sourceTextSnippet: 'Force is a push or pull.'
-  };
-}
-
 function makeProblemItemForChunk(index) {
   return {
     ...makeProblemItem(),
@@ -4850,48 +4717,6 @@ function makeProblemItemForChunk(index) {
     sourceTextSnippet: index === 3
       ? 'Chunk 3 includes a practice prompt.'
       : `Chunk ${index} term means the first source-supported idea.`
-  };
-}
-
-function makeDefaultStandardsMetadata() {
-  return {
-    linkedStandardIds: [],
-    suggestedStandardIds: [],
-    alignmentStatus: 'not_aligned_yet',
-    alignmentSource: 'none'
-  };
-}
-
-function makeStandardsBank() {
-  return {
-    standardsBankId: 'sample_physical_science_standards',
-    title: 'Sample Physical Science Standards Bank',
-    version: '0.1.0',
-    subject: 'Physical Science',
-    gradeLevel: '8',
-    jurisdiction: 'Local Sample',
-    sourceFiles: [],
-    standards: [
-      {
-        standardId: 'SAMPLE.PS.FORCES.1',
-        code: 'PS.FORCES.1',
-        title: 'Balanced and Unbalanced Forces',
-        officialText: 'Describe how balanced and unbalanced forces affect motion.',
-        studentFriendlyText: 'I can explain how balanced and unbalanced forces change motion.',
-        strand: 'Physical Science',
-        topic: 'Forces and Motion',
-        keywords: ['balanced forces', 'unbalanced forces', 'net force'],
-        questionTriggers: ['balanced forces', 'unbalanced forces', 'net force'],
-        prerequisiteStandards: [],
-        relatedStandards: [],
-        reviewStatus: 'approved',
-        confidence: 'high',
-        sourceFile: 'sample_standards_source.pdf',
-        sourceLocation: 'p. 1',
-        sourceTextSnippet: 'Describe how balanced and unbalanced forces affect motion.'
-      }
-    ],
-    metadata: {}
   };
 }
 
@@ -4930,8 +4755,5 @@ function restoreEnvVar(name, previousValue) {
 }
 
 function cleanupTempRoot() {
-  fs.rmSync(tempRoot, {
-    recursive: true,
-    force: true
-  });
+  cleanupDir(tempRoot);
 }
