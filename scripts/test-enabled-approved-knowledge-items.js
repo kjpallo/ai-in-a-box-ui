@@ -84,6 +84,7 @@ async function main() {
     await assertDeletedApprovedPackNoLongerAnswers();
     await assertEditedReapprovedContentWinsOverArchivedDraftCopy();
     await assertTeacherFactsStillAnswerWithEnabledApprovedPacks();
+    await assertCivicsResponsibilityQuestionsUseApprovedKnowledge();
     await assertHotReloadBehavior();
   } finally {
     cleanupTempRoot();
@@ -269,6 +270,110 @@ async function assertTeacherFactsStillAnswerWithEnabledApprovedPacks() {
   const dnaAnswer = await questionAnswer.answerStudentMessage('What is DNA?');
   assert.equal(dnaAnswer.routeType, 'definition');
   assert.match(dnaAnswer.response, /DNA is a molecule that stores genetic instructions\./);
+}
+
+async function assertCivicsResponsibilityQuestionsUseApprovedKnowledge() {
+  const workflowRoot = path.join(tempRoot, 'civics-responsibility-workflow');
+  const workflowApprovedPacksDir = path.join(workflowRoot, 'approved-packs');
+  const workflowTeacherFactsFile = path.join(workflowRoot, 'teacher_facts.json');
+  fs.mkdirSync(workflowApprovedPacksDir, { recursive: true });
+  fs.writeFileSync(workflowTeacherFactsFile, `${JSON.stringify({ items: [] }, null, 2)}\n`);
+
+  const packId = 'civics-government-branches-enabled';
+  writePack(workflowApprovedPacksDir, makePack({
+    packId,
+    title: 'Government Branches and Civic Participation',
+    subject: 'History/Civics',
+    gradeLevel: '8',
+    vocabulary: [
+      makeVocabulary('Judicial branch', 'interprets laws', 'approved'),
+      makeVocabulary('Legislative branch', 'makes laws', 'approved'),
+      makeVocabulary('Executive branch', 'carries out laws', 'approved')
+    ],
+    concepts: [
+      makeConcept('Judicial review', 'Judicial review is the power of courts to decide whether laws or government actions follow the Constitution.', 'approved'),
+      makeConcept('Civic participation', 'Civic participation means taking part in your community and government, such as voting or attending public meetings.', 'approved')
+    ],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+  fs.writeFileSync(path.join(workflowApprovedPacksDir, '_activation.json'), `${JSON.stringify({
+    version: 1,
+    packs: {
+      [packId]: { enabled: true, updatedAt: '2026-06-01T00:00:00.000Z' }
+    }
+  }, null, 2)}\n`);
+
+  const enabledItems = loadEnabledApprovedKnowledgeItems({ approvedPacksDir: workflowApprovedPacksDir });
+  const judicialBranch = enabledItems.find((item) => item.title === 'Judicial branch');
+  assert.ok(judicialBranch, 'enabled civics branch vocabulary should load');
+  assert.equal(judicialBranch.fact, 'The judicial branch interprets laws.');
+  assert.ok(judicialBranch.terms.includes('interprets laws'), 'definition action phrase should be searchable');
+
+  const loadCombinedKnowledge = () => [
+    ...loadTeacherKnowledge(workflowTeacherFactsFile),
+    ...loadEnabledApprovedKnowledgeItems({ approvedPacksDir: workflowApprovedPacksDir })
+  ];
+  const questionAnswer = makeQuestionAnswerService({
+    teacherFactsFile: workflowTeacherFactsFile,
+    loadCombinedKnowledge,
+    fallbackMessage: 'Civics responsibility questions should not call AI fallback.'
+  });
+
+  await assertQuestionAnswer({
+    questionAnswer,
+    question: 'who interprets laws?',
+    routeType: 'class_fact',
+    answer: 'The judicial branch interprets laws.'
+  });
+  await assertQuestionAnswer({
+    questionAnswer,
+    question: 'which branch interprets laws?',
+    routeType: 'class_fact',
+    answer: 'The judicial branch interprets laws.'
+  });
+  await assertQuestionAnswer({
+    questionAnswer,
+    question: 'what branch makes laws?',
+    routeType: 'class_fact',
+    answer: 'The legislative branch makes laws.'
+  });
+  await assertQuestionAnswer({
+    questionAnswer,
+    question: 'who carries out laws?',
+    routeType: 'class_fact',
+    answer: 'The executive branch carries out laws.'
+  });
+  await assertQuestionAnswer({
+    questionAnswer,
+    question: 'what is judicial review?',
+    routeType: 'definition',
+    answerPattern: /Judicial review is the power of courts to decide whether laws or government actions follow the Constitution\./
+  });
+  await assertQuestionAnswer({
+    questionAnswer,
+    question: 'what is civic participation?',
+    routeType: 'definition',
+    answerPattern: /Civic participation means taking part in your community and government/
+  });
+
+  const unsupported = await questionAnswer.answerStudentMessage('what branch changes laws?');
+  assert.equal(unsupported.routeType, 'no_match', 'unsupported responsibility question should still fail safely.');
+  assert.match(unsupported.response, /I do not have a trusted local fact for that yet\./);
+  assert.doesNotMatch(unsupported.response, /judicial branch|legislative branch|executive branch/i);
+}
+
+async function assertQuestionAnswer({ questionAnswer, question, routeType, answer = '', answerPattern = null }) {
+  const result = await questionAnswer.answerStudentMessage(question);
+  assert.equal(result.routeType, routeType, `${question} should route as ${routeType}`);
+  if (answer) {
+    assert.equal(result.response, answer);
+  }
+  if (answerPattern) {
+    assert.match(result.response, answerPattern);
+  }
+  assert.doesNotMatch(result.response, /I do not have a trusted local fact/i);
 }
 
 async function assertSelectedApprovalWorkflowCreatesEnabledStudentKnowledge() {
