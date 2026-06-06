@@ -18,6 +18,7 @@ node_modules/
 
 # Local artifacts
 logs/
+exports/
 audio/*
 !audio/.gitkeep
 coverage/

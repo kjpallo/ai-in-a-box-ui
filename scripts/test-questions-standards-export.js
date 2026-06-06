@@ -11,6 +11,9 @@ const {
 } = require('../lib/auth/teacherAuth');
 const { createApp, request } = require('./test-helpers/httpHarness');
 const {
+  hashCsv
+} = require('../lib/profile/questionsStandardsExportManifest');
+const {
   CSV_COLUMNS,
   buildQuestionsStandardsCsvExport,
   exportQuestionsStandardsCsv
@@ -159,9 +162,10 @@ assert.equal(fs.readFileSync(logFilePath, 'utf8'), logContents, 'raw interaction
 assert.deepEqual(
   fs.readdirSync(tmpDir).sort(),
   ['student_interactions.json'],
-  'CSV export should not write artifact files yet'
+  'pure CSV export service should not write artifact files'
 );
 
+const manifestDir = path.join(tmpDir, 'manifests');
 const handlers = new Map();
 const app = createApp(handlers);
 const sessionStore = createTeacherSessionStore();
@@ -182,7 +186,8 @@ registerProfileRoutes(app, {
   requireTeacherAuth: requireTeacherAuth(sessionStore),
   sendDailySummaryEmail: async () => ({ ok: true }),
   studentInteractionsFile: logFilePath,
-  studentSessions: {}
+  studentSessions: {},
+  questionsStandardsExportManifestDir: manifestDir
 });
 
 async function runRouteChecks() {
@@ -211,6 +216,11 @@ async function runRouteChecks() {
     /^attachment; filename="questions-standards-history-2026-05-01-to-2026-05-02-session-session-a\.csv"$/,
     'CSV export should be returned as a safe download filename'
   );
+  assert.match(
+    csvResponse.getHeader('x-export-id'),
+    /^[0-9a-f-]{32,36}$/i,
+    'CSV export should expose a safe export id header'
+  );
   const routeRows = parse(csvResponse.body, { columns: true });
   assert.deepEqual(
     routeRows.map((row) => row.id),
@@ -219,6 +229,35 @@ async function runRouteChecks() {
   );
   assert.equal(routeRows[0].question, 'What is force, really?');
   assert.equal(routeRows[0].response, 'A force is a push, a "pull", or both.\nIt can change motion.');
+
+  const manifestFiles = fs.readdirSync(manifestDir).sort();
+  assert.equal(manifestFiles.length, 1, 'successful route export should write one manifest');
+  const manifestPath = path.join(manifestDir, manifestFiles[0]);
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  assert.equal(manifest.exportId, csvResponse.getHeader('x-export-id'), 'manifest exportId should match response header');
+  assert.equal(manifest.filename, 'questions-standards-history-2026-05-01-to-2026-05-02-session-session-a.csv');
+  assert.deepEqual(manifest.filters, {
+    date: '',
+    startDate: '2026-05-01',
+    endDate: '2026-05-02',
+    sessionId: 'session-a'
+  });
+  assert.equal(manifest.sourceLogPath, path.resolve(logFilePath), 'manifest should record the source log path');
+  assert.deepEqual(manifest.exportedRecordIds, ['interaction-1', 'interaction-3']);
+  assert.equal(manifest.rowCount, 2, 'manifest should record exported row count');
+  assert.deepEqual(manifest.columns, CSV_COLUMNS, 'manifest should record exported columns');
+  assert.deepEqual(manifest.checksum, {
+    algorithm: 'sha256',
+    value: hashCsv(csvResponse.body)
+  }, 'manifest checksum should match the generated CSV');
+  assert.equal(manifest.purgeCompleted, false, 'manifest should not mark purge complete');
+  assert.equal(manifest.deletedRecordCount, 0, 'manifest should not record deleted rows');
+
+  const manifestText = fs.readFileSync(manifestPath, 'utf8');
+  assert.doesNotMatch(manifestText, /What is force, really\?/u, 'manifest should not include full question text');
+  assert.doesNotMatch(manifestText, /push, a "pull", or both/u, 'manifest should not include full answer text');
+  assert.doesNotMatch(manifestText, /Message fallback works/u, 'manifest should not include filtered question text');
+  assert.doesNotMatch(manifestText, /Response fallback works/u, 'manifest should not include filtered answer text');
 
   const allHistoryResponse = await request(
     handlers,
@@ -230,6 +269,7 @@ async function runRouteChecks() {
     authorizedExtras
   );
   assert.equal(parse(allHistoryResponse.body, { columns: true }).length, 3, 'route should export all current history without filters');
+  assert.equal(fs.readdirSync(manifestDir).length, 2, 'each successful route export should write a manifest');
 
   const invalidDateResponse = await request(
     handlers,
@@ -242,6 +282,44 @@ async function runRouteChecks() {
   );
   assert.equal(invalidDateResponse.statusCode, 400, 'route should reject unsafe date filters');
   assert.equal(invalidDateResponse.body.error, 'date must use YYYY-MM-DD.');
+
+  const failingHandlers = new Map();
+  const failingApp = createApp(failingHandlers);
+  const failingManifestDir = path.join(tmpDir, 'manifest-blocker');
+  fs.writeFileSync(failingManifestDir, 'not a directory', 'utf8');
+  registerProfileRoutes(failingApp, {
+    clearGoogleIdentity: async () => null,
+    completeGoogleConnect: async () => ({ teacher: {} }),
+    createGoogleConnectUrl: () => '/google/start',
+    disconnectGoogle: () => {},
+    getAvailableProfileDates: () => ({ dates: [] }),
+    getClassroomControls: () => ({}),
+    getDailyQuestionSummary: () => ({}),
+    getProfileStatus: () => ({ authenticated: true }),
+    getStandardsSummaryReport: () => ({}),
+    linkGoogleIdentity: async () => ({}),
+    port: 3000,
+    questionRateLimiter: null,
+    requireTeacherAuth: requireTeacherAuth(sessionStore),
+    sendDailySummaryEmail: async () => ({ ok: true }),
+    studentInteractionsFile: logFilePath,
+    studentSessions: {},
+    questionsStandardsExportManifestDir: failingManifestDir
+  });
+
+  const failedManifestResponse = await request(
+    failingHandlers,
+    'GET',
+    '/api/profile/questions-standards/export.csv',
+    {},
+    {},
+    { date: '2026-05-01' },
+    authorizedExtras
+  );
+  assert.equal(failedManifestResponse.statusCode, 500, 'manifest write failure should fail the export safely');
+  assert.equal(failedManifestResponse.body.error, 'Unable to export question history.');
+  assert.equal(failedManifestResponse.getHeader('x-export-id'), undefined, 'failed manifest write should not create a purge-ready export id');
+  assert.equal(fs.readFileSync(logFilePath, 'utf8'), logContents, 'failed manifest write should not modify raw records');
 }
 
 runRouteChecks()

@@ -46,6 +46,8 @@ EXCLUDE_PATTERNS=(
   "*/.env.*"
   "logs/*"
   "*/logs/*"
+  "exports/*"
+  "*/exports/*"
   "audio/*"
   "*/audio/*"
   "coverage/*"
@@ -116,7 +118,7 @@ trap 'rm -f "${ENTRY_LIST_FILE}"' EXIT
 zipinfo -1 "${ZIP_PATH}" > "${ENTRY_LIST_FILE}"
 
 SUSPICIOUS_PATHS="$(
-  grep -E -i '(^|/)\.env($|[.])|(^|/)\.DS_Store$|(^|/)logs/|(^|/)audio/|(^|/)coverage/|(^|/)dist/|(^|/)build/|(^|/)models/|(^|/)vendor/|(^|/)backups/|(^|/)review-handoff/|(^|/)tmp/|(^|/)knowledge/(uploads/(incoming|extracted|page-images|ocr)|deleted-approved-packs|draft-packs/_(accepted|removed))/|(^|/)[^/]*(token|secret|oauth|gmail[_-]?auth|teacher[_-]?auth)[^/]*\.(json|txt|key|pem|env|ini|yaml|yml)$|(^|/)[^/]*auth[^/]*\.(json|txt|key|pem|env|ini|yaml|yml)$|(^|/)[^/]*\.(pem|key|p12|pfx|zip|log|bak|tmp|temp)$|(^|/)voices/[^/]*\.(onnx|json)$' "${ENTRY_LIST_FILE}" || true
+  grep -E -i '(^|/)\.env($|[.])|(^|/)\.DS_Store$|(^|/)(logs|exports)/|(^|/)audio/|(^|/)coverage/|(^|/)dist/|(^|/)build/|(^|/)models/|(^|/)vendor/|(^|/)backups/|(^|/)review-handoff/|(^|/)tmp/|(^|/)knowledge/(uploads/(incoming|extracted|page-images|ocr)|deleted-approved-packs|draft-packs/_(accepted|removed))/|(^|/)[^/]*(token|secret|oauth|gmail[_-]?auth|teacher[_-]?auth)[^/]*\.(json|txt|key|pem|env|ini|yaml|yml)$|(^|/)[^/]*auth[^/]*\.(json|txt|key|pem|env|ini|yaml|yml)$|(^|/)[^/]*\.(pem|key|p12|pfx|zip|log|bak|tmp|temp)$|(^|/)voices/[^/]*\.(onnx|json)$' "${ENTRY_LIST_FILE}" || true
 )"
 
 if [[ -n "${SUSPICIOUS_PATHS}" ]]; then

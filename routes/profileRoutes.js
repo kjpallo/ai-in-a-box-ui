@@ -1,4 +1,7 @@
 const crypto = require('crypto');
+const {
+  writeQuestionsStandardsExportManifest
+} = require('../lib/profile/questionsStandardsExportManifest');
 const { exportQuestionsStandardsCsv } = require('../lib/profile/questionsStandardsCsvExport');
 const { getStandardsBankDetails } = require('../lib/standards/standardsBankDiscovery');
 const { loadMissouriStandardsBank } = require('../lib/standards/standardsMatcher');
@@ -20,7 +23,8 @@ function registerProfileRoutes(app, {
   studentInteractionsFile,
   studentSessions,
   getStudentRateLimitInfo,
-  questionRateLimiter
+  questionRateLimiter,
+  questionsStandardsExportManifestDir
 }) {
   app.get('/api/profile/status', (req, res) => {
     res.json(getProfileStatus(req));
@@ -203,6 +207,7 @@ function registerProfileRoutes(app, {
       }
 
       try {
+        const filename = buildQuestionsStandardsExportFilename(filters);
         const result = exportQuestionsStandardsCsv({
           logFilePath: studentInteractionsFile,
           date: filters.date,
@@ -210,9 +215,20 @@ function registerProfileRoutes(app, {
           endDate: filters.endDate,
           sessionId: filters.sessionId
         });
+        const manifestResult = writeQuestionsStandardsExportManifest({
+          columns: result.columns,
+          csv: result.csv,
+          filename,
+          filters,
+          manifestDir: questionsStandardsExportManifestDir,
+          rowCount: result.rowCount,
+          sourceLogPath: studentInteractionsFile,
+          exportedRecordIds: result.exportedRecordIds
+        });
 
         res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-        res.setHeader('Content-Disposition', `attachment; filename="${buildQuestionsStandardsExportFilename(filters)}"`);
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.setHeader('X-Export-Id', manifestResult.exportId);
         res.send(result.csv);
       } catch {
         res.status(500).json({ error: 'Unable to export question history.' });
