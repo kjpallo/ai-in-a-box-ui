@@ -4,7 +4,11 @@ const { findRelevantKnowledge, loadTeacherKnowledge } = require('../../lib/knowl
 const { routeStudentQuestion } = require('../../lib/router/questionRouter');
 const { createQuestionAnswerService } = require('../../lib/server/questionAnswerService');
 const { registerProfileRoutes } = require('../../routes/profileRoutes');
-const { registerStudentRoutes } = require('../../routes/studentRoutes');
+const {
+  createStudentQuestionRateLimiter,
+  getStudentRateLimitInfo,
+  registerStudentRoutes
+} = require('../../routes/studentRoutes');
 const { createApp, request } = require('./httpHarness');
 const { projectRoot } = require('./fileSystem');
 
@@ -14,6 +18,7 @@ function createStudentRouteHarness(options = {}) {
   const handlers = new Map();
   const app = createApp(handlers, ['get', 'post']);
   const studentSessions = Object.create(null);
+  const questionRateLimiter = createStudentQuestionRateLimiter(options.rateLimitClock ? { now: options.rateLimitClock } : undefined);
   const classroomControls = {
     studentCopyInspectLockEnabled: true,
     studentGuidedFormulaTutoringEnabled: options.studentGuidedFormulaTutoringEnabled !== false,
@@ -47,9 +52,11 @@ function createStudentRouteHarness(options = {}) {
     getAvailableProfileDates() {
       return { dates: [] };
     },
+    getClassroomControls: () => classroomControls,
     getDailyQuestionSummary() {
       return {};
     },
+    getStudentRateLimitInfo,
     getStandardsSummaryReport() {
       return {};
     },
@@ -58,6 +65,7 @@ function createStudentRouteHarness(options = {}) {
     },
     linkGoogleIdentity() {},
     port: 3000,
+    questionRateLimiter,
     sendDailySummaryEmail() {},
     studentSessions
   });
@@ -66,6 +74,7 @@ function createStudentRouteHarness(options = {}) {
     answerStudentMessage: questionAnswer.answerStudentMessage,
     getClassroomControls: () => classroomControls,
     logCompletedInteraction: questionAnswer.logCompletedInteraction,
+    questionRateLimiter,
     studentSessions
   });
 
@@ -79,6 +88,7 @@ function createStudentRouteHarness(options = {}) {
       });
     },
     questionAnswer,
+    questionRateLimiter,
     studentSessions,
     classroomControls
   };

@@ -9,12 +9,15 @@ function registerProfileRoutes(app, {
   disconnectGoogle,
   getAvailableProfileDates,
   getDailyQuestionSummary,
+  getClassroomControls,
   getStandardsSummaryReport,
   getProfileStatus,
   linkGoogleIdentity,
   port,
   sendDailySummaryEmail,
-  studentSessions
+  studentSessions,
+  getStudentRateLimitInfo,
+  questionRateLimiter
 }) {
   app.get('/api/profile/status', (req, res) => {
     res.json(getProfileStatus(req));
@@ -46,6 +49,17 @@ function registerProfileRoutes(app, {
     const sessions = Object.values(studentSessions)
       .map(serializeClassSession)
       .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+
+    res.json({ sessions });
+  });
+
+  app.get('/api/profile/live-student-activity', (_req, res) => {
+    const sessions = serializeLiveStudentActivity({
+      studentSessions,
+      getClassroomControls,
+      getStudentRateLimitInfo,
+      questionRateLimiter
+    });
 
     res.json({ sessions });
   });
@@ -312,6 +326,236 @@ function serializeClassSession(session) {
   };
 }
 
+function serializeLiveStudentActivity({
+  studentSessions,
+  getClassroomControls,
+  getStudentRateLimitInfo,
+  questionRateLimiter,
+  now = Date.now()
+}) {
+  const controls = typeof getClassroomControls === 'function' ? getClassroomControls() : null;
+  return Object.values(studentSessions || {})
+    .map((session) => serializeLiveClassSession(session, {
+      controls,
+      getStudentRateLimitInfo,
+      questionRateLimiter,
+      now
+    }))
+    .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+}
+
+function serializeLiveClassSession(session, {
+  controls,
+  getStudentRateLimitInfo,
+  questionRateLimiter,
+  now = Date.now()
+} = {}) {
+  const rawHubs = Object.values(session?.anonymousHubs || {});
+  const displayOrderByHubId = new Map(rawHubs
+    .slice()
+    .sort(compareHubsForStableDisplay)
+    .map((hub, index) => [safeText(hub?.studentHubId), index]));
+  const hubs = rawHubs
+    .map((hub, index) => serializeLiveStudentHub(hub, {
+      classSessionId: session?.sessionId || '',
+      controls,
+      getStudentRateLimitInfo,
+      index,
+      now,
+      questionRateLimiter,
+      stableDisplayIndex: displayOrderByHubId.get(safeText(hub?.studentHubId))
+    }))
+    .sort(compareLiveStudentHubs);
+
+  return {
+    className: session?.className || '',
+    sessionId: session?.sessionId || '',
+    classSessionId: session?.sessionId || '',
+    createdAt: session?.createdAt || '',
+    studentUrl: session?.studentUrl || (session?.sessionId ? `/student.html?sessionId=${encodeURIComponent(session.sessionId)}` : ''),
+    activeAnonymousHubCount: hubs.filter((hub) => hub.active).length,
+    anonymousHubCount: hubs.length,
+    anonymousHubs: hubs,
+    students: hubs
+  };
+}
+
+function serializeLiveStudentHub(hub, {
+  classSessionId,
+  controls,
+  getStudentRateLimitInfo,
+  index = 0,
+  now = Date.now(),
+  questionRateLimiter,
+  stableDisplayIndex
+} = {}) {
+  const messages = Array.isArray(hub?.messages) ? hub.messages : [];
+  const latest = findLatestMessage(messages);
+  const active = isRecentlyActive(hub?.lastSeenAt, now);
+  const rateLimit = serializeHubRateLimit({
+    classSessionId,
+    controls,
+    getStudentRateLimitInfo,
+    questionRateLimiter,
+    studentHubId: hub?.studentHubId || ''
+  });
+  const formulaTutorActive = isFormulaTutorActive(hub?.currentTutorProblem);
+  const displayNumber = Number.isInteger(stableDisplayIndex) ? stableDisplayIndex + 1 : index + 1;
+  const displayName = `Anonymous Student ${displayNumber}`;
+
+  return {
+    label: displayName,
+    displayName,
+    classSessionId: safeText(classSessionId),
+    sessionId: safeText(classSessionId),
+    studentHubId: safeText(hub?.studentHubId),
+    firstSeenAt: safeText(hub?.firstSeenAt),
+    lastSeenAt: safeText(hub?.lastSeenAt),
+    lastMessageAt: safeText(hub?.lastMessageAt || latest?.createdAt || latest?.time),
+    messageCount: Number(hub?.messageCount || messages.length || 0),
+    active,
+    status: active ? 'active' : 'idle',
+    latestQuestion: safeText(latest?.question || latest?.message),
+    latestResponse: safeText(latest?.response),
+    routeType: safeText(latest?.routeType),
+    confidence: safeText(latest?.confidence),
+    standardId: safeText(latest?.standardId),
+    topic: safeText(latest?.topic || latest?.title || latest?.sourceTopic),
+    source: safeText(latest?.source || latest?.sourceName),
+    rateLimit,
+    alerts: buildLiveStudentAlerts({ latest, rateLimit, formulaTutorActive }),
+    recentMessages: messages.slice(-10).map(serializeRecentLiveMessage).filter(Boolean)
+  };
+}
+
+function compareHubsForStableDisplay(a, b) {
+  const firstSeen = String(a?.firstSeenAt || '').localeCompare(String(b?.firstSeenAt || ''));
+  if (firstSeen !== 0) return firstSeen;
+  return String(a?.studentHubId || '').localeCompare(String(b?.studentHubId || ''));
+}
+
+function compareLiveStudentHubs(a, b) {
+  if (a.active !== b.active) return a.active ? -1 : 1;
+  const aLast = String(a.lastMessageAt || a.lastSeenAt || '');
+  const bLast = String(b.lastMessageAt || b.lastSeenAt || '');
+  if (aLast !== bLast) return bLast.localeCompare(aLast);
+  return String(a.firstSeenAt || '').localeCompare(String(b.firstSeenAt || ''));
+}
+
+function findLatestMessage(messages) {
+  if (!Array.isArray(messages)) return null;
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const entry = messages[index];
+    if (entry && typeof entry === 'object') return entry;
+  }
+  return null;
+}
+
+function serializeRecentLiveMessage(entry) {
+  if (!entry || typeof entry !== 'object') return null;
+  const serialized = {
+    time: safeText(entry.time || entry.createdAt),
+    question: safeText(entry.question || entry.message),
+    message: safeText(entry.message || entry.question),
+    response: safeText(entry.response),
+    routeType: safeText(entry.routeType),
+    confidence: safeText(entry.confidence),
+    standardId: safeText(entry.standardId)
+  };
+
+  addOptionalText(serialized, 'topic', entry.topic || entry.title || entry.sourceTopic);
+  addOptionalText(serialized, 'source', entry.source || entry.sourceName);
+  addOptionalSafeObject(serialized, 'debug', entry.debug);
+  addOptionalSafeObject(serialized, 'sourceMetadata', entry.sourceMetadata || entry.sourceDebug);
+
+  return serialized;
+}
+
+function serializeHubRateLimit({
+  classSessionId,
+  controls,
+  getStudentRateLimitInfo,
+  questionRateLimiter,
+  studentHubId
+}) {
+  if (
+    !controls ||
+    !questionRateLimiter ||
+    typeof getStudentRateLimitInfo !== 'function' ||
+    !classSessionId ||
+    !studentHubId
+  ) {
+    return null;
+  }
+
+  const status = getStudentRateLimitInfo({
+    controls,
+    questionRateLimiter,
+    classSessionId,
+    studentHubId
+  });
+  const remainingWhole = Number(status?.remainingWhole);
+  const limited = Boolean(status?.enabled) && Number.isFinite(remainingWhole) && remainingWhole < 1;
+
+  return {
+    enabled: Boolean(status?.enabled),
+    limit: Number(status?.limit || 0),
+    max: Number(status?.max || status?.limit || 0),
+    maxQuestionsPerMinute: Number(status?.max || status?.limit || 0),
+    remaining: Number(status?.remaining || 0),
+    remainingWhole: Number.isFinite(remainingWhole) ? remainingWhole : 0,
+    limited,
+    notLimited: !limited,
+    secondsUntilNextQuestion: Number(status?.secondsUntilNextQuestion || 0),
+    secondsUntilFull: Number(status?.secondsUntilFull || 0),
+    windowSeconds: Number(status?.windowSeconds || 60),
+    resetInSeconds: Number(status?.resetInSeconds || status?.secondsUntilNextQuestion || 0)
+  };
+}
+
+function buildLiveStudentAlerts({ latest, rateLimit, formulaTutorActive }) {
+  const confidence = String(latest?.confidence || '').trim().toLowerCase();
+  const routeType = String(latest?.routeType || '').trim().toLowerCase();
+  const missingStandard = Boolean(latest) && !safeText(latest?.standardId);
+  const noMatch = routeType === 'no_match';
+  const lowConfidence = ['low', 'weak'].includes(confidence);
+  const outOfQuestions = Boolean(rateLimit?.limited);
+  return {
+    needsReview: noMatch || lowConfidence || outOfQuestions,
+    missingStandard,
+    noMatch,
+    lowConfidence,
+    outOfQuestions,
+    formulaTutorActive: Boolean(formulaTutorActive)
+  };
+}
+
+function isFormulaTutorActive(currentTutorProblem) {
+  if (!currentTutorProblem || typeof currentTutorProblem !== 'object') return false;
+  const tutorType = String(currentTutorProblem.tutorType || '').toLowerCase();
+  return tutorType === 'formula' || tutorType === 'formula_tutor' || Boolean(currentTutorProblem.formulaId);
+}
+
+function addOptionalText(target, field, value) {
+  const text = safeText(value);
+  if (text) target[field] = text;
+}
+
+function addOptionalSafeObject(target, field, value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return;
+  const safe = {};
+  Object.entries(value).forEach(([key, item]) => {
+    if (typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean' || item === null) {
+      safe[key] = item;
+    }
+  });
+  if (Object.keys(safe).length) target[field] = safe;
+}
+
+function safeText(value) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
 function isRecentlyActive(value, now = Date.now()) {
   const time = Date.parse(value || '');
   if (!Number.isFinite(time)) return false;
@@ -328,5 +572,6 @@ function escapeHtml(value) {
 }
 
 module.exports = {
-  registerProfileRoutes
+  registerProfileRoutes,
+  serializeLiveStudentActivity
 };

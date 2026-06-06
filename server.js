@@ -46,7 +46,11 @@ const { registerClassroomControlsRoutes } = require('./routes/classroomControlsR
 const { registerHealthRoutes } = require('./routes/healthRoutes');
 const { registerProfileRoutes } = require('./routes/profileRoutes');
 const { registerQuestionRoutes } = require('./routes/questionRoutes');
-const { registerStudentRoutes } = require('./routes/studentRoutes');
+const {
+  createStudentQuestionRateLimiter,
+  getStudentRateLimitInfo,
+  registerStudentRoutes
+} = require('./routes/studentRoutes');
 const { createTeacherContentRoutes } = require('./routes/teacherContentRoutes');
 const { registerVoiceRoutes } = require('./routes/voiceRoutes');
 const { registerWhisperRoutes } = require('./routes/whisperRoutes');
@@ -70,6 +74,7 @@ const studentInteractionsFile = path.join(__dirname, 'logs', 'student_interactio
 const MAX_KNOWLEDGE_ITEMS = Number(process.env.MAX_KNOWLEDGE_ITEMS || 6);
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'qwen2.5:0.5b';
 const studentSessions = Object.create(null);
+const studentQuestionRateLimiter = createStudentQuestionRateLimiter();
 const teacherAuthStore = createTeacherAuthStore();
 const teacherSessionStore = createTeacherSessionStore();
 const teacherAuthRequired = requireTeacherAuth(teacherSessionStore);
@@ -186,7 +191,9 @@ registerProfileRoutes(app, {
   createGoogleConnectUrl,
   disconnectGoogle,
   getAvailableProfileDates,
+  getClassroomControls,
   getDailyQuestionSummary,
+  getStudentRateLimitInfo,
   getStandardsSummaryReport: (date) => buildStandardsSummaryReport(loadStudentInteractionLogs(studentInteractionsFile), { date }),
   getProfileStatus: (req) => sanitizeTeacherProfileStatus({
     authStore: teacherAuthStore,
@@ -195,6 +202,7 @@ registerProfileRoutes(app, {
   }),
   linkGoogleIdentity: (teacher) => teacherAuthStore.updateGoogleIdentity(teacher),
   port: PORT,
+  questionRateLimiter: studentQuestionRateLimiter,
   sendDailySummaryEmail,
   studentSessions
 });
@@ -207,6 +215,7 @@ registerStudentRoutes(app, {
   answerStudentMessage: questionAnswer.answerStudentMessage,
   getClassroomControls,
   logCompletedInteraction: questionAnswer.logCompletedInteraction,
+  questionRateLimiter: studentQuestionRateLimiter,
   studentSessions
 });
 
