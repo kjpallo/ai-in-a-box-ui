@@ -4,10 +4,8 @@
   gap: 12px;
   align-content: stretch;
   grid-template-rows: auto auto minmax(0, 1fr);
-  border-color: rgba(102, 247, 209, 0.3);
-  background:
-    radial-gradient(circle at 100% 0%, rgba(102, 247, 209, 0.12), transparent 34%),
-    rgba(4, 14, 16, 0.78);
+  border-color: var(--surface-border);
+  background: var(--surface);
   min-height: 0;
 }
 
@@ -29,14 +27,14 @@
 
 .teacher-content-entry-card .small-button {
   width: max-content;
-  border: 1px solid rgba(126, 233, 255, 0.55);
-  background: linear-gradient(135deg, rgba(13, 53, 62, 0.92), rgba(9, 31, 35, 0.94));
-  box-shadow: 0 0 0 1px rgba(102, 247, 209, 0.28), 0 8px 24px rgba(0, 0, 0, 0.32);
+  border: 1px solid rgba(126, 233, 255, 0.32);
+  background: linear-gradient(135deg, rgba(18, 64, 70, 0.82), rgba(11, 39, 42, 0.9));
+  box-shadow: var(--glow-primary), 0 8px 22px rgba(0, 0, 0, 0.28);
 }
 
 .teacher-content-entry-card .small-button:hover {
-  border-color: rgba(102, 247, 209, 0.88);
-  box-shadow: 0 0 0 1px rgba(102, 247, 209, 0.48), 0 0 28px rgba(102, 247, 209, 0.22);
+  border-color: rgba(102, 247, 209, 0.5);
+  box-shadow: var(--glow-primary), 0 10px 24px rgba(0, 0, 0, 0.28);
 }
 
 .teacher-content-overlay[hidden] {
@@ -58,7 +56,7 @@
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at 50% 10%, rgba(102, 247, 209, 0.08), transparent 38%),
+    radial-gradient(circle at 50% 10%, rgba(102, 247, 209, 0.04), transparent 38%),
     rgba(0, 5, 6, 0.82);
   backdrop-filter: blur(10px) saturate(0.62) brightness(0.72);
 }
@@ -73,12 +71,12 @@
   grid-template-rows: auto auto auto minmax(0, 1fr) auto;
   gap: 12px;
   padding: 16px;
-  border: 1px solid rgba(102, 247, 209, 0.34);
+  border: 1px solid var(--surface-border-strong);
   border-radius: 22px;
   background:
-    linear-gradient(180deg, rgba(8, 24, 27, 0.82), rgba(3, 10, 12, 0.92)),
-    rgba(3, 10, 12, 0.66);
-  box-shadow: 0 34px 110px rgba(0, 0, 0, 0.72), 0 0 48px rgba(102, 247, 209, 0.14);
+    linear-gradient(180deg, rgba(10, 28, 31, 0.86), rgba(5, 14, 16, 0.94)),
+    rgba(5, 14, 16, 0.66);
+  box-shadow: 0 34px 96px rgba(0, 0, 0, 0.7);
   animation: teacherContentDrop 220ms ease-out;
   backdrop-filter: blur(18px) saturate(1.1);
 }
@@ -124,6 +122,7 @@
 .teacher-content-head h3 {
   margin-top: 8px;
   font-size: 1.28rem;
+  line-height: 1.2;
 }
 
 .teacher-content-head p,
@@ -138,13 +137,13 @@
 .teacher-content-draft-picker span {
   margin: 0;
   color: #b7d1cf;
-  line-height: 1.4;
+  line-height: 1.5;
 }
 
 .teacher-content-close {
   width: 38px;
   height: 38px;
-  border: 1px solid rgba(102, 247, 209, 0.24);
+  border: 1px solid var(--surface-border-strong);
   border-radius: 999px;
   color: #effff8;
   background: rgba(255, 255, 255, 0.06);
@@ -155,7 +154,7 @@
 .teacher-content-status-row {
   align-items: center;
   padding: 10px 12px;
-  border: 1px solid rgba(102, 247, 209, 0.14);
+  border: 1px solid var(--surface-border);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.035);
   font-size: 0.84rem;
@@ -177,7 +176,7 @@
 .teacher-content-draft-picker select,
 .teacher-content-upload-row select {
   min-height: 34px;
-  border: 1px solid rgba(102, 247, 209, 0.22);
+  border: 1px solid var(--surface-border-strong);
   border-radius: 10px;
   padding: 0 10px;
   color: #effff8;
@@ -201,12 +200,11 @@
   align-items: flex-start;
   justify-content: flex-start;
   gap: 8px;
-  border: 1px solid rgba(102, 247, 209, 0.16);
+  border: 1px solid var(--surface-border);
   border-radius: 12px;
   color: #d8eee9;
-  background:
-    linear-gradient(180deg, rgba(102, 247, 209, 0.055), rgba(255, 255, 255, 0.035));
-  font-size: 0.8rem;
+  background: rgba(255, 255, 255, 0.045);
+  font-size: 0.82rem;
   font-weight: 850;
   padding: 9px;
   text-align: left;
@@ -220,7 +218,7 @@
   place-items: center;
   border-radius: 999px;
   color: #061314;
-  background: rgba(102, 247, 209, 0.86);
+  background: rgba(102, 247, 209, 0.76);
   font-size: 0.72rem;
 }
 
@@ -242,14 +240,14 @@
   color: #9fc8c4;
   font-size: 0.68rem;
   font-weight: 900;
-  letter-spacing: 0.04em;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
 .teacher-content-review-bulk-summary {
   margin: 8px 0 10px;
   padding: 8px 10px;
-  border: 1px solid rgba(102, 247, 209, 0.24);
+  border: 1px solid var(--surface-border);
   border-radius: 10px;
   background: rgba(102, 247, 209, 0.05);
 }
@@ -286,7 +284,7 @@
   gap: 2px;
   padding: 6px 8px;
   border-radius: 10px;
-  border: 1px solid rgba(126, 233, 255, 0.28);
+  border: 1px solid var(--surface-border);
   background: rgba(5, 17, 20, 0.64);
   color: #def8f3;
 }
@@ -301,8 +299,8 @@
 }
 
 .teacher-content-review-pack-card.active {
-  border-color: rgba(102, 247, 209, 0.9);
-  box-shadow: 0 0 0 1px rgba(102, 247, 209, 0.4), 0 0 20px rgba(102, 247, 209, 0.16);
+  border-color: rgba(102, 247, 209, 0.62);
+  box-shadow: var(--glow-active);
 }
 
 .teacher-content-validation-note {
@@ -316,26 +314,26 @@
 
 @keyframes teacher-content-required-glow {
   0% {
-    border-color: rgba(102, 247, 209, 0.78);
-    box-shadow: 0 0 0 1px rgba(102, 247, 209, 0.38), 0 0 16px rgba(102, 247, 209, 0.28);
+    border-color: rgba(255, 209, 102, 0.58);
+    box-shadow: 0 0 0 1px rgba(255, 209, 102, 0.22), 0 0 14px rgba(255, 209, 102, 0.22);
   }
   50% {
-    border-color: rgba(126, 233, 255, 0.95);
-    box-shadow: 0 0 0 1px rgba(126, 233, 255, 0.45), 0 0 24px rgba(126, 233, 255, 0.32);
+    border-color: rgba(255, 209, 102, 0.9);
+    box-shadow: 0 0 0 1px rgba(255, 209, 102, 0.34), 0 0 22px rgba(255, 209, 102, 0.3);
   }
   100% {
-    border-color: rgba(102, 247, 209, 0.78);
-    box-shadow: 0 0 0 1px rgba(102, 247, 209, 0.38), 0 0 16px rgba(102, 247, 209, 0.28);
+    border-color: rgba(255, 209, 102, 0.58);
+    box-shadow: 0 0 0 1px rgba(255, 209, 102, 0.22), 0 0 14px rgba(255, 209, 102, 0.22);
   }
 }
 
 .teacher-content-tab.active {
-  border-color: rgba(102, 247, 209, 0.72);
+  border-color: rgba(102, 247, 209, 0.58);
   color: #f5fffb;
   background:
     radial-gradient(circle at 100% 0%, rgba(102, 247, 209, 0.18), transparent 48%),
     rgba(102, 247, 209, 0.1);
-  box-shadow: 0 0 22px rgba(102, 247, 209, 0.18);
+  box-shadow: var(--glow-active);
 }
 
 .teacher-content-tab.active .teacher-content-tab-copy small {
@@ -356,13 +354,11 @@
   min-width: 0;
   min-height: 0;
   padding: 16px;
-  border: 1px solid rgba(102, 247, 209, 0.2);
+  border: 1px solid var(--surface-border);
   border-radius: 20px;
   background:
-    linear-gradient(180deg, rgba(8, 25, 28, 0.96), rgba(4, 12, 14, 0.98));
-  box-shadow:
-    0 24px 54px rgba(0, 0, 0, 0.48),
-    0 0 32px rgba(102, 247, 209, 0.08);
+    linear-gradient(180deg, rgba(12, 30, 33, 0.96), rgba(7, 18, 20, 0.98));
+  box-shadow: 0 22px 48px rgba(0, 0, 0, 0.46);
 }
 
 .teacher-content-card.active {
@@ -406,10 +402,10 @@
   display: grid;
   gap: 12px;
   grid-template-rows: auto auto minmax(0, 1fr);
-  border: 1px solid rgba(102, 247, 209, 0.18);
+  border: 1px solid var(--surface-border);
   border-radius: 14px;
   padding: 12px;
-  background: rgba(2, 10, 12, 0.62);
+  background: rgba(5, 17, 20, 0.62);
   min-width: 0;
   min-height: 0;
 }
@@ -420,7 +416,7 @@
   z-index: 4;
   margin: -16px -16px 0;
   padding: 16px 16px 12px;
-  border-bottom: 1px solid rgba(102, 247, 209, 0.12);
+  border-bottom: 1px solid var(--surface-border);
   background:
     linear-gradient(180deg, rgba(8, 25, 28, 0.98), rgba(8, 25, 28, 0.9));
   backdrop-filter: blur(10px);
@@ -429,7 +425,7 @@
 .teacher-content-knowledge-manager-shell .teacher-content-draft-picker {
   align-items: center;
   justify-content: flex-start;
-  border: 1px solid rgba(102, 247, 209, 0.14);
+  border: 1px solid var(--surface-border);
   border-radius: 10px;
   padding: 9px 10px;
   background: rgba(255, 255, 255, 0.03);
@@ -461,7 +457,7 @@
   display: inline-flex;
   align-items: center;
   min-height: 28px;
-  border: 1px solid rgba(102, 247, 209, 0.22);
+  border: 1px solid rgba(102, 247, 209, 0.18);
   border-radius: 999px;
   padding: 0 10px;
   color: #061314;
@@ -507,7 +503,7 @@
   min-height: 38px;
   display: flex;
   align-items: center;
-  border: 1px dashed rgba(102, 247, 209, 0.28);
+  border: 1px dashed rgba(210, 238, 234, 0.18);
   border-radius: 12px;
   padding: 0 12px;
   color: #d8eee9;
@@ -531,6 +527,6 @@
   color: var(--neon);
   font-size: 0.72rem;
   font-weight: 900;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   text-transform: uppercase;
 }

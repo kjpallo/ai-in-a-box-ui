@@ -162,7 +162,7 @@
   color: #f4fffb;
   font-size: 1.35rem;
   line-height: 1.05;
-  letter-spacing: 0.24em;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -204,7 +204,7 @@
   color: #dffcf7;
   font-size: 0.82rem;
   font-weight: 850;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -277,7 +277,7 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   font-size: 1.08rem;
   font-weight: 900;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   overflow-wrap: anywhere;
 }
 
@@ -311,4 +311,3 @@
     transition-duration: 1ms;
   }
 }
-

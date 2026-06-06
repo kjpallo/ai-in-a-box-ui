@@ -86,7 +86,7 @@
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
   align-items: center;
-  border: 1px solid rgba(102, 247, 209, 0.14);
+  border: 1px solid var(--surface-border);
   border-radius: 10px;
   padding: 10px;
   background: rgba(102, 247, 209, 0.055);
@@ -138,7 +138,7 @@
 .teacher-content-approved-edit-section {
   display: grid;
   gap: 10px;
-  border: 1px solid rgba(102, 247, 209, 0.14);
+  border: 1px solid var(--surface-border);
   border-radius: 12px;
   padding: 12px;
   background: rgba(255, 255, 255, 0.035);
@@ -154,7 +154,7 @@
 .teacher-content-approved-edit-item {
   display: grid;
   gap: 10px;
-  border: 1px solid rgba(126, 233, 255, 0.16);
+  border: 1px solid var(--surface-border);
   border-radius: 10px;
   padding: 12px;
   background: rgba(0, 0, 0, 0.18);
@@ -206,6 +206,7 @@
   color: #b7d1cf;
   font-size: 0.74rem;
   font-weight: 900;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -215,7 +216,7 @@
   max-width: 100%;
   overflow-wrap: anywhere;
   resize: vertical;
-  border: 1px solid rgba(102, 247, 209, 0.2);
+  border: 1px solid var(--surface-border-strong);
   border-radius: 9px;
   padding: 9px 10px;
   color: #effff8;
@@ -226,7 +227,7 @@
 
 .teacher-content-approved-edit-field textarea:focus {
   border-color: rgba(102, 247, 209, 0.62);
-  box-shadow: 0 0 0 2px rgba(102, 247, 209, 0.12);
+  box-shadow: 0 0 0 2px rgba(102, 247, 209, 0.1);
 }
 
 .teacher-content-approved-edit-actions {
@@ -266,5 +267,4 @@
     grid-template-columns: 1fr;
   }
 }
-
 

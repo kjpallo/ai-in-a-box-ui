@@ -4,13 +4,14 @@
 }
 
 .teacher-content-scope-warning {
-  border: 1px solid rgba(255, 205, 87, 0.32);
+  border: 1px solid rgba(255, 209, 102, 0.44);
   border-radius: 8px;
   padding: 10px;
   background: rgba(255, 205, 87, 0.08);
   color: #fff6d7;
   display: grid;
   gap: 4px;
+  box-shadow: var(--glow-warning);
 }
 
 .teacher-content-scope-warning strong {
@@ -48,7 +49,7 @@
 
 .teacher-content-approved-status span,
 .teacher-content-approved-badges span {
-  border: 1px solid rgba(102, 247, 209, 0.2);
+  border: 1px solid var(--surface-border);
   border-radius: 999px;
   padding: 5px 8px;
   color: #dffbf5;
@@ -67,10 +68,10 @@
   display: grid;
   gap: 4px;
   min-width: 0;
-  border: 1px solid rgba(126, 233, 255, 0.16);
+  border: 1px solid var(--surface-border);
   border-radius: 10px;
   padding: 8px;
-  background: rgba(126, 233, 255, 0.055);
+  background: var(--surface-soft);
 }
 
 .teacher-content-meta-pill small,
@@ -78,7 +79,7 @@
   color: #cafff0;
   font-size: 0.68rem;
   font-weight: 900;
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -124,7 +125,7 @@
   width: 48px;
   height: 26px;
   flex: 0 0 auto;
-  border: 1px solid rgba(102, 247, 209, 0.28);
+  border: 1px solid rgba(102, 247, 209, 0.2);
   border-radius: 999px;
   padding: 3px;
   background: rgba(102, 247, 209, 0.12);
@@ -140,7 +141,7 @@
   aspect-ratio: 1;
   border-radius: 999px;
   background: var(--neon);
-  box-shadow: 0 0 12px rgba(102, 247, 209, 0.42);
+  box-shadow: 0 0 8px rgba(102, 247, 209, 0.26);
 }
 
 .teacher-content-switch.is-on span {
@@ -193,4 +194,3 @@
   align-items: center;
   padding-top: 2px;
 }
-

@@ -44,7 +44,7 @@
 
   .brand-copy h1 {
     font-size: 1.1rem;
-    letter-spacing: 0.26em;
+    letter-spacing: 0;
   }
 
   .eyebrow {
@@ -235,7 +235,7 @@
   }
 
   .blade-bottom-nav {
-    grid-template-columns: 44px repeat(5, minmax(0, 1fr)) 44px;
+    grid-template-columns: 44px repeat(6, minmax(0, 1fr)) 44px;
     overflow-x: auto;
   }
 
@@ -460,11 +460,6 @@
   }
 
   .blade-bottom-nav {
-    grid-template-columns: 42px repeat(3, minmax(105px, 1fr)) 42px;
-  }
-
-  .blade-nav-item:nth-of-type(n+5) {
-    display: none;
+    grid-template-columns: 42px repeat(6, minmax(105px, 1fr)) 42px;
   }
 }
-

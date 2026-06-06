@@ -6,12 +6,12 @@
   bottom: 12px;
   z-index: 16;
   min-width: 0;
-  border: 1px solid rgba(126, 233, 255, 0.18);
+  border: 1px solid var(--surface-border-strong);
   border-radius: 16px;
   padding: 14px;
   background:
-    linear-gradient(180deg, rgba(10, 31, 34, 0.98), rgba(4, 13, 15, 0.98));
-  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.42), 0 0 24px rgba(126, 233, 255, 0.08);
+    linear-gradient(180deg, rgba(12, 31, 34, 0.98), rgba(7, 18, 20, 0.98));
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.4);
 }
 
 .teacher-content-standard-detail h5 {
@@ -57,7 +57,7 @@
 .teacher-content-edit-section {
   display: grid;
   gap: 10px;
-  border: 1px solid rgba(102, 247, 209, 0.14);
+  border: 1px solid var(--surface-border);
   border-radius: 10px;
   padding: 12px;
   background: rgba(255, 255, 255, 0.035);
@@ -90,7 +90,7 @@
 .teacher-content-review-filter {
   min-height: 30px;
   padding: 0 10px;
-  border: 1px solid rgba(132, 211, 194, 0.25);
+  border: 1px solid var(--surface-border);
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.2);
   color: #d8eee9;
@@ -102,15 +102,17 @@
   border-color: rgba(102, 247, 209, 0.55);
   background: rgba(102, 247, 209, 0.16);
   color: #f1fff9;
+  box-shadow: var(--glow-active);
 }
 
 .teacher-content-review-needs-review {
   display: grid;
   gap: 8px;
-  border: 1px solid rgba(255, 205, 87, 0.32);
+  border: 1px solid rgba(255, 209, 102, 0.46);
   border-radius: 10px;
   padding: 10px 12px;
   background: rgba(255, 205, 87, 0.08);
+  box-shadow: var(--glow-warning);
 }
 
 .teacher-content-review-needs-review p {
@@ -125,10 +127,10 @@
 }
 
 .teacher-content-review-table-shell {
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  border: 1px solid var(--surface-border);
   border-radius: 12px;
   overflow: hidden;
-  background: rgba(0, 0, 0, 0.16);
+  background: rgba(5, 16, 18, 0.52);
 }
 
 .teacher-content-review-card-list {
@@ -146,7 +148,7 @@
 .teacher-content-review-chip {
   display: inline-flex;
   align-items: center;
-  border: 1px solid rgba(102, 247, 209, 0.32);
+  border: 1px solid rgba(102, 247, 209, 0.2);
   border-radius: 999px;
   padding: 3px 8px;
   color: #ddfff7;
@@ -167,31 +169,31 @@
   grid-template-columns: 32px minmax(140px, 0.95fr) minmax(96px, 0.55fr) minmax(140px, 0.85fr) minmax(220px, 1.3fr) minmax(170px, 1fr) minmax(120px, 0.62fr);
   gap: 12px;
   align-items: start;
-  padding: 8px 10px;
+  padding: 10px 11px;
 }
 
 .teacher-content-review-table-shell[data-review-combined-table] .teacher-content-review-table-head {
-  border-bottom: 1px solid rgba(102, 247, 209, 0.14);
-  background: rgba(102, 247, 209, 0.06);
+  border-bottom: 1px solid var(--surface-border);
+  background: rgba(255, 255, 255, 0.045);
 }
 
 .teacher-content-review-table-shell[data-review-combined-table] .teacher-content-review-table-head span {
   color: #d9fff3;
-  font-size: 0.72rem;
+  font-size: 0.76rem;
   font-weight: 900;
-  letter-spacing: 0.04em;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
 .teacher-content-review-sort {
-  border: 1px solid rgba(126, 233, 255, 0.22);
+  border: 1px solid var(--surface-border);
   border-radius: 999px;
   padding: 4px 8px;
   background: rgba(126, 233, 255, 0.08);
   color: #d9fff3;
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   font-weight: 900;
-  letter-spacing: 0.04em;
+  letter-spacing: 0;
   text-transform: uppercase;
   cursor: pointer;
 }
@@ -200,6 +202,7 @@
   border-color: rgba(102, 247, 209, 0.42);
   background: rgba(102, 247, 209, 0.16);
   color: #f2fff9;
+  box-shadow: var(--glow-active);
 }
 
 .teacher-content-review-table-body {
@@ -209,23 +212,22 @@
 }
 
 .teacher-content-review-table-shell[data-review-combined-table] .teacher-content-review-table-row {
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-  border-left: 1px solid rgba(255, 255, 255, 0.07);
-  border-right: 1px solid rgba(255, 255, 255, 0.07);
-  background: rgba(0, 0, 0, 0.16);
-  line-height: 1.25;
+  border-top: 1px solid var(--line);
+  background: transparent;
+  line-height: 1.4;
 }
 
 .teacher-content-review-table-shell[data-review-combined-table] .teacher-content-review-table-row:last-child {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  border-bottom: 0;
 }
 
 .teacher-content-review-table-shell[data-review-combined-table] .teacher-content-review-table-row.selected {
-  background: rgba(241, 159, 76, 0.12);
+  background: rgba(255, 209, 102, 0.1);
+  box-shadow: inset 3px 0 0 rgba(255, 209, 102, 0.72), var(--glow-warning);
 }
 
 .teacher-content-review-table-shell[data-review-combined-table] .teacher-content-review-table-row.unsafe {
-  background: rgba(255, 132, 132, 0.05);
+  background: rgba(255, 132, 132, 0.065);
 }
 
 .teacher-content-review-table-shell[data-review-combined-table] .teacher-content-review-table-row strong,
@@ -233,6 +235,7 @@
 .teacher-content-review-table-shell[data-review-combined-table] .teacher-content-review-table-row p {
   margin: 0;
   color: #e7f8f3;
+  font-size: 0.84rem;
   overflow-wrap: anywhere;
 }
 
@@ -243,7 +246,7 @@
 }
 
 .teacher-content-review-wording p {
-  font-size: 0.76rem;
+  font-size: 0.82rem;
   color: #dff3ee;
   display: -webkit-box;
   -webkit-line-clamp: 3;
@@ -266,7 +269,7 @@
   display: grid;
   gap: 3px;
   min-width: 0;
-  font-size: 0.74rem;
+  font-size: 0.8rem;
 }
 
 .teacher-content-review-table-shell[data-review-combined-table] .teacher-content-review-table-row .teacher-content-review-select-control {
@@ -288,7 +291,7 @@
 }
 
 .teacher-content-review-advanced-details {
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--surface-border);
   border-radius: 10px;
   padding: 10px;
   background: rgba(255, 255, 255, 0.03);
@@ -328,15 +331,16 @@
   grid-template-columns: minmax(120px, 0.38fr) minmax(0, 1fr) auto auto;
   gap: 10px;
   align-items: start;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--surface-border);
   border-radius: 10px;
   padding: 10px;
-  background: rgba(0, 0, 0, 0.16);
+  background: rgba(5, 16, 18, 0.44);
 }
 
 .teacher-content-review-item.selected {
-  border-color: rgba(241, 159, 76, 0.42);
-  background: rgba(241, 159, 76, 0.08);
+  border-color: rgba(255, 209, 102, 0.48);
+  background: rgba(255, 209, 102, 0.08);
+  box-shadow: var(--glow-warning);
 }
 
 .teacher-content-review-item.unsafe {
@@ -349,7 +353,7 @@
   gap: 8px;
   align-items: center;
   color: #f7e6ca;
-  font-size: 0.76rem;
+  font-size: 0.8rem;
   font-weight: 900;
   text-transform: uppercase;
 }
@@ -378,7 +382,7 @@
 
 .teacher-content-review-item [data-review-item-standards] {
   width: fit-content;
-  border: 1px solid rgba(132, 211, 194, 0.28);
+  border: 1px solid var(--surface-border);
   border-radius: 999px;
   padding: 3px 8px;
   color: #d8eee9;
@@ -389,7 +393,7 @@
 
 .teacher-content-confidence {
   width: max-content;
-  border: 1px solid rgba(126, 233, 255, 0.26);
+  border: 1px solid rgba(126, 233, 255, 0.18);
   border-radius: 999px;
   padding: 4px 8px;
   color: #e6f7ff;
@@ -400,7 +404,7 @@
 
 .teacher-content-confidence.high {
   color: #dffff3;
-  border-color: rgba(102, 247, 209, 0.34);
+  border-color: rgba(102, 247, 209, 0.24);
   background: rgba(102, 247, 209, 0.12);
 }
 
@@ -420,11 +424,11 @@
 
 .teacher-content-review-bulk-message {
   margin: 0;
-  border: 1px solid rgba(241, 159, 76, 0.25);
+  border: 1px solid rgba(255, 209, 102, 0.36);
   border-radius: 10px;
   padding: 10px 12px;
   color: #fff4df;
-  background: rgba(241, 159, 76, 0.1);
+  background: rgba(255, 209, 102, 0.09);
 }
 
 .teacher-content-review-edit-mode-note {
@@ -443,11 +447,11 @@
   gap: 10px;
   align-items: center;
   justify-content: space-between;
-  border: 1px solid rgba(241, 159, 76, 0.32);
+  border: 1px solid rgba(255, 209, 102, 0.42);
   border-radius: 12px;
   padding: 10px 12px;
-  background: rgba(20, 18, 14, 0.82);
-  box-shadow: none;
+  background: rgba(24, 21, 14, 0.84);
+  box-shadow: var(--glow-warning);
 }
 
 .teacher-content-review-action-bar > div:first-child {
@@ -478,10 +482,10 @@
   display: grid;
   gap: 12px;
   position: static;
-  border: 1px solid rgba(102, 247, 209, 0.24);
+  border: 1px solid var(--surface-border-strong);
   border-radius: 12px;
   padding: 14px;
-  background: rgba(8, 29, 27, 0.68);
+  background: rgba(8, 29, 27, 0.62);
   box-shadow: none;
 }
 
@@ -489,13 +493,13 @@
   display: grid;
   gap: 14px;
   position: static;
-  border: 1px solid rgba(102, 247, 209, 0.3);
+  border: 1px solid rgba(255, 209, 102, 0.38);
   border-radius: 16px;
   padding: 16px;
   background:
-    linear-gradient(145deg, rgba(9, 36, 33, 0.92), rgba(8, 18, 22, 0.94)),
-    radial-gradient(circle at top right, rgba(126, 233, 255, 0.12), transparent 34%);
-  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.28);
+    linear-gradient(145deg, rgba(24, 28, 20, 0.92), rgba(8, 18, 22, 0.94)),
+    radial-gradient(circle at top right, rgba(255, 209, 102, 0.1), transparent 34%);
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.28), var(--glow-warning);
 }
 
 .teacher-content-review-focused-head {
@@ -527,10 +531,10 @@
 }
 
 .teacher-content-review-issues-to-fix {
-  border: 1px solid rgba(241, 159, 76, 0.3);
+  border: 1px solid rgba(255, 209, 102, 0.38);
   border-radius: 12px;
   padding: 10px 12px;
-  background: rgba(241, 159, 76, 0.08);
+  background: rgba(255, 209, 102, 0.08);
 }
 
 .teacher-content-review-issues-to-fix h5 {
@@ -551,7 +555,7 @@
   gap: 8px;
   align-items: flex-start;
   justify-content: space-between;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--surface-border);
   border-radius: 10px;
   padding: 8px;
   overflow-wrap: anywhere;
@@ -571,7 +575,7 @@
 .teacher-content-review-queue {
   margin: 8px 0 10px;
   padding: 8px 10px;
-  border: 1px solid rgba(102, 247, 209, 0.24);
+  border: 1px solid var(--surface-border);
   border-radius: 10px;
   background: rgba(102, 247, 209, 0.05);
 }
@@ -586,10 +590,10 @@
 
 .teacher-content-review-evidence-card {
   position: static;
-  border-color: rgba(126, 233, 255, 0.28);
+  border-color: var(--surface-border-strong);
   background:
-    linear-gradient(180deg, rgba(10, 31, 34, 0.98), rgba(4, 13, 15, 0.98));
-  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.42), 0 0 24px rgba(126, 233, 255, 0.08);
+    linear-gradient(180deg, rgba(12, 31, 34, 0.98), rgba(7, 18, 20, 0.98));
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.4);
 }
 
 [data-review-item-real-status],
@@ -602,11 +606,12 @@
 
 .teacher-content-review-inline-message {
   margin: 0;
-  border: 1px solid rgba(241, 159, 76, 0.35);
+  border: 1px solid rgba(255, 209, 102, 0.42);
   border-radius: 8px;
   padding: 8px 10px;
   color: #fff4df;
-  background: rgba(241, 159, 76, 0.1);
+  background: rgba(255, 209, 102, 0.1);
+  box-shadow: var(--glow-warning);
 }
 
 .teacher-content-edit-fields {
@@ -623,7 +628,7 @@
   color: var(--neon);
   font-size: 0.72rem;
   font-weight: 900;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -631,10 +636,10 @@
   width: 100%;
   min-height: 92px;
   resize: vertical;
-  border: 1px solid rgba(102, 247, 209, 0.18);
+  border: 1px solid var(--surface-border-strong);
   border-radius: 10px;
   padding: 10px;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(5, 17, 20, 0.62);
   color: var(--text);
   line-height: 1.45;
 }
@@ -643,4 +648,3 @@
   outline: 2px solid rgba(102, 247, 209, 0.42);
   outline-offset: 1px;
 }
-

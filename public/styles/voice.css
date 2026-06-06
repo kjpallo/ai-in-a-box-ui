@@ -7,10 +7,10 @@
   gap: 0.65rem;
   padding: 0.72rem;
   border-radius: 18px;
-  border: 1px solid rgba(103,255,208,0.16);
+  border: 1px solid var(--surface-border);
   background:
-    radial-gradient(circle at top left, rgba(103,255,208,0.08), transparent 38%),
-    rgba(255,255,255,0.035);
+    radial-gradient(circle at top left, rgba(103,255,208,0.035), transparent 38%),
+    var(--surface-soft);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
 }
 
@@ -23,10 +23,10 @@
 .voice-mode-button {
   width: 100%;
   min-height: 42px;
-  border: 1px solid rgba(103,255,208,0.18);
+  border: 1px solid var(--surface-border);
   border-radius: 999px;
   color: #dfffee;
-  background: rgba(255,255,255,0.055);
+  background: rgba(255,255,255,0.045);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
 }
 
@@ -35,7 +35,7 @@
   background: linear-gradient(135deg, #7effee, #3de6b3);
   border-color: rgba(126,255,238,0.72);
   box-shadow:
-    0 0 20px rgba(103,255,208,0.36),
+    var(--glow-active),
     inset 0 1px 0 rgba(255,255,255,0.25);
 }
 
@@ -59,7 +59,7 @@
   color: #ffe6a3;
   background: rgba(255,209,102,0.12);
   border-color: rgba(255,209,102,0.35);
-  box-shadow: 0 0 14px rgba(255,209,102,0.16);
+  box-shadow: var(--glow-warning);
 }
 
 .voice-device-grid {
@@ -78,14 +78,14 @@
   color: #b9d8d1;
   font-size: 0.68rem;
   font-weight: 900;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
 .voice-device-field select {
   min-width: 0;
   width: 100%;
-  border: 1px solid rgba(103,255,208,0.18);
+  border: 1px solid var(--surface-border-strong);
   border-radius: 12px;
   color: #effff8;
   background: rgba(0,0,0,0.28);
@@ -145,7 +145,7 @@
 
 .command-log-meta span {
   padding: 0.14rem 0.36rem;
-  border: 1px solid rgba(103,255,208,0.12);
+  border: 1px solid var(--surface-border);
   border-radius: 999px;
   background: rgba(103,255,208,0.055);
 }
@@ -158,8 +158,8 @@ body.tts-speaking .subtitle::after {
 body.tts-speaking .voice-panel {
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.08),
-    0 0 24px rgba(103,255,208,0.2),
-    0 0 56px rgba(103,255,208,0.1);
+    0 0 24px rgba(103,255,208,0.18),
+    0 0 48px rgba(103,255,208,0.09);
 }
 
 body.tts-speaking .voice-panel-inner::before {

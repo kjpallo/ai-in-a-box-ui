@@ -3,10 +3,10 @@
 .teacher-content-name-field select {
   min-height: 38px;
   width: 100%;
-  border: 1px solid rgba(102, 247, 209, 0.18);
+  border: 1px solid var(--surface-border-strong);
   border-radius: 10px;
   padding: 0 10px;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(5, 17, 20, 0.62);
   color: var(--text);
 }
 
@@ -24,21 +24,22 @@
 .teacher-content-whole-import-advanced {
   display: grid;
   gap: 12px;
-  border: 1px solid rgba(102, 247, 209, 0.16);
+  border: 1px solid var(--surface-border);
   border-radius: 12px;
   padding: 14px;
-  background: rgba(255, 255, 255, 0.035);
+  background: var(--surface-soft);
 }
 
 .teacher-content-import-estimate.large {
-  border-color: rgba(126, 233, 255, 0.34);
+  border-color: rgba(126, 233, 255, 0.26);
   background: rgba(126, 233, 255, 0.06);
 }
 
 .teacher-content-preview-controls,
 .teacher-content-preview-report.partial {
-  border-color: rgba(255, 207, 102, 0.32);
+  border-color: rgba(255, 209, 102, 0.38);
   background: rgba(255, 207, 102, 0.055);
+  box-shadow: var(--glow-warning);
 }
 
 .teacher-content-preview-repair,
@@ -46,7 +47,7 @@
   display: grid;
   gap: 8px;
   padding: 10px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--surface-border);
   border-radius: 8px;
   background: rgba(0, 0, 0, 0.12);
 }
@@ -63,8 +64,9 @@
 }
 
 .teacher-content-recovery-panel {
-  border-color: rgba(255, 207, 102, 0.38);
+  border-color: rgba(255, 209, 102, 0.42);
   background: rgba(255, 207, 102, 0.075);
+  box-shadow: var(--glow-warning);
 }
 
 .teacher-content-backend-details {
@@ -91,8 +93,9 @@
 }
 
 .teacher-content-selected-import {
-  border-color: rgba(102, 247, 209, 0.28);
+  border-color: rgba(102, 247, 209, 0.36);
   background: rgba(102, 247, 209, 0.06);
+  box-shadow: var(--glow-active);
 }
 
 .teacher-content-whole-import-advanced {
@@ -152,10 +155,10 @@
 .teacher-content-approved-pack,
 .teacher-content-approved-empty,
 .teacher-content-approved-status {
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--surface-border);
   border-radius: 12px;
   padding: 11px;
-  background: rgba(255, 255, 255, 0.045);
+  background: var(--surface-soft);
   min-width: 0;
 }
 
@@ -163,9 +166,9 @@
 .teacher-content-count-pill small {
   display: block;
   color: #cafff0;
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: 900;
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
   text-transform: uppercase;
   line-height: 1.25;
   white-space: normal;
@@ -204,24 +207,25 @@
 }
 
 .teacher-content-readiness-card {
-  border-color: rgba(102, 247, 209, 0.22);
+  border-color: rgba(102, 247, 209, 0.2);
   background:
-    radial-gradient(circle at 0% 0%, rgba(102, 247, 209, 0.12), transparent 38%),
+    radial-gradient(circle at 0% 0%, rgba(102, 247, 209, 0.06), transparent 38%),
     rgba(102, 247, 209, 0.055);
 }
 
 .teacher-content-readiness-card.blocked {
-  border-color: rgba(126, 233, 255, 0.26);
+  border-color: rgba(255, 209, 102, 0.38);
   background:
-    radial-gradient(circle at 0% 0%, rgba(126, 233, 255, 0.14), transparent 38%),
-    rgba(126, 233, 255, 0.055);
+    radial-gradient(circle at 0% 0%, rgba(255, 209, 102, 0.1), transparent 38%),
+    rgba(255, 209, 102, 0.06);
+  box-shadow: var(--glow-warning);
 }
 
 .teacher-content-readiness-card span {
   color: #cafff0;
   font-size: 0.7rem;
   font-weight: 900;
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -238,20 +242,21 @@
 }
 
 .teacher-content-blocked-reasons p:not(.profile-empty-state) {
-  border: 1px solid rgba(126, 233, 255, 0.16);
+  border: 1px solid var(--surface-border);
   border-radius: 10px;
   padding: 9px 10px;
   background: rgba(2, 9, 10, 0.42);
 }
 
 .teacher-content-review-note {
-  border-color: rgba(255, 207, 102, 0.24);
+  border-color: rgba(255, 209, 102, 0.34);
   background: rgba(255, 207, 102, 0.055);
 }
 
 .teacher-content-review-note.warning {
-  border-color: rgba(126, 233, 255, 0.28);
-  background: rgba(126, 233, 255, 0.06);
+  border-color: rgba(255, 209, 102, 0.48);
+  background: rgba(255, 209, 102, 0.08);
+  box-shadow: var(--glow-warning);
 }
 
 .teacher-content-review-note p,
@@ -318,31 +323,31 @@
 }
 
 .teacher-content-handoff {
-  border-color: rgba(102, 247, 209, 0.28);
-  background:
-    linear-gradient(180deg, rgba(102, 247, 209, 0.1), rgba(102, 247, 209, 0.045));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 22px rgba(102, 247, 209, 0.08);
+  border-color: rgba(102, 247, 209, 0.2);
+  background: linear-gradient(180deg, rgba(102, 247, 209, 0.07), rgba(102, 247, 209, 0.035));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .teacher-content-source-match {
-  border-color: rgba(102, 247, 209, 0.2);
+  border-color: var(--surface-border);
   background:
-    radial-gradient(circle at 0% 0%, rgba(102, 247, 209, 0.1), transparent 34%),
+    radial-gradient(circle at 0% 0%, rgba(102, 247, 209, 0.05), transparent 34%),
     rgba(255, 255, 255, 0.035);
 }
 
 .teacher-content-source-match.blocked {
-  border-color: rgba(126, 233, 255, 0.3);
+  border-color: rgba(255, 209, 102, 0.38);
   background:
-    radial-gradient(circle at 0% 0%, rgba(126, 233, 255, 0.12), transparent 34%),
-    rgba(126, 233, 255, 0.055);
+    radial-gradient(circle at 0% 0%, rgba(255, 209, 102, 0.1), transparent 34%),
+    rgba(255, 209, 102, 0.055);
+  box-shadow: var(--glow-warning);
 }
 
 .teacher-content-upload-progress {
   position: relative;
   display: grid;
   gap: 8px;
-  border-color: rgba(126, 233, 255, 0.22);
+  border-color: rgba(126, 233, 255, 0.18);
   background: rgba(126, 233, 255, 0.055);
 }
 
@@ -352,8 +357,9 @@
 }
 
 .teacher-content-upload-progress.error {
-  border-color: rgba(126, 233, 255, 0.28);
-  background: rgba(126, 233, 255, 0.07);
+  border-color: rgba(255, 209, 102, 0.4);
+  background: rgba(255, 209, 102, 0.07);
+  box-shadow: var(--glow-warning);
 }
 
 .teacher-content-upload-progress small {
@@ -386,10 +392,10 @@
 }
 
 .teacher-content-progress-error-panel {
-  border: 1px solid rgba(126, 233, 255, 0.24);
+  border: 1px solid rgba(255, 209, 102, 0.38);
   border-radius: 8px;
   padding: 12px;
-  background: rgba(126, 233, 255, 0.055);
+  background: rgba(255, 209, 102, 0.06);
   display: grid;
   gap: 8px;
 }
@@ -424,7 +430,7 @@
   cursor: pointer;
   font-size: 0.78rem;
   font-weight: 900;
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -460,8 +466,9 @@
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
-  border-color: rgba(102, 247, 209, 0.24);
+  border-color: rgba(102, 247, 209, 0.36);
   background: rgba(102, 247, 209, 0.055);
+  box-shadow: var(--glow-active);
 }
 
 .teacher-content-selected-draft span,
@@ -478,7 +485,7 @@
   color: #cafff0;
   font-size: 0.7rem;
   font-weight: 900;
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -495,7 +502,7 @@
 }
 
 .teacher-content-selected-draft-meta span {
-  border: 1px solid rgba(102, 247, 209, 0.14);
+  border: 1px solid var(--surface-border);
   border-radius: 999px;
   padding: 6px 9px;
   background: rgba(2, 9, 10, 0.46);
@@ -504,8 +511,8 @@
 }
 
 .teacher-content-review-progress {
-  border-color: rgba(102, 247, 209, 0.18);
-  background: rgba(255, 255, 255, 0.035);
+  border-color: var(--surface-border);
+  background: var(--surface-soft);
 }
 
 .teacher-content-progress-head {
@@ -526,7 +533,7 @@
   height: 100%;
   border-radius: inherit;
   background: var(--neon);
-  box-shadow: 0 0 16px rgba(102, 247, 209, 0.4);
+  box-shadow: 0 0 12px rgba(102, 247, 209, 0.24);
 }
 
 .teacher-content-count-strip,
@@ -539,7 +546,7 @@
 .teacher-content-count-pill,
 .teacher-content-chip-list span {
   min-width: 92px;
-  border: 1px solid rgba(102, 247, 209, 0.14);
+  border: 1px solid var(--surface-border);
   border-radius: 10px;
   padding: 8px 10px;
   color: #effff8;
@@ -555,7 +562,7 @@
 .teacher-content-standards-tools {
   grid-template-columns: minmax(170px, 1fr) auto minmax(170px, 1fr) repeat(4, auto);
   align-items: end;
-  border-color: rgba(126, 233, 255, 0.16);
+  border-color: var(--surface-border);
   background: rgba(126, 233, 255, 0.045);
 }
 
@@ -564,7 +571,7 @@
   grid-template-columns: minmax(220px, 1.25fr) minmax(150px, 0.7fr) minmax(150px, 0.7fr) minmax(190px, 0.8fr);
   gap: 12px;
   align-items: end;
-  border: 1px solid rgba(102, 247, 209, 0.16);
+  border: 1px solid var(--surface-border);
   border-radius: 16px;
   padding: 12px;
   background: rgba(2, 9, 10, 0.36);
@@ -574,8 +581,9 @@
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
   align-items: center;
-  border-color: rgba(102, 247, 209, 0.22);
+  border-color: rgba(102, 247, 209, 0.36);
   background: rgba(102, 247, 209, 0.055);
+  box-shadow: var(--glow-active);
 }
 
 .teacher-content-selected-bank span,
@@ -588,7 +596,7 @@
   color: #cafff0;
   font-size: 0.7rem;
   font-weight: 900;
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -611,7 +619,7 @@
 }
 
 .teacher-content-selected-bank-meta span {
-  border: 1px solid rgba(102, 247, 209, 0.14);
+  border: 1px solid var(--surface-border);
   border-radius: 999px;
   padding: 6px 9px;
   background: rgba(2, 9, 10, 0.46);
@@ -631,7 +639,7 @@
   color: #cafff0;
   font-size: 0.7rem;
   font-weight: 900;
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -644,7 +652,7 @@
 .teacher-content-standards-field input {
   width: 100%;
   min-height: 34px;
-  border: 1px solid rgba(102, 247, 209, 0.22);
+  border: 1px solid var(--surface-border-strong);
   border-radius: 10px;
   padding: 0 10px;
   color: #effff8;
@@ -667,16 +675,16 @@
 
 .teacher-content-standard-card {
   gap: 10px;
-  border-color: rgba(102, 247, 209, 0.16);
-  background:
-    linear-gradient(180deg, rgba(102, 247, 209, 0.055), rgba(255, 255, 255, 0.035));
+  border-color: var(--surface-border);
+  background: var(--surface-soft);
 }
 
 .teacher-content-standard-card.selected,
 .teacher-content-standard-card:focus {
   outline: 2px solid rgba(126, 233, 255, 0.36);
   outline-offset: 2px;
-  border-color: rgba(126, 233, 255, 0.42);
+  border-color: rgba(102, 247, 209, 0.5);
+  box-shadow: var(--glow-active);
 }
 
 .teacher-content-standard-head {
@@ -708,7 +716,7 @@
 .teacher-content-standard-meta span,
 .teacher-content-standard-chips strong,
 .teacher-content-standard-chips em {
-  border: 1px solid rgba(102, 247, 209, 0.14);
+  border: 1px solid var(--surface-border);
   border-radius: 999px;
   padding: 5px 8px;
   background: rgba(2, 9, 10, 0.44);
@@ -741,4 +749,3 @@
   background: rgba(215, 239, 240, 0.055);
   color: #d8eee9;
 }
-
