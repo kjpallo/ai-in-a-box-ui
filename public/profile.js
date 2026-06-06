@@ -12,6 +12,7 @@
   let showingReviewQuestions = false;
   let studentSessionRefreshTimer = null;
   let loadingStudentControls = false;
+  const QUESTIONS_STANDARDS_EXPORT_ENDPOINT = '/api/profile/questions-standards/export.csv';
 
   function byId(id) {
     return document.getElementById(id);
@@ -1321,36 +1322,34 @@
     textarea.remove();
   }
 
-  function exportReportCsv() {
-    const rows = getFilteredReportQuestions();
-    if (!rows.length) {
-      setText('reportExportStatus', 'No rows are available to export for this filter.');
-      return;
-    }
+  async function exportReportCsv() {
+    const exportButton = byId('reportExportCsv');
+    const selectedDate = selectedReportDate();
 
-    const csvRows = [
-      ['Time/date', 'Question', 'Topic', 'Standard'],
-      ...rows.map((item) => {
-        const timeParts = formatQuestionTimeParts(item);
-        return [
-          [timeParts.date, timeParts.time].filter(Boolean).join(' '),
-          item.question || '',
-          titleCaseLabel(item.topic || 'other') || 'Other',
-          formatQuestionStandards(item)
-        ];
-      })
-    ];
-    const csv = csvRows.map((row) => row.map(csvCell).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `questions-standards-${currentDate || todayKey()}-${reportQuestionFilter}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-    setText('reportExportStatus', `CSV exported for ${rows.length} row${rows.length === 1 ? '' : 's'}.`);
+    if (exportButton) exportButton.disabled = true;
+    setText('reportExportStatus', 'Exporting CSV from the server...');
+
+    try {
+      const response = await fetch(buildQuestionsStandardsExportUrl(selectedDate), { cache: 'no-store' });
+      if (!response.ok) {
+        throw new Error(await readExportError(response));
+      }
+
+      const blob = await response.blob();
+      const filename = filenameFromContentDisposition(response.headers.get('Content-Disposition'))
+        || `questions-standards-history-${selectedDate}.csv`;
+      const exportId = response.headers.get('X-Export-Id');
+
+      downloadBlob(blob, filename);
+      setText(
+        'reportExportStatus',
+        exportId ? 'CSV exported. Export ID saved for retention.' : 'CSV exported from the server.'
+      );
+    } catch (error) {
+      setText('reportExportStatus', error.message || 'Could not export CSV from the server. No retention export was saved.');
+    } finally {
+      if (exportButton) exportButton.disabled = currentQuestions.length === 0;
+    }
   }
 
   function printReport() {
@@ -1386,8 +1385,57 @@
     }
   }
 
-  function csvCell(value) {
-    return `"${String(value ?? '').replaceAll('"', '""')}"`;
+  function selectedReportDate() {
+    return firstDateKey(byId('reportDateSelect')?.value, currentDate, todayKey());
+  }
+
+  function buildQuestionsStandardsExportUrl(selectedDate) {
+    const params = new URLSearchParams();
+    params.set('date', selectedDate || todayKey());
+    return `${QUESTIONS_STANDARDS_EXPORT_ENDPOINT}?${params.toString()}`;
+  }
+
+  async function readExportError(response) {
+    try {
+      const contentType = response.headers.get('Content-Type') || '';
+      if (contentType.includes('application/json')) {
+        const data = await response.json();
+        return data?.error || 'Could not export CSV from the server. No retention export was saved.';
+      }
+      const text = await response.text();
+      return text.trim() || 'Could not export CSV from the server. No retention export was saved.';
+    } catch {
+      return 'Could not export CSV from the server. No retention export was saved.';
+    }
+  }
+
+  function filenameFromContentDisposition(value) {
+    const header = String(value || '');
+    const utf8Match = header.match(/filename\*=UTF-8''([^;]+)/i);
+    if (utf8Match) return decodeSafeFilename(utf8Match[1]);
+    const quotedMatch = header.match(/filename="([^"]+)"/i);
+    if (quotedMatch) return quotedMatch[1];
+    const plainMatch = header.match(/filename=([^;]+)/i);
+    return plainMatch ? plainMatch[1].trim() : '';
+  }
+
+  function decodeSafeFilename(value) {
+    try {
+      return decodeURIComponent(value);
+    } catch {
+      return String(value || '');
+    }
+  }
+
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
   }
 
   function initialsForTeacher(teacher) {
