@@ -7,6 +7,7 @@
   let currentStandardsSummary = null;
   let currentQuestions = [];
   let reportQuestionFilter = 'all';
+  let availableActivityDates = [];
   const standardDetailsCache = new Map();
   let showingReviewQuestions = false;
   let studentSessionRefreshTimer = null;
@@ -125,6 +126,19 @@
     if (guidedFormulaTutor) guidedFormulaTutor.checked = controls?.studentGuidedFormulaTutoringEnabled !== false;
     if (rateLimit) rateLimit.checked = controls?.studentQuestionRateLimitEnabled !== false;
     if (perMinute) perMinute.value = String(Number(controls?.studentQuestionsPerMinute) || 6);
+    updateQuestionSpeedSummary();
+  }
+
+  function updateQuestionSpeedSummary() {
+    const enabled = byId('studentQuestionRateLimitEnabled')?.checked;
+    const perMinute = Number(byId('studentQuestionsPerMinute')?.value || 6) || 6;
+    setText('liveQuestionSpeedValue', enabled ? `${perMinute}/min` : 'Open');
+    setText(
+      'liveQuestionSpeedHint',
+      enabled
+        ? `Up to ${perMinute}/min.`
+        : 'No limit.'
+    );
   }
 
   async function saveStudentControls() {
@@ -137,7 +151,7 @@
     const questionsPerMinute = Number(perMinute?.value || 6);
 
     if (!Number.isInteger(questionsPerMinute) || questionsPerMinute < 1 || questionsPerMinute > 30) {
-      setText('studentControlsStatus', 'Questions per minute must be from 1 to 30.');
+      setText('studentControlsStatus', 'Question limit must be from 1 to 30.');
       return;
     }
 
@@ -171,24 +185,24 @@
     try {
       const data = await fetchJson('/api/profile/dates');
       const dates = Array.isArray(data.dates) ? data.dates.filter(Boolean) : [];
-      const selectedDate = preferredDate || select.value || currentDate || data.defaultDate || todayKey();
-      currentDate = dates.includes(selectedDate) ? selectedDate : dates[0] || data.defaultDate || selectedDate;
+      availableActivityDates = dates;
+      const selectedDate = firstDateKey(preferredDate, select.value, currentDate, data.defaultDate, todayKey());
+      currentDate = selectedDate || todayKey();
+      const optionDates = dates.includes(currentDate) ? dates : [currentDate, ...dates];
 
-      select.innerHTML = dates.length
-        ? dates.map((date) => `<option value="${escapeAttr(date)}">${escapeHtml(date)}</option>`).join('')
+      select.innerHTML = optionDates.length
+        ? optionDates.map((date) => `<option value="${escapeAttr(date)}">${escapeHtml(date === todayKey() ? 'Today' : date)}</option>`).join('')
         : `<option value="${escapeAttr(currentDate)}">${escapeHtml(currentDate)}</option>`;
       select.value = currentDate;
       select.disabled = false;
-      syncReportDateSelect(dates, currentDate);
+      syncReportDateSelect(optionDates, currentDate);
 
-      setText(
-        'profileDateStatus',
-        dates.length ? `${dates.length} activity date${dates.length === 1 ? '' : 's'} loaded.` : 'No activity dates loaded yet.'
-      );
+      setLiveDateStatus(currentDate, null);
 
       await loadSummary(currentDate);
     } catch (error) {
       currentDate = todayKey();
+      availableActivityDates = [currentDate];
       select.innerHTML = `<option value="${escapeAttr(currentDate)}">${escapeHtml(currentDate)}</option>`;
       select.value = currentDate;
       select.disabled = false;
@@ -238,42 +252,36 @@
     const total = Number(data?.totalQuestions || 0);
     const questions = Array.isArray(data?.questions) ? data.questions : [];
     const topics = Array.isArray(data?.topics) ? data.topics : [];
-    const noMatchCount = questions.filter(isNoMatchQuestion).length;
     const reviewCount = questions.filter(questionNeedsReview).length;
     const matchedToStandards = countQuestionsWithStandards(questions);
     const topTopic = topics[0]?.topic ? titleCaseLabel(topics[0].topic) : '-';
     const untaggedQuestions = Math.max(0, total - currentStandardsTagged);
+    const selectedDate = data.date || currentDate || todayKey();
+    currentDate = selectedDate;
 
-    setText('profileTotalQuestions', total);
+    setText('liveStatusValue', total ? 'Active' : 'Ready');
+    setText('profileTotalQuestions', `${total} question${total === 1 ? '' : 's'} ${selectedDate === todayKey() ? 'today' : 'on this date'}`);
     setText('reportQuestionsAskedValue', total);
-    setText('profileNeedsReviewValue', noMatchCount);
-    setText('profileTopTopicValue', topTopic);
+    setText('profileNeedsReviewValue', reviewCount);
     setText('profileStandardsTaggedValue', currentStandardsTagged);
-    setText('liveStandardsTaggedValue', currentStandardsTagged);
     setText('reportStandardsTaggedValue', currentStandardsTagged || matchedToStandards);
     setText('reportUntaggedQuestionsValue', untaggedQuestions);
     setText('reportTopTopicValue', topTopic);
     setText('reportNeedsReviewValue', reviewCount);
-    setText('reportDateRangeValue', data.date || currentDate || todayKey());
-    setAttentionCount('profileNeedsReviewValue', noMatchCount);
+    setText('reportDateRangeValue', selectedDate);
+    setAttentionCount('profileNeedsReviewValue', reviewCount);
     setAttentionCount('reportNeedsReviewValue', reviewCount);
-    setText(
-      'profileNoMatchAttention',
-      `${noMatchCount} no-match question${noMatchCount === 1 ? '' : 's'} need${noMatchCount === 1 ? 's' : ''} review`
-    );
-    setText(
-      'profileMissingStandardsAttention',
-      `${Math.max(0, total - currentStandardsTagged)} question${Math.max(0, total - currentStandardsTagged) === 1 ? '' : 's'} missing standards tags`
-    );
-    setText('profileCommonTopicAttention', `Most common topic: ${topTopic === '-' ? 'none yet' : topTopic.toLowerCase()}`);
+    updateLiveAttentionState(reviewCount);
+    renderLiveAttentionActions(questions);
+    setLiveDateStatus(selectedDate, total);
     setText(
       'profileSummaryStatus',
-      total ? `Showing activity for ${data.date || currentDate}.` : 'No question activity loaded yet.'
+      total ? `Live activity for ${selectedDate}.` : 'No question activity loaded yet.'
     );
     setText(
       'profileDailySummaryText',
       total
-        ? `${total} question${total === 1 ? '' : 's'} on ${data.date || currentDate}; top topic is ${topTopic === '-' ? 'none yet' : topTopic}.`
+        ? `${total} question${total === 1 ? '' : 's'} on ${selectedDate}; top topic is ${topTopic === '-' ? 'none yet' : topTopic}.`
         : 'No question activity was logged for this date yet.'
     );
 
@@ -286,12 +294,11 @@
   }
 
   function renderSummaryError(message) {
-    setText('profileTotalQuestions', 0);
+    setText('liveStatusValue', 'Offline');
+    setText('profileTotalQuestions', '0 questions today');
     setText('reportQuestionsAskedValue', 0);
     setText('profileNeedsReviewValue', 0);
-    setText('profileTopTopicValue', '-');
     setText('profileStandardsTaggedValue', currentStandardsTagged);
-    setText('liveStandardsTaggedValue', currentStandardsTagged);
     setText('reportStandardsTaggedValue', currentStandardsTagged);
     setText('reportUntaggedQuestionsValue', 0);
     setText('reportTopTopicValue', '-');
@@ -299,9 +306,9 @@
     setText('reportDateRangeValue', currentDate || todayKey());
     setAttentionCount('profileNeedsReviewValue', 0);
     setAttentionCount('reportNeedsReviewValue', 0);
-    setText('profileNoMatchAttention', '0 no-match questions need review');
-    setText('profileMissingStandardsAttention', '0 questions missing standards tags');
-    setText('profileCommonTopicAttention', 'Most common topic: none yet');
+    updateLiveAttentionState(0);
+    renderLiveAttentionActions([]);
+    setLiveDateStatus(currentDate || todayKey(), 0);
     setText('profileSummaryStatus', message);
     setText('profileDailySummaryText', message);
     currentQuestions = [];
@@ -336,19 +343,13 @@
       generatedLabel === 'Not available' ? 'Standards report loaded.' : `Generated ${generatedLabel}.`
     );
     setText('profileStandardsTaggedValue', tagged);
-    setText('liveStandardsTaggedValue', tagged);
     setText('reportStandardsTaggedValue', tagged);
     setText('reportUntaggedQuestionsValue', safeSummary.untaggedQuestions);
     setText('reportDateRangeValue', currentDate || byId('reportDateSelect')?.value || todayKey());
     updateTeacherReportSummary();
     const coverageDonut = byId('standardsCoverageDonut');
     if (coverageDonut) coverageDonut.style.setProperty('--coverage-percent', String(Math.max(0, Math.min(100, percentTagged))));
-    const liveTotal = Number(byId('profileTotalQuestions')?.textContent || 0);
-    const missingLiveStandards = Math.max(0, liveTotal - tagged);
-    setText(
-      'profileMissingStandardsAttention',
-      `${missingLiveStandards} question${missingLiveStandards === 1 ? '' : 's'} missing standards tags`
-    );
+    renderLiveAttentionActions(currentQuestions);
 
     renderStandardsReportEmptyState(safeSummary);
     renderStandardsRows(safeSummary.standards, safeSummary.concepts, safeSummary.taggedQuestions);
@@ -523,22 +524,35 @@
     if (!rows) return;
 
     if (!questions.length) {
-      rows.innerHTML = `<p class="profile-empty-state" role="row">${
+      rows.innerHTML = `<p class="profile-empty-state">${
         showingReviewQuestions ? 'No review-needed questions found for this date.' : 'No question activity loaded yet.'
       }</p>`;
       renderReportQuestionRows(getFilteredReportQuestions());
       return;
     }
 
-    rows.innerHTML = questions.map((item) => `
-      <div class="profile-table-row ${isNoMatchQuestion(item) ? 'needs-review-row' : ''}" role="row">
-        <span role="cell">${escapeHtml(item.time || '')}</span>
-        <span role="cell">${escapeHtml(titleCaseLabel(item.topic || 'other'))}</span>
-        <span role="cell" title="${escapeAttr(item.question || '')}">${escapeHtml(truncate(item.question, 130))}</span>
-        <span role="cell"><span class="live-status-pill ${isNoMatchQuestion(item) ? 'no-match' : 'matched'}">${escapeHtml(statusLabel(item))}</span></span>
-        <span role="cell"><span class="live-confidence-pill ${confidenceClass(item.confidence)}">${escapeHtml(confidenceLabel(item.confidence))}</span></span>
-      </div>
-    `).join('');
+    rows.innerHTML = questions.map((item) => {
+      const review = reviewStatusForQuestion(item);
+      const timeParts = formatQuestionTimeParts(item);
+      const topic = titleCaseLabel(item.topic || 'other') || 'Other';
+      const source = liveSourceLabel(item, topic);
+      return `
+      <article class="live-feed-item ${review.needsReview ? 'needs-review-row' : ''}">
+        <div class="live-feed-meta">
+          <time datetime="${escapeAttr(item.timestamp || '')}" title="${escapeAttr([timeParts.date, timeParts.time].filter(Boolean).join(' '))}">
+            ${escapeHtml(timeParts.time || item.time || 'Now')}
+          </time>
+          <span>${escapeHtml(source)}</span>
+        </div>
+        <p title="${escapeAttr(item.question || '')}">${escapeHtml(item.question || 'No question text')}</p>
+        <div class="live-feed-state">
+          <span class="live-status-pill ${review.needsReview ? 'no-match' : 'matched'}">${escapeHtml(review.label)}</span>
+          <span class="live-confidence-pill ${escapeAttr(confidenceClass(questionConfidence(item)))}">${escapeHtml(confidenceLabel(questionConfidence(item)))}</span>
+          ${review.needsReview ? '<button type="button" class="small-button secondary-small live-review-button" data-live-review-action>Review</button>' : ''}
+        </div>
+      </article>
+    `;
+    }).join('');
     renderReportQuestionRows(getFilteredReportQuestions());
   }
 
@@ -594,7 +608,7 @@
   }
 
   function reviewQuestions() {
-    const reviewQuestions = currentQuestions.filter(isNoMatchQuestion);
+    const reviewQuestions = currentQuestions.filter(questionNeedsReview);
     const table = byId('profileQuestionRows');
 
     showingReviewQuestions = true;
@@ -603,7 +617,7 @@
     if (reviewQuestions.length) {
       setText(
         'profileSummaryStatus',
-        `Showing ${reviewQuestions.length} no-match question${reviewQuestions.length === 1 ? '' : 's'} that need review.`
+        `Showing ${reviewQuestions.length} question${reviewQuestions.length === 1 ? '' : 's'} that need teacher review.`
       );
       updateTeacherReportSummary();
       table?.closest('.recent-questions-card')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -678,6 +692,7 @@
     byId('profileDateSelect')?.addEventListener('change', async (event) => {
       syncDateSelectValue(event.target.value);
       await loadSummary(event.target.value);
+      await loadStudentSessions();
       await loadStandardsSummaryReport();
     });
 
@@ -688,8 +703,16 @@
     });
 
     byId('profileRefreshSummary')?.addEventListener('click', async () => {
+      const selectedDate = byId('profileDateSelect')?.value || currentDate || todayKey();
       await loadProfileStatus();
-      await loadDates(byId('profileDateSelect')?.value || currentDate);
+      await loadDates(selectedDate);
+      await loadStudentSessions();
+      await loadStandardsSummaryReport();
+    });
+
+    byId('profileTodaySummary')?.addEventListener('click', async () => {
+      syncDateSelectValue(todayKey());
+      await loadDates(todayKey());
       await loadStudentSessions();
       await loadStandardsSummaryReport();
     });
@@ -833,6 +856,15 @@
     byId('studentGuidedFormulaTutoringEnabled')?.addEventListener('change', saveStudentControls);
     byId('studentQuestionRateLimitEnabled')?.addEventListener('change', saveStudentControls);
     byId('studentQuestionsPerMinute')?.addEventListener('change', saveStudentControls);
+    byId('studentQuestionsPerMinute')?.addEventListener('input', updateQuestionSpeedSummary);
+    byId('profileQuestionRows')?.addEventListener('click', (event) => {
+      if (!event.target.closest('[data-live-review-action]')) return;
+      reviewQuestions();
+    });
+    byId('liveAttentionActions')?.addEventListener('click', (event) => {
+      if (!event.target.closest('[data-live-review-action]')) return;
+      reviewQuestions();
+    });
   }
 
   async function init() {
@@ -894,27 +926,163 @@
     currentStudentUrl = studentUrl;
     const panel = byId('profileStudentLinkPanel');
     const link = byId('profileStudentUrl');
+    const details = byId('profileStudentUrlDetails');
 
     if (panel) panel.hidden = !studentUrl;
     if (link) {
-      link.textContent = studentUrl || '';
+      link.textContent = studentUrl ? 'Open Classroom View' : '';
       link.href = studentUrl || '#';
     }
+    if (details) details.textContent = studentUrl || '';
 
     setText(
       'profileStudentLinkStatus',
-      studentUrl ? 'Class link ready. Copy and share this one link with students.' : 'No class link created yet.'
+      studentUrl ? 'Class link ready.' : 'No class link created yet.'
     );
+  }
+
+  function setLiveDateStatus(date, questionCount) {
+    const selectedDate = date || currentDate || todayKey();
+    const isToday = selectedDate === todayKey();
+    const dateLabel = isToday ? 'today' : selectedDate;
+    const hasCount = Number.isFinite(Number(questionCount));
+    const questionTotal = Math.max(0, Number(questionCount || 0));
+    const questionText = hasCount
+      ? `${questionTotal} question${questionTotal === 1 ? '' : 's'} ${isToday ? 'so far' : 'logged'}`
+      : 'Loading questions';
+    const otherDates = availableActivityDates.filter((activityDate) => activityDate && activityDate !== selectedDate).length;
+    const dateHint = otherDates ? ` ${otherDates} other day${otherDates === 1 ? '' : 's'} in the date menu.` : '';
+
+    setText('profileDateStatus', `Viewing ${dateLabel}. ${questionText}.${dateHint}`);
+  }
+
+  function updateLiveAttentionState(reviewCount) {
+    const count = Number(reviewCount || 0);
+    const card = byId('liveAttentionSuccess')?.closest('[data-live-attention-card]');
+    const success = byId('liveAttentionSuccess');
+    const actions = byId('liveAttentionActions');
+    const reviewButton = byId('profileReviewQuestions');
+
+    if (card) card.classList.toggle('has-attention', count > 0);
+    if (success) success.hidden = count > 0;
+    if (actions) actions.hidden = count === 0;
+    if (reviewButton) reviewButton.disabled = count === 0;
+    setText(
+      'liveAttentionHint',
+      count ? `${count} item${count === 1 ? '' : 's'} queued for teacher review.` : 'No teacher action queued.'
+    );
+  }
+
+  function renderLiveAttentionActions(questions) {
+    const actions = byId('liveAttentionActions');
+    if (!actions) return;
+
+    const reviewItems = (Array.isArray(questions) ? questions : [])
+      .filter(questionNeedsReview)
+      .slice(-4)
+      .reverse();
+
+    if (!reviewItems.length) {
+      actions.innerHTML = '';
+      return;
+    }
+
+    const totalReviewItems = (Array.isArray(questions) ? questions : []).filter(questionNeedsReview).length;
+    const extraCount = Math.max(0, totalReviewItems - reviewItems.length);
+    const extraCard = extraCount
+      ? `
+        <article class="live-attention-action-card live-attention-more-card">
+          <div class="live-attention-action-copy">
+            <strong>${extraCount} more item${extraCount === 1 ? '' : 's'} need attention</strong>
+            <p>Use Review Feed to scan every question that needs a teacher decision.</p>
+          </div>
+          <button type="button" class="small-button secondary-small" data-live-review-action>Review Feed</button>
+        </article>
+      `
+      : '';
+
+    actions.innerHTML = reviewItems.map(renderLiveAttentionActionCard).join('') + extraCard;
+  }
+
+  function renderLiveAttentionActionCard(item) {
+    const reason = attentionReasonForQuestion(item);
+    const timeParts = formatQuestionTimeParts(item);
+    const answer = firstText(item?.answerGiven, item?.answer, item?.response, item?.responsePreview);
+    const actionLabel = reason.actionLabel || 'Review';
+
+    return `
+      <article class="live-attention-action-card">
+        <div class="live-attention-action-copy">
+          <div class="live-attention-action-topline">
+            <span>${escapeHtml(reason.title)}</span>
+            <time datetime="${escapeAttr(item?.timestamp || '')}">${escapeHtml(timeParts.time || 'Now')}</time>
+          </div>
+          <strong>${escapeHtml(reason.whatHappened)}</strong>
+          <dl>
+            <div>
+              <dt>Student question</dt>
+              <dd>${escapeHtml(truncate(firstText(item?.question, item?.studentQuestion, item?.message) || 'No question text logged.', 180))}</dd>
+            </div>
+            <div>
+              <dt>Charlemagne answer</dt>
+              <dd>${escapeHtml(answer ? truncate(answer, 180) : 'No answer was logged for this item.')}</dd>
+            </div>
+            <div>
+              <dt>Why it needs attention</dt>
+              <dd>${escapeHtml(reason.why)}</dd>
+            </div>
+          </dl>
+        </div>
+        <button type="button" class="small-button secondary-small" data-live-review-action>${escapeHtml(actionLabel)}</button>
+      </article>
+    `;
+  }
+
+  function attentionReasonForQuestion(item) {
+    if (isNoMatchQuestion(item)) {
+      return {
+        title: 'No trusted answer',
+        whatHappened: 'Charlemagne could not confidently route this question.',
+        why: 'The student may need a teacher answer or a new knowledge entry.',
+        actionLabel: 'Review'
+      };
+    }
+
+    if (!hasQuestionStandard(item)) {
+      return {
+        title: 'Missing standard',
+        whatHappened: 'The question was answered, but no standard is attached.',
+        why: 'Add or confirm a standard before using this in reports.',
+        actionLabel: 'Review'
+      };
+    }
+
+    if (String(item?.standardsError || '').trim()) {
+      return {
+        title: 'Standards check failed',
+        whatHappened: 'The answer was logged, but standards matching had a problem.',
+        why: firstText(item?.standardsError) || 'The standards match needs teacher review.',
+        actionLabel: 'Review'
+      };
+    }
+
+    const confidence = confidenceLabel(questionConfidence(item)).toLowerCase();
+    return {
+      title: 'Check answer',
+      whatHappened: 'Charlemagne answered with a weak or unclear match.',
+      why: `The confidence is ${confidence}, so verify the student got the right help.`,
+      actionLabel: 'Review'
+    };
   }
 
   async function loadStudentSessions() {
     if (!byId('profileStudentSessions')) return;
 
     try {
-      const data = await fetchJson('/api/profile/student-sessions');
+      const data = await fetchJson('/api/profile/live-student-activity');
       renderStudentSessions(Array.isArray(data.sessions) ? data.sessions : []);
     } catch {
-      renderStudentSessions([], 'Could not load active student sessions.');
+      renderStudentSessions([], 'Could not load live activity. Try Refresh.');
     }
   }
 
@@ -930,57 +1098,204 @@
 
   function renderStudentSessions(sessions, errorMessage = '') {
     const rows = byId('profileStudentSessions');
+    const grid = byId('liveStudentGrid');
     if (!rows) return;
 
     if (errorMessage) {
       setText('profileStudentSessionCount', 'Unavailable');
+      setText('liveStudentConnectionValue', 'Unavailable');
+      setText('liveStudentConnectionHint', 'Could not check students.');
+      setText('liveStudentsUpdatedAt', 'Could not load live activity.');
+      setText('profileSummaryStatus', 'Could not load live activity. Try Refresh.');
+      setText('liveStatusValue', 'Offline');
       rows.innerHTML = `<p class="profile-empty-state">${escapeHtml(errorMessage)}</p>`;
+      if (grid) grid.innerHTML = `<p class="profile-empty-state">${escapeHtml(errorMessage)}</p>`;
       return;
     }
 
+    const latestSession = sessions[0] || {};
+    const latestStudentUrl = latestSession.studentUrl || '';
+    if (latestStudentUrl && !currentStudentUrl) renderStudentLink(latestStudentUrl);
+
+    const liveHubs = collectLiveStudentHubs(sessions);
+    const activeCount = liveHubs.filter((item) => item.hub.active).length;
+    const totalStudents = liveHubs.length;
+    const alertCount = liveHubs.filter((item) => hasLiveAlert(item.hub)).length;
+    const questionCount = liveHubs.reduce((sum, item) => sum + toCount(item.hub.messageCount), 0);
+    const studentNoun = totalStudents === 1 ? 'student' : 'students';
+
     if (!sessions.length) {
       setText('profileStudentSessionCount', '0 active');
-      rows.innerHTML = '<p class="profile-empty-state">Create a class link to start anonymous student hubs.</p>';
+      setText('liveStudentConnectionValue', '0 active');
+      setText('liveStudentConnectionHint', 'Create a class link to begin.');
+      setText('liveStudentsUpdatedAt', 'Live activity loaded.');
+      setText('profileSummaryStatus', 'No students connected yet.');
+      setText('liveStatusValue', 'Ready');
+      rows.innerHTML = '<p class="profile-empty-state">Create a class link to connect students.</p>';
+      if (grid) {
+        grid.innerHTML = '<p class="profile-empty-state">No students connected yet. Create or share the student link to begin.</p>';
+      }
       if (!currentStudentUrl) renderStudentLink('');
       return;
     }
 
-    const activeSession = sessions[0] || {};
-    const studentUrl = activeSession.studentUrl || '';
-    if (studentUrl && !currentStudentUrl) renderStudentLink(studentUrl);
-
-    const hubs = Array.isArray(activeSession.anonymousHubs) ? activeSession.anonymousHubs : [];
-    const activeCount = Number(activeSession.activeAnonymousHubCount ?? hubs.length) || 0;
     setText('profileStudentSessionCount', `${activeCount} active`);
+    setText('liveStudentConnectionValue', `${activeCount} active`);
+    setText('liveStatusValue', activeCount > 0 ? 'Active' : 'Open');
+    setText('liveStudentsUpdatedAt', `Updated ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`);
+    setText(
+      'liveStudentConnectionHint',
+      totalStudents
+        ? `${totalStudents} ${studentNoun} connected${alertCount ? `, ${alertCount} with alerts` : ''}`
+        : 'Class link open, waiting for students'
+    );
+    setText(
+      'profileSummaryStatus',
+      totalStudents
+        ? `${totalStudents} ${studentNoun} live now. ${questionCount} question${questionCount === 1 ? '' : 's'} asked.`
+        : 'No students connected yet.'
+    );
 
-    if (!hubs.length) {
+    if (!liveHubs.length) {
       rows.innerHTML = `
         <div class="profile-student-session-row is-class-session">
           <div>
             <strong>Class link status</strong>
-            <span>Waiting for anonymous student hubs.</span>
+            <span>Waiting for students.</span>
           </div>
-          <time datetime="${escapeAttr(activeSession.createdAt || '')}">${escapeHtml(formatSessionTime(activeSession.createdAt))}</time>
+          <time datetime="${escapeAttr(latestSession.createdAt || '')}">${escapeHtml(formatSessionTime(latestSession.createdAt))}</time>
         </div>
       `;
+      if (grid) {
+        grid.innerHTML = '<p class="profile-empty-state">No students connected yet. Create or share the student link to begin.</p>';
+      }
       return;
     }
 
-    rows.innerHTML = hubs.slice(0, 3).map((hub, index) => `
+    if (grid) {
+      grid.innerHTML = liveHubs.map((item, index) => renderLiveStudentCard(item.hub, item.session, index)).join('');
+    }
+
+    rows.innerHTML = liveHubs.slice(0, 4).map(({ hub }, index) => `
       <div class="profile-student-session-row">
         <div>
-          <strong>${escapeHtml(hub.label || `Anonymous Student ${index + 1}`)}</strong>
+          <strong>${escapeHtml(hub.displayName || hub.label || `Anonymous Student ${index + 1}`)}</strong>
           <span>${escapeHtml(formatHubActivity(hub))}</span>
-          ${hub.studentHubId ? `
-            <details class="profile-student-debug">
-              <summary>Technical</summary>
-              <code>${escapeHtml(hub.studentHubId)}</code>
-            </details>
-          ` : ''}
         </div>
         <time datetime="${escapeAttr(hub.lastSeenAt || '')}">${escapeHtml(formatSessionTime(hub.lastSeenAt))}</time>
       </div>
     `).join('');
+  }
+
+  function collectLiveStudentHubs(sessions) {
+    return (Array.isArray(sessions) ? sessions : [])
+      .flatMap((session) => {
+        const hubs = Array.isArray(session?.anonymousHubs)
+          ? session.anonymousHubs
+          : Array.isArray(session?.students)
+            ? session.students
+            : [];
+        return hubs.map((hub) => ({ session, hub }));
+      })
+      .filter((item) => item.hub && typeof item.hub === 'object');
+  }
+
+  function renderLiveStudentCard(hub, session, index) {
+    const displayName = firstText(hub?.displayName, hub?.label) || `Anonymous Student ${index + 1}`;
+    const status = normalizeKey(hub?.status) === 'active' || hub?.active ? 'Active' : 'Idle';
+    const statusClass = status === 'Active' ? 'active' : 'idle';
+    const question = firstText(hub?.latestQuestion);
+    const response = firstText(hub?.latestResponse);
+    const topic = firstText(hub?.topic, hub?.source);
+    const source = firstText(hub?.source);
+    const topicSource = topic && source && normalizeKey(topic) !== normalizeKey(source)
+      ? `${topic} / ${titleCaseLabel(source) || source}`
+      : topic || source;
+    const questionsLeft = formatLiveQuestionsLeft(hub?.rateLimit);
+    const alertBadges = liveAlertLabels(hub);
+    const cardClass = [
+      'live-student-card',
+      `is-${statusClass}`,
+      alertBadges.length ? 'has-alerts' : ''
+    ].filter(Boolean).join(' ');
+
+    return `
+      <article class="${escapeAttr(cardClass)}">
+        <div class="live-student-card-head">
+          <div>
+            <strong>${escapeHtml(displayName)}</strong>
+            ${session?.className ? `<span>${escapeHtml(session.className)}</span>` : ''}
+          </div>
+          <span class="live-student-status-pill ${escapeAttr(statusClass)}">Status: ${escapeHtml(status)}</span>
+        </div>
+
+        ${alertBadges.length ? `
+          <div class="live-student-alerts" aria-label="Student alerts">
+            ${alertBadges.map((label) => `<span>${escapeHtml(label)}</span>`).join('')}
+          </div>
+        ` : ''}
+
+        <dl class="live-student-facts">
+          <div>
+            <dt>Last active</dt>
+            <dd>${escapeHtml(formatSessionTime(hub?.lastSeenAt))}</dd>
+          </div>
+          <div>
+            <dt>Asked</dt>
+            <dd>${escapeHtml(formatHubActivity(hub))}</dd>
+          </div>
+          ${questionsLeft ? `
+            <div>
+              <dt>Questions left</dt>
+              <dd>${escapeHtml(questionsLeft)}</dd>
+            </div>
+          ` : ''}
+          ${topicSource ? `
+            <div>
+              <dt>Topic</dt>
+              <dd>${escapeHtml(titleCaseLabel(topicSource) || topicSource)}</dd>
+            </div>
+          ` : ''}
+        </dl>
+
+        <div class="live-student-exchange">
+          <section>
+            <h5>Asked</h5>
+            <p>${escapeHtml(question ? truncate(question, 210) : 'No question yet.')}</p>
+          </section>
+          <section>
+            <h5>Charlemagne</h5>
+            <p>${escapeHtml(response ? truncate(response, 230) : 'No response yet.')}</p>
+          </section>
+        </div>
+      </article>
+    `;
+  }
+
+  function formatLiveQuestionsLeft(rateLimit) {
+    if (!rateLimit || typeof rateLimit !== 'object') return '';
+    if (rateLimit.enabled === false) return 'Open';
+
+    const remaining = Number(rateLimit.remainingWhole);
+    const max = Number(rateLimit.maxQuestionsPerMinute || rateLimit.max || rateLimit.limit);
+    if (!Number.isFinite(remaining) || !Number.isFinite(max) || max <= 0) return '';
+    return `${Math.max(0, Math.floor(remaining))}/${Math.floor(max)}`;
+  }
+
+  function hasLiveAlert(hub) {
+    return liveAlertLabels(hub).length > 0;
+  }
+
+  function liveAlertLabels(hub) {
+    const alerts = hub?.alerts && typeof hub.alerts === 'object' ? hub.alerts : {};
+    const labels = [];
+    if (alerts.outOfQuestions) labels.push('Out of questions');
+    if (alerts.noMatch) labels.push('No match');
+    if (alerts.lowConfidence) labels.push('Low confidence');
+    if (alerts.missingStandard) labels.push('Missing standard');
+    if (alerts.formulaTutorActive) labels.push('Formula tutor');
+    if (alerts.needsReview && !labels.length) labels.push('Needs review');
+    return labels;
   }
 
   function formatHubActivity(hub) {
@@ -1119,6 +1434,15 @@
     if (key === 'science formula') return 'science formula';
     if (key === 'no match') return 'no match';
     return key || 'other';
+  }
+
+  function liveSourceLabel(item, topic) {
+    const source = firstText(item?.sourceTitle, item?.sourceName, item?.source, item?.routeType, item?.type);
+    const topicText = String(topic || '').trim();
+    if (source && topicText && normalizeKey(source) !== normalizeKey(topicText)) {
+      return `${topicText} / ${titleCaseLabel(source) || source}`;
+    }
+    return topicText || titleCaseLabel(source) || 'Classroom';
   }
 
   function isNoMatchQuestion(item) {
@@ -1419,10 +1743,6 @@
     if (copyButton) copyButton.disabled = currentQuestions.length === 0;
   }
 
-  function statusLabel(item) {
-    return isNoMatchQuestion(item) ? 'No Match' : 'Matched';
-  }
-
   function confidenceLabel(value) {
     const confidence = normalizeKey(value);
     if (confidence === 'strong' || confidence === 'high') return 'Strong';
@@ -1562,6 +1882,15 @@
   function toCount(value) {
     const number = Number(value);
     return Number.isFinite(number) && number > 0 ? Math.floor(number) : 0;
+  }
+
+  function firstDateKey(...values) {
+    for (const value of values) {
+      const text = String(value || '').trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+      if (text.toLowerCase() === 'today') return todayKey();
+    }
+    return todayKey();
   }
 
   function todayKey() {

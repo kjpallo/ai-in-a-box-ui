@@ -123,52 +123,6 @@
                 </div>
               </dl>
             </section>
-
-            <section class="teacher-profile-card student-link-card">
-              <h4>Student Link</h4>
-              <p>Share one class link. Each student browser joins as an anonymous hub.</p>
-              <button type="button" id="profileCreateStudentLink" class="small-button">Create Student Link</button>
-              <div id="profileStudentLinkPanel" class="profile-student-link-panel" hidden>
-                <a id="profileStudentUrl" href="#" target="_blank" rel="noreferrer"></a>
-                <button type="button" id="profileCopyStudentLink" class="small-button secondary-small">Copy link</button>
-              </div>
-              <span id="profileStudentLinkStatus">No student link created yet.</span>
-              <div class="profile-student-session-list" aria-label="Active student sessions">
-                <div class="profile-student-session-head">
-                  <strong>Active anonymous hubs</strong>
-                  <span id="profileStudentSessionCount">0 active</span>
-                </div>
-                <div id="profileStudentSessions" class="profile-student-session-rows">
-                  <p class="profile-empty-state">No anonymous hubs yet.</p>
-                </div>
-              </div>
-            </section>
-
-            <section class="teacher-profile-card student-controls-card">
-              <h4>Student Controls</h4>
-              <p>This adds classroom friction. It does not replace school browser/device management.</p>
-              <p>Students can highlight text and use it as a reference instead of copying.</p>
-              <label class="profile-control-row">
-                <input type="checkbox" id="studentCopyInspectLockEnabled" />
-                <span>Lock copying and inspect shortcuts on student page</span>
-              </label>
-              <label class="profile-control-row">
-                <input type="checkbox" id="studentGuidedFormulaTutoringEnabled" />
-                <span>
-                  Guided Formula Tutor
-                  <small>When on, student formula questions are solved step-by-step instead of showing the final answer immediately.</small>
-                </span>
-              </label>
-              <label class="profile-control-row">
-                <input type="checkbox" id="studentQuestionRateLimitEnabled" />
-                <span>Limit student question speed</span>
-              </label>
-              <label class="profile-control-field" for="studentQuestionsPerMinute">
-                <span>Questions per minute</span>
-                <input type="number" id="studentQuestionsPerMinute" min="1" max="30" step="1" value="6" />
-              </label>
-              <span id="studentControlsStatus" class="profile-control-status">Loading student controls...</span>
-            </section>
           </div>
         </section>
       `
@@ -265,7 +219,7 @@
           <div class="live-activity-header">
             <div>
               <h3>Live Activity</h3>
-              <p>See what students are asking right now and what needs attention.</p>
+              <p>See which anonymous students are using Charlemagne now and what was just asked and answered.</p>
             </div>
             <div class="live-activity-controls">
               <label class="sr-only" for="profileDateSelect">Activity date</label>
@@ -273,76 +227,104 @@
                 <option>Today</option>
                 <option>No activity dates loaded yet</option>
               </select>
+              <button type="button" id="profileTodaySummary" class="small-button secondary-small">Today</button>
               <button type="button" id="profileRefreshSummary" class="small-button secondary-small">Refresh</button>
             </div>
           </div>
 
           <span id="profileDateStatus" class="live-activity-date-status">No activity dates loaded yet.</span>
 
-          <div class="live-summary-grid" aria-label="Live activity summary">
-            <section class="live-summary-card">
-              <span class="live-summary-icon" aria-hidden="true">?</span>
+          <div class="live-summary-grid" aria-label="Live classroom status">
+            <section class="live-summary-card live-summary-card-status">
+              <span class="live-summary-icon" aria-hidden="true">●</span>
               <div>
-                <span>Total questions</span>
-                <strong id="profileTotalQuestions">0</strong>
+                <span>Room status</span>
+                <strong id="liveStatusValue">Ready</strong>
+                <small><span id="profileTotalQuestions">0 questions today</span> · <span id="liveStudentConnectionHint">Class link not shared yet</span></small>
               </div>
             </section>
-            <section class="live-summary-card attention" data-needs-review-card>
-              <span class="live-summary-icon" aria-hidden="true">!</span>
+            <section class="live-summary-card live-summary-card-students">
+              <span class="live-summary-icon" aria-hidden="true">ID</span>
               <div>
-                <span>Needs review</span>
-                <strong id="profileNeedsReviewValue">0</strong>
-              </div>
-            </section>
-            <section class="live-summary-card">
-              <span class="live-summary-icon" aria-hidden="true">#</span>
-              <div>
-                <span>Top topic</span>
-                <strong id="profileTopTopicValue">-</strong>
-              </div>
-            </section>
-            <section class="live-summary-card">
-              <span class="live-summary-icon" aria-hidden="true">✓</span>
-              <div>
-                <span>Standards tagged</span>
-                <strong id="liveStandardsTaggedValue">0</strong>
+                <span>Students connected</span>
+                <strong id="liveStudentConnectionValue">0 active</strong>
+                <small id="liveStudentsUpdatedAt">Live activity not loaded yet.</small>
               </div>
             </section>
           </div>
 
-          <section class="live-attention-card" aria-label="Needs teacher attention">
-            <div class="live-attention-head">
-              <h4>Needs Teacher Attention</h4>
-              <button type="button" id="profileReviewQuestions" class="small-button secondary-small">Review Questions</button>
-            </div>
-            <div class="live-attention-list">
-              <p><span aria-hidden="true"></span><strong id="profileNoMatchAttention">0 no-match questions need review</strong></p>
-              <p><span aria-hidden="true"></span><strong id="profileMissingStandardsAttention">0 questions missing standards tags</strong></p>
-              <p><span aria-hidden="true"></span><strong id="profileCommonTopicAttention">Most common topic: none yet</strong></p>
-            </div>
-          </section>
+          <div class="live-activity-workspace">
+            <div class="live-activity-main-column">
+              <section class="live-students-card">
+                <div class="profile-section-head">
+                  <div>
+                    <h4>Students Live Now</h4>
+                    <span id="profileSummaryStatus">Loading live students...</span>
+                  </div>
+                </div>
 
-          <section class="recent-questions-card">
-            <div class="profile-section-head">
-              <div>
-                <h4>Recent Questions</h4>
-                <span id="profileSummaryStatus">No question activity loaded yet.</span>
-              </div>
+                <div id="liveStudentGrid" class="live-student-grid" aria-label="Students live now">
+                  <p class="profile-empty-state">Loading live students...</p>
+                </div>
+              </section>
             </div>
 
-            <div class="profile-table-shell live-question-table" role="table" aria-label="Recent question activity">
-              <div class="profile-table-head" role="row">
-                <span role="columnheader">Time</span>
-                <span role="columnheader">Topic</span>
-                <span role="columnheader">Question</span>
-                <span role="columnheader">Status</span>
-                <span role="columnheader">Confidence</span>
+            <aside class="live-classroom-controls-card" aria-label="Classroom controls">
+              <div class="live-classroom-head">
+                <div>
+                  <h4>Classroom Controls</h4>
+                  <p>Share the classroom link and tune live controls.</p>
+                </div>
+                <button type="button" id="liveLockTeacherModeButton" class="small-button secondary-small">Lock Teacher Mode</button>
               </div>
-              <div id="profileQuestionRows" class="profile-table-body">
-                <p class="profile-empty-state" role="row">No question activity loaded yet.</p>
+
+              <div class="live-student-link-row">
+                <button type="button" id="profileCreateStudentLink" class="small-button">Create Student Link</button>
+                <div id="profileStudentLinkPanel" class="profile-student-link-panel" hidden>
+                  <a id="profileStudentUrl" class="small-button profile-student-open-button" href="#" target="_blank" rel="noreferrer">Open Classroom View</a>
+                  <button type="button" id="profileCopyStudentLink" class="small-button secondary-small">Copy Student Link</button>
+                  <details class="profile-student-link-details">
+                    <summary>Show link details</summary>
+                    <code id="profileStudentUrlDetails"></code>
+                  </details>
+                </div>
+                <span id="profileStudentLinkStatus">No student link created yet.</span>
               </div>
-            </div>
-          </section>
+
+              <div class="profile-student-session-list" aria-label="Active student sessions">
+                <div class="profile-student-session-head">
+                  <strong>Connected students</strong>
+                  <span id="profileStudentSessionCount">0 active</span>
+                </div>
+                <div id="profileStudentSessions" class="profile-student-session-rows">
+                  <p class="profile-empty-state">No students connected yet.</p>
+                </div>
+              </div>
+
+              <div class="live-student-controls">
+                <label class="profile-control-row">
+                  <input type="checkbox" id="studentCopyInspectLockEnabled" />
+                  <span title="Lock copying and inspect shortcuts">Disable right click</span>
+                </label>
+                <label class="profile-control-row">
+                  <input type="checkbox" id="studentGuidedFormulaTutoringEnabled" />
+                  <span>
+                    Guided Formula Tutor
+                    <small>Step-by-step formula help.</small>
+                  </span>
+                </label>
+                <label class="profile-control-row">
+                  <input type="checkbox" id="studentQuestionRateLimitEnabled" />
+                  <span>Question limit</span>
+                </label>
+                <label class="profile-control-field" for="studentQuestionsPerMinute">
+                  <span>Max questions/min</span>
+                  <input type="number" id="studentQuestionsPerMinute" min="1" max="30" step="1" value="6" />
+                </label>
+                <span id="studentControlsStatus" class="profile-control-status">Loading student controls...</span>
+              </div>
+            </aside>
+          </div>
         </section>
       `;
   }

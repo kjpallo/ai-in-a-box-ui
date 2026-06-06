@@ -245,6 +245,7 @@
 
   .live-summary-grid,
   .live-attention-list,
+  .live-activity-workspace,
   .reports-summary-grid,
   .teacher-content-standards-tools,
   .teacher-content-standards-filters,
@@ -316,6 +317,13 @@
   .standards-route-list,
   .live-summary-grid,
   .live-attention-list,
+  .live-activity-workspace,
+  .live-feed-item,
+  .live-student-card-head,
+  .live-student-facts,
+  .live-classroom-head,
+  .live-student-link-row,
+  .profile-student-link-panel,
   .live-activity-controls,
   .reports-summary-grid,
   .reports-controls,
@@ -355,6 +363,7 @@
   .system-health-top,
   .live-activity-header,
   .live-attention-head,
+  .live-classroom-head,
   .reports-header,
   .reports-card-head,
   .profile-section-head,
@@ -464,9 +473,21 @@
     min-width: 680px;
   }
 
-  .live-question-table .profile-table-head,
-  .live-question-table .profile-table-row {
-    min-width: 620px;
+  .live-feed-list {
+    max-height: none;
+  }
+
+  .live-feed-state {
+    justify-items: start;
+  }
+
+  .live-attention-action-card {
+    grid-template-columns: 1fr;
+  }
+
+  .live-attention-action-card .small-button {
+    width: 100%;
+    justify-content: center;
   }
 
   .questions-standards-table .profile-table-head,
