@@ -39,7 +39,7 @@
 .teacher-content-preview-report.partial {
   border-color: rgba(255, 209, 102, 0.38);
   background: rgba(255, 207, 102, 0.055);
-  box-shadow: var(--glow-warning);
+  box-shadow: none;
 }
 
 .teacher-content-preview-repair,
@@ -95,7 +95,7 @@
 .teacher-content-selected-import {
   border-color: rgba(102, 247, 209, 0.36);
   background: rgba(102, 247, 209, 0.06);
-  box-shadow: var(--glow-active);
+  box-shadow: inset 3px 0 0 rgba(102, 247, 209, 0.62);
 }
 
 .teacher-content-whole-import-advanced {
@@ -166,10 +166,10 @@
 .teacher-content-count-pill small {
   display: block;
   color: #cafff0;
-  font-size: 0.72rem;
-  font-weight: 900;
+  font-size: 0.76rem;
+  font-weight: 800;
   letter-spacing: 0;
-  text-transform: uppercase;
+  text-transform: none;
   line-height: 1.25;
   white-space: normal;
   overflow-wrap: anywhere;
@@ -207,10 +207,8 @@
 }
 
 .teacher-content-readiness-card {
-  border-color: rgba(102, 247, 209, 0.2);
-  background:
-    radial-gradient(circle at 0% 0%, rgba(102, 247, 209, 0.06), transparent 38%),
-    rgba(102, 247, 209, 0.055);
+  border-color: var(--surface-border);
+  background: var(--surface-soft);
 }
 
 .teacher-content-readiness-card.blocked {
@@ -223,10 +221,10 @@
 
 .teacher-content-readiness-card span {
   color: #cafff0;
-  font-size: 0.7rem;
-  font-weight: 900;
+  font-size: 0.76rem;
+  font-weight: 800;
   letter-spacing: 0;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .teacher-content-readiness-card strong {
@@ -249,8 +247,8 @@
 }
 
 .teacher-content-review-note {
-  border-color: rgba(255, 209, 102, 0.34);
-  background: rgba(255, 207, 102, 0.055);
+  border-color: var(--surface-border);
+  background: var(--surface-soft);
 }
 
 .teacher-content-review-note.warning {
@@ -323,16 +321,14 @@
 }
 
 .teacher-content-handoff {
-  border-color: rgba(102, 247, 209, 0.2);
-  background: linear-gradient(180deg, rgba(102, 247, 209, 0.07), rgba(102, 247, 209, 0.035));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  border-color: var(--surface-border);
+  background: var(--surface-soft);
+  box-shadow: none;
 }
 
 .teacher-content-source-match {
   border-color: var(--surface-border);
-  background:
-    radial-gradient(circle at 0% 0%, rgba(102, 247, 209, 0.05), transparent 34%),
-    rgba(255, 255, 255, 0.035);
+  background: rgba(255, 255, 255, 0.035);
 }
 
 .teacher-content-source-match.blocked {
@@ -347,13 +343,13 @@
   position: relative;
   display: grid;
   gap: 8px;
-  border-color: rgba(126, 233, 255, 0.18);
-  background: rgba(126, 233, 255, 0.055);
+  border-color: var(--surface-border);
+  background: var(--surface-soft);
 }
 
 .teacher-content-upload-progress.ready {
-  border-color: rgba(102, 247, 209, 0.24);
-  background: rgba(102, 247, 209, 0.055);
+  border-color: var(--surface-border);
+  background: var(--surface-soft);
 }
 
 .teacher-content-upload-progress.error {
@@ -428,10 +424,10 @@
 .teacher-content-advanced-details summary {
   color: #cafff0;
   cursor: pointer;
-  font-size: 0.78rem;
-  font-weight: 900;
+  font-size: 0.82rem;
+  font-weight: 800;
   letter-spacing: 0;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .teacher-content-handoff-copy {
@@ -468,7 +464,7 @@
   gap: 12px;
   border-color: rgba(102, 247, 209, 0.36);
   background: rgba(102, 247, 209, 0.055);
-  box-shadow: var(--glow-active);
+  box-shadow: inset 3px 0 0 rgba(102, 247, 209, 0.62);
 }
 
 .teacher-content-selected-draft span,
@@ -483,10 +479,10 @@
 
 .teacher-content-selected-draft > div:first-child span {
   color: #cafff0;
-  font-size: 0.7rem;
-  font-weight: 900;
+  font-size: 0.76rem;
+  font-weight: 800;
   letter-spacing: 0;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .teacher-content-selected-draft strong,
@@ -533,7 +529,7 @@
   height: 100%;
   border-radius: inherit;
   background: var(--neon);
-  box-shadow: 0 0 12px rgba(102, 247, 209, 0.24);
+  box-shadow: none;
 }
 
 .teacher-content-count-strip,
@@ -583,7 +579,7 @@
   align-items: center;
   border-color: rgba(102, 247, 209, 0.36);
   background: rgba(102, 247, 209, 0.055);
-  box-shadow: var(--glow-active);
+  box-shadow: inset 3px 0 0 rgba(102, 247, 209, 0.62);
 }
 
 .teacher-content-selected-bank span,
@@ -594,10 +590,10 @@
 
 .teacher-content-selected-bank > div:first-child span {
   color: #cafff0;
-  font-size: 0.7rem;
-  font-weight: 900;
+  font-size: 0.76rem;
+  font-weight: 800;
   letter-spacing: 0;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .teacher-content-selected-bank strong {
@@ -637,10 +633,10 @@
 .teacher-content-standards-field span,
 .teacher-content-standard-chips > span {
   color: #cafff0;
-  font-size: 0.7rem;
-  font-weight: 900;
+  font-size: 0.76rem;
+  font-weight: 800;
   letter-spacing: 0;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .teacher-content-standards-field {
@@ -684,7 +680,7 @@
   outline: 2px solid rgba(126, 233, 255, 0.36);
   outline-offset: 2px;
   border-color: rgba(102, 247, 209, 0.5);
-  box-shadow: var(--glow-active);
+  box-shadow: inset 3px 0 0 rgba(102, 247, 209, 0.62);
 }
 
 .teacher-content-standard-head {

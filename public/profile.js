@@ -246,6 +246,8 @@
     setText('reportUntaggedQuestionsValue', untaggedQuestions);
     setText('reportTopTopicValue', topTopic);
     setText('reportNeedsReviewValue', noMatchCount);
+    setAttentionCount('profileNeedsReviewValue', noMatchCount);
+    setAttentionCount('reportNeedsReviewValue', noMatchCount);
     setText(
       'profileNoMatchAttention',
       `${noMatchCount} no-match question${noMatchCount === 1 ? '' : 's'} need${noMatchCount === 1 ? 's' : ''} review`
@@ -282,6 +284,8 @@
     setText('reportUntaggedQuestionsValue', 0);
     setText('reportTopTopicValue', '-');
     setText('reportNeedsReviewValue', 0);
+    setAttentionCount('profileNeedsReviewValue', 0);
+    setAttentionCount('reportNeedsReviewValue', 0);
     setText('profileNoMatchAttention', '0 no-match questions need review');
     setText('profileMissingStandardsAttention', '0 questions missing standards tags');
     setText('profileCommonTopicAttention', 'Most common topic: none yet');
@@ -746,6 +750,12 @@
   function setText(id, text) {
     const element = byId(id);
     if (element) element.textContent = String(text);
+  }
+
+  function setAttentionCount(id, count) {
+    const element = byId(id);
+    const card = element?.closest('[data-needs-review-card]');
+    if (card) card.classList.toggle('has-attention', Number(count) > 0);
   }
 
   function renderStudentLink(studentUrl) {

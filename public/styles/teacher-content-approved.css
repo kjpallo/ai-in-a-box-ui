@@ -11,14 +11,14 @@
   color: #fff6d7;
   display: grid;
   gap: 4px;
-  box-shadow: var(--glow-warning);
+  box-shadow: 0 0 14px rgba(255, 209, 102, 0.16);
 }
 
 .teacher-content-scope-warning strong {
   color: #ffe29a;
-  font-size: 0.78rem;
-  font-weight: 900;
-  text-transform: uppercase;
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: none;
 }
 
 .teacher-content-scope-warning p {
@@ -77,10 +77,10 @@
 .teacher-content-meta-pill small,
 .teacher-content-switch-block small {
   color: #cafff0;
-  font-size: 0.68rem;
-  font-weight: 900;
+  font-size: 0.74rem;
+  font-weight: 800;
   letter-spacing: 0;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .teacher-content-meta-pill strong {
@@ -141,7 +141,7 @@
   aspect-ratio: 1;
   border-radius: 999px;
   background: var(--neon);
-  box-shadow: 0 0 8px rgba(102, 247, 209, 0.26);
+  box-shadow: none;
 }
 
 .teacher-content-switch.is-on span {

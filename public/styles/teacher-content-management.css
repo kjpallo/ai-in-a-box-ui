@@ -204,10 +204,10 @@
 
 .teacher-content-approved-edit-field span {
   color: #b7d1cf;
-  font-size: 0.74rem;
-  font-weight: 900;
+  font-size: 0.78rem;
+  font-weight: 800;
   letter-spacing: 0;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .teacher-content-approved-edit-field textarea {
@@ -227,7 +227,7 @@
 
 .teacher-content-approved-edit-field textarea:focus {
   border-color: rgba(102, 247, 209, 0.62);
-  box-shadow: 0 0 0 2px rgba(102, 247, 209, 0.1);
+  box-shadow: none;
 }
 
 .teacher-content-approved-edit-actions {
@@ -267,4 +267,3 @@
     grid-template-columns: 1fr;
   }
 }
-

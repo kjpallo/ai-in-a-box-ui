@@ -16,9 +16,8 @@
   border: 1px solid var(--surface-border-strong);
   border-radius: 20px;
   background:
-    radial-gradient(circle at 3% 50%, rgba(102, 247, 209, 0.055), transparent 24%),
-    linear-gradient(180deg, rgba(10, 27, 30, 0.95), rgba(7, 16, 18, 0.98));
-  box-shadow: var(--panel-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    linear-gradient(180deg, rgba(22, 45, 49, 0.94), rgba(15, 32, 36, 0.98));
+  box-shadow: none;
 }
 
 .brand-block {
@@ -36,9 +35,9 @@
   display: grid;
   place-items: center;
   background:
-    radial-gradient(circle at 50% 35%, rgba(102, 247, 209, 0.22), transparent 48%),
+    radial-gradient(circle at 50% 35%, rgba(102, 247, 209, 0.12), transparent 48%),
     rgba(5, 20, 19, 0.86);
-  box-shadow: inset 0 0 16px rgba(102, 247, 209, 0.1);
+  box-shadow: none;
 }
 
 .brand-mark span {
@@ -49,7 +48,7 @@
   border-top-left-radius: 12px;
   border-top-right-radius: 12px;
   clip-path: polygon(50% 0, 100% 25%, 88% 80%, 50% 100%, 12% 80%, 0 25%);
-  box-shadow: 0 0 10px rgba(102, 247, 209, 0.26);
+  box-shadow: none;
 }
 
 .brand-copy {
@@ -73,7 +72,7 @@
   font-weight: 800;
   letter-spacing: 0;
   line-height: 1.1;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .status-center {
@@ -99,7 +98,7 @@
   font-size: 0.72rem;
   font-weight: 900;
   letter-spacing: 0;
-  text-transform: uppercase;
+  text-transform: none;
   white-space: nowrap;
 }
 
@@ -108,7 +107,7 @@
   height: 10px;
   border-radius: 999px;
   background: var(--neon);
-  box-shadow: 0 0 8px rgba(102, 247, 209, 0.42);
+  box-shadow: none;
 }
 
 .header-sparkline {
@@ -143,7 +142,7 @@
   color: var(--text);
   font-weight: 750;
   white-space: nowrap;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  box-shadow: none;
 }
 
 .classroom-view-pill span {
@@ -169,7 +168,6 @@
   border-color: rgba(126, 233, 255, 0.2);
   color: #dffcf7;
   background:
-    radial-gradient(circle at 20% 30%, rgba(126, 233, 255, 0.07), transparent 44%),
     rgba(12, 31, 34, 0.72);
 }
 
@@ -210,24 +208,20 @@
   overflow: hidden;
   border: 1px solid var(--panel-border);
   border-radius: var(--radius-lg);
-  background:
-    radial-gradient(circle at 50% 0%, rgba(102, 247, 209, 0.035), transparent 34%),
-    linear-gradient(180deg, rgba(11, 29, 33, 0.94), rgba(6, 17, 19, 0.98));
-  box-shadow: var(--panel-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(22, 45, 49, 0.92), rgba(15, 34, 38, 0.97));
+  box-shadow: none;
 }
 
 .panel::before {
-  content: "";
-  position: absolute;
-  inset: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.045);
-  border-radius: calc(var(--radius-lg) - 7px);
-  pointer-events: none;
+  display: none;
 }
 
 .voice-panel {
   border-color: rgba(102, 247, 209, 0.24);
-  box-shadow: var(--panel-shadow), 0 0 24px rgba(102, 247, 209, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(102, 247, 209, 0.07), transparent 34%),
+    linear-gradient(180deg, rgba(18, 48, 50, 0.94), rgba(11, 28, 31, 0.98));
+  box-shadow: 0 0 28px rgba(102, 247, 209, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .question-panel {
@@ -274,7 +268,7 @@
   font-size: 1rem;
   line-height: 1.2;
   letter-spacing: 0;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .status-pill,
@@ -307,27 +301,27 @@
   margin-right: 8px;
   border-radius: 999px;
   background: var(--neon);
-  box-shadow: 0 0 8px rgba(102, 247, 209, 0.48);
+  box-shadow: none;
 }
 
 .small-button {
   padding: 0 13px;
   border-color: rgba(210, 238, 234, 0.16);
   color: #f2fbff;
-  background: rgba(15, 43, 44, 0.72);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.055);
+  background: rgba(24, 56, 58, 0.72);
+  box-shadow: var(--glow-primary);
 }
 
 .small-button:hover,
 .small-button:focus-visible {
   border-color: rgba(102, 247, 209, 0.34);
-  box-shadow: var(--glow-primary), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  box-shadow: var(--glow-primary);
 }
 
 .secondary-small {
   color: #bfd3d3;
   border-color: rgba(210, 238, 234, 0.12);
-  background: rgba(255, 255, 255, 0.045);
+  background: rgba(255, 255, 255, 0.04);
   box-shadow: none;
 }
 
@@ -374,7 +368,7 @@
   padding: 22px 22px;
   font-size: 1.04rem;
   line-height: 1.55;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+  box-shadow: none;
 }
 
 #messageInput::placeholder {
@@ -426,8 +420,8 @@
 
 .secondary-button {
   border: 1px solid rgba(210, 238, 234, 0.14);
-  color: #f3faf8;
-  background: linear-gradient(180deg, rgba(42, 54, 56, 0.76), rgba(24, 32, 34, 0.9));
+  color: #d6e7e4;
+  background: rgba(255, 255, 255, 0.045);
   box-shadow: none;
 }
 
@@ -444,7 +438,7 @@
   border: 1px solid rgba(126, 233, 255, 0.16);
   background: rgba(12, 31, 34, 0.72);
   color: #dffcf7;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  box-shadow: none;
 }
 
 .voice-action-button::before {
@@ -494,7 +488,7 @@
   font-size: 1.08rem;
   line-height: 1.65;
   white-space: pre-wrap;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+  box-shadow: none;
 }
 
 .response-empty {
@@ -636,7 +630,7 @@
   border: 1px solid var(--surface-border);
   border-radius: 12px;
   background: var(--surface);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  box-shadow: none;
 }
 
 .history-icon {

@@ -29,12 +29,12 @@
   width: max-content;
   border: 1px solid rgba(126, 233, 255, 0.32);
   background: linear-gradient(135deg, rgba(18, 64, 70, 0.82), rgba(11, 39, 42, 0.9));
-  box-shadow: var(--glow-primary), 0 8px 22px rgba(0, 0, 0, 0.28);
+  box-shadow: var(--glow-primary);
 }
 
 .teacher-content-entry-card .small-button:hover {
   border-color: rgba(102, 247, 209, 0.5);
-  box-shadow: var(--glow-primary), 0 10px 24px rgba(0, 0, 0, 0.28);
+  box-shadow: var(--glow-primary);
 }
 
 .teacher-content-overlay[hidden] {
@@ -74,9 +74,9 @@
   border: 1px solid var(--surface-border-strong);
   border-radius: 22px;
   background:
-    linear-gradient(180deg, rgba(10, 28, 31, 0.86), rgba(5, 14, 16, 0.94)),
-    rgba(5, 14, 16, 0.66);
-  box-shadow: 0 34px 96px rgba(0, 0, 0, 0.7);
+    linear-gradient(180deg, rgba(22, 45, 49, 0.92), rgba(13, 29, 33, 0.96)),
+    rgba(13, 29, 33, 0.66);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
   animation: teacherContentDrop 220ms ease-out;
   backdrop-filter: blur(18px) saturate(1.1);
 }
@@ -238,10 +238,10 @@
 .teacher-content-tab-copy small,
 .teacher-content-preview-card small {
   color: #9fc8c4;
-  font-size: 0.68rem;
-  font-weight: 900;
+  font-size: 0.72rem;
+  font-weight: 800;
   letter-spacing: 0;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .teacher-content-review-bulk-summary {
@@ -356,9 +356,8 @@
   padding: 16px;
   border: 1px solid var(--surface-border);
   border-radius: 20px;
-  background:
-    linear-gradient(180deg, rgba(12, 30, 33, 0.96), rgba(7, 18, 20, 0.98));
-  box-shadow: 0 22px 48px rgba(0, 0, 0, 0.46);
+  background: linear-gradient(180deg, rgba(22, 45, 49, 0.9), rgba(15, 33, 37, 0.96));
+  box-shadow: none;
 }
 
 .teacher-content-card.active {
@@ -525,8 +524,8 @@
 
 .teacher-content-name-field span {
   color: var(--neon);
-  font-size: 0.72rem;
-  font-weight: 900;
+  font-size: 0.76rem;
+  font-weight: 800;
   letter-spacing: 0;
-  text-transform: uppercase;
+  text-transform: none;
 }

@@ -287,7 +287,7 @@
                 <strong id="profileTotalQuestions">0</strong>
               </div>
             </section>
-            <section class="live-summary-card attention">
+            <section class="live-summary-card attention" data-needs-review-card>
               <span class="live-summary-icon" aria-hidden="true">!</span>
               <div>
                 <span>Needs review</span>
@@ -370,7 +370,7 @@
               <span>Top topic</span>
               <strong id="reportTopTopicValue">-</strong>
             </section>
-            <section class="report-summary-card attention">
+            <section class="report-summary-card attention" data-needs-review-card>
               <span>Needs review</span>
               <strong id="reportNeedsReviewValue">0</strong>
             </section>
