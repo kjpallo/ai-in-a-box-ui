@@ -7,7 +7,7 @@
     "start": "node server.js",
     "dev": "node server.js",
 
-    "test": "node scripts/test-router.js && node scripts/test-standards-followup.js && node scripts/test-student-sessions.js && node scripts/test-classroom-controls.js && node scripts/test-live-student-activity.js && node scripts/test-live-activity-ui.js",
+    "test": "node scripts/test-router.js && node scripts/test-standards-followup.js && node scripts/test-student-sessions.js && node scripts/test-classroom-controls.js && node scripts/test-live-student-activity.js && node scripts/test-live-activity-ui.js && node scripts/test-questions-standards-export.js",
     "test:classroom-core": "npm test && npm run test:bank && npm run test:approved-knowledge-pack-loader && npm run test:standards-summary",
     "test:teacher-content": "npm run test:teacher-content-adapter && npm run test:teacher-content-routes && npm run test:teacher-content-ui && npm run test:upload-text-extraction && npm run test:generate-draft-pack",
     "test:all": "npm test && npm run test:bank",
@@ -24,6 +24,7 @@
     "test:standards-log": "node scripts/test-standards-log-shape.js",
     "test:standards-log-examples": "node scripts/test-standards-log-metadata-examples.js",
     "test:standards-summary": "node scripts/test-standards-summary-report.js",
+    "test:questions-standards-export": "node scripts/test-questions-standards-export.js",
 
     "test:knowledge-pack": "node scripts/test-knowledge-pack-validation.js && node scripts/validate-knowledge-pack.js",
     "test:approved-packs": "node scripts/test-approved-knowledge-pack-loader.js",
