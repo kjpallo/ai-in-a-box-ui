@@ -203,7 +203,9 @@ registerProfileRoutes(app, {
   linkGoogleIdentity: (teacher) => teacherAuthStore.updateGoogleIdentity(teacher),
   port: PORT,
   questionRateLimiter: studentQuestionRateLimiter,
+  requireTeacherAuth: teacherAuthRequired,
   sendDailySummaryEmail,
+  studentInteractionsFile,
   studentSessions
 });
 registerClassroomControlsRoutes(app, {

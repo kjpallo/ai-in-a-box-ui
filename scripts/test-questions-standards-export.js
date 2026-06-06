@@ -3,6 +3,13 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { parse } = require('csv-parse/sync');
+const { registerProfileRoutes } = require('../routes/profileRoutes');
+const {
+  createTeacherSessionStore,
+  requireTeacherAuth,
+  SESSION_COOKIE_NAME
+} = require('../lib/auth/teacherAuth');
+const { createApp, request } = require('./test-helpers/httpHarness');
 const {
   CSV_COLUMNS,
   buildQuestionsStandardsCsvExport,
@@ -121,6 +128,13 @@ const dateAndSessionFiltered = buildQuestionsStandardsCsvExport(records, {
 assert.equal(dateAndSessionFiltered.rowCount, 1, 'date and session filters should compose');
 assert.deepEqual(dateAndSessionFiltered.exportedRecordIds, ['interaction-1']);
 
+const dateRangeFiltered = buildQuestionsStandardsCsvExport(records, {
+  startDate: '2026-05-02',
+  endDate: '2026-05-02'
+});
+assert.equal(dateRangeFiltered.rowCount, 1, 'date range filtering should keep records in the inclusive range');
+assert.deepEqual(dateRangeFiltered.exportedRecordIds, ['interaction-3']);
+
 const empty = buildQuestionsStandardsCsvExport([]);
 assert.equal(empty.rowCount, 0, 'empty history should export zero rows');
 assert.deepEqual(empty.exportedRecordIds, []);
@@ -148,4 +162,93 @@ assert.deepEqual(
   'CSV export should not write artifact files yet'
 );
 
-console.log('Questions & Standards CSV export checks passed');
+const handlers = new Map();
+const app = createApp(handlers);
+const sessionStore = createTeacherSessionStore();
+const teacherSessionId = sessionStore.createSession({ username: 'teacher' });
+registerProfileRoutes(app, {
+  clearGoogleIdentity: async () => null,
+  completeGoogleConnect: async () => ({ teacher: {} }),
+  createGoogleConnectUrl: () => '/google/start',
+  disconnectGoogle: () => {},
+  getAvailableProfileDates: () => ({ dates: [] }),
+  getClassroomControls: () => ({}),
+  getDailyQuestionSummary: () => ({}),
+  getProfileStatus: () => ({ authenticated: true }),
+  getStandardsSummaryReport: () => ({}),
+  linkGoogleIdentity: async () => ({}),
+  port: 3000,
+  questionRateLimiter: null,
+  requireTeacherAuth: requireTeacherAuth(sessionStore),
+  sendDailySummaryEmail: async () => ({ ok: true }),
+  studentInteractionsFile: logFilePath,
+  studentSessions: {}
+});
+
+async function runRouteChecks() {
+  const unauthorized = await request(handlers, 'GET', '/api/profile/questions-standards/export.csv');
+  assert.equal(unauthorized.statusCode, 401, 'CSV export route should require teacher auth');
+  assert.equal(unauthorized.body.error, 'Teacher login required.');
+
+  const authorizedExtras = {
+    headers: {
+      cookie: `${SESSION_COOKIE_NAME}=${encodeURIComponent(teacherSessionId)}`
+    }
+  };
+  const csvResponse = await request(
+    handlers,
+    'GET',
+    '/api/profile/questions-standards/export.csv',
+    {},
+    {},
+    { startDate: '2026-05-01', endDate: '2026-05-02', classSessionId: 'session-a' },
+    authorizedExtras
+  );
+  assert.equal(csvResponse.statusCode, 200, 'authorized teacher should be able to export CSV');
+  assert.equal(csvResponse.getHeader('content-type'), 'text/csv; charset=utf-8');
+  assert.match(
+    csvResponse.getHeader('content-disposition'),
+    /^attachment; filename="questions-standards-history-2026-05-01-to-2026-05-02-session-session-a\.csv"$/,
+    'CSV export should be returned as a safe download filename'
+  );
+  const routeRows = parse(csvResponse.body, { columns: true });
+  assert.deepEqual(
+    routeRows.map((row) => row.id),
+    ['interaction-1', 'interaction-3'],
+    'route should apply date-range and class-session filters'
+  );
+  assert.equal(routeRows[0].question, 'What is force, really?');
+  assert.equal(routeRows[0].response, 'A force is a push, a "pull", or both.\nIt can change motion.');
+
+  const allHistoryResponse = await request(
+    handlers,
+    'GET',
+    '/api/profile/questions-standards/export.csv',
+    {},
+    {},
+    {},
+    authorizedExtras
+  );
+  assert.equal(parse(allHistoryResponse.body, { columns: true }).length, 3, 'route should export all current history without filters');
+
+  const invalidDateResponse = await request(
+    handlers,
+    'GET',
+    '/api/profile/questions-standards/export.csv',
+    {},
+    {},
+    { date: '05/01/2026' },
+    authorizedExtras
+  );
+  assert.equal(invalidDateResponse.statusCode, 400, 'route should reject unsafe date filters');
+  assert.equal(invalidDateResponse.body.error, 'date must use YYYY-MM-DD.');
+}
+
+runRouteChecks()
+  .then(() => {
+    console.log('Questions & Standards CSV export checks passed');
+  })
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
