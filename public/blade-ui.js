@@ -184,9 +184,9 @@
 
     {
       id: 'reports',
-      label: 'Reports',
-      short: 'REPORTS',
-      icon: '📊',
+      label: 'Questions & Standards',
+      short: 'Q/STDS',
+      icon: 'QS',
       body: renderReportsBlade()
     },
 
@@ -349,84 +349,129 @@
 
   function renderReportsBlade() {
     return `
-        <section class="reports-panel" aria-label="Reports">
+        <section class="reports-panel" aria-label="Questions and Standards">
           <div class="reports-header">
             <div>
-              <h3>Reports</h3>
-              <p>Review trends, standards coverage, and daily summaries.</p>
+              <h3>Questions &amp; Standards</h3>
+              <p>Review student questions, matched standards, and export classroom evidence.</p>
+              <span id="standardsSummaryStatus">No standards report loaded yet.</span>
+            </div>
+            <div class="reports-header-actions" aria-label="Report actions">
+              <button type="button" id="reportExportCsv" class="small-button">Export CSV</button>
+              <button type="button" id="reportPrintReport" class="small-button secondary-small">Print</button>
+              <button type="button" id="reportCopySummary" class="small-button secondary-small">Copy Summary</button>
+              <button type="button" id="profileRefreshStandardsReport" class="small-button secondary-small">Refresh</button>
             </div>
           </div>
 
-          <div class="reports-summary-grid" aria-label="Reports summary">
+          <div class="reports-summary-grid" aria-label="Questions and standards summary">
             <section class="report-summary-card">
-              <span>Standards tagged</span>
+              <span class="report-summary-icon report-summary-icon-calendar" aria-hidden="true"></span>
+              <span class="report-summary-label">Date</span>
+              <strong id="reportDateRangeValue">Today</strong>
+            </section>
+            <section class="report-summary-card">
+              <span class="report-summary-icon report-summary-icon-question" aria-hidden="true"></span>
+              <span class="report-summary-label">Total Questions</span>
+              <strong id="reportQuestionsAskedValue">0</strong>
+            </section>
+            <section class="report-summary-card">
+              <span class="report-summary-icon report-summary-icon-check" aria-hidden="true"></span>
+              <span class="report-summary-label">Matched Standards</span>
               <strong id="reportStandardsTaggedValue">0</strong>
             </section>
-            <section class="report-summary-card">
-              <span>Untagged questions</span>
-              <strong id="reportUntaggedQuestionsValue">0</strong>
-            </section>
-            <section class="report-summary-card">
-              <span>Top topic</span>
-              <strong id="reportTopTopicValue">-</strong>
-            </section>
             <section class="report-summary-card attention" data-needs-review-card>
-              <span>Needs review</span>
+              <span class="report-summary-icon report-summary-icon-review" aria-hidden="true"></span>
+              <span class="report-summary-label">Needs Review</span>
               <strong id="reportNeedsReviewValue">0</strong>
             </section>
           </div>
 
-          <div class="reports-content-grid">
-            <section class="reports-card standards-coverage-card">
-              <div class="reports-card-head">
-                <div>
-                  <h4>Standards Coverage</h4>
-                  <span id="standardsSummaryStatus">No standards report loaded yet.</span>
-                </div>
-                <button type="button" id="profileRefreshStandardsReport" class="small-button secondary-small">Refresh Report</button>
+          <section class="reports-card questions-standards-toolbar" aria-label="Questions and standards controls">
+            <div class="reports-filter-group">
+              <label class="reports-date-field" for="reportDateSelect">
+                <span>Date</span>
+                <select id="reportDateSelect" disabled>
+                  <option>Today</option>
+                  <option>No activity dates loaded yet</option>
+                </select>
+              </label>
+              <div class="report-filter-buttons" role="group" aria-label="Question filters">
+                <button type="button" class="report-filter-button active" data-report-filter="all" aria-pressed="true">All questions</button>
+                <button type="button" class="report-filter-button" data-report-filter="needs-review" aria-pressed="false">Needs review</button>
+                <button type="button" class="report-filter-button" data-report-filter="missing-standard" aria-pressed="false">Missing standard</button>
               </div>
+            </div>
+            <span id="reportExportStatus" class="reports-export-status">Exports use the currently loaded date and filter.</span>
+          </section>
 
-              <div class="standards-coverage-body">
-                <div class="coverage-donut" id="standardsCoverageDonut" style="--coverage-percent: 0">
-                  <strong id="standardsTaggedPercent">0%</strong>
-                  <span>tagged</span>
-                </div>
-                <div class="standards-summary-counts" aria-label="Standards summary counts">
-                  <div>
-                    <span>Total questions</span>
-                    <strong id="standardsTotalQuestions">0</strong>
-                  </div>
-                  <div>
-                    <span>Tagged questions</span>
-                    <strong id="standardsTaggedQuestions">0</strong>
-                  </div>
-                  <div>
-                    <span>Untagged questions</span>
-                    <strong id="standardsUntaggedQuestions">0</strong>
-                  </div>
-                  <div>
-                    <span>Percentage tagged</span>
-                    <strong id="standardsTaggedPercentValue">0%</strong>
-                  </div>
+          <section class="reports-card questions-standards-card">
+            <div class="profile-section-head standards-report-head">
+              <div>
+                <h4>Student Questions</h4>
+                <span>Questions students asked, with matched topics and standards.</span>
+              </div>
+              <span id="reportQuestionCount">Showing 0 of 0</span>
+            </div>
+
+            <div class="profile-table-shell questions-standards-table" role="table" aria-label="Student questions and matched standards">
+              <div class="profile-table-head" role="row">
+                <span role="columnheader">Time / date</span>
+                <span role="columnheader">Question</span>
+                <span role="columnheader">Topic</span>
+                <span role="columnheader">Standard</span>
+              </div>
+              <div id="reportQuestionRows" class="profile-table-body">
+                <div class="profile-empty-state questions-empty-state" role="row">
+                  <strong>No questions yet.</strong>
+                  <span>Student questions will appear here after classroom activity is logged.</span>
                 </div>
               </div>
+            </div>
+          </section>
 
-              <div id="standardsSummaryEmptyState" class="profile-empty-state">No standards report loaded yet.</div>
+          <div id="standardDetailsModal" class="standard-details-modal" role="dialog" aria-modal="true" aria-labelledby="standardDetailsTitle" hidden>
+            <div class="standard-details-backdrop" data-standard-modal-close></div>
+            <section class="standard-details-panel" tabindex="-1">
+              <button type="button" class="standard-details-close" data-standard-modal-close aria-label="Close standard details">&times;</button>
+              <span class="standard-details-kicker">Standard</span>
+              <h4 id="standardDetailsTitle">Standard details</h4>
+              <div id="standardDetailsBody" class="standard-details-body">
+                <p>Choose a standard to view details.</p>
+              </div>
             </section>
+          </div>
 
-            <section class="reports-card topic-summary-card">
-              <h4>Topic Summary</h4>
-              <div id="profileTopicSummary" class="topic-summary-placeholder">
-                <span class="topic-ring-placeholder" aria-hidden="true"></span>
-                <p>Topic summary will appear here after question activity is available.</p>
-              </div>
-            </section>
+          <div class="reports-hidden-metrics" aria-hidden="true">
+            <div id="standardsSummaryEmptyState" class="profile-empty-state reports-status-empty">No standards report loaded yet.</div>
+            <p id="reportSummaryStatus">No question activity loaded yet.</p>
+            <span id="standardsGeneratedAt">Not loaded</span>
+            <span id="profileStandardsTaggedValue">0</span>
+            <span id="reportUntaggedQuestionsValue">0</span>
+            <span id="reportTopTopicValue">-</span>
+            <span id="standardsTotalQuestions">0</span>
+            <span id="standardsTaggedQuestions">0</span>
+            <span id="standardsUntaggedQuestions">0</span>
+            <span id="standardsTaggedPercent">0%</span>
+            <span id="standardsTaggedPercentValue">0%</span>
+            <span id="standardsConfidenceStrong">0</span>
+            <span id="standardsConfidenceMedium">0</span>
+            <span id="standardsConfidenceWeak">0</span>
+            <span id="standardsConfidenceNone">0</span>
+            <div id="profileTopicSummary"></div>
+            <div id="standardsConceptRows"></div>
+            <div id="standardsUnitRows"></div>
+            <div id="standardsRouteRows"></div>
+            <div id="standardsRecentRows"></div>
+            <div id="standardsCoverageDonut" style="--coverage-percent: 0"></div>
+            <div id="profileDailySummaryText"></div>
+            <div id="profileEmailNotice"></div>
+            <button type="button" id="profileSendDailyEmail" disabled></button>
 
-            <section class="reports-card standards-report-card">
+            <section class="standards-report-card">
               <div class="profile-section-head standards-report-head">
                 <div>
                   <h4>Top Standards / Concepts</h4>
-                  <span id="standardsGeneratedAt">Not loaded</span>
                 </div>
               </div>
 
@@ -441,25 +486,6 @@
                 <div id="standardsSummaryRows"></div>
               </div>
             </section>
-
-            <section class="reports-card daily-email-card reports-email-card">
-              <h4>Daily Email Report</h4>
-              <span id="profileEmailNotice">Connect Gmail before sending daily reports.</span>
-              <p id="profileDailySummaryText">Daily email reports summarize question topics and common student needs.</p>
-              <button type="button" id="profileSendDailyEmail" class="small-button secondary-small" disabled>Send daily summary email</button>
-            </section>
-          </div>
-
-          <div class="reports-hidden-metrics" aria-hidden="true">
-            <span id="profileStandardsTaggedValue">0</span>
-            <span id="standardsConfidenceStrong">0</span>
-            <span id="standardsConfidenceMedium">0</span>
-            <span id="standardsConfidenceWeak">0</span>
-            <span id="standardsConfidenceNone">0</span>
-            <div id="standardsConceptRows"></div>
-            <div id="standardsUnitRows"></div>
-            <div id="standardsRouteRows"></div>
-            <div id="standardsRecentRows"></div>
           </div>
         </section>
       `;

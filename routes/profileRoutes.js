@@ -1,4 +1,6 @@
 const crypto = require('crypto');
+const { getStandardsBankDetails } = require('../lib/standards/standardsBankDiscovery');
+const { loadMissouriStandardsBank } = require('../lib/standards/standardsMatcher');
 
 function registerProfileRoutes(app, {
   completeGoogleConnect,
@@ -172,6 +174,27 @@ function registerProfileRoutes(app, {
     }
   });
 
+  app.get('/api/profile/standard-details/:standardId', (req, res) => {
+    const standardId = String(req.params?.standardId || '').trim();
+    const standardsBankId = String(req.query?.standardsBankId || '').trim();
+    if (!standardId) {
+      res.status(400).json({ ok: false, error: 'standardId is required.' });
+      return;
+    }
+
+    try {
+      res.json({
+        ok: true,
+        standard: getProfileStandardDetails(standardId, standardsBankId)
+      });
+    } catch {
+      res.json({
+        ok: true,
+        standard: { standardId }
+      });
+    }
+  });
+
   app.post('/api/profile/send-daily-summary', async (req, res) => {
     sendProfileDailySummary(req, res);
   });
@@ -196,6 +219,60 @@ function sendProfileError(res, error) {
   res.status(statusCode >= 400 && statusCode < 600 ? statusCode : 500).json({
     error: error instanceof Error ? error.message : String(error)
   });
+}
+
+function getProfileStandardDetails(standardId, standardsBankId = '') {
+  const fromSavedBank = standardsBankId && standardsBankId !== 'missouri_science_6_12'
+    ? getSavedStandardsBankDetail(standardId, standardsBankId)
+    : null;
+  if (fromSavedBank) return fromSavedBank;
+
+  const bank = loadMissouriStandardsBank();
+  const standard = Array.isArray(bank.standards)
+    ? bank.standards.find((item) => item && item.standardId === standardId)
+    : null;
+
+  return normalizeProfileStandardDetail(standard || { standardId }, bank.bankId || standardsBankId);
+}
+
+function getSavedStandardsBankDetail(standardId, standardsBankId) {
+  const result = getStandardsBankDetails(standardsBankId, { maxStandards: 1000 });
+  if (!result.success) return null;
+
+  const standards = Array.isArray(result.standardsBank?.standards) ? result.standardsBank.standards : [];
+  const standard = standards.find((item) => item && item.standardId === standardId);
+  return standard ? normalizeProfileStandardDetail(standard, standardsBankId) : null;
+}
+
+function normalizeProfileStandardDetail(standard, standardsBankId = '') {
+  const item = standard || {};
+  return {
+    standardId: textField(item, 'standardId'),
+    standardsBankId,
+    code: textField(item, 'code'),
+    title: textField(item, 'title'),
+    label: textField(item, 'label') || textField(item, 'teacherShortName') || textField(item, 'title'),
+    officialStandard: textField(item, 'officialStandard') || textField(item, 'officialText'),
+    officialText: textField(item, 'officialText'),
+    standardText: textField(item, 'statement') || textField(item, 'description'),
+    statement: textField(item, 'statement'),
+    studentFriendlyStandard: textField(item, 'studentFriendlyStandard') || textField(item, 'studentFriendlyText'),
+    studentFriendlyText: textField(item, 'studentFriendlyText'),
+    studentCanStatement: textField(item, 'studentCanStatement'),
+    teacherShortName: textField(item, 'teacherShortName'),
+    unit: textField(item, 'unit'),
+    topic: textField(item, 'topic'),
+    conceptTitle: textField(item, 'conceptTitle'),
+    classroomArea: textField(item, 'classroomArea'),
+    domainName: textField(item, 'domainName'),
+    domainCode: textField(item, 'domainCode'),
+    strandTitle: textField(item, 'strandTitle') || textField(item, 'strand'),
+    strandCode: textField(item, 'strandCode')
+  };
+}
+
+function textField(item, field) {
+  return typeof item?.[field] === 'string' ? item[field].trim() : '';
 }
 
 function buildStudentUrl(req, sessionId, port) {

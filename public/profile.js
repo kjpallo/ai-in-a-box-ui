@@ -4,7 +4,10 @@
   let currentProfileStatus = null;
   let currentStudentUrl = '';
   let currentStandardsTagged = 0;
+  let currentStandardsSummary = null;
   let currentQuestions = [];
+  let reportQuestionFilter = 'all';
+  const standardDetailsCache = new Map();
   let showingReviewQuestions = false;
   let studentSessionRefreshTimer = null;
   let loadingStudentControls = false;
@@ -176,6 +179,7 @@
         : `<option value="${escapeAttr(currentDate)}">${escapeHtml(currentDate)}</option>`;
       select.value = currentDate;
       select.disabled = false;
+      syncReportDateSelect(dates, currentDate);
 
       setText(
         'profileDateStatus',
@@ -188,6 +192,7 @@
       select.innerHTML = `<option value="${escapeAttr(currentDate)}">${escapeHtml(currentDate)}</option>`;
       select.value = currentDate;
       select.disabled = false;
+      syncReportDateSelect([currentDate], currentDate);
       setText('profileDateStatus', 'Could not load activity dates.');
       renderSummaryError('Could not load daily question summary.');
     }
@@ -234,20 +239,24 @@
     const questions = Array.isArray(data?.questions) ? data.questions : [];
     const topics = Array.isArray(data?.topics) ? data.topics : [];
     const noMatchCount = questions.filter(isNoMatchQuestion).length;
+    const reviewCount = questions.filter(questionNeedsReview).length;
+    const matchedToStandards = countQuestionsWithStandards(questions);
     const topTopic = topics[0]?.topic ? titleCaseLabel(topics[0].topic) : '-';
     const untaggedQuestions = Math.max(0, total - currentStandardsTagged);
 
     setText('profileTotalQuestions', total);
+    setText('reportQuestionsAskedValue', total);
     setText('profileNeedsReviewValue', noMatchCount);
     setText('profileTopTopicValue', topTopic);
     setText('profileStandardsTaggedValue', currentStandardsTagged);
     setText('liveStandardsTaggedValue', currentStandardsTagged);
-    setText('reportStandardsTaggedValue', currentStandardsTagged);
+    setText('reportStandardsTaggedValue', currentStandardsTagged || matchedToStandards);
     setText('reportUntaggedQuestionsValue', untaggedQuestions);
     setText('reportTopTopicValue', topTopic);
-    setText('reportNeedsReviewValue', noMatchCount);
+    setText('reportNeedsReviewValue', reviewCount);
+    setText('reportDateRangeValue', data.date || currentDate || todayKey());
     setAttentionCount('profileNeedsReviewValue', noMatchCount);
-    setAttentionCount('reportNeedsReviewValue', noMatchCount);
+    setAttentionCount('reportNeedsReviewValue', reviewCount);
     setText(
       'profileNoMatchAttention',
       `${noMatchCount} no-match question${noMatchCount === 1 ? '' : 's'} need${noMatchCount === 1 ? 's' : ''} review`
@@ -270,12 +279,15 @@
 
     currentQuestions = questions;
     showingReviewQuestions = false;
+    updateTeacherReportSummary();
     renderQuestionRows(currentQuestions);
+    renderReportQuestionRows(getFilteredReportQuestions());
     renderTopicSummary(topics);
   }
 
   function renderSummaryError(message) {
     setText('profileTotalQuestions', 0);
+    setText('reportQuestionsAskedValue', 0);
     setText('profileNeedsReviewValue', 0);
     setText('profileTopTopicValue', '-');
     setText('profileStandardsTaggedValue', currentStandardsTagged);
@@ -284,6 +296,7 @@
     setText('reportUntaggedQuestionsValue', 0);
     setText('reportTopTopicValue', '-');
     setText('reportNeedsReviewValue', 0);
+    setText('reportDateRangeValue', currentDate || todayKey());
     setAttentionCount('profileNeedsReviewValue', 0);
     setAttentionCount('reportNeedsReviewValue', 0);
     setText('profileNoMatchAttention', '0 no-match questions need review');
@@ -293,7 +306,9 @@
     setText('profileDailySummaryText', message);
     currentQuestions = [];
     showingReviewQuestions = false;
+    updateTeacherReportSummary(message);
     renderQuestionRows([]);
+    renderReportQuestionRows([]);
     renderTopicSummary([]);
   }
 
@@ -304,6 +319,7 @@
     const percentTagged = total ? Math.round((tagged / total) * 1000) / 10 : 0;
     const generatedLabel = formatDateTime(safeSummary.generatedAt);
     currentStandardsTagged = tagged;
+    currentStandardsSummary = safeSummary;
 
     setText('standardsTotalQuestions', total);
     setText('standardsTaggedQuestions', tagged);
@@ -323,6 +339,8 @@
     setText('liveStandardsTaggedValue', tagged);
     setText('reportStandardsTaggedValue', tagged);
     setText('reportUntaggedQuestionsValue', safeSummary.untaggedQuestions);
+    setText('reportDateRangeValue', currentDate || byId('reportDateSelect')?.value || todayKey());
+    updateTeacherReportSummary();
     const coverageDonut = byId('standardsCoverageDonut');
     if (coverageDonut) coverageDonut.style.setProperty('--coverage-percent', String(Math.max(0, Math.min(100, percentTagged))));
     const liveTotal = Number(byId('profileTotalQuestions')?.textContent || 0);
@@ -338,6 +356,7 @@
     renderUnitRows(safeSummary.units);
     renderRouteRows(safeSummary.routeTypes);
     renderRecentTaggedQuestions(safeSummary.recentTaggedQuestions);
+    renderReportQuestionRows(getFilteredReportQuestions());
   }
 
   function renderStandardsSummaryError(message) {
@@ -353,12 +372,14 @@
     setText('standardsConfidenceWeak', 0);
     setText('standardsConfidenceNone', 0);
     setText('standardsSummaryStatus', message);
+    currentStandardsSummary = normalizeStandardsSummary({});
     renderStandardsReportEmptyState(emptySummary, message);
     renderStandardsRows([]);
     renderConceptRows([]);
     renderUnitRows([]);
     renderRouteRows([]);
     renderRecentTaggedQuestions([]);
+    renderReportQuestionRows(getFilteredReportQuestions());
   }
 
   function renderStandardsReportEmptyState(summary, errorMessage = '') {
@@ -505,6 +526,7 @@
       rows.innerHTML = `<p class="profile-empty-state" role="row">${
         showingReviewQuestions ? 'No review-needed questions found for this date.' : 'No question activity loaded yet.'
       }</p>`;
+      renderReportQuestionRows(getFilteredReportQuestions());
       return;
     }
 
@@ -517,6 +539,58 @@
         <span role="cell"><span class="live-confidence-pill ${confidenceClass(item.confidence)}">${escapeHtml(confidenceLabel(item.confidence))}</span></span>
       </div>
     `).join('');
+    renderReportQuestionRows(getFilteredReportQuestions());
+  }
+
+  function renderReportQuestionRows(questions) {
+    const rows = byId('reportQuestionRows');
+    if (!rows) return;
+    const table = rows.closest('.questions-standards-table');
+    const rowCount = Array.isArray(questions) ? questions.length : 0;
+
+    updateReportFilterButtons();
+    updateReportQuestionCount(questions);
+    updateExportButtonStates(questions);
+    if (table) {
+      table.classList.toggle('has-many-rows', rowCount > 5);
+      table.classList.toggle('has-few-rows', rowCount > 0 && rowCount <= 5);
+    }
+
+    if (!rowCount) {
+      rows.innerHTML = `
+        <div class="profile-empty-state questions-empty-state" role="row">
+          <strong>${escapeHtml(emptyReportTitle())}</strong>
+          <span>${escapeHtml(emptyReportMessage())}</span>
+        </div>
+      `;
+      return;
+    }
+
+    rows.innerHTML = questions.map((item) => {
+      const review = reviewStatusForQuestion(item);
+      const standards = formatQuestionStandards(item);
+      const standardsHtml = renderQuestionStandardsCell(item);
+      const timeParts = formatQuestionTimeParts(item);
+      const topic = titleCaseLabel(item.topic || 'other') || 'Other';
+
+      return `
+        <div class="profile-table-row ${review.needsReview ? 'needs-review-row' : ''}" role="row">
+          <span role="cell" class="report-time-cell">
+            <span>${escapeHtml(timeParts.date)}</span>
+            <small>${escapeHtml(timeParts.time)}</small>
+          </span>
+          <span role="cell" class="report-question-cell">${escapeHtml(item.question || 'No question text')}</span>
+          <span role="cell">${escapeHtml(topic)}</span>
+          <span role="cell" class="report-standard-cell" title="${escapeAttr(standards)}">${standardsHtml}</span>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function updateReportQuestionCount(questions) {
+    const visible = Array.isArray(questions) ? questions.length : 0;
+    const total = Array.isArray(currentQuestions) ? currentQuestions.length : 0;
+    setText('reportQuestionCount', `Showing ${visible} of ${total}`);
   }
 
   function reviewQuestions() {
@@ -531,12 +605,14 @@
         'profileSummaryStatus',
         `Showing ${reviewQuestions.length} no-match question${reviewQuestions.length === 1 ? '' : 's'} that need review.`
       );
+      updateTeacherReportSummary();
       table?.closest('.recent-questions-card')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       table?.querySelector('.needs-review-row')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       return;
     }
 
     setText('profileSummaryStatus', 'No review-needed questions found for this date.');
+    updateTeacherReportSummary();
     table?.closest('.recent-questions-card')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
@@ -600,6 +676,13 @@
 
   function bindEvents() {
     byId('profileDateSelect')?.addEventListener('change', async (event) => {
+      syncDateSelectValue(event.target.value);
+      await loadSummary(event.target.value);
+      await loadStandardsSummaryReport();
+    });
+
+    byId('reportDateSelect')?.addEventListener('change', async (event) => {
+      syncDateSelectValue(event.target.value);
       await loadSummary(event.target.value);
       await loadStandardsSummaryReport();
     });
@@ -618,6 +701,33 @@
     byId('profileReviewQuestions')?.addEventListener('click', () => {
       reviewQuestions();
     });
+
+    document.querySelectorAll('[data-report-filter]').forEach((button) => {
+      button.addEventListener('click', () => {
+        reportQuestionFilter = button.getAttribute('data-report-filter') || 'all';
+        renderReportQuestionRows(getFilteredReportQuestions());
+      });
+    });
+
+    byId('reportQuestionRows')?.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-standard-id]');
+      if (!button) return;
+      openStandardDetails(standardContextFromButton(button));
+    });
+
+    byId('standardDetailsModal')?.addEventListener('click', (event) => {
+      if (event.target.closest('[data-standard-modal-close]')) closeStandardDetailsModal();
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && !byId('standardDetailsModal')?.hidden) {
+        closeStandardDetailsModal();
+      }
+    });
+
+    byId('reportExportCsv')?.addEventListener('click', exportReportCsv);
+    byId('reportPrintReport')?.addEventListener('click', printReport);
+    byId('reportCopySummary')?.addEventListener('click', copyReportSummary);
 
     byId('profileConnectGoogleButton')?.addEventListener('click', () => {
       if (!currentProfileStatus?.googleConfigured) {
@@ -758,6 +868,28 @@
     if (card) card.classList.toggle('has-attention', Number(count) > 0);
   }
 
+  function syncReportDateSelect(dates, selectedDate) {
+    const select = byId('reportDateSelect');
+    if (!select) return;
+
+    const safeDates = Array.isArray(dates) ? dates.filter(Boolean) : [];
+    const value = selectedDate || safeDates[0] || todayKey();
+    select.innerHTML = safeDates.length
+      ? safeDates.map((date) => `<option value="${escapeAttr(date)}">${escapeHtml(date)}</option>`).join('')
+      : `<option value="${escapeAttr(value)}">${escapeHtml(value)}</option>`;
+    select.value = value;
+    select.disabled = false;
+  }
+
+  function syncDateSelectValue(value) {
+    currentDate = value || currentDate || todayKey();
+    const profileSelect = byId('profileDateSelect');
+    const reportSelect = byId('reportDateSelect');
+    if (profileSelect && profileSelect.value !== currentDate) profileSelect.value = currentDate;
+    if (reportSelect && reportSelect.value !== currentDate) reportSelect.value = currentDate;
+    setText('reportDateRangeValue', currentDate);
+  }
+
   function renderStudentLink(studentUrl) {
     currentStudentUrl = studentUrl;
     const panel = byId('profileStudentLinkPanel');
@@ -874,6 +1006,75 @@
     textarea.remove();
   }
 
+  function exportReportCsv() {
+    const rows = getFilteredReportQuestions();
+    if (!rows.length) {
+      setText('reportExportStatus', 'No rows are available to export for this filter.');
+      return;
+    }
+
+    const csvRows = [
+      ['Time/date', 'Question', 'Topic', 'Standard'],
+      ...rows.map((item) => {
+        const timeParts = formatQuestionTimeParts(item);
+        return [
+          [timeParts.date, timeParts.time].filter(Boolean).join(' '),
+          item.question || '',
+          titleCaseLabel(item.topic || 'other') || 'Other',
+          formatQuestionStandards(item)
+        ];
+      })
+    ];
+    const csv = csvRows.map((row) => row.map(csvCell).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `questions-standards-${currentDate || todayKey()}-${reportQuestionFilter}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    setText('reportExportStatus', `CSV exported for ${rows.length} row${rows.length === 1 ? '' : 's'}.`);
+  }
+
+  function printReport() {
+    setText('reportExportStatus', 'Opening print dialog for the current report.');
+    window.print();
+  }
+
+  async function copyReportSummary() {
+    if (!currentQuestions.length) {
+      setText('reportExportStatus', 'No summary is available to copy yet.');
+      return;
+    }
+
+    const total = currentQuestions.length;
+    const matched = currentStandardsTagged || countQuestionsWithStandards(currentQuestions);
+    const needsReview = currentQuestions.filter(questionNeedsReview).length;
+    const missing = currentQuestions.filter((item) => !hasQuestionStandard(item)).length;
+    const generated = currentStandardsSummary?.generatedAt ? formatDateTime(currentStandardsSummary.generatedAt) : 'Not loaded';
+    const summary = [
+      `Questions & Standards summary for ${currentDate || todayKey()}`,
+      `Questions asked: ${total}`,
+      `Matched to standards: ${matched}`,
+      `Needs review: ${needsReview}`,
+      `Missing standard: ${missing}`,
+      `Standards report generated: ${generated}`
+    ].join('\n');
+
+    try {
+      await copyText(summary);
+      setText('reportExportStatus', 'Summary copied.');
+    } catch {
+      setText('reportExportStatus', 'Could not copy summary.');
+    }
+  }
+
+  function csvCell(value) {
+    return `"${String(value ?? '').replaceAll('"', '""')}"`;
+  }
+
   function initialsForTeacher(teacher) {
     const first = String(teacher.firstName || '').trim()[0] || '';
     const last = String(teacher.lastName || '').trim()[0] || '';
@@ -889,6 +1090,14 @@
 
   function normalizeKey(value) {
     return String(value || '').trim().toLowerCase().replace(/[_-]+/g, ' ');
+  }
+
+  function firstText(...values) {
+    for (const value of values) {
+      const text = String(value || '').replace(/\s+/g, ' ').trim();
+      if (text) return text;
+    }
+    return '';
   }
 
   function titleCaseLabel(value) {
@@ -918,6 +1127,298 @@
     return route === 'no match' || topic === 'no trusted answer';
   }
 
+  function getFilteredReportQuestions() {
+    if (reportQuestionFilter === 'needs-review') return currentQuestions.filter(questionNeedsReview);
+    if (reportQuestionFilter === 'missing-standard') return currentQuestions.filter((item) => !hasQuestionStandard(item));
+    return currentQuestions;
+  }
+
+  function questionNeedsReview(item) {
+    if (isNoMatchQuestion(item)) return true;
+    if (!hasQuestionStandard(item)) return true;
+    if (String(item?.standardsError || '').trim()) return true;
+    const confidence = normalizeKey(questionConfidence(item));
+    return confidence === 'none' || confidence === 'weak' || confidence === 'low';
+  }
+
+  function countQuestionsWithStandards(questions) {
+    return (Array.isArray(questions) ? questions : []).filter(hasQuestionStandard).length;
+  }
+
+  function hasQuestionStandard(item) {
+    return getQuestionStandards(item).length > 0;
+  }
+
+  function getQuestionStandards(item) {
+    const primary = objectRows(item?.primaryStandards);
+    const legacy = objectRows(item?.standards);
+    const possible = objectRows(item?.possibleStandards);
+    if (primary.length) return primary;
+    if (legacy.length) return legacy;
+    return possible;
+  }
+
+  function formatQuestionStandards(item) {
+    const standards = getQuestionStandards(item);
+    if (!standards.length) return 'No standard matched';
+    return standards
+      .map((standard) => [standard.standardId, standard.label].map((part) => String(part || '').trim()).filter(Boolean).join(': '))
+      .filter(Boolean)
+      .join(', ') || 'Standard matched';
+  }
+
+  function renderQuestionStandardsCell(item) {
+    const standards = getQuestionStandards(item);
+    if (!standards.length) return '<span class="report-standard-empty">No standard matched</span>';
+
+    return standards.map((standard) => {
+      const standardId = String(standard?.standardId || '').trim();
+      if (!standardId) return '';
+
+      return `
+        <button
+          type="button"
+          class="report-standard-button"
+          data-standard-id="${escapeAttr(standardId)}"
+          data-standard-bank-id="${escapeAttr(item?.standardsBankId || standard.standardsBankId || '')}"
+          data-standard-label="${escapeAttr(standard.label || '')}"
+          data-standard-unit="${escapeAttr(standard.unit || '')}"
+          data-standard-concept="${escapeAttr(standard.conceptTitle || '')}"
+          data-standard-area="${escapeAttr(standard.classroomArea || '')}"
+          data-standard-reason="${escapeAttr(standard.reasonSummary || '')}"
+          data-standard-domain="${escapeAttr(standard.domainName || standard.domainCode || '')}"
+          data-standard-strand="${escapeAttr(standard.strandTitle || standard.strandCode || '')}"
+          aria-label="View standard ${escapeAttr(standardId)}"
+        >${escapeHtml(standardId)}</button>
+      `;
+    }).filter(Boolean).join('');
+  }
+
+  function standardContextFromButton(button) {
+    return {
+      standardId: button.getAttribute('data-standard-id') || '',
+      standardsBankId: button.getAttribute('data-standard-bank-id') || '',
+      label: button.getAttribute('data-standard-label') || '',
+      unit: button.getAttribute('data-standard-unit') || '',
+      conceptTitle: button.getAttribute('data-standard-concept') || '',
+      classroomArea: button.getAttribute('data-standard-area') || '',
+      reasonSummary: button.getAttribute('data-standard-reason') || '',
+      domain: button.getAttribute('data-standard-domain') || '',
+      strand: button.getAttribute('data-standard-strand') || ''
+    };
+  }
+
+  async function openStandardDetails(context) {
+    const standardId = String(context?.standardId || '').trim();
+    if (!standardId) return;
+
+    showStandardDetailsModal({
+      ...context,
+      standardId,
+      loading: true
+    });
+
+    try {
+      const details = await loadStandardDetails(standardId, context?.standardsBankId || '');
+      showStandardDetailsModal({
+        ...context,
+        ...details,
+        standardId,
+        loading: false
+      });
+    } catch {
+      showStandardDetailsModal({
+        ...context,
+        standardId,
+        loading: false,
+        loadError: 'Full standard text is not available yet.'
+      });
+    }
+  }
+
+  async function loadStandardDetails(standardId, standardsBankId = '') {
+    const cacheKey = [standardsBankId || 'default', standardId].join(':');
+    if (standardDetailsCache.has(cacheKey)) return standardDetailsCache.get(cacheKey);
+
+    const query = standardsBankId ? `?standardsBankId=${encodeURIComponent(standardsBankId)}` : '';
+    const data = await fetchJson(`/api/profile/standard-details/${encodeURIComponent(standardId)}${query}`);
+    const details = data?.standard && typeof data.standard === 'object' ? data.standard : {};
+    standardDetailsCache.set(cacheKey, details);
+    return details;
+  }
+
+  function showStandardDetailsModal(details) {
+    const modal = byId('standardDetailsModal');
+    const body = byId('standardDetailsBody');
+    const title = byId('standardDetailsTitle');
+    if (!modal || !body || !title) return;
+
+    const standardId = String(details?.standardId || '').trim() || 'Unknown standard';
+    title.textContent = standardId;
+    body.innerHTML = renderStandardDetailsBody(details);
+    modal.hidden = false;
+    document.body.classList.add('standard-details-open');
+    modal.querySelector('.standard-details-panel')?.focus();
+  }
+
+  function closeStandardDetailsModal() {
+    const modal = byId('standardDetailsModal');
+    if (!modal) return;
+    modal.hidden = true;
+    document.body.classList.remove('standard-details-open');
+  }
+
+  function renderStandardDetailsBody(details = {}) {
+    if (details.loading) {
+      return '<p class="standard-details-fallback">Loading standard details...</p>';
+    }
+
+    const standardText = firstText(details.officialStandard, details.officialText, details.standardText, details.statement);
+    const studentText = firstText(details.studentFriendlyStandard, details.studentFriendlyText, details.studentCanStatement);
+    const fallback = details.loadError || 'Full standard text is not available yet.';
+    const metaRows = [
+      ['Matched topic', firstText(details.label, details.teacherShortName, details.title)],
+      ['Unit', details.unit],
+      ['Concept', firstText(details.conceptTitle, details.topic)],
+      ['Classroom area', details.classroomArea],
+      ['Domain', firstText(details.domainName, details.domain)],
+      ['Strand', firstText(details.strandTitle, details.strand)],
+      ['Reason', details.reasonSummary]
+    ].filter(([, value]) => String(value || '').trim());
+
+    return `
+      <div class="standard-details-code">${escapeHtml(details.standardId || 'Unknown standard')}</div>
+      <section class="standard-details-section">
+        <h5>Standard Text</h5>
+        <p>${escapeHtml(standardText || fallback)}</p>
+      </section>
+      ${studentText ? `
+        <section class="standard-details-section">
+          <h5>Student-Friendly Text</h5>
+          <p>${escapeHtml(studentText)}</p>
+        </section>
+      ` : ''}
+      ${metaRows.length ? `
+        <section class="standard-details-section">
+          <h5>Related Content</h5>
+          <dl class="standard-details-meta">
+            ${metaRows.map(([label, value]) => `
+              <div>
+                <dt>${escapeHtml(label)}</dt>
+                <dd>${escapeHtml(value)}</dd>
+              </div>
+            `).join('')}
+          </dl>
+        </section>
+      ` : ''}
+    `;
+  }
+
+  function questionConfidence(item) {
+    return item?.standardsConfidence || item?.possibleStandardsConfidence || item?.confidence || 'unknown';
+  }
+
+  function reviewStatusForQuestion(item) {
+    if (isNoMatchQuestion(item)) return { label: 'Needs review', needsReview: true };
+    if (!hasQuestionStandard(item)) return { label: 'Missing standard', needsReview: true };
+    if (String(item?.standardsError || '').trim()) return { label: 'Needs review', needsReview: true };
+
+    const confidence = normalizeKey(questionConfidence(item));
+    if (confidence === 'none' || confidence === 'weak' || confidence === 'low') {
+      return { label: 'Check match', needsReview: true };
+    }
+
+    return { label: 'Ready', needsReview: false };
+  }
+
+  function formatQuestionTime(item) {
+    if (item?.timestamp) return formatDateTime(item.timestamp);
+    return [currentDate, item?.time].filter(Boolean).join(' ');
+  }
+
+  function formatQuestionTimeParts(item) {
+    const timestamp = item?.timestamp ? new Date(item.timestamp) : null;
+    if (timestamp && !Number.isNaN(timestamp.getTime())) {
+      return {
+        date: formatDateKeySlash(timestamp),
+        time: timestamp.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+      };
+    }
+
+    return {
+      date: formatDateKeySlash(currentDate || todayKey()),
+      time: String(item?.time || '').trim()
+    };
+  }
+
+  function formatDateKeySlash(value) {
+    if (value instanceof Date) {
+      const year = value.getFullYear();
+      const month = String(value.getMonth() + 1).padStart(2, '0');
+      const day = String(value.getDate()).padStart(2, '0');
+      return `${year}/${month}/${day}`;
+    }
+
+    const text = String(value || '').trim();
+    const match = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (match) return `${match[1]}/${match[2]}/${match[3]}`;
+    return text.replaceAll('-', '/');
+  }
+
+  function updateTeacherReportSummary(fallbackMessage = '') {
+    if (fallbackMessage && currentQuestions.length === 0) {
+      setText('reportSummaryStatus', fallbackMessage);
+      return;
+    }
+
+    const total = currentQuestions.length;
+    const matched = currentStandardsTagged || countQuestionsWithStandards(currentQuestions);
+    const needsReview = currentQuestions.filter(questionNeedsReview).length;
+    const selectedDate = currentDate || todayKey();
+    const dateLabel = selectedDate === todayKey() ? 'Today' : `On ${selectedDate}`;
+    const reviewPhrase = needsReview === 1 ? '1 question needs teacher review' : `${needsReview} questions need teacher review`;
+
+    if (!total) {
+      setText('reportSummaryStatus', 'No questions for this date yet. This report will be ready once classroom activity is logged.');
+      return;
+    }
+
+    setText(
+      'reportSummaryStatus',
+      `${dateLabel}, students asked ${total} question${total === 1 ? '' : 's'}. ${matched} question${matched === 1 ? '' : 's'} matched a standard. ${reviewPhrase}. ${needsReview ? 'Review the highlighted rows before export.' : 'This report is ready to export.'}`
+    );
+  }
+
+  function emptyReportTitle() {
+    if (currentQuestions.length === 0) return 'No questions yet.';
+    if (reportQuestionFilter === 'needs-review') return 'No questions need review.';
+    if (reportQuestionFilter === 'missing-standard') return 'No questions are missing standards.';
+    return 'No questions match this filter.';
+  }
+
+  function emptyReportMessage() {
+    if (currentQuestions.length === 0) return 'Student questions will appear here after classroom activity is logged.';
+    if (reportQuestionFilter === 'needs-review') return 'Everything loaded for this date is ready or already matched.';
+    if (reportQuestionFilter === 'missing-standard') return 'Every loaded question has a matched or possible standard.';
+    return 'Try another date or filter.';
+  }
+
+  function updateReportFilterButtons() {
+    document.querySelectorAll('[data-report-filter]').forEach((button) => {
+      const active = button.getAttribute('data-report-filter') === reportQuestionFilter;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+  }
+
+  function updateExportButtonStates(questions) {
+    const hasRows = Array.isArray(questions) && questions.length > 0;
+    const csvButton = byId('reportExportCsv');
+    const copyButton = byId('reportCopySummary');
+    if (csvButton) csvButton.disabled = !hasRows;
+    if (copyButton) copyButton.disabled = currentQuestions.length === 0;
+  }
+
   function statusLabel(item) {
     return isNoMatchQuestion(item) ? 'No Match' : 'Matched';
   }
@@ -925,7 +1426,9 @@
   function confidenceLabel(value) {
     const confidence = normalizeKey(value);
     if (confidence === 'strong' || confidence === 'high') return 'Strong';
+    if (confidence === 'weak' || confidence === 'low') return 'Weak';
     if (confidence === 'none' || confidence === 'no confidence') return 'None';
+    if (confidence === 'unknown') return 'Unknown';
     return 'Medium';
   }
 

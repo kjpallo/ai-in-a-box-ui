@@ -319,6 +319,8 @@
   .live-activity-controls,
   .reports-summary-grid,
   .reports-controls,
+  .questions-standards-toolbar,
+  .reports-filter-group,
   .reports-content-grid,
   .standards-coverage-body,
   .teacher-content-tabs,
@@ -362,6 +364,14 @@
   .teacher-content-approved-head {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .reports-header-actions {
+    justify-content: flex-start;
+  }
+
+  .teacher-summary-card {
+    grid-template-columns: 1fr;
   }
 
   .teacher-content-overlay {
@@ -457,6 +467,24 @@
   .live-question-table .profile-table-head,
   .live-question-table .profile-table-row {
     min-width: 620px;
+  }
+
+  .questions-standards-table .profile-table-head,
+  .questions-standards-table .profile-table-row {
+    min-width: 760px;
+  }
+
+  .standard-details-modal {
+    padding: 12px;
+  }
+
+  .standard-details-panel {
+    padding: 20px;
+  }
+
+  .standard-details-meta div {
+    grid-template-columns: 1fr;
+    gap: 4px;
   }
 
   .blade-bottom-nav {
