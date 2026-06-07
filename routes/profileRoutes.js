@@ -2,6 +2,9 @@ const crypto = require('crypto');
 const {
   writeQuestionsStandardsExportManifest
 } = require('../lib/profile/questionsStandardsExportManifest');
+const {
+  purgeQuestionsStandardsExport
+} = require('../lib/profile/questionsStandardsExportPurge');
 const { exportQuestionsStandardsCsv } = require('../lib/profile/questionsStandardsCsvExport');
 const { getStandardsBankDetails } = require('../lib/standards/standardsBankDiscovery');
 const { loadMissouriStandardsBank } = require('../lib/standards/standardsMatcher');
@@ -236,6 +239,29 @@ function registerProfileRoutes(app, {
     }
   );
 
+  registerMaybeProtectedPost(
+    app,
+    '/api/profile/questions-standards/export/:exportId/purge',
+    requireTeacherAuth,
+    (req, res) => {
+      if (req.body?.confirm !== true) {
+        res.status(400).json({ error: 'confirm true is required.' });
+        return;
+      }
+
+      try {
+        const result = purgeQuestionsStandardsExport({
+          exportId: req.params?.exportId,
+          logFilePath: studentInteractionsFile,
+          manifestDir: questionsStandardsExportManifestDir
+        });
+        res.json(result);
+      } catch (error) {
+        sendProfileError(res, error);
+      }
+    }
+  );
+
   app.get('/api/profile/standard-details/:standardId', (req, res) => {
     const standardId = String(req.params?.standardId || '').trim();
     const standardsBankId = String(req.query?.standardsBankId || '').trim();
@@ -290,6 +316,15 @@ function registerMaybeProtectedGet(app, route, requireTeacherAuth, handler) {
   }
 
   app.get(route, handler);
+}
+
+function registerMaybeProtectedPost(app, route, requireTeacherAuth, handler) {
+  if (typeof requireTeacherAuth === 'function') {
+    app.post(route, requireTeacherAuth, handler);
+    return;
+  }
+
+  app.post(route, handler);
 }
 
 function parseQuestionsStandardsExportFilters(query = {}) {

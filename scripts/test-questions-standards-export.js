@@ -18,6 +18,9 @@ const {
   buildQuestionsStandardsCsvExport,
   exportQuestionsStandardsCsv
 } = require('../lib/profile/questionsStandardsCsvExport');
+const {
+  purgeQuestionsStandardsExport
+} = require('../lib/profile/questionsStandardsExportPurge');
 
 const records = [
   {
@@ -146,8 +149,13 @@ assert.deepEqual(parse(empty.csv, { columns: true }), [], 'header-only CSV shoul
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'questions-standards-export-'));
 const logFilePath = path.join(tmpDir, 'student_interactions.json');
+const problemQuestionsPath = path.join(tmpDir, 'problem_questions.json');
 const logContents = `${JSON.stringify(records, null, 2)}\n`;
+const problemQuestionsContents = `${JSON.stringify([
+  { id: 'problem-1', question: 'Needs review' }
+], null, 2)}\n`;
 fs.writeFileSync(logFilePath, logContents, 'utf8');
+fs.writeFileSync(problemQuestionsPath, problemQuestionsContents, 'utf8');
 
 const fileBacked = exportQuestionsStandardsCsv({
   logFilePath,
@@ -161,7 +169,7 @@ assert.equal(fs.existsSync(logFilePath), true, 'raw interaction history should n
 assert.equal(fs.readFileSync(logFilePath, 'utf8'), logContents, 'raw interaction history should not be modified');
 assert.deepEqual(
   fs.readdirSync(tmpDir).sort(),
-  ['student_interactions.json'],
+  ['problem_questions.json', 'student_interactions.json'],
   'pure CSV export service should not write artifact files'
 );
 
@@ -252,6 +260,7 @@ async function runRouteChecks() {
   }, 'manifest checksum should match the generated CSV');
   assert.equal(manifest.purgeCompleted, false, 'manifest should not mark purge complete');
   assert.equal(manifest.deletedRecordCount, 0, 'manifest should not record deleted rows');
+  assert.equal(fs.readFileSync(logFilePath, 'utf8'), logContents, 'export endpoint should not purge raw records');
 
   const manifestText = fs.readFileSync(manifestPath, 'utf8');
   assert.doesNotMatch(manifestText, /What is force, really\?/u, 'manifest should not include full question text');
@@ -270,6 +279,7 @@ async function runRouteChecks() {
   );
   assert.equal(parse(allHistoryResponse.body, { columns: true }).length, 3, 'route should export all current history without filters');
   assert.equal(fs.readdirSync(manifestDir).length, 2, 'each successful route export should write a manifest');
+  assert.equal(fs.readFileSync(logFilePath, 'utf8'), logContents, 'subsequent export endpoint calls should not purge raw records');
 
   const invalidDateResponse = await request(
     handlers,
@@ -320,6 +330,141 @@ async function runRouteChecks() {
   assert.equal(failedManifestResponse.body.error, 'Unable to export question history.');
   assert.equal(failedManifestResponse.getHeader('x-export-id'), undefined, 'failed manifest write should not create a purge-ready export id');
   assert.equal(fs.readFileSync(logFilePath, 'utf8'), logContents, 'failed manifest write should not modify raw records');
+
+  const missingManifestResponse = await request(
+    handlers,
+    'POST',
+    '/api/profile/questions-standards/export/:exportId/purge',
+    { confirm: true },
+    { exportId: 'missing-export-id' },
+    {},
+    authorizedExtras
+  );
+  assert.equal(missingManifestResponse.statusCode, 404, 'purge should fail when manifest is missing');
+  assert.equal(missingManifestResponse.body.error, 'Export manifest not found.');
+  assert.equal(fs.readFileSync(logFilePath, 'utf8'), logContents, 'missing manifest purge should not modify raw records');
+
+  const missingConfirmResponse = await request(
+    handlers,
+    'POST',
+    '/api/profile/questions-standards/export/:exportId/purge',
+    {},
+    { exportId: manifest.exportId },
+    {},
+    authorizedExtras
+  );
+  assert.equal(missingConfirmResponse.statusCode, 400, 'purge should require confirm true');
+  assert.equal(missingConfirmResponse.body.error, 'confirm true is required.');
+  assert.equal(fs.readFileSync(logFilePath, 'utf8'), logContents, 'unconfirmed purge should not modify raw records');
+
+  const falseConfirmResponse = await request(
+    handlers,
+    'POST',
+    '/api/profile/questions-standards/export/:exportId/purge',
+    { confirm: false },
+    { exportId: manifest.exportId },
+    {},
+    authorizedExtras
+  );
+  assert.equal(falseConfirmResponse.statusCode, 400, 'purge should reject false confirm');
+  assert.equal(fs.readFileSync(logFilePath, 'utf8'), logContents, 'false confirm purge should not modify raw records');
+
+  const unauthorizedPurge = await request(
+    handlers,
+    'POST',
+    '/api/profile/questions-standards/export/:exportId/purge',
+    { confirm: true },
+    { exportId: manifest.exportId }
+  );
+  assert.equal(unauthorizedPurge.statusCode, 401, 'purge route should require teacher auth');
+  assert.equal(unauthorizedPurge.body.error, 'Teacher login required.');
+  assert.equal(fs.readFileSync(logFilePath, 'utf8'), logContents, 'unauthorized purge should not modify raw records');
+
+  const purgeResponse = await request(
+    handlers,
+    'POST',
+    '/api/profile/questions-standards/export/:exportId/purge',
+    { confirm: true },
+    { exportId: manifest.exportId },
+    {},
+    authorizedExtras
+  );
+  assert.equal(purgeResponse.statusCode, 200, 'confirmed purge should succeed');
+  assert.equal(purgeResponse.body.ok, true);
+  assert.equal(purgeResponse.body.exportId, manifest.exportId);
+  assert.equal(purgeResponse.body.deletedRecordCount, 2, 'purge should delete only exported records');
+  assert.deepEqual(purgeResponse.body.remainingUnmatchedExportIds, [], 'purge should match all exported IDs');
+  assert.equal(purgeResponse.body.purgeCompleted, true);
+  assert.equal(purgeResponse.body.purgeStatus, 'completed');
+  assert.match(purgeResponse.body.purgedAt, /^\d{4}-\d{2}-\d{2}T/u, 'purge should report purge time');
+
+  const purgedRecords = JSON.parse(fs.readFileSync(logFilePath, 'utf8'));
+  assert.deepEqual(
+    purgedRecords.map((entry) => entry && entry.id).filter(Boolean),
+    ['interaction-2'],
+    'purge should leave unrelated interaction records'
+  );
+  assert.equal(purgedRecords.includes(null), true, 'purge should leave unrelated non-record log entries');
+  assert.equal(purgedRecords.includes('not a record'), true, 'purge should leave unrelated non-object log entries');
+  assert.equal(
+    fs.readFileSync(problemQuestionsPath, 'utf8'),
+    problemQuestionsContents,
+    'purge should not touch problem_questions.json'
+  );
+
+  const updatedManifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  assert.equal(updatedManifest.purgeCompleted, true, 'manifest should mark purge complete');
+  assert.match(updatedManifest.purgedAt, /^\d{4}-\d{2}-\d{2}T/u, 'manifest should record purge time');
+  assert.equal(updatedManifest.deletedRecordCount, 2, 'manifest should record deleted rows');
+  assert.deepEqual(updatedManifest.remainingUnmatchedExportIds, [], 'manifest should record unmatched exported IDs');
+  assert.equal(updatedManifest.purgeStatus, 'completed', 'manifest should record purge status');
+
+  const alreadyCompletedResponse = await request(
+    handlers,
+    'POST',
+    '/api/profile/questions-standards/export/:exportId/purge',
+    { confirm: true },
+    { exportId: manifest.exportId },
+    {},
+    authorizedExtras
+  );
+  assert.equal(alreadyCompletedResponse.statusCode, 409, 'purge should fail if manifest is already completed');
+  assert.equal(alreadyCompletedResponse.body.error, 'Export has already been purged.');
+  assert.deepEqual(
+    JSON.parse(fs.readFileSync(logFilePath, 'utf8')).map((entry) => entry && entry.id).filter(Boolean),
+    ['interaction-2'],
+    'already-completed purge should not modify raw records'
+  );
+
+  const serviceTmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'questions-standards-purge-service-'));
+  const serviceLogFilePath = path.join(serviceTmpDir, 'student_interactions.json');
+  const serviceManifestDir = path.join(serviceTmpDir, 'manifests');
+  fs.mkdirSync(serviceManifestDir, { recursive: true });
+  fs.writeFileSync(serviceLogFilePath, JSON.stringify([
+    { id: 'direct-1', question: 'Exported one' },
+    { id: 'direct-2', question: 'Not exported' }
+  ], null, 2), 'utf8');
+  fs.writeFileSync(path.join(serviceManifestDir, 'manifest.json'), JSON.stringify({
+    exportId: 'direct-export',
+    exportedRecordIds: ['direct-1', 'missing-direct'],
+    rowCount: 2,
+    purgeCompleted: false,
+    deletedRecordCount: 0
+  }, null, 2), 'utf8');
+
+  const directResult = purgeQuestionsStandardsExport({
+    exportId: 'direct-export',
+    logFilePath: serviceLogFilePath,
+    manifestDir: serviceManifestDir,
+    now: () => new Date('2026-06-06T12:00:00.000Z')
+  });
+  assert.equal(directResult.deletedRecordCount, 1, 'purge service should delete matched exported records');
+  assert.deepEqual(
+    directResult.remainingUnmatchedExportIds,
+    ['missing-direct'],
+    'purge service should report exported IDs that were no longer in the source log'
+  );
+  assert.equal(directResult.purgeStatus, 'completed_with_unmatched_export_ids');
 }
 
 runRouteChecks()
