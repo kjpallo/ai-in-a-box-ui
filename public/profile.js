@@ -7,6 +7,7 @@
   let currentStandardsSummary = null;
   let currentQuestions = [];
   let reportQuestionFilter = 'all';
+  let questionsStandardsExportState = null;
   let availableActivityDates = [];
   const standardDetailsCache = new Map();
   let showingReviewQuestions = false;
@@ -729,6 +730,7 @@
     document.querySelectorAll('[data-report-filter]').forEach((button) => {
       button.addEventListener('click', () => {
         reportQuestionFilter = button.getAttribute('data-report-filter') || 'all';
+        clearQuestionsStandardsExportState();
         renderReportQuestionRows(getFilteredReportQuestions());
       });
     });
@@ -750,6 +752,7 @@
     });
 
     byId('reportExportCsv')?.addEventListener('click', exportReportCsv);
+    byId('reportPurgeRawHistory')?.addEventListener('click', purgeQuestionsStandardsExport);
     byId('reportPrintReport')?.addEventListener('click', printReport);
     byId('reportCopySummary')?.addEventListener('click', copyReportSummary);
 
@@ -921,6 +924,7 @@
     if (profileSelect && profileSelect.value !== currentDate) profileSelect.value = currentDate;
     if (reportSelect && reportSelect.value !== currentDate) reportSelect.value = currentDate;
     setText('reportDateRangeValue', currentDate);
+    clearQuestionsStandardsExportState();
   }
 
   function renderStudentLink(studentUrl) {
@@ -1327,6 +1331,7 @@
     const selectedDate = selectedReportDate();
 
     if (exportButton) exportButton.disabled = true;
+    clearQuestionsStandardsExportState('Exporting CSV from the server...');
     setText('reportExportStatus', 'Exporting CSV from the server...');
 
     try {
@@ -1341,6 +1346,14 @@
       const exportId = response.headers.get('X-Export-Id');
 
       downloadBlob(blob, filename);
+      if (exportId) {
+        questionsStandardsExportState = {
+          exportId,
+          date: selectedDate,
+          filter: reportQuestionFilter
+        };
+      }
+      updateQuestionsStandardsPurgeButton();
       setText(
         'reportExportStatus',
         exportId ? 'CSV exported. Export ID saved for retention.' : 'CSV exported from the server.'
@@ -1349,6 +1362,59 @@
       setText('reportExportStatus', error.message || 'Could not export CSV from the server. No retention export was saved.');
     } finally {
       if (exportButton) exportButton.disabled = currentQuestions.length === 0;
+    }
+  }
+
+  async function purgeQuestionsStandardsExport() {
+    const purgeButton = byId('reportPurgeRawHistory');
+    const exportId = validQuestionsStandardsExportId();
+    if (!exportId) {
+      clearQuestionsStandardsExportState('Export the CSV before deleting raw history.');
+      return;
+    }
+
+    const confirmed = window.confirm([
+      'The CSV has already been exported.',
+      '',
+      'This will delete only the raw JSON history records used to make that CSV.',
+      'It will not delete the CSV.',
+      'It will not delete problem/question review logs.',
+      'It cannot be undone from the app.',
+      '',
+      'Delete the raw history used for this CSV?'
+    ].join('\n'));
+    if (!confirmed) return;
+
+    if (purgeButton) purgeButton.disabled = true;
+    setText('reportExportStatus', 'Deleting raw history for this export...');
+
+    try {
+      const response = await fetch(
+        `/api/profile/questions-standards/export/${encodeURIComponent(exportId)}/purge`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ confirm: true })
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(await readExportError(response, 'Could not delete raw history for this export.'));
+      }
+
+      const data = await response.json().catch(() => ({}));
+      const deletedCount = Number(data?.deletedRecordCount || 0);
+      questionsStandardsExportState = null;
+      updateQuestionsStandardsPurgeButton();
+      setText(
+        'reportExportStatus',
+        `Raw history deleted for this export. Deleted records: ${deletedCount}`
+      );
+      await loadSummary(selectedReportDate());
+      await loadStandardsSummaryReport();
+    } catch (error) {
+      setText('reportExportStatus', error.message || 'Could not delete raw history for this export.');
+      updateQuestionsStandardsPurgeButton();
     }
   }
 
@@ -1395,17 +1461,39 @@
     return `${QUESTIONS_STANDARDS_EXPORT_ENDPOINT}?${params.toString()}`;
   }
 
-  async function readExportError(response) {
+  function validQuestionsStandardsExportId() {
+    if (!questionsStandardsExportState?.exportId) return '';
+    if (questionsStandardsExportState.date !== selectedReportDate()) return '';
+    if (questionsStandardsExportState.filter !== reportQuestionFilter) return '';
+    return questionsStandardsExportState.exportId;
+  }
+
+  function clearQuestionsStandardsExportState(statusMessage = '') {
+    questionsStandardsExportState = null;
+    updateQuestionsStandardsPurgeButton();
+    if (statusMessage) setText('reportExportStatus', statusMessage);
+  }
+
+  function updateQuestionsStandardsPurgeButton() {
+    const purgeButton = byId('reportPurgeRawHistory');
+    if (!purgeButton) return;
+
+    const hasExportId = Boolean(validQuestionsStandardsExportId());
+    purgeButton.hidden = !hasExportId;
+    purgeButton.disabled = !hasExportId;
+  }
+
+  async function readExportError(response, fallbackMessage = 'Could not export CSV from the server. No retention export was saved.') {
     try {
       const contentType = response.headers.get('Content-Type') || '';
       if (contentType.includes('application/json')) {
         const data = await response.json();
-        return data?.error || 'Could not export CSV from the server. No retention export was saved.';
+        return data?.error || fallbackMessage;
       }
       const text = await response.text();
-      return text.trim() || 'Could not export CSV from the server. No retention export was saved.';
+      return text.trim() || fallbackMessage;
     } catch {
-      return 'Could not export CSV from the server. No retention export was saved.';
+      return fallbackMessage;
     }
   }
 

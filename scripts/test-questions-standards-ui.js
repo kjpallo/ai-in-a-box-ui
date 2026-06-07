@@ -7,6 +7,7 @@ const projectRoot = path.join(__dirname, '..');
 const profileUi = read(path.join(projectRoot, 'public', 'profile.js'));
 const bladeUi = read(path.join(projectRoot, 'public', 'blade-ui.js'));
 const exportHandler = between(profileUi, 'async function exportReportCsv()', 'function printReport()');
+const purgeHandler = between(profileUi, 'async function purgeQuestionsStandardsExport()', 'function printReport()');
 
 assert.match(
   profileUi,
@@ -35,6 +36,11 @@ assert.match(
 );
 assert.match(
   exportHandler,
+  /questionsStandardsExportState = \{\s*exportId,\s*date: selectedDate,\s*filter: reportQuestionFilter\s*\}/,
+  'Questions & Standards CSV export should store the export id for the current date and filter.'
+);
+assert.match(
+  exportHandler,
   /CSV exported\. Export ID saved for retention\./,
   'Questions & Standards CSV export should show retention-safe success feedback.'
 );
@@ -55,6 +61,11 @@ assert.match(
 );
 assert.match(
   bladeUi,
+  /id="reportPurgeRawHistory"[^>]*hidden[^>]*disabled[^>]*>Delete raw history used for this CSV/,
+  'Questions & Standards purge UI should be unavailable before a successful export.'
+);
+assert.match(
+  bladeUi,
   /id="reportPrintReport"[\s\S]*Print/,
   'Questions & Standards should keep the Print button.'
 );
@@ -62,6 +73,76 @@ assert.match(
   bladeUi,
   /id="reportCopySummary"[\s\S]*Copy Summary/,
   'Questions & Standards should keep the Copy Summary button.'
+);
+assert.match(
+  profileUi,
+  /byId\('reportExportCsv'\)\?\.addEventListener\('click', exportReportCsv\)/,
+  'Export behavior should stay wired.'
+);
+assert.match(
+  profileUi,
+  /byId\('reportPurgeRawHistory'\)\?\.addEventListener\('click', purgeQuestionsStandardsExport\)/,
+  'Delete raw history should be wired only to the explicit purge action.'
+);
+assert.match(
+  purgeHandler,
+  /const exportId = validQuestionsStandardsExportId\(\);[\s\S]*if \(!exportId\)/,
+  'Purge should require a valid stored export id before it can call the server.'
+);
+assert.match(
+  purgeHandler,
+  /window\.confirm\(\[/,
+  'Purge should require explicit teacher confirmation.'
+);
+assert.match(
+  purgeHandler,
+  /The CSV has already been exported\.[\s\S]*delete only the raw JSON history records used to make that CSV[\s\S]*It will not delete the CSV\.[\s\S]*It will not delete problem\/question review logs\.[\s\S]*It cannot be undone from the app\./,
+  'Purge confirmation should explain exactly what will and will not be deleted.'
+);
+assert.match(
+  purgeHandler,
+  /if \(!confirmed\) return;[\s\S]*fetch\(\s*`\/api\/profile\/questions-standards\/export\/\$\{encodeURIComponent\(exportId\)\}\/purge`/,
+  'Purge endpoint should be called only after confirmation.'
+);
+assert.match(
+  purgeHandler,
+  /method: 'POST'[\s\S]*body: JSON\.stringify\(\{ confirm: true \}\)/,
+  'Purge should send confirm true to the backend.'
+);
+assert.match(
+  purgeHandler,
+  /Raw history deleted for this export\. Deleted records: \$\{deletedCount\}/,
+  'Purge success should report deleted record count.'
+);
+assert.match(
+  purgeHandler,
+  /loadSummary\(selectedReportDate\(\)\)[\s\S]*loadStandardsSummaryReport\(\)/,
+  'Purge success should refresh Questions & Standards data.'
+);
+assert.match(
+  purgeHandler,
+  /Could not delete raw history for this export\./,
+  'Purge failure should show a clear error.'
+);
+assert.match(
+  profileUi,
+  /function validQuestionsStandardsExportId\(\)[\s\S]*questionsStandardsExportState\.date !== selectedReportDate\(\)[\s\S]*questionsStandardsExportState\.filter !== reportQuestionFilter/,
+  'Stored export ids should only be valid for the same date and filter.'
+);
+assert.match(
+  profileUi,
+  /reportQuestionFilter = button\.getAttribute\('data-report-filter'\) \|\| 'all';\s*clearQuestionsStandardsExportState\(\);/,
+  'Changing the Questions & Standards filter should clear the stored export id.'
+);
+assert.match(
+  profileUi,
+  /function syncDateSelectValue\(value\)[\s\S]*clearQuestionsStandardsExportState\(\);/,
+  'Changing the Questions & Standards date should clear the stored export id.'
+);
+assert.doesNotMatch(
+  profileUi,
+  /purgeQuestionsStandardsExport\(\);|await purgeQuestionsStandardsExport\(/,
+  'Purge should not run automatically.'
 );
 assert.match(
   profileUi,
@@ -78,12 +159,6 @@ assert.match(
   /fetchJson\('\/api\/profile\/live-student-activity'\)/,
   'Live Activity should remain on the teacher-only live activity endpoint.'
 );
-assert.doesNotMatch(
-  profileUi + '\n' + bladeUi,
-  /Export and delete|Delete raw history|purge confirmation|data-report-purge|reportPurge|deleteRawHistory/i,
-  'Questions & Standards should not add purge/delete controls yet.'
-);
-
 const protectedDiff = spawnSync(
   'git',
   [
