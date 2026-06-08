@@ -150,6 +150,7 @@ assert.deepEqual(parse(empty.csv, { columns: true }), [], 'header-only CSV shoul
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'questions-standards-export-'));
 const logFilePath = path.join(tmpDir, 'student_interactions.json');
 const problemQuestionsPath = path.join(tmpDir, 'problem_questions.json');
+const archiveDir = path.join(tmpDir, 'archives');
 const logContents = `${JSON.stringify(records, null, 2)}\n`;
 const problemQuestionsContents = `${JSON.stringify([
   { id: 'problem-1', question: 'Needs review' }
@@ -159,6 +160,7 @@ fs.writeFileSync(problemQuestionsPath, problemQuestionsContents, 'utf8');
 
 const fileBacked = exportQuestionsStandardsCsv({
   logFilePath,
+  archiveDir,
   date: '2026-05-01',
   sessionId: 'session-b'
 });
@@ -195,6 +197,7 @@ registerProfileRoutes(app, {
   sendDailySummaryEmail: async () => ({ ok: true }),
   studentInteractionsFile: logFilePath,
   studentSessions: {},
+  questionsStandardsArchiveDir: archiveDir,
   questionsStandardsExportManifestDir: manifestDir
 });
 
@@ -314,6 +317,7 @@ async function runRouteChecks() {
     sendDailySummaryEmail: async () => ({ ok: true }),
     studentInteractionsFile: logFilePath,
     studentSessions: {},
+    questionsStandardsArchiveDir: archiveDir,
     questionsStandardsExportManifestDir: failingManifestDir
   });
 

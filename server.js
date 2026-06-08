@@ -23,6 +23,13 @@ const {
   loadStudentInteractionLogs
 } = require('./lib/system/standardsSummaryReport');
 const {
+  loadQuestionsStandardsRecords
+} = require('./lib/profile/questionsStandardsArchiveRecords');
+const {
+  DEFAULT_AUTO_ARCHIVE_INTERVAL_MS,
+  runQuestionsStandardsAutoArchive
+} = require('./lib/profile/questionsStandardsAutoArchive');
+const {
   getProfileStatus: getGmailProfileStatus,
   createGoogleConnectUrl,
   completeGoogleConnect,
@@ -63,6 +70,7 @@ loadLocalEnv(path.join(__dirname, '.env'));
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || '';
 
 const publicDir = path.join(__dirname, 'public');
 const voicesDir = path.join(__dirname, 'voices');
@@ -73,6 +81,10 @@ const approvedPacksDir = path.join(knowledgeDir, 'approved-packs');
 const studentInteractionsFile = path.join(__dirname, 'logs', 'student_interactions.json');
 const MAX_KNOWLEDGE_ITEMS = Number(process.env.MAX_KNOWLEDGE_ITEMS || 6);
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'qwen2.5:0.5b';
+const QUESTIONS_STANDARDS_AUTO_ARCHIVE_INTERVAL_MS = normalizeIntervalMs(
+  process.env.QUESTIONS_STANDARDS_AUTO_ARCHIVE_INTERVAL_MS,
+  DEFAULT_AUTO_ARCHIVE_INTERVAL_MS
+);
 const studentSessions = Object.create(null);
 const studentQuestionRateLimiter = createStudentQuestionRateLimiter();
 const teacherAuthStore = createTeacherAuthStore();
@@ -138,6 +150,7 @@ const questionAnswer = createQuestionAnswerService({
 
 tts.pruneAudioDir();
 setInterval(tts.pruneAudioDir, Math.max(60_000, Math.floor(Number(process.env.AUDIO_TTL_MS || 1000 * 60 * 30) / 2))).unref();
+setInterval(runQuestionsStandardsAutoArchiveFromControls, QUESTIONS_STANDARDS_AUTO_ARCHIVE_INTERVAL_MS).unref();
 
 app.use(express.json());
 
@@ -194,7 +207,10 @@ registerProfileRoutes(app, {
   getClassroomControls,
   getDailyQuestionSummary,
   getStudentRateLimitInfo,
-  getStandardsSummaryReport: (date) => buildStandardsSummaryReport(loadStudentInteractionLogs(studentInteractionsFile), { date }),
+  getStandardsSummaryReport: (date) => buildStandardsSummaryReport(loadQuestionsStandardsRecords({
+    logFilePath: studentInteractionsFile,
+    readCurrentRecords: loadStudentInteractionLogs
+  }), { date }),
   getProfileStatus: (req) => sanitizeTeacherProfileStatus({
     authStore: teacherAuthStore,
     authenticated: Boolean(getTeacherSession(req, teacherSessionStore)),
@@ -210,6 +226,7 @@ registerProfileRoutes(app, {
 });
 registerClassroomControlsRoutes(app, {
   getClassroomControls,
+  port: PORT,
   updateClassroomControls
 });
 app.use('/api/teacher-content', teacherAuthRequired, createTeacherContentRoutes());
@@ -221,11 +238,40 @@ registerStudentRoutes(app, {
   studentSessions
 });
 
-app.listen(PORT, () => {
-  console.log(`AI in a Box running at http://localhost:${PORT}`);
+app.listen(PORT, HOST || undefined, () => {
+  const localUrl = `http://localhost:${PORT}`;
+  console.log(`AI in a Box running at ${localUrl}`);
+  if (HOST) console.log(`Server host binding: ${HOST}`);
   console.log(`TTS backend: ${tts.getEffectiveTtsBackend()}`);
   console.log(`Audio mode: ${tts.getEffectiveAudioMode()}`);
   if (tts.usingPiperHttp()) {
     console.log(`Piper HTTP URL: ${process.env.PIPER_HTTP_URL}`);
   }
 });
+
+function runQuestionsStandardsAutoArchiveFromControls() {
+  const controls = getClassroomControls();
+  if (controls.questionsStandardsAutoArchiveEnabled !== true) return;
+
+  const result = runQuestionsStandardsAutoArchive({
+    enabled: true,
+    inactiveMinutes: controls.questionsStandardsAutoArchiveInactiveMinutes,
+    studentSessions,
+    logFilePath: studentInteractionsFile,
+    logger: console
+  });
+
+  if (result.archivedSessions.length || result.errors.length) {
+    console.info('Questions & Standards auto-archive check finished.', {
+      archivedCount: result.archivedSessions.length,
+      errorCount: result.errors.length,
+      checkedAt: result.checkedAt
+    });
+  }
+}
+
+function normalizeIntervalMs(value, fallback) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number < 60_000) return fallback;
+  return Math.floor(number);
+}

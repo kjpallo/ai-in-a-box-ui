@@ -288,6 +288,7 @@
                     <code id="profileStudentUrlDetails"></code>
                   </details>
                 </div>
+                <p id="profileStudentLanHint" class="profile-student-lan-hint">Phones/tablets must be on the same local network as this teacher device.</p>
                 <span id="profileStudentLinkStatus">No student link created yet.</span>
               </div>
 
@@ -340,6 +341,7 @@
             </div>
             <div class="reports-header-actions" aria-label="Report actions">
               <button type="button" id="reportExportCsv" class="small-button">Export CSV</button>
+              <button type="button" id="reportPurgeRawHistory" class="small-button secondary-small danger-small" hidden disabled>Delete raw history used for this CSV</button>
               <button type="button" id="reportPrintReport" class="small-button secondary-small">Print</button>
               <button type="button" id="reportCopySummary" class="small-button secondary-small">Copy Summary</button>
               <button type="button" id="profileRefreshStandardsReport" class="small-button secondary-small">Refresh</button>

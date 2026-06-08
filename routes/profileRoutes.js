@@ -6,6 +6,9 @@ const {
   purgeQuestionsStandardsExport
 } = require('../lib/profile/questionsStandardsExportPurge');
 const { exportQuestionsStandardsCsv } = require('../lib/profile/questionsStandardsCsvExport');
+const {
+  archiveQuestionsStandardsSession
+} = require('../lib/profile/questionsStandardsSessionArchive');
 const { getStandardsBankDetails } = require('../lib/standards/standardsBankDiscovery');
 const { loadMissouriStandardsBank } = require('../lib/standards/standardsMatcher');
 
@@ -27,7 +30,8 @@ function registerProfileRoutes(app, {
   studentSessions,
   getStudentRateLimitInfo,
   questionRateLimiter,
-  questionsStandardsExportManifestDir
+  questionsStandardsExportManifestDir,
+  questionsStandardsArchiveDir
 }) {
   app.get('/api/profile/status', (req, res) => {
     res.json(getProfileStatus(req));
@@ -73,6 +77,50 @@ function registerProfileRoutes(app, {
 
     res.json({ sessions });
   });
+
+  registerMaybeProtectedPost(
+    app,
+    '/api/profile/student-sessions/:sessionId/archive',
+    requireTeacherAuth,
+    (req, res) => {
+      if (req.body?.confirm !== true) {
+        res.status(400).json({ error: 'confirm true is required.' });
+        return;
+      }
+
+      try {
+        const result = archiveQuestionsStandardsSession({
+          sessionId: req.params?.sessionId,
+          logFilePath: studentInteractionsFile,
+          archiveDir: questionsStandardsArchiveDir
+        });
+        const sessionId = result.sessionId || req.params?.sessionId || '';
+        const message = result.archived
+          ? 'Session archived. The CSV was verified, raw JSON history for this session was deleted, and the session remains available in Questions & Standards.'
+          : result.message || 'No question history records matched this session.';
+
+        if (result.archived && studentSessions && sessionId && studentSessions[sessionId]) {
+          delete studentSessions[sessionId];
+        }
+
+        res.json({
+          ok: true,
+          archived: result.archived === true,
+          archiveId: result.archiveId || '',
+          exportId: result.exportId || result.archiveId || '',
+          sessionId,
+          classSessionId: result.classSessionId || sessionId,
+          csvFilename: result.csvFilename || '',
+          rowCount: Number(result.rowCount || 0),
+          deletedRecordCount: Number(result.deletedRecordCount || 0),
+          rawRecordsDeleted: result.rawRecordsDeleted === true,
+          message
+        });
+      } catch (error) {
+        sendProfileError(res, error);
+      }
+    }
+  );
 
   app.get('/api/profile/google/start', (_req, res) => {
     try {
@@ -213,6 +261,7 @@ function registerProfileRoutes(app, {
         const filename = buildQuestionsStandardsExportFilename(filters);
         const result = exportQuestionsStandardsCsv({
           logFilePath: studentInteractionsFile,
+          archiveDir: questionsStandardsArchiveDir,
           date: filters.date,
           startDate: filters.startDate,
           endDate: filters.endDate,
@@ -433,9 +482,32 @@ function textField(item, field) {
 }
 
 function buildStudentUrl(req, sessionId, port) {
-  const host = req.get('host') || `localhost:${port}`;
-  const protocol = req.protocol || 'http';
-  return `${protocol}://${host}/student.html?sessionId=${encodeURIComponent(sessionId)}`;
+  const baseUrl = getConfiguredPublicBaseUrl() || buildRequestBaseUrl(req, port);
+  return `${baseUrl}/student.html?sessionId=${encodeURIComponent(sessionId)}`;
+}
+
+function getConfiguredPublicBaseUrl(env = process.env) {
+  const rawBaseUrl = safeText(env.PUBLIC_BASE_URL) || safeText(env.APP_BASE_URL);
+  if (!rawBaseUrl) return '';
+
+  try {
+    const url = new URL(rawBaseUrl);
+    if (!['http:', 'https:'].includes(url.protocol)) return '';
+    url.hash = '';
+    url.search = '';
+    return url.toString().replace(/\/+$/g, '');
+  } catch {
+    return rawBaseUrl.replace(/\/+$/g, '');
+  }
+}
+
+function buildRequestBaseUrl(req, port) {
+  const getHeader = typeof req?.get === 'function'
+    ? (name) => req.get(name)
+    : (name) => req?.headers?.[String(name).toLowerCase()];
+  const host = getHeader('host') || `localhost:${port}`;
+  const protocol = req?.protocol || getHeader('x-forwarded-proto') || 'http';
+  return `${protocol}://${host}`.replace(/\/+$/g, '');
 }
 
 function serializeClassSession(session) {
@@ -715,6 +787,8 @@ function escapeHtml(value) {
 }
 
 module.exports = {
+  buildStudentUrl,
+  getConfiguredPublicBaseUrl,
   registerProfileRoutes,
   serializeLiveStudentActivity
 };

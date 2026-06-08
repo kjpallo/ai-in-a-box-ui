@@ -40,6 +40,16 @@ assert.match(
   'Questions & Standards CSV export should store the export id for the current date and filter.'
 );
 assert.match(
+  profileUi,
+  /let currentReportQuestions = \[\]/,
+  'Questions & Standards should keep report rows separate from Live Activity questions.'
+);
+assert.match(
+  profileUi,
+  /currentReportQuestions = safeSummary\.questions/,
+  'Questions & Standards report rows should come from the archive-aware standards summary.'
+);
+assert.match(
   exportHandler,
   /CSV exported\. Export ID saved for retention\./,
   'Questions & Standards CSV export should show retention-safe success feedback.'
@@ -118,6 +128,11 @@ assert.match(
   purgeHandler,
   /loadSummary\(selectedReportDate\(\)\)[\s\S]*loadStandardsSummaryReport\(\)/,
   'Purge success should refresh Questions & Standards data.'
+);
+assert.match(
+  exportHandler,
+  /exportButton\) exportButton\.disabled = currentReportQuestions\.length === 0/,
+  'Export button state should use archive-aware report question rows.'
 );
 assert.match(
   purgeHandler,

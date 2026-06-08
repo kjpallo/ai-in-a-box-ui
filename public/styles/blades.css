@@ -662,7 +662,7 @@
 
 .teacher-profile-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(260px, 0.85fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
 }
 
@@ -769,7 +769,7 @@
 
 .profile-student-link-panel {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   align-items: center;
 }
@@ -782,6 +782,10 @@
 .profile-student-session-row a {
   color: var(--neon);
   overflow-wrap: anywhere;
+}
+
+.profile-student-open-button {
+  color: #061314;
 }
 
 .profile-student-session-list {

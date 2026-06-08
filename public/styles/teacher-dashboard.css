@@ -235,6 +235,17 @@
   box-shadow: var(--glow-active);
 }
 
+.reports-header-actions #reportPurgeRawHistory {
+  border: 1px solid rgba(255, 118, 118, 0.42);
+  color: #ffdede;
+  background: rgba(82, 20, 26, 0.58);
+  box-shadow: none;
+}
+
+.reports-header-actions #reportPurgeRawHistory[hidden] {
+  display: none;
+}
+
 .reports-header h3,
 .reports-card h4 {
   margin: 0;
@@ -1246,6 +1257,14 @@
   font-size: 0.78rem;
 }
 
+.profile-student-lan-hint {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #d8efe8;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
 .live-student-link-row > .small-button,
 .profile-student-link-panel > .small-button,
 .profile-student-link-panel > .profile-student-open-button {
@@ -1502,6 +1521,12 @@
   font-size: 0.88rem;
   line-height: 1.42;
   overflow-wrap: anywhere;
+}
+
+.live-student-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .live-feed-list {

@@ -12,7 +12,14 @@ const {
   getClassroomControls,
   updateClassroomControls
 } = require('../lib/system/classroomControls');
-const { registerClassroomControlsRoutes } = require('../routes/classroomControlsRoutes');
+const {
+  getLocalIpv4Addresses,
+  registerClassroomControlsRoutes
+} = require('../routes/classroomControlsRoutes');
+const {
+  buildStudentUrl,
+  getConfiguredPublicBaseUrl
+} = require('../routes/profileRoutes');
 const {
   createStudentQuestionRateLimiter,
   registerStudentRoutes
@@ -20,6 +27,8 @@ const {
 
 async function main() {
   await testClassroomControlsStoreAndRoutes();
+  testClassroomControlsLanSuggestions();
+  testStudentLinkBaseUrlGeneration();
   testStudentQuestionTokenBucket();
   await testStudentSafeControlsAndRateLimit();
   await testInvalidStudentControlsFallBackSafely();
@@ -36,8 +45,15 @@ async function testClassroomControlsStoreAndRoutes() {
     const handlers = new Map();
     registerClassroomControlsRoutes(createApp(handlers), {
       getClassroomControls: () => getClassroomControls(controlsFile),
+      port: 3000,
       updateClassroomControls: (settings) => updateClassroomControls(settings, controlsFile)
     });
+
+    const loaded = await request(handlers, 'GET', '/api/classroom-controls');
+    assert.equal(loaded.statusCode, 200);
+    assert.deepEqual(loaded.body.controls, DEFAULT_CLASSROOM_CONTROLS);
+    assert.ok(Array.isArray(loaded.body.network.localIpv4Addresses));
+    assert.ok(Array.isArray(loaded.body.network.suggestedBaseUrls));
 
     const unauthenticated = await callMiddleware(requireTeacherAuth(createTeacherSessionStore()));
     assert.equal(unauthenticated.statusCode, 401);
@@ -47,6 +63,12 @@ async function testClassroomControlsStoreAndRoutes() {
     });
     assert.equal(invalid.statusCode, 400);
     assert.match(invalid.body.error, /1 to 30/);
+
+    const invalidAutoArchiveMinutes = await request(handlers, 'POST', '/api/classroom-controls', {
+      questionsStandardsAutoArchiveInactiveMinutes: 0
+    });
+    assert.equal(invalidAutoArchiveMinutes.statusCode, 400);
+    assert.match(invalidAutoArchiveMinutes.body.error, /1 to 1440/);
 
     const extraField = await request(handlers, 'POST', '/api/classroom-controls', {
       studentQuestionsPerMinute: 6,
@@ -58,13 +80,17 @@ async function testClassroomControlsStoreAndRoutes() {
       studentCopyInspectLockEnabled: false,
       studentGuidedFormulaTutoringEnabled: false,
       studentQuestionRateLimitEnabled: true,
-      studentQuestionsPerMinute: 2
+      studentQuestionsPerMinute: 2,
+      questionsStandardsAutoArchiveEnabled: true,
+      questionsStandardsAutoArchiveInactiveMinutes: 45
     });
     assert.equal(updated.statusCode, 200);
     assert.equal(updated.body.controls.studentCopyInspectLockEnabled, false);
     assert.equal(updated.body.controls.studentGuidedFormulaTutoringEnabled, false);
     assert.equal(updated.body.controls.studentQuestionRateLimitEnabled, true);
     assert.equal(updated.body.controls.studentQuestionsPerMinute, 2);
+    assert.equal(updated.body.controls.questionsStandardsAutoArchiveEnabled, true);
+    assert.equal(updated.body.controls.questionsStandardsAutoArchiveInactiveMinutes, 45);
 
     const guidedTutorOn = await request(handlers, 'POST', '/api/classroom-controls', {
       studentGuidedFormulaTutoringEnabled: true
@@ -76,8 +102,54 @@ async function testClassroomControlsStoreAndRoutes() {
     assert.equal(saved.studentGuidedFormulaTutoringEnabled, true);
     assert.equal(saved.studentQuestionRateLimitEnabled, true);
     assert.equal(saved.studentQuestionsPerMinute, 2);
+    assert.equal(saved.questionsStandardsAutoArchiveEnabled, true);
+    assert.equal(saved.questionsStandardsAutoArchiveInactiveMinutes, 45);
   } finally {
     await fsp.rm(tempDir, { recursive: true, force: true });
+  }
+}
+
+function testClassroomControlsLanSuggestions() {
+  const addresses = getLocalIpv4Addresses({
+    lo0: [{ family: 'IPv4', address: '127.0.0.1', internal: true }],
+    Ethernet: [{ family: 'IPv4', address: '192.168.1.42', internal: false }],
+    'Local Area Connection': [{ family: 'IPv4', address: '192.168.1.42', internal: false }],
+    utun: [{ family: 'IPv6', address: 'fe80::1', internal: false }]
+  });
+
+  assert.deepEqual(addresses, ['192.168.1.42']);
+}
+
+function testStudentLinkBaseUrlGeneration() {
+  const originalPublicBaseUrl = process.env.PUBLIC_BASE_URL;
+  const originalAppBaseUrl = process.env.APP_BASE_URL;
+
+  try {
+    process.env.PUBLIC_BASE_URL = 'http://192.168.1.42:3000/';
+    delete process.env.APP_BASE_URL;
+    assert.equal(getConfiguredPublicBaseUrl(), 'http://192.168.1.42:3000');
+    assert.equal(
+      buildStudentUrl(createRequest('localhost:3000'), 'class public', 3000),
+      'http://192.168.1.42:3000/student.html?sessionId=class%20public'
+    );
+
+    delete process.env.PUBLIC_BASE_URL;
+    process.env.APP_BASE_URL = 'http://10.0.0.9:3000';
+    assert.equal(getConfiguredPublicBaseUrl(), 'http://10.0.0.9:3000');
+    assert.equal(
+      buildStudentUrl(createRequest('localhost:3000'), 'class app', 3000),
+      'http://10.0.0.9:3000/student.html?sessionId=class%20app'
+    );
+
+    delete process.env.PUBLIC_BASE_URL;
+    delete process.env.APP_BASE_URL;
+    assert.equal(
+      buildStudentUrl(createRequest('teacher-mac.local:3000', 'https'), 'class local', 3000),
+      'https://teacher-mac.local:3000/student.html?sessionId=class%20local'
+    );
+  } finally {
+    restoreEnv('PUBLIC_BASE_URL', originalPublicBaseUrl);
+    restoreEnv('APP_BASE_URL', originalAppBaseUrl);
   }
 }
 
@@ -120,6 +192,7 @@ async function testStudentSafeControlsAndRateLimit() {
   const publicControls = await request(handlers, 'GET', '/api/student/controls');
   assert.equal(publicControls.statusCode, 200);
   assert.equal(publicControls.body.studentCopyInspectLockEnabled, true);
+  assert.equal(publicControls.body.questionsStandardsAutoArchiveEnabled, undefined);
   assert.equal(publicControls.body.teacherOnlySecret, undefined);
 
   const initialStatus = await getRateLimitStatus(handlers, 'classA', 'student-a');
@@ -376,6 +449,24 @@ function createResponse() {
       return this;
     }
   };
+}
+
+function createRequest(host, protocol = 'http') {
+  return {
+    protocol,
+    headers: { host },
+    get(name) {
+      return this.headers[String(name).toLowerCase()] || '';
+    }
+  };
+}
+
+function restoreEnv(name, value) {
+  if (value === undefined) {
+    delete process.env[name];
+  } else {
+    process.env[name] = value;
+  }
 }
 
 main().catch((error) => {

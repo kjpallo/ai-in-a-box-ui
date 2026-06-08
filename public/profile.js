@@ -6,6 +6,7 @@
   let currentStandardsTagged = 0;
   let currentStandardsSummary = null;
   let currentQuestions = [];
+  let currentReportQuestions = [];
   let reportQuestionFilter = 'all';
   let questionsStandardsExportState = null;
   let availableActivityDates = [];
@@ -110,6 +111,7 @@
       setText('studentControlsStatus', 'Loading student controls...');
       const data = await fetchJson('/api/classroom-controls');
       renderStudentControls(data.controls || data);
+      renderStudentLanHint(data.network || null);
       setText('studentControlsStatus', 'Student controls loaded.');
     } catch (error) {
       setText('studentControlsStatus', error.message || 'Could not load student controls.');
@@ -129,6 +131,17 @@
     if (rateLimit) rateLimit.checked = controls?.studentQuestionRateLimitEnabled !== false;
     if (perMinute) perMinute.value = String(Number(controls?.studentQuestionsPerMinute) || 6);
     updateQuestionSpeedSummary();
+  }
+
+  function renderStudentLanHint(network) {
+    const hint = byId('profileStudentLanHint');
+    if (!hint) return;
+
+    const urls = Array.isArray(network?.suggestedBaseUrls)
+      ? network.suggestedBaseUrls.map((url) => String(url || '').trim()).filter(Boolean)
+      : [];
+    const suggestion = urls[0] ? ` Suggested: ${urls[0]}` : '';
+    hint.textContent = `Phones/tablets must be on the same local network as this teacher device.${suggestion}`;
   }
 
   function updateQuestionSpeedSummary() {
@@ -288,6 +301,7 @@
     );
 
     currentQuestions = questions;
+    currentReportQuestions = questions;
     showingReviewQuestions = false;
     updateTeacherReportSummary();
     renderQuestionRows(currentQuestions);
@@ -314,6 +328,7 @@
     setText('profileSummaryStatus', message);
     setText('profileDailySummaryText', message);
     currentQuestions = [];
+    currentReportQuestions = [];
     showingReviewQuestions = false;
     updateTeacherReportSummary(message);
     renderQuestionRows([]);
@@ -329,6 +344,8 @@
     const generatedLabel = formatDateTime(safeSummary.generatedAt);
     currentStandardsTagged = tagged;
     currentStandardsSummary = safeSummary;
+    currentReportQuestions = safeSummary.questions;
+    syncReportDateSelect(safeSummary.availableDates, currentDate || byId('reportDateSelect')?.value || todayKey());
 
     setText('standardsTotalQuestions', total);
     setText('standardsTaggedQuestions', tagged);
@@ -376,6 +393,7 @@
     setText('standardsConfidenceNone', 0);
     setText('standardsSummaryStatus', message);
     currentStandardsSummary = normalizeStandardsSummary({});
+    currentReportQuestions = [];
     renderStandardsReportEmptyState(emptySummary, message);
     renderStandardsRows([]);
     renderConceptRows([]);
@@ -605,7 +623,7 @@
 
   function updateReportQuestionCount(questions) {
     const visible = Array.isArray(questions) ? questions.length : 0;
-    const total = Array.isArray(currentQuestions) ? currentQuestions.length : 0;
+    const total = Array.isArray(currentReportQuestions) ? currentReportQuestions.length : 0;
     setText('reportQuestionCount', `Showing ${visible} of ${total}`);
   }
 
@@ -869,6 +887,11 @@
       if (!event.target.closest('[data-live-review-action]')) return;
       reviewQuestions();
     });
+    byId('liveStudentGrid')?.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-archive-student-session]');
+      if (!button) return;
+      archiveStudentSession(button);
+    });
   }
 
   async function init() {
@@ -910,8 +933,9 @@
 
     const safeDates = Array.isArray(dates) ? dates.filter(Boolean) : [];
     const value = selectedDate || safeDates[0] || todayKey();
-    select.innerHTML = safeDates.length
-      ? safeDates.map((date) => `<option value="${escapeAttr(date)}">${escapeHtml(date)}</option>`).join('')
+    const optionDates = safeDates.includes(value) ? safeDates : [value, ...safeDates];
+    select.innerHTML = optionDates.length
+      ? optionDates.map((date) => `<option value="${escapeAttr(date)}">${escapeHtml(date)}</option>`).join('')
       : `<option value="${escapeAttr(value)}">${escapeHtml(value)}</option>`;
     select.value = value;
     select.disabled = false;
@@ -921,7 +945,13 @@
     currentDate = value || currentDate || todayKey();
     const profileSelect = byId('profileDateSelect');
     const reportSelect = byId('reportDateSelect');
-    if (profileSelect && profileSelect.value !== currentDate) profileSelect.value = currentDate;
+    if (
+      profileSelect
+      && profileSelect.value !== currentDate
+      && Array.from(profileSelect.options || []).some((option) => option.value === currentDate)
+    ) {
+      profileSelect.value = currentDate;
+    }
     if (reportSelect && reportSelect.value !== currentDate) reportSelect.value = currentDate;
     setText('reportDateRangeValue', currentDate);
     clearQuestionsStandardsExportState();
@@ -1207,6 +1237,7 @@
 
   function renderLiveStudentCard(hub, session, index) {
     const displayName = firstText(hub?.displayName, hub?.label) || `Anonymous Student ${index + 1}`;
+    const sessionId = firstText(session?.classSessionId, session?.sessionId);
     const status = normalizeKey(hub?.status) === 'active' || hub?.active ? 'Active' : 'Idle';
     const statusClass = status === 'Active' ? 'active' : 'idle';
     const question = firstText(hub?.latestQuestion);
@@ -1273,8 +1304,56 @@
             <p>${escapeHtml(response ? truncate(response, 230) : 'No response yet.')}</p>
           </section>
         </div>
+        ${sessionId ? `
+          <div class="live-student-card-actions">
+            <button
+              type="button"
+              class="small-button secondary-small danger-small"
+              data-archive-student-session="${escapeAttr(sessionId)}"
+            >End Session &amp; Archive</button>
+          </div>
+        ` : ''}
       </article>
     `;
+  }
+
+  async function archiveStudentSession(button) {
+    const sessionId = button?.getAttribute('data-archive-student-session') || '';
+    if (!sessionId) return;
+
+    const confirmed = window.confirm([
+      'End Session & Archive?',
+      '',
+      'This will save this session to CSV.',
+      'The session will remain available in Questions & Standards.',
+      'Raw JSON history for this session will be deleted after the CSV is verified.',
+      'This cannot be undone from the app.'
+    ].join('\n'));
+    if (!confirmed) return;
+
+    try {
+      button.disabled = true;
+      setText('profileStudentLinkStatus', 'Archiving session...');
+      const result = await fetchJson(`/api/profile/student-sessions/${encodeURIComponent(sessionId)}/archive`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ confirm: true })
+      });
+      const rowCount = Number(result?.rowCount || 0);
+      const deletedCount = Number(result?.deletedRecordCount || 0);
+      setText(
+        'profileStudentLinkStatus',
+        result?.message || `Session archived. Rows: ${rowCount}. Deleted raw records: ${deletedCount}.`
+      );
+      await loadStudentSessions();
+      await loadStandardsSummaryReport();
+    } catch (error) {
+      setText('profileStudentLinkStatus', error.message || 'Could not archive this session.');
+    } finally {
+      button.disabled = false;
+    }
   }
 
   function formatLiveQuestionsLeft(rateLimit) {
@@ -1361,7 +1440,7 @@
     } catch (error) {
       setText('reportExportStatus', error.message || 'Could not export CSV from the server. No retention export was saved.');
     } finally {
-      if (exportButton) exportButton.disabled = currentQuestions.length === 0;
+      if (exportButton) exportButton.disabled = currentReportQuestions.length === 0;
     }
   }
 
@@ -1424,15 +1503,15 @@
   }
 
   async function copyReportSummary() {
-    if (!currentQuestions.length) {
+    if (!currentReportQuestions.length) {
       setText('reportExportStatus', 'No summary is available to copy yet.');
       return;
     }
 
-    const total = currentQuestions.length;
-    const matched = currentStandardsTagged || countQuestionsWithStandards(currentQuestions);
-    const needsReview = currentQuestions.filter(questionNeedsReview).length;
-    const missing = currentQuestions.filter((item) => !hasQuestionStandard(item)).length;
+    const total = currentReportQuestions.length;
+    const matched = currentStandardsTagged || countQuestionsWithStandards(currentReportQuestions);
+    const needsReview = currentReportQuestions.filter(questionNeedsReview).length;
+    const missing = currentReportQuestions.filter((item) => !hasQuestionStandard(item)).length;
     const generated = currentStandardsSummary?.generatedAt ? formatDateTime(currentStandardsSummary.generatedAt) : 'Not loaded';
     const summary = [
       `Questions & Standards summary for ${currentDate || todayKey()}`,
@@ -1588,9 +1667,9 @@
   }
 
   function getFilteredReportQuestions() {
-    if (reportQuestionFilter === 'needs-review') return currentQuestions.filter(questionNeedsReview);
-    if (reportQuestionFilter === 'missing-standard') return currentQuestions.filter((item) => !hasQuestionStandard(item));
-    return currentQuestions;
+    if (reportQuestionFilter === 'needs-review') return currentReportQuestions.filter(questionNeedsReview);
+    if (reportQuestionFilter === 'missing-standard') return currentReportQuestions.filter((item) => !hasQuestionStandard(item));
+    return currentReportQuestions;
   }
 
   function questionNeedsReview(item) {
@@ -1826,14 +1905,14 @@
   }
 
   function updateTeacherReportSummary(fallbackMessage = '') {
-    if (fallbackMessage && currentQuestions.length === 0) {
+    if (fallbackMessage && currentReportQuestions.length === 0) {
       setText('reportSummaryStatus', fallbackMessage);
       return;
     }
 
-    const total = currentQuestions.length;
-    const matched = currentStandardsTagged || countQuestionsWithStandards(currentQuestions);
-    const needsReview = currentQuestions.filter(questionNeedsReview).length;
+    const total = currentReportQuestions.length;
+    const matched = currentStandardsTagged || countQuestionsWithStandards(currentReportQuestions);
+    const needsReview = currentReportQuestions.filter(questionNeedsReview).length;
     const selectedDate = currentDate || todayKey();
     const dateLabel = selectedDate === todayKey() ? 'Today' : `On ${selectedDate}`;
     const reviewPhrase = needsReview === 1 ? '1 question needs teacher review' : `${needsReview} questions need teacher review`;
@@ -1850,14 +1929,14 @@
   }
 
   function emptyReportTitle() {
-    if (currentQuestions.length === 0) return 'No questions yet.';
+    if (currentReportQuestions.length === 0) return 'No questions yet.';
     if (reportQuestionFilter === 'needs-review') return 'No questions need review.';
     if (reportQuestionFilter === 'missing-standard') return 'No questions are missing standards.';
     return 'No questions match this filter.';
   }
 
   function emptyReportMessage() {
-    if (currentQuestions.length === 0) return 'Student questions will appear here after classroom activity is logged.';
+    if (currentReportQuestions.length === 0) return 'Student questions will appear here after classroom activity is logged.';
     if (reportQuestionFilter === 'needs-review') return 'Everything loaded for this date is ready or already matched.';
     if (reportQuestionFilter === 'missing-standard') return 'Every loaded question has a matched or possible standard.';
     return 'Try another date or filter.';
@@ -1876,7 +1955,7 @@
     const csvButton = byId('reportExportCsv');
     const copyButton = byId('reportCopySummary');
     if (csvButton) csvButton.disabled = !hasRows;
-    if (copyButton) copyButton.disabled = currentQuestions.length === 0;
+    if (copyButton) copyButton.disabled = currentReportQuestions.length === 0;
   }
 
   function confidenceLabel(value) {
@@ -1932,6 +2011,8 @@
         weak: toCount(confidence.weak),
         none: toCount(confidence.none)
       },
+      availableDates: Array.isArray(summary?.availableDates) ? summary.availableDates.filter(Boolean) : [],
+      questions: objectRows(summary?.questions),
       recentTaggedQuestions: objectRows(summary?.recentTaggedQuestions)
     };
   }

@@ -86,11 +86,12 @@
   }
 
   function bindTeacherLogout() {
-    const button = byId('lockTeacherModeButton');
-    if (!button || button.dataset.bound === 'true') return;
+    if (document.body.dataset.teacherLogoutBound === 'true') return;
+    document.body.dataset.teacherLogoutBound = 'true';
 
-    button.dataset.bound = 'true';
-    button.addEventListener('click', async () => {
+    document.addEventListener('click', async (event) => {
+      const button = event.target.closest('#lockTeacherModeButton, #liveLockTeacherModeButton');
+      if (!button) return;
       button.disabled = true;
       button.textContent = 'Locking...';
 

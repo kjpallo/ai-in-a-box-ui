@@ -1,11 +1,19 @@
+const os = require('os');
+
 function registerClassroomControlsRoutes(app, {
   getClassroomControls,
+  port,
   updateClassroomControls
 }) {
   app.get('/api/classroom-controls', (_req, res) => {
+    const localIpv4Addresses = getLocalIpv4Addresses();
     res.json({
       ok: true,
-      controls: getClassroomControls()
+      controls: getClassroomControls(),
+      network: {
+        localIpv4Addresses,
+        suggestedBaseUrls: localIpv4Addresses.map((address) => `http://${address}:${port || process.env.PORT || 3000}`)
+      }
     });
   });
 
@@ -26,7 +34,9 @@ function pickAllowedSettings(body) {
     'studentCopyInspectLockEnabled',
     'studentGuidedFormulaTutoringEnabled',
     'studentQuestionRateLimitEnabled',
-    'studentQuestionsPerMinute'
+    'studentQuestionsPerMinute',
+    'questionsStandardsAutoArchiveEnabled',
+    'questionsStandardsAutoArchiveInactiveMinutes'
   ];
   const unknownKey = Object.keys(body).find((key) => !allowedKeys.includes(key));
   if (unknownKey) {
@@ -42,6 +52,15 @@ function pickAllowedSettings(body) {
 }
 
 module.exports = {
+  getLocalIpv4Addresses,
   pickAllowedSettings,
   registerClassroomControlsRoutes
 };
+
+function getLocalIpv4Addresses(networkInterfaces = os.networkInterfaces()) {
+  return Object.values(networkInterfaces)
+    .flat()
+    .filter((item) => item && (item.family === 'IPv4' || item.family === 4) && !item.internal && item.address)
+    .map((item) => item.address)
+    .filter((address, index, addresses) => addresses.indexOf(address) === index);
+}
