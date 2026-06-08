@@ -132,6 +132,8 @@ fs.writeFileSync(archiveManifestPath, `${JSON.stringify({
   archiveId: 'archive-test',
   exportId: 'archive-test',
   createdAt: '2026-06-06T12:00:00.000Z',
+  className: 'Archived Physical Science',
+  sessionLabel: 'Archived Physical Science',
   csvFilename: 'archive-test.csv',
   exportedRecordIds: archiveExport.exportedRecordIds,
   rowCount: archiveExport.rowCount,
@@ -184,6 +186,15 @@ assert.equal(archivedQuestion.responsePreview, 'Archived answer remains reviewab
 assert.equal(archivedQuestion.topic, 'archived topic');
 assert.equal(archivedQuestion.source, 'student');
 assert.equal(archivedQuestion.confidence, 'strong');
+assert.equal(archivedQuestion.sessionId, 'session-archived');
+assert.equal(archivedQuestion.classSessionId, 'session-archived');
+assert.equal(archivedQuestion.sessionKey, 'session-archived');
+assert.equal(archivedQuestion.className, 'Archived Physical Science');
+assert.equal(archivedQuestion.sessionLabel, 'Archived Physical Science');
+assert.equal(archivedQuestion.archived, true);
+assert.equal(archivedQuestion.completed, true);
+assert.equal(archivedQuestion.archiveCreatedAt, '2026-06-06T12:00:00.000Z');
+assert.equal(archivedQuestion.archiveId, 'archive-test');
 assert.equal(archivedQuestion.standardsConfidence, 'strong');
 assert.deepEqual(archivedQuestion.primaryStandards, [
   { standardId: 'ARCH.STANDARD.1', label: 'Archived standard label', unit: 'Archive Unit' }

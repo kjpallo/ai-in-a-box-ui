@@ -14,7 +14,16 @@
   let showingReviewQuestions = false;
   let studentSessionRefreshTimer = null;
   let loadingStudentControls = false;
+  let currentLiveStudentTiles = [];
   const QUESTIONS_STANDARDS_EXPORT_ENDPOINT = '/api/profile/questions-standards/export.csv';
+  const LIVE_STUDENT_STATUS_TAGS = [
+    'active',
+    'idle',
+    'no-question',
+    'needs-review',
+    'out-of-questions',
+    'formula-tutor'
+  ];
 
   function byId(id) {
     return document.getElementById(id);
@@ -578,6 +587,7 @@
 
   function renderReportQuestionRows(questions) {
     const rows = byId('reportQuestionRows');
+    renderReportSessionGroups(currentReportQuestions);
     if (!rows) return;
     const table = rows.closest('.questions-standards-table');
     const rowCount = Array.isArray(questions) ? questions.length : 0;
@@ -619,6 +629,124 @@
         </div>
       `;
     }).join('');
+  }
+
+  function renderReportSessionGroups(questions) {
+    const container = byId('reportSessionGroups');
+    if (!container) return;
+
+    const groups = buildReportSessionGroups(questions);
+    setText('reportSessionGroupCount', `${groups.length} archived`);
+
+    if (!groups.length) {
+      container.innerHTML = '<p class="profile-empty-state">Archived session groups will appear here after a session is ended.</p>';
+      return;
+    }
+
+    container.innerHTML = groups.map(renderReportSessionGroup).join('');
+  }
+
+  function buildReportSessionGroups(questions) {
+    const groups = new Map();
+
+    (Array.isArray(questions) ? questions : []).forEach((question, index) => {
+      if (!isArchivedReportQuestion(question)) return;
+
+      const restartKey = firstText(
+        question?.sessionKey,
+        question?.sessionId,
+        question?.classSessionId,
+        question?.archiveId ? `archive:${question.archiveId}` : '',
+        question?.archiveCsvFilename ? `archive-file:${question.archiveCsvFilename}` : '',
+        question?.id ? `question:${question.id}` : '',
+        `archived-session-${index + 1}`
+      );
+      const existing = groups.get(restartKey) || {
+        restartKey,
+        label: firstText(question?.className, question?.sessionLabel) || 'Restarted Session',
+        archivedAt: '',
+        questionCount: 0,
+        standardIds: new Set(),
+        standardCounts: new Map(),
+        topics: new Map(),
+        status: question?.archived === true ? 'Archived' : 'Completed'
+      };
+
+      existing.questionCount += 1;
+      existing.label = firstText(existing.label, question?.className, question?.sessionLabel) || 'Restarted Session';
+      existing.archivedAt = latestLabel(existing.archivedAt, question?.archiveCreatedAt, question?.timestamp);
+      addQuestionStandardsToGroup(existing, question);
+      incrementClientCount(existing.topics, question?.topic);
+      if (question?.archived === true) existing.status = 'Archived';
+      groups.set(restartKey, existing);
+    });
+
+    return Array.from(groups.values())
+      .map((group) => ({
+        ...group,
+        standardCount: group.standardIds.size,
+        topStandardId: topClientCountLabel(group.standardCounts),
+        topTopic: topClientCountLabel(group.topics)
+      }))
+      .sort((a, b) => String(b.archivedAt || '').localeCompare(String(a.archivedAt || '')));
+  }
+
+  function isArchivedReportQuestion(question) {
+    return Boolean(
+      question?.archived === true ||
+      question?.completed === true ||
+      firstText(question?.archiveId, question?.archiveCreatedAt, question?.archiveCsvFilename)
+    );
+  }
+
+  function addQuestionStandardsToGroup(group, question) {
+    getQuestionStandards(question).forEach((standard) => {
+      const standardId = firstText(standard?.standardId);
+      if (!standardId) return;
+      group.standardIds.add(standardId);
+      incrementClientCount(group.standardCounts, standardId);
+    });
+  }
+
+  function latestLabel(...values) {
+    return values.map(firstText).filter(Boolean).sort().pop() || '';
+  }
+
+  function renderReportSessionGroup(group) {
+    const standardLabel = group.standardCount
+      ? `${group.standardCount} standard${group.standardCount === 1 ? '' : 's'}${group.topStandardId ? ` / top ${group.topStandardId}` : ''}`
+      : (group.topTopic ? `Top topic ${group.topTopic}` : 'No standard matched');
+    const metaRows = [
+      ['Archived', group.archivedAt ? formatDateTime(group.archivedAt) : 'Not available'],
+      ['Questions', `${group.questionCount}`],
+      ['Standards', standardLabel],
+      ['Topic', group.topTopic]
+    ].filter(([, value]) => firstText(value));
+
+    return `
+      <article class="report-session-group" data-report-session-group data-session-key="${escapeAttr(group.restartKey)}">
+        <div class="report-session-group-copy">
+          <div class="report-session-group-title">
+            <strong>${escapeHtml(group.label || 'Restarted Session')}</strong>
+            <span class="report-session-state-pill">${escapeHtml(group.status || 'Archived')}</span>
+          </div>
+          <dl class="report-session-group-meta">
+            ${metaRows.map(([label, value]) => `
+              <div>
+                <dt>${escapeHtml(label)}</dt>
+                <dd>${escapeHtml(value)}</dd>
+              </div>
+            `).join('')}
+          </dl>
+        </div>
+        <button
+          type="button"
+          class="small-button secondary-small report-session-restart-button"
+          data-restart-student-session="${escapeAttr(group.restartKey)}"
+          data-restart-session-label="${escapeAttr(group.label || 'Restarted Session')}"
+        >Restart Session</button>
+      </article>
+    `;
   }
 
   function updateReportQuestionCount(questions) {
@@ -759,12 +887,35 @@
       openStandardDetails(standardContextFromButton(button));
     });
 
+    byId('reportSessionGroups')?.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-restart-student-session]');
+      if (!button) return;
+      restartStudentSessionFromReport(button);
+    });
+
     byId('standardDetailsModal')?.addEventListener('click', (event) => {
       if (event.target.closest('[data-standard-modal-close]')) closeStandardDetailsModal();
     });
 
+    byId('liveStudentGrid')?.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-live-student-modal-open]');
+      if (!button) return;
+      openLiveStudentModal(button);
+    });
+
+    byId('liveStudentDetailsModal')?.addEventListener('click', (event) => {
+      if (event.target.closest('[data-live-student-modal-close]')) closeLiveStudentDetailsModal();
+    });
+
     document.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape' && !byId('standardDetailsModal')?.hidden) {
+      if (event.key !== 'Escape') return;
+
+      if (!byId('liveStudentDetailsModal')?.hidden) {
+        closeLiveStudentDetailsModal();
+        return;
+      }
+
+      if (!byId('standardDetailsModal')?.hidden) {
         closeStandardDetailsModal();
       }
     });
@@ -857,6 +1008,12 @@
     });
 
     byId('profileStudentSessions')?.addEventListener('click', async (event) => {
+      const archiveButton = event.target.closest('[data-archive-student-session]');
+      if (archiveButton) {
+        archiveStudentSession(archiveButton);
+        return;
+      }
+
       const button = event.target.closest('[data-copy-student-url]');
       if (!button) return;
 
@@ -886,11 +1043,6 @@
     byId('liveAttentionActions')?.addEventListener('click', (event) => {
       if (!event.target.closest('[data-live-review-action]')) return;
       reviewQuestions();
-    });
-    byId('liveStudentGrid')?.addEventListener('click', (event) => {
-      const button = event.target.closest('[data-archive-student-session]');
-      if (!button) return;
-      archiveStudentSession(button);
     });
   }
 
@@ -972,7 +1124,7 @@
 
     setText(
       'profileStudentLinkStatus',
-      studentUrl ? 'Class link ready.' : 'No class link created yet.'
+      studentUrl ? 'Class link ready in Active Sessions.' : 'No student link created yet.'
     );
   }
 
@@ -1135,12 +1287,21 @@
     const rows = byId('profileStudentSessions');
     const grid = byId('liveStudentGrid');
     if (!rows) return;
+    const sortedSessions = normalizeLiveSessions(sessions);
 
     if (errorMessage) {
+      currentLiveStudentTiles = [];
       setText('profileStudentSessionCount', 'Unavailable');
       setText('liveStudentConnectionValue', 'Unavailable');
       setText('liveStudentConnectionHint', 'Could not check students.');
+      setText('liveStudentPresenceBreakdown', 'Unavailable');
       setText('liveStudentsUpdatedAt', 'Could not load live activity.');
+      setText('liveRunningSessionsValue', 'Unavailable');
+      setText('liveSessionDurationValue', 'Could not check sessions.');
+      setText('liveMessageCountValue', 'Unavailable');
+      setText('liveRecentQuestionCountValue', 'Could not check questions.');
+      setText('liveTopStandardValue', '-');
+      setText('liveTopTopicValue', '-');
       setText('profileSummaryStatus', 'Could not load live activity. Try Refresh.');
       setText('liveStatusValue', 'Offline');
       rows.innerHTML = `<p class="profile-empty-state">${escapeHtml(errorMessage)}</p>`;
@@ -1148,25 +1309,35 @@
       return;
     }
 
-    const latestSession = sessions[0] || {};
+    const latestSession = sortedSessions[0] || {};
     const latestStudentUrl = latestSession.studentUrl || '';
     if (latestStudentUrl && !currentStudentUrl) renderStudentLink(latestStudentUrl);
 
-    const liveHubs = collectLiveStudentHubs(sessions);
+    const liveHubs = collectLiveStudentHubs(sortedSessions);
     const activeCount = liveHubs.filter((item) => item.hub.active).length;
     const totalStudents = liveHubs.length;
     const alertCount = liveHubs.filter((item) => hasLiveAlert(item.hub)).length;
     const questionCount = liveHubs.reduce((sum, item) => sum + toCount(item.hub.messageCount), 0);
+    const idleCount = Math.max(0, totalStudents - activeCount);
+    const liveStats = buildLiveSummaryStats(sortedSessions, liveHubs);
     const studentNoun = totalStudents === 1 ? 'student' : 'students';
 
-    if (!sessions.length) {
-      setText('profileStudentSessionCount', '0 active');
+    if (!sortedSessions.length) {
+      currentLiveStudentTiles = [];
+      setText('profileStudentSessionCount', '0 running');
       setText('liveStudentConnectionValue', '0 active');
       setText('liveStudentConnectionHint', 'Create a class link to begin.');
+      setText('liveStudentPresenceBreakdown', '0 connected / 0 idle');
       setText('liveStudentsUpdatedAt', 'Live activity loaded.');
+      setText('liveRunningSessionsValue', '0');
+      setText('liveSessionDurationValue', 'No session running.');
+      setText('liveMessageCountValue', '0');
+      setText('liveRecentQuestionCountValue', 'No recent questions.');
+      setText('liveTopStandardValue', '-');
+      setText('liveTopTopicValue', '-');
       setText('profileSummaryStatus', 'No students connected yet.');
       setText('liveStatusValue', 'Ready');
-      rows.innerHTML = '<p class="profile-empty-state">Create a class link to connect students.</p>';
+      rows.innerHTML = '<p class="profile-empty-state">Create a student link to start a running session.</p>';
       if (grid) {
         grid.innerHTML = '<p class="profile-empty-state">No students connected yet. Create or share the student link to begin.</p>';
       }
@@ -1174,9 +1345,21 @@
       return;
     }
 
-    setText('profileStudentSessionCount', `${activeCount} active`);
+    setText('profileStudentSessionCount', `${sortedSessions.length} running`);
     setText('liveStudentConnectionValue', `${activeCount} active`);
     setText('liveStatusValue', activeCount > 0 ? 'Active' : 'Open');
+    setText('liveRunningSessionsValue', `${liveStats.runningSessionCount}`);
+    setText('liveSessionDurationValue', liveStats.longestRunningLabel ? `Longest session ${liveStats.longestRunningLabel}` : 'Session just started.');
+    setText('liveMessageCountValue', `${liveStats.totalMessageCount}`);
+    setText(
+      'liveRecentQuestionCountValue',
+      liveStats.recentQuestionCount
+        ? `${liveStats.recentQuestionCount} recent question${liveStats.recentQuestionCount === 1 ? '' : 's'}`
+        : 'No recent questions.'
+    );
+    setText('liveTopStandardValue', liveStats.topStandardId || '-');
+    setText('liveTopTopicValue', liveStats.topTopic || '-');
+    setText('liveStudentPresenceBreakdown', `${totalStudents} connected / ${idleCount} idle`);
     setText('liveStudentsUpdatedAt', `Updated ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`);
     setText(
       'liveStudentConnectionHint',
@@ -1191,16 +1374,10 @@
         : 'No students connected yet.'
     );
 
+    rows.innerHTML = sortedSessions.map(renderActiveSessionCard).join('');
+
     if (!liveHubs.length) {
-      rows.innerHTML = `
-        <div class="profile-student-session-row is-class-session">
-          <div>
-            <strong>Class link status</strong>
-            <span>Waiting for students.</span>
-          </div>
-          <time datetime="${escapeAttr(latestSession.createdAt || '')}">${escapeHtml(formatSessionTime(latestSession.createdAt))}</time>
-        </div>
-      `;
+      currentLiveStudentTiles = [];
       if (grid) {
         grid.innerHTML = '<p class="profile-empty-state">No students connected yet. Create or share the student link to begin.</p>';
       }
@@ -1208,113 +1385,398 @@
     }
 
     if (grid) {
-      grid.innerHTML = liveHubs.map((item, index) => renderLiveStudentCard(item.hub, item.session, index)).join('');
+      currentLiveStudentTiles = liveHubs.map((item, index) => buildLiveStudentTile(item.hub, item.session, index));
+      grid.innerHTML = currentLiveStudentTiles.map(renderLiveStudentCard).join('');
     }
+  }
 
-    rows.innerHTML = liveHubs.slice(0, 4).map(({ hub }, index) => `
-      <div class="profile-student-session-row">
-        <div>
-          <strong>${escapeHtml(hub.displayName || hub.label || `Anonymous Student ${index + 1}`)}</strong>
-          <span>${escapeHtml(formatHubActivity(hub))}</span>
+  function normalizeLiveSessions(sessions) {
+    return (Array.isArray(sessions) ? sessions : [])
+      .filter((session) => session && typeof session === 'object')
+      .slice()
+      .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+  }
+
+  function buildLiveSummaryStats(sessions, liveHubs) {
+    const safeSessions = Array.isArray(sessions) ? sessions : [];
+    const safeHubs = Array.isArray(liveHubs) ? liveHubs : [];
+    const standardCounts = new Map();
+    const topicCounts = new Map();
+    let totalMessageCount = 0;
+    let recentQuestionCount = 0;
+    let sessionRecentQuestionCount = 0;
+    let longestRunningMs = 0;
+
+    safeSessions.forEach((session) => {
+      totalMessageCount += sessionQuestionCount(session);
+      sessionRecentQuestionCount += toCount(session?.recentQuestionCount);
+
+      const explicitMs = Number(session?.runningDurationMs || session?.durationMs);
+      if (Number.isFinite(explicitMs) && explicitMs > longestRunningMs) {
+        longestRunningMs = explicitMs;
+      } else {
+        const createdMs = new Date(firstText(session?.createdAt)).getTime();
+        if (Number.isFinite(createdMs)) longestRunningMs = Math.max(longestRunningMs, Date.now() - createdMs);
+      }
+
+      incrementClientCount(standardCounts, session?.topStandardId);
+      incrementClientCount(topicCounts, session?.topTopic);
+    });
+
+    safeHubs.forEach((item) => {
+      const hub = item?.hub || {};
+      incrementClientCount(standardCounts, hub.standardId);
+      incrementClientCount(topicCounts, hub.topic);
+
+      const messages = Array.isArray(hub.recentMessages) ? hub.recentMessages : [];
+      messages.forEach((message) => {
+        if (firstText(message?.question, message?.message)) recentQuestionCount += 1;
+        incrementClientCount(standardCounts, message?.standardId);
+        incrementClientCount(topicCounts, message?.topic);
+      });
+    });
+
+    if (!recentQuestionCount) recentQuestionCount = sessionRecentQuestionCount;
+
+    return {
+      runningSessionCount: safeSessions.length,
+      totalMessageCount,
+      recentQuestionCount,
+      longestRunningLabel: longestRunningMs > 0 ? formatDurationMs(longestRunningMs) : '',
+      topStandardId: topClientCountLabel(standardCounts),
+      topTopic: topClientCountLabel(topicCounts)
+    };
+  }
+
+  function incrementClientCount(map, value) {
+    const text = firstText(value);
+    if (!text) return;
+    map.set(text, (map.get(text) || 0) + 1);
+  }
+
+  function topClientCountLabel(map) {
+    return Array.from(map.entries())
+      .sort(([labelA, countA], [labelB, countB]) => {
+        if (countB !== countA) return countB - countA;
+        return String(labelA).localeCompare(String(labelB));
+      })[0]?.[0] || '';
+  }
+
+  function renderActiveSessionCard(session, index) {
+    const sessionId = firstText(session?.classSessionId, session?.sessionId);
+    const studentUrl = firstText(session?.studentUrl);
+    const className = firstText(session?.className, session?.name, session?.title) || `Class Session ${index + 1}`;
+    const createdAt = firstText(session?.createdAt);
+    const duration = formatRunningDuration(session);
+    const studentCounts = sessionStudentCounts(session);
+    const questionCount = sessionQuestionCount(session);
+    const questionsLabel = questionCount === 1 ? 'question/message' : 'questions/messages';
+    const archiveDisabled = sessionId ? '' : ' disabled';
+    const linkDisabled = studentUrl ? '' : ' disabled';
+    const openAttrs = studentUrl
+      ? `href="${escapeAttr(studentUrl)}" target="_blank" rel="noreferrer"`
+      : 'href="#" aria-disabled="true"';
+
+    return `
+      <article class="active-session-card" data-active-session-card data-session-id="${escapeAttr(sessionId)}">
+        <div class="active-session-card-head">
+          <div>
+            <strong>${escapeHtml(className)}</strong>
+            <time datetime="${escapeAttr(createdAt)}">${escapeHtml(formatSessionTime(createdAt))}</time>
+          </div>
+          <span class="active-session-running-pill">Running</span>
         </div>
-        <time datetime="${escapeAttr(hub.lastSeenAt || '')}">${escapeHtml(formatSessionTime(hub.lastSeenAt))}</time>
-      </div>
-    `).join('');
+
+        <dl class="active-session-facts">
+          ${duration ? `
+            <div>
+              <dt>Duration</dt>
+              <dd>${escapeHtml(duration)}</dd>
+            </div>
+          ` : ''}
+          <div>
+            <dt>Students</dt>
+            <dd>${studentCounts.active} active / ${studentCounts.total} total</dd>
+          </div>
+          <div>
+            <dt>Messages</dt>
+            <dd>${escapeHtml(`${questionCount} ${questionsLabel}`)}</dd>
+          </div>
+        </dl>
+
+        <div class="active-session-link">
+          <span>Student link</span>
+          <code>${escapeHtml(studentUrl || 'No student link available')}</code>
+        </div>
+
+        <div class="active-session-actions">
+          <button type="button" class="small-button secondary-small" data-copy-student-url="${escapeAttr(studentUrl)}"${linkDisabled}>Copy Link</button>
+          <a class="small-button secondary-small active-session-open-button${studentUrl ? '' : ' is-disabled'}" ${openAttrs}>Open Student View</a>
+          <button
+            type="button"
+            class="small-button secondary-small danger-small"
+            data-archive-student-session="${escapeAttr(sessionId)}"${archiveDisabled}
+          >End Session &amp; Archive</button>
+        </div>
+      </article>
+    `;
+  }
+
+  function sessionStudentCounts(session) {
+    const students = sessionStudents(session);
+    const active = Number.isFinite(Number(session?.activeAnonymousHubCount))
+      ? toCount(session.activeAnonymousHubCount)
+      : Number.isFinite(Number(session?.activeStudentCount))
+        ? toCount(session.activeStudentCount)
+      : students.filter((hub) => hub?.active).length;
+    const total = Number.isFinite(Number(session?.anonymousHubCount))
+      ? toCount(session.anonymousHubCount)
+      : Number.isFinite(Number(session?.totalStudentCount))
+        ? toCount(session.totalStudentCount)
+      : students.length;
+    return { active, total };
+  }
+
+  function sessionQuestionCount(session) {
+    const students = sessionStudents(session);
+    const fromStudents = students.reduce((sum, hub) => sum + toCount(hub?.messageCount), 0);
+    if (fromStudents) return fromStudents;
+    if (Number.isFinite(Number(session?.messageCount))) return toCount(session.messageCount);
+    if (Number.isFinite(Number(session?.totalMessageCount))) return toCount(session.totalMessageCount);
+    if (Number.isFinite(Number(session?.totalQuestions))) return toCount(session.totalQuestions);
+    if (Number.isFinite(Number(session?.totalMessages))) return toCount(session.totalMessages);
+    return Array.isArray(session?.messages) ? session.messages.length : 0;
+  }
+
+  function sessionStudents(session) {
+    if (Array.isArray(session?.anonymousHubs)) return session.anonymousHubs;
+    if (Array.isArray(session?.students)) return session.students;
+    return [];
+  }
+
+  function formatRunningDuration(session) {
+    const explicitDuration = firstText(session?.runningDuration, session?.duration, session?.durationLabel);
+    if (explicitDuration) return explicitDuration;
+
+    const explicitMs = Number(session?.runningDurationMs || session?.durationMs);
+    if (Number.isFinite(explicitMs) && explicitMs > 0) return formatDurationMs(explicitMs);
+
+    const createdAt = firstText(session?.createdAt);
+    if (!createdAt) return '';
+    const createdMs = new Date(createdAt).getTime();
+    if (!Number.isFinite(createdMs)) return '';
+    return formatDurationMs(Date.now() - createdMs);
+  }
+
+  function formatDurationMs(durationMs) {
+    const totalMinutes = Math.max(0, Math.floor(Number(durationMs || 0) / 60_000));
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (hours > 0 && minutes > 0) return `${hours}h ${minutes}m`;
+    if (hours > 0) return `${hours}h`;
+    return `${Math.max(1, minutes)}m`;
   }
 
   function collectLiveStudentHubs(sessions) {
     return (Array.isArray(sessions) ? sessions : [])
       .flatMap((session) => {
-        const hubs = Array.isArray(session?.anonymousHubs)
-          ? session.anonymousHubs
-          : Array.isArray(session?.students)
-            ? session.students
-            : [];
+        const hubs = sessionStudents(session);
         return hubs.map((hub) => ({ session, hub }));
       })
       .filter((item) => item.hub && typeof item.hub === 'object');
   }
 
-  function renderLiveStudentCard(hub, session, index) {
+  function buildLiveStudentTile(hub, session, index) {
     const displayName = firstText(hub?.displayName, hub?.label) || `Anonymous Student ${index + 1}`;
-    const sessionId = firstText(session?.classSessionId, session?.sessionId);
-    const status = normalizeKey(hub?.status) === 'active' || hub?.active ? 'Active' : 'Idle';
-    const statusClass = status === 'Active' ? 'active' : 'idle';
-    const question = firstText(hub?.latestQuestion);
-    const response = firstText(hub?.latestResponse);
-    const topic = firstText(hub?.topic, hub?.source);
-    const source = firstText(hub?.source);
-    const topicSource = topic && source && normalizeKey(topic) !== normalizeKey(source)
-      ? `${topic} / ${titleCaseLabel(source) || source}`
-      : topic || source;
+    const sessionName = firstText(session?.className, session?.name, session?.title) || 'Class Session';
+    const activeState = normalizeKey(hub?.status) === 'active' || hub?.active ? 'active' : 'idle';
+    const messageCount = toCount(hub?.messageCount);
     const questionsLeft = formatLiveQuestionsLeft(hub?.rateLimit);
-    const alertBadges = liveAlertLabels(hub);
-    const cardClass = [
-      'live-student-card',
-      `is-${statusClass}`,
-      alertBadges.length ? 'has-alerts' : ''
-    ].filter(Boolean).join(' ');
+    const statusTags = liveStudentStatusTags(hub, activeState, messageCount);
+
+    return {
+      index,
+      displayName,
+      sessionName,
+      activeState,
+      messageCount,
+      countLabel: formatHubActivity(hub),
+      questionsLeft,
+      statusTags,
+      statusLabel: liveStudentStatusLabel(statusTags, activeState),
+      standardId: firstText(hub?.standardId),
+      topic: firstText(hub?.topic),
+      source: firstText(hub?.source),
+      recentMessages: safeRecentLiveMessages(hub?.recentMessages)
+    };
+  }
+
+  function renderLiveStudentCard(tile) {
+    const statusAttrs = [
+      `data-status-active="${tile.statusTags.includes('active') ? 'true' : 'false'}"`,
+      `data-status-idle="${tile.statusTags.includes('idle') ? 'true' : 'false'}"`,
+      `data-status-no-question="${tile.statusTags.includes('no-question') ? 'true' : 'false'}"`,
+      `data-status-needs-review="${tile.statusTags.includes('needs-review') ? 'true' : 'false'}"`,
+      `data-status-out-of-questions="${tile.statusTags.includes('out-of-questions') ? 'true' : 'false'}"`,
+      `data-status-formula-tutor="${tile.statusTags.includes('formula-tutor') ? 'true' : 'false'}"`
+    ].join(' ');
+    const className = [
+      'live-student-tile',
+      ...tile.statusTags
+    ].join(' ');
 
     return `
-      <article class="${escapeAttr(cardClass)}">
-        <div class="live-student-card-head">
-          <div>
-            <strong>${escapeHtml(displayName)}</strong>
-            ${session?.className ? `<span>${escapeHtml(session.className)}</span>` : ''}
-          </div>
-          <span class="live-student-status-pill ${escapeAttr(statusClass)}">Status: ${escapeHtml(status)}</span>
-        </div>
-
-        ${alertBadges.length ? `
-          <div class="live-student-alerts" aria-label="Student alerts">
-            ${alertBadges.map((label) => `<span>${escapeHtml(label)}</span>`).join('')}
-          </div>
-        ` : ''}
-
-        <dl class="live-student-facts">
-          <div>
-            <dt>Last active</dt>
-            <dd>${escapeHtml(formatSessionTime(hub?.lastSeenAt))}</dd>
-          </div>
-          <div>
-            <dt>Asked</dt>
-            <dd>${escapeHtml(formatHubActivity(hub))}</dd>
-          </div>
-          ${questionsLeft ? `
-            <div>
-              <dt>Questions left</dt>
-              <dd>${escapeHtml(questionsLeft)}</dd>
-            </div>
-          ` : ''}
-          ${topicSource ? `
-            <div>
-              <dt>Topic</dt>
-              <dd>${escapeHtml(titleCaseLabel(topicSource) || topicSource)}</dd>
-            </div>
-          ` : ''}
-        </dl>
-
-        <div class="live-student-exchange">
-          <section>
-            <h5>Asked</h5>
-            <p>${escapeHtml(question ? truncate(question, 210) : 'No question yet.')}</p>
-          </section>
-          <section>
-            <h5>Charlemagne</h5>
-            <p>${escapeHtml(response ? truncate(response, 230) : 'No response yet.')}</p>
-          </section>
-        </div>
-        ${sessionId ? `
-          <div class="live-student-card-actions">
-            <button
-              type="button"
-              class="small-button secondary-small danger-small"
-              data-archive-student-session="${escapeAttr(sessionId)}"
-            >End Session &amp; Archive</button>
-          </div>
-        ` : ''}
-      </article>
+      <button
+        type="button"
+        class="${escapeAttr(className)}"
+        data-live-student-modal-open
+        data-live-student-index="${escapeAttr(tile.index)}"
+        data-student-display-name="${escapeAttr(tile.displayName)}"
+        data-session-name="${escapeAttr(tile.sessionName)}"
+        data-live-state="${escapeAttr(tile.activeState)}"
+        data-status-tags="${escapeAttr(tile.statusTags.join(' '))}"
+        ${statusAttrs}
+      >
+        <strong>${escapeHtml(tile.displayName)}</strong>
+        <span class="live-student-tile-status">${escapeHtml(tile.statusLabel)}</span>
+        <span class="live-student-tile-count">${escapeHtml(tile.countLabel)}</span>
+      </button>
     `;
+  }
+
+  function liveStudentStatusTags(hub, activeState, messageCount) {
+    const alerts = hub?.alerts && typeof hub.alerts === 'object' ? hub.alerts : {};
+    const tags = [activeState === 'active' ? 'active' : 'idle'];
+
+    if (!messageCount || !firstText(hub?.latestQuestion)) tags.push('no-question');
+    if (alerts.needsReview || alerts.noMatch || alerts.lowConfidence || alerts.missingStandard) tags.push('needs-review');
+    if (alerts.outOfQuestions || hub?.rateLimit?.limited || Number(hub?.rateLimit?.remainingWhole) === 0) {
+      tags.push('out-of-questions');
+    }
+    if (alerts.formulaTutorActive || normalizeKey(hub?.routeType) === 'formula tutor') tags.push('formula-tutor');
+
+    return LIVE_STUDENT_STATUS_TAGS.filter((tag) => tags.includes(tag));
+  }
+
+  function liveStudentStatusLabel(statusTags, activeState) {
+    const labels = [];
+    labels.push(activeState === 'active' ? 'Active' : 'Idle');
+    if (statusTags.includes('no-question')) labels.push('No question');
+    if (statusTags.includes('needs-review')) labels.push('Needs review');
+    if (statusTags.includes('out-of-questions')) labels.push('Out of questions');
+    if (statusTags.includes('formula-tutor')) labels.push('Formula tutor');
+    return labels.join(' / ');
+  }
+
+  function safeRecentLiveMessages(messages) {
+    if (!Array.isArray(messages)) return [];
+    return messages
+      .filter((entry) => entry && typeof entry === 'object')
+      .slice(-10)
+      .map((entry) => ({
+        time: firstText(entry.time, entry.createdAt),
+        question: firstText(entry.question, entry.message),
+        response: firstText(entry.response),
+        standardId: firstText(entry.standardId),
+        topic: firstText(entry.topic),
+        source: firstText(entry.source)
+      }))
+      .filter((entry) => entry.question || entry.response || entry.standardId || entry.topic || entry.source);
+  }
+
+  function openLiveStudentModal(button) {
+    const index = Number(button?.getAttribute('data-live-student-index'));
+    if (!Number.isInteger(index)) return;
+
+    const tile = currentLiveStudentTiles[index];
+    if (!tile) return;
+    showLiveStudentDetailsModal(tile);
+  }
+
+  function showLiveStudentDetailsModal(tile) {
+    const modal = byId('liveStudentDetailsModal');
+    const body = byId('liveStudentDetailsBody');
+    const title = byId('liveStudentDetailsTitle');
+    if (!modal || !body || !title) return;
+
+    title.textContent = tile.displayName;
+    body.innerHTML = renderLiveStudentDetailsBody(tile);
+    modal.hidden = false;
+    document.body.classList.add('live-student-details-open');
+    modal.querySelector('.live-student-details-panel')?.focus();
+  }
+
+  function closeLiveStudentDetailsModal() {
+    const modal = byId('liveStudentDetailsModal');
+    if (!modal) return;
+    modal.hidden = true;
+    document.body.classList.remove('live-student-details-open');
+  }
+
+  function renderLiveStudentDetailsBody(tile) {
+    const metaRows = [
+      ['Session', tile.sessionName],
+      ['State', titleCaseLabel(tile.activeState)],
+      ['Messages', tile.countLabel],
+      ['Questions left', tile.questionsLeft],
+      ['Standard', tile.standardId],
+      ['Topic', tile.topic],
+      ['Source', titleCaseLabel(tile.source) || tile.source]
+    ].filter(([, value]) => firstText(value));
+
+    return `
+      <dl class="live-student-details-meta">
+        ${metaRows.map(([label, value]) => `
+          <div>
+            <dt>${escapeHtml(label)}</dt>
+            <dd>${escapeHtml(value)}</dd>
+          </div>
+        `).join('')}
+      </dl>
+
+      <section class="live-student-details-history" aria-label="Recent chat history">
+        <h5>Recent chat history</h5>
+        ${renderLiveStudentRecentMessages(tile.recentMessages)}
+      </section>
+    `;
+  }
+
+  function renderLiveStudentRecentMessages(messages) {
+    if (!Array.isArray(messages) || !messages.length) {
+      return '<p class="live-student-details-empty">No recent student questions yet.</p>';
+    }
+
+    return messages.map((message) => {
+      const metaRows = [
+        ['Standard', message.standardId],
+        ['Topic', message.topic],
+        ['Source', titleCaseLabel(message.source) || message.source]
+      ].filter(([, value]) => firstText(value));
+
+      return `
+        <article class="live-student-message" data-live-student-message>
+          ${message.time ? `<time datetime="${escapeAttr(message.time)}">${escapeHtml(formatSessionTime(message.time))}</time>` : ''}
+          <div class="live-student-message-bubble student">
+            <span>Student</span>
+            <p>${escapeHtml(message.question || 'No question text available.')}</p>
+          </div>
+          <div class="live-student-message-bubble charlemagne">
+            <span>Charlemagne</span>
+            <p>${escapeHtml(message.response || 'No response yet.')}</p>
+          </div>
+          ${metaRows.length ? `
+            <dl class="live-student-message-meta">
+              ${metaRows.map(([label, value]) => `
+                <div>
+                  <dt>${escapeHtml(label)}</dt>
+                  <dd>${escapeHtml(value)}</dd>
+                </div>
+              `).join('')}
+            </dl>
+          ` : ''}
+        </article>
+      `;
+    }).join('');
   }
 
   async function archiveStudentSession(button) {
@@ -1351,6 +1813,34 @@
       await loadStandardsSummaryReport();
     } catch (error) {
       setText('profileStudentLinkStatus', error.message || 'Could not archive this session.');
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  async function restartStudentSessionFromReport(button) {
+    const sessionKey = button?.getAttribute('data-restart-student-session') || '';
+    const sessionLabel = button?.getAttribute('data-restart-session-label') || '';
+    if (!sessionKey) return;
+
+    try {
+      button.disabled = true;
+      setText('reportExportStatus', 'Restarting session...');
+      const result = await fetchJson(`/api/profile/student-sessions/${encodeURIComponent(sessionKey)}/restart`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ className: sessionLabel || 'Restarted Session' })
+      });
+
+      if (result?.studentUrl) renderStudentLink(result.studentUrl);
+      setText('reportExportStatus', result?.message || 'Session restarted. A new student link is ready.');
+      setText('profileStudentLinkStatus', result?.message || 'Session restarted. A new student link is ready.');
+      await loadStudentSessions();
+      await loadStandardsSummaryReport();
+    } catch (error) {
+      setText('reportExportStatus', error.message || 'Could not restart this session.');
     } finally {
       button.disabled = false;
     }

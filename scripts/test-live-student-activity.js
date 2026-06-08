@@ -87,6 +87,22 @@ async function main() {
       }
     }
   };
+  studentSessions['older-live-activity'] = {
+    sessionId: 'older-live-activity',
+    className: 'Earth Science',
+    createdAt: new Date(nowMs - 90 * 60_000).toISOString(),
+    studentUrl: '/student.html?sessionId=older-live-activity',
+    messages: [],
+    anonymousHubs: {}
+  };
+  studentSessions['newer-live-activity'] = {
+    sessionId: 'newer-live-activity',
+    className: 'Biology',
+    createdAt: new Date(nowMs - 5 * 60_000).toISOString(),
+    studentUrl: '/student.html?sessionId=newer-live-activity',
+    messages: [],
+    anonymousHubs: {}
+  };
 
   questionRateLimiter.check({
     classSessionId,
@@ -102,11 +118,25 @@ async function main() {
     beforeLastSeenAt,
     'teacher live polling must not refresh hub presence'
   );
+  assert.deepEqual(
+    response.body.sessions.map((item) => item.classSessionId),
+    ['newer-live-activity', classSessionId, 'older-live-activity'],
+    'live activity should return multiple running sessions newest first'
+  );
 
   const session = response.body.sessions.find((item) => item.classSessionId === classSessionId);
   assert.ok(session, 'live activity should include the seeded class session');
   assert.equal(session.anonymousHubCount, 3);
   assert.equal(session.activeAnonymousHubCount, 1);
+  assert.equal(session.activeStudentCount, 1);
+  assert.equal(session.totalStudentCount, 3);
+  assert.equal(session.idleStudentCount, 2, 'stale hubs should become idle without closing the class session');
+  assert.equal(session.totalMessageCount, 3);
+  assert.equal(session.recentQuestionCount, 3);
+  assert.equal(session.topStandardId, 'HS-PS2-1');
+  assert.equal(session.topTopic, 'Forces and motion');
+  assert.ok(session.runningSeconds > 0, 'live session summary should expose safe running seconds');
+  assert.ok(studentSessions[classSessionId], 'teacher live polling should not remove stale sessions');
 
   const activeHub = session.anonymousHubs.find((hub) => hub.studentHubId === 'active-hub');
   assert.ok(activeHub, 'active hub should be serialized');
@@ -125,11 +155,11 @@ async function main() {
   assert.equal(activeHub.alerts.outOfQuestions, true);
   assert.equal(activeHub.alerts.formulaTutorActive, true);
   assert.equal(activeHub.recentMessages.length, 2);
-  assert.equal(activeHub.recentMessages[0].debug.safeFlag, true);
-  assert.equal(activeHub.recentMessages[0].debug.nested, undefined);
+  assert.equal(activeHub.recentMessages[0].debug, undefined);
+  assert.equal(activeHub.recentMessages[0].sourceMetadata, undefined);
 
   const activeHubJson = JSON.stringify(activeHub);
-  assert.doesNotMatch(activeHubJson, /currentTutorProblem|pendingClarification|finalAnswer|hidden implementation state/);
+  assert.doesNotMatch(activeHubJson, /currentTutorProblem|pendingClarification|finalAnswer|hidden implementation state|debug|sourceMetadata/);
 
   const idleHub = session.anonymousHubs.find((hub) => hub.studentHubId === 'idle-hub');
   assert.ok(idleHub, 'idle hub should be serialized');
@@ -139,11 +169,32 @@ async function main() {
   assert.equal(idleHub.alerts.lowConfidence, true);
   assert.equal(idleHub.alerts.missingStandard, true);
   assert.equal(idleHub.alerts.needsReview, true);
+  assert.ok(studentSessions[classSessionId], 'idle students should not archive, end, disable, or remove the class session by default');
 
   const missingFieldsHub = session.anonymousHubs.find((hub) => hub.studentHubId === 'missing-fields-hub');
   assert.ok(missingFieldsHub, 'hub with missing optional fields should not crash serialization');
   assert.equal(missingFieldsHub.latestQuestion, '');
   assert.deepEqual(missingFieldsHub.recentMessages, []);
+
+  const createResponse = await request('POST', '/api/profile/create-student-session', {
+    className: 'Chemistry'
+  });
+  assert.equal(createResponse.statusCode, 201);
+  const afterCreateResponse = await request('GET', '/api/profile/live-student-activity');
+  assert.equal(afterCreateResponse.statusCode, 200);
+  assert.ok(
+    afterCreateResponse.body.sessions.some((item) => item.classSessionId === classSessionId),
+    'creating a new student link should not hide older running sessions'
+  );
+  assert.ok(
+    afterCreateResponse.body.sessions.some((item) => item.classSessionId === createResponse.body.sessionId),
+    'creating a student link should create a new running session'
+  );
+  assert.equal(
+    afterCreateResponse.body.sessions[0].classSessionId,
+    createResponse.body.sessionId,
+    'newly created sessions should appear at the top of live activity'
+  );
 
   console.log('live student activity: teacher endpoint serializes anonymous hub activity safely');
 }

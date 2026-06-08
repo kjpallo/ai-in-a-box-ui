@@ -9,7 +9,7 @@ const entries = [
     routeType: 'formula',
     answerGiven: leakedAnswerText,
     sessionId: 'student-session-1',
-    debug: { route: { type: 'formula' } },
+    debug: { route: { type: 'formula' }, className: 'Period 2 Physical Science' },
     matchedConcepts: [
       { id: 'density-formula', title: 'Density', type: 'formula', unit: 'Matter', score: 15 }
     ],
@@ -215,10 +215,25 @@ for (const example of [
 }
 
 const serialized = JSON.stringify(summary);
-assert.equal(serialized.includes('sessionId'), false, 'examples should not leak sessionId');
-assert.equal(serialized.includes('student-session-1'), false, 'examples should not leak session values');
 assert.equal(serialized.includes('debug'), false, 'examples should not leak debug');
 assert.equal(serialized.includes(leakedAnswerText), false, 'examples should not leak full answer text');
+const densityQuestion = summary.questions.find((question) => question.question === 'What is density?');
+assert.ok(densityQuestion, 'compact questions should include the density question');
+assert.equal(densityQuestion.sessionId, 'student-session-1', 'compact questions should include safe session ids for restart grouping');
+assert.equal(densityQuestion.classSessionId, 'student-session-1');
+assert.equal(densityQuestion.sessionKey, 'student-session-1');
+assert.equal(densityQuestion.className, 'Period 2 Physical Science', 'compact questions may expose the safe class label');
+assert.equal(Object.prototype.hasOwnProperty.call(densityQuestion, 'debug'), false, 'compact questions should not expose raw debug objects');
+
+const examplesSerialized = JSON.stringify([
+  ...summary.recentTaggedQuestions,
+  ...summary.standards.flatMap((row) => row.exampleQuestions),
+  ...summary.possibleStandardsSummary.flatMap((row) => row.exampleQuestions),
+  ...summary.concepts.flatMap((row) => row.exampleQuestions),
+  ...summary.units.flatMap((row) => row.exampleQuestions)
+]);
+assert.equal(examplesSerialized.includes('sessionId'), false, 'examples should not leak sessionId');
+assert.equal(examplesSerialized.includes('student-session-1'), false, 'examples should not leak session values');
 
 const emptySummary = buildStandardsSummaryReport({ not: 'an array' });
 assert.equal(emptySummary.totalQuestions, 0, 'non-array input should behave like an empty log');

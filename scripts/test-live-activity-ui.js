@@ -25,9 +25,34 @@ assert.match(
 );
 assert.match(
   bladeUi,
+  /<strong>Active Sessions<\/strong>/,
+  'Live Activity should render an Active Sessions board in the right rail.'
+);
+assert.match(
+  bladeUi,
   /id="liveStudentGrid"/,
   'Live Activity should include a live student grid target.'
 );
+assert.match(
+  bladeUi,
+  /id="profileStudentSessions"/,
+  'Live Activity should include a running sessions render target.'
+);
+[
+  'liveRunningSessionsValue',
+  'liveSessionDurationValue',
+  'liveStudentPresenceBreakdown',
+  'liveMessageCountValue',
+  'liveRecentQuestionCountValue',
+  'liveTopStandardValue',
+  'liveTopTopicValue'
+].forEach((id) => {
+  assert.match(
+    bladeUi,
+    new RegExp(`id="${id}"`),
+    `Live Activity should include the ${id} summary target.`
+  );
+});
 assert.doesNotMatch(
   bladeUi,
   /id="profileQuestionRows" class="live-feed-list"/,
@@ -40,18 +65,117 @@ assert.doesNotMatch(
 );
 assert.match(
   teacherDashboardCss,
-  /\.live-student-card\b/,
-  'Live Activity should style anonymous student monitoring cards.'
+  /\.live-student-tile\b/,
+  'Live Activity should style compact anonymous student tiles.'
 );
 assert.match(
   teacherDashboardCss,
-  /\.live-student-alerts span\b/,
-  'Live Activity alerts should be rendered as text badges.'
+  /\.live-student-grid[\s\S]*grid-template-columns: repeat\(auto-fill, minmax\(138px, 1fr\)\)/,
+  'Live Activity student grid should render compact tile buttons.'
+);
+assert.match(
+  bladeUi,
+  /id="liveStudentDetailsModal"[\s\S]*data-live-student-modal-close[\s\S]*id="liveStudentDetailsBody"/,
+  'Live Activity should include a teacher-only student details modal with close controls.'
 );
 assert.match(
   profileUi,
-  /data-archive-student-session/,
-  'Live Activity should include a teacher End Session & Archive action.'
+  /function renderActiveSessionCard[\s\S]*data-active-session-card[\s\S]*data-copy-student-url="\$\{escapeAttr\(studentUrl\)\}"[\s\S]*Open Student View[\s\S]*data-archive-student-session="\$\{escapeAttr\(sessionId\)\}"/,
+  'Active Sessions cards should include per-session copy, open, and archive actions using that session URL/id.'
+);
+assert.match(
+  profileUi,
+  /rows\.innerHTML = sortedSessions\.map\(renderActiveSessionCard\)\.join\(''\)/,
+  'Active Sessions board should render every running session instead of replacing older sessions.'
+);
+assert.match(
+  profileUi,
+  /function normalizeLiveSessions[\s\S]*sort\(\(a, b\) => String\(b\.createdAt \|\| ''\)\.localeCompare\(String\(a\.createdAt \|\| ''\)\)\)/,
+  'Active Sessions should sort sessions newest first before rendering.'
+);
+const liveStudentCardBody = profileUi.match(/function renderLiveStudentCard[\s\S]*?(?=\n  async function archiveStudentSession)/)?.[0] || '';
+assert.doesNotMatch(
+  liveStudentCardBody,
+  /data-archive-student-session|End Session &amp; Archive/,
+  'End Session & Archive should not be rendered inside student cards.'
+);
+assert.match(
+  liveStudentCardBody,
+  /<button[\s\S]*data-live-student-modal-open[\s\S]*data-live-student-index="\$\{escapeAttr\(tile\.index\)\}"[\s\S]*data-student-display-name="\$\{escapeAttr\(tile\.displayName\)\}"[\s\S]*data-session-name="\$\{escapeAttr\(tile\.sessionName\)\}"/,
+  'Student grid should render compact tile buttons with modal-open data attributes.'
+);
+assert.match(
+  profileUi,
+  /const LIVE_STUDENT_STATUS_TAGS = \[[\s\S]*'active'[\s\S]*'idle'[\s\S]*'no-question'[\s\S]*'needs-review'[\s\S]*'out-of-questions'[\s\S]*'formula-tutor'[\s\S]*\]/,
+  'Live Activity should define every student tile status tag.'
+);
+[
+  'active',
+  'idle',
+  'no-question',
+  'needs-review',
+  'out-of-questions',
+  'formula-tutor'
+].forEach((status) => {
+  assert.match(
+    profileUi,
+    new RegExp(`data-status-${status}`),
+    `Student tiles should expose data-status-${status}.`
+  );
+  assert.match(
+    teacherDashboardCss,
+    new RegExp(`\\.live-student-tile\\.${status.replace('-', '\\-')}`),
+    `Student tile CSS should include the ${status} status class.`
+  );
+});
+assert.match(
+  profileUi,
+  /currentLiveStudentTiles = liveHubs\.map\(\(item, index\) => buildLiveStudentTile\(item\.hub, item\.session, index\)\)/,
+  'Live Activity should render exactly one tile per returned anonymous hub.'
+);
+assert.match(
+  profileUi,
+  /safeRecentLiveMessages\(hub\?\.recentMessages\)/,
+  'Student modal should use the safe serialized recentMessages payload.'
+);
+assert.match(
+  profileUi,
+  /function buildLiveSummaryStats[\s\S]*totalMessageCount[\s\S]*recentQuestionCount[\s\S]*topStandardId[\s\S]*topTopic/,
+  'Live Activity should derive safe aggregate summary stats for running sessions.'
+);
+assert.doesNotMatch(
+  profileUi,
+  /addOptionalSafeObject\(serialized, 'debug'|addOptionalSafeObject\(serialized, 'sourceMetadata'/,
+  'Live Activity serialization should not include raw debug or source metadata objects.'
+);
+const liveStudentRecentMessagesBody = profileUi.match(/function renderLiveStudentRecentMessages[\s\S]*?(?=\n  async function archiveStudentSession)/)?.[0] || '';
+['Student', 'Charlemagne', 'Standard', 'Topic', 'Source'].forEach((label) => {
+  assert.match(
+    liveStudentRecentMessagesBody,
+    new RegExp(label),
+    `Student modal should display ${label} in recent safe message history.`
+  );
+});
+const liveStudentModalBody = profileUi.match(/function safeRecentLiveMessages[\s\S]*?(?=\n  async function archiveStudentSession)/)?.[0] || '';
+assert.doesNotMatch(
+  liveStudentModalBody,
+  /debug|sourceMetadata|currentTutorProblem|pendingClarification|finalAnswer/,
+  'Student modal rendering should not expose hidden debug or runtime fields.'
+);
+assert.match(
+  profileUi,
+  /byId\('liveStudentDetailsModal'\)\?\.addEventListener\('click'[\s\S]*data-live-student-modal-close[\s\S]*closeLiveStudentDetailsModal/,
+  'Student modal should close from backdrop and close button clicks.'
+);
+assert.match(
+  profileUi,
+  /event\.key !== 'Escape'[\s\S]*!byId\('liveStudentDetailsModal'\)\?\.hidden[\s\S]*closeLiveStudentDetailsModal/,
+  'Student modal should close when Escape is pressed.'
+);
+assert.doesNotMatch(
+  bladeUi,
+  /id="profileStudentLinkPanel"|id="profileCopyStudentLink"|id="profileStudentUrl"/,
+  'Copy/open session controls should live on Active Sessions cards, not the create-link panel.'
 );
 assert.match(
   profileUi,
@@ -77,6 +201,16 @@ assert.match(
   teacherDashboardCss,
   /\.profile-student-lan-hint\b/,
   'Live Activity should style the LAN student-link hint.'
+);
+assert.match(
+  teacherDashboardCss,
+  /\.active-session-card\b/,
+  'Active Sessions cards should have dedicated board styling.'
+);
+assert.match(
+  teacherDashboardCss,
+  /\.profile-student-session-rows[\s\S]*overflow-y: auto/,
+  'Active Sessions board should allow multiple visible running sessions.'
 );
 assert.match(
   serverJs,

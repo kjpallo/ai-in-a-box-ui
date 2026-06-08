@@ -63,6 +63,19 @@ const originalLogContents = `${JSON.stringify(records, null, 2)}\n`;
 
 fs.writeFileSync(logFilePath, originalLogContents, 'utf8');
 
+const defaultOffSessions = buildStudentSessions();
+const defaultOff = runQuestionsStandardsAutoArchive({
+  studentSessions: defaultOffSessions,
+  logFilePath,
+  archiveDir,
+  now: () => now,
+  logger: null
+});
+assert.equal(defaultOff.status, 'disabled', 'auto archive should be off by default');
+assert.equal(defaultOff.enabled, false);
+assert.equal(fs.readFileSync(logFilePath, 'utf8'), originalLogContents, 'default-off auto archive should not change raw records');
+assert.ok(defaultOffSessions['inactive-session'], 'default-off auto archive should not clear stale runtime sessions');
+
 const disabledSessions = buildStudentSessions();
 const disabled = runQuestionsStandardsAutoArchive({
   enabled: false,

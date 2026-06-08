@@ -243,12 +243,36 @@
                 <small><span id="profileTotalQuestions">0 questions today</span> · <span id="liveStudentConnectionHint">Class link not shared yet</span></small>
               </div>
             </section>
+            <section class="live-summary-card live-summary-card-sessions">
+              <span class="live-summary-icon" aria-hidden="true">RUN</span>
+              <div>
+                <span>Running sessions</span>
+                <strong id="liveRunningSessionsValue">0</strong>
+                <small id="liveSessionDurationValue">No session running.</small>
+              </div>
+            </section>
             <section class="live-summary-card live-summary-card-students">
               <span class="live-summary-icon" aria-hidden="true">ID</span>
               <div>
                 <span>Students connected</span>
                 <strong id="liveStudentConnectionValue">0 active</strong>
-                <small id="liveStudentsUpdatedAt">Live activity not loaded yet.</small>
+                <small><span id="liveStudentPresenceBreakdown">0 connected / 0 idle</span> · <span id="liveStudentsUpdatedAt">Live activity not loaded yet.</span></small>
+              </div>
+            </section>
+            <section class="live-summary-card live-summary-card-questions">
+              <span class="live-summary-icon" aria-hidden="true">QS</span>
+              <div>
+                <span>Questions answered</span>
+                <strong id="liveMessageCountValue">0</strong>
+                <small id="liveRecentQuestionCountValue">No recent questions.</small>
+              </div>
+            </section>
+            <section class="live-summary-card live-summary-card-signals">
+              <span class="live-summary-icon" aria-hidden="true">STD</span>
+              <div>
+                <span>Top signal</span>
+                <strong id="liveTopStandardValue">-</strong>
+                <small>Topic: <span id="liveTopTopicValue">-</span></small>
               </div>
             </section>
           </div>
@@ -280,25 +304,17 @@
 
               <div class="live-student-link-row">
                 <button type="button" id="profileCreateStudentLink" class="small-button">Create Student Link</button>
-                <div id="profileStudentLinkPanel" class="profile-student-link-panel" hidden>
-                  <a id="profileStudentUrl" class="small-button profile-student-open-button" href="#" target="_blank" rel="noreferrer">Open Classroom View</a>
-                  <button type="button" id="profileCopyStudentLink" class="small-button secondary-small">Copy Student Link</button>
-                  <details class="profile-student-link-details">
-                    <summary>Show link details</summary>
-                    <code id="profileStudentUrlDetails"></code>
-                  </details>
-                </div>
                 <p id="profileStudentLanHint" class="profile-student-lan-hint">Phones/tablets must be on the same local network as this teacher device.</p>
                 <span id="profileStudentLinkStatus">No student link created yet.</span>
               </div>
 
               <div class="profile-student-session-list" aria-label="Active student sessions">
                 <div class="profile-student-session-head">
-                  <strong>Connected students</strong>
-                  <span id="profileStudentSessionCount">0 active</span>
+                  <strong>Active Sessions</strong>
+                  <span id="profileStudentSessionCount">0 running</span>
                 </div>
                 <div id="profileStudentSessions" class="profile-student-session-rows">
-                  <p class="profile-empty-state">No students connected yet.</p>
+                  <p class="profile-empty-state">No running sessions yet.</p>
                 </div>
               </div>
 
@@ -325,6 +341,18 @@
                 <span id="studentControlsStatus" class="profile-control-status">Loading student controls...</span>
               </div>
             </aside>
+          </div>
+
+          <div id="liveStudentDetailsModal" class="live-student-details-modal" role="dialog" aria-modal="true" aria-labelledby="liveStudentDetailsTitle" hidden>
+            <div class="live-student-details-backdrop" data-live-student-modal-close></div>
+            <section class="live-student-details-panel" tabindex="-1">
+              <button type="button" class="live-student-details-close" data-live-student-modal-close aria-label="Close student activity">&times;</button>
+              <span class="live-student-details-kicker">Teacher only</span>
+              <h4 id="liveStudentDetailsTitle">Student activity</h4>
+              <div id="liveStudentDetailsBody" class="live-student-details-body">
+                <p>Choose a student tile to view recent chat history.</p>
+              </div>
+            </section>
           </div>
         </section>
       `;
@@ -387,6 +415,19 @@
               </div>
             </div>
             <span id="reportExportStatus" class="reports-export-status">Exports use the currently loaded date and filter.</span>
+          </section>
+
+          <section class="reports-card report-session-groups-card" aria-label="Archived and completed sessions">
+            <div class="profile-section-head standards-report-head">
+              <div>
+                <h4>Archived Sessions</h4>
+                <span>Completed Questions &amp; Standards groups remain available after restart.</span>
+              </div>
+              <span id="reportSessionGroupCount">0 archived</span>
+            </div>
+            <div id="reportSessionGroups" class="report-session-groups">
+              <p class="profile-empty-state">Archived session groups will appear here after a session is ended.</p>
+            </div>
           </section>
 
           <section class="reports-card questions-standards-card">

@@ -5,7 +5,13 @@ const {
 const {
   purgeQuestionsStandardsExport
 } = require('../lib/profile/questionsStandardsExportPurge');
-const { exportQuestionsStandardsCsv } = require('../lib/profile/questionsStandardsCsvExport');
+const {
+  exportQuestionsStandardsCsv,
+  readStudentInteractions
+} = require('../lib/profile/questionsStandardsCsvExport');
+const {
+  loadQuestionsStandardsRecords
+} = require('../lib/profile/questionsStandardsArchiveRecords');
 const {
   archiveQuestionsStandardsSession
 } = require('../lib/profile/questionsStandardsSessionArchive');
@@ -38,24 +44,19 @@ function registerProfileRoutes(app, {
   });
 
   app.post('/api/profile/create-student-session', (req, res) => {
-    const sessionId = crypto.randomUUID();
-    const className = String(req.body?.className || '').trim();
-    const studentUrl = buildStudentUrl(req, sessionId, port);
-
-    studentSessions[sessionId] = {
-      sessionId,
+    const className = safeText(req.body?.className);
+    const session = createProfileStudentSession({
       className,
-      createdAt: new Date().toISOString(),
-      studentUrl,
-      messages: [],
-      anonymousHubs: Object.create(null)
-    };
+      port,
+      req,
+      studentSessions
+    });
 
     res.status(201).json({
-      sessionId,
-      className,
-      createdAt: studentSessions[sessionId].createdAt,
-      studentUrl
+      sessionId: session.sessionId,
+      className: session.className,
+      createdAt: session.createdAt,
+      studentUrl: session.studentUrl
     });
   });
 
@@ -89,8 +90,13 @@ function registerProfileRoutes(app, {
       }
 
       try {
+        const requestedSessionId = safeText(req.params?.sessionId);
+        const liveSession = requestedSessionId && studentSessions
+          ? studentSessions[requestedSessionId]
+          : null;
         const result = archiveQuestionsStandardsSession({
-          sessionId: req.params?.sessionId,
+          sessionId: requestedSessionId,
+          className: firstNonEmptyText(liveSession?.className, req.body?.className),
           logFilePath: studentInteractionsFile,
           archiveDir: questionsStandardsArchiveDir
         });
@@ -115,6 +121,74 @@ function registerProfileRoutes(app, {
           deletedRecordCount: Number(result.deletedRecordCount || 0),
           rawRecordsDeleted: result.rawRecordsDeleted === true,
           message
+        });
+      } catch (error) {
+        sendProfileError(res, error);
+      }
+    }
+  );
+
+  registerMaybeProtectedPost(
+    app,
+    '/api/profile/student-sessions/:sessionId/restart',
+    requireTeacherAuth,
+    (req, res) => {
+      try {
+        const sourceSessionId = safeText(req.params?.sessionId);
+        if (!sourceSessionId) {
+          res.status(400).json({ error: 'sessionId is required.' });
+          return;
+        }
+
+        const sourceSession = findQuestionsStandardsSessionMetadata({
+          archiveDir: questionsStandardsArchiveDir,
+          logFilePath: studentInteractionsFile,
+          sessionId: sourceSessionId
+        });
+
+        if (!sourceSession) {
+          res.status(404).json({
+            ok: false,
+            error: 'Archived Questions & Standards session not found.'
+          });
+          return;
+        }
+
+        const className = firstNonEmptyText(
+          req.body?.className,
+          sourceSession.className,
+          sourceSession.sessionLabel,
+          sourceSession.label,
+          'Restarted Session'
+        );
+        const session = createProfileStudentSession({
+          className,
+          port,
+          req,
+          studentSessions
+        });
+
+        res.status(201).json({
+          ok: true,
+          restarted: true,
+          sourceSessionId,
+          sessionId: session.sessionId,
+          classSessionId: session.sessionId,
+          className: session.className,
+          createdAt: session.createdAt,
+          studentUrl: session.studentUrl,
+          session: serializeClassSession(session),
+          sourceSession: {
+            sessionId: sourceSession.sessionId,
+            classSessionId: sourceSession.sessionId,
+            className: sourceSession.className,
+            sessionLabel: sourceSession.sessionLabel,
+            archived: sourceSession.archived === true,
+            archiveCreatedAt: sourceSession.archiveCreatedAt,
+            archiveId: sourceSession.archiveId,
+            questionCount: sourceSession.questionCount
+          },
+          message: `Restarted ${className}. A new student link is ready.`
         });
       } catch (error) {
         sendProfileError(res, error);
@@ -510,6 +584,90 @@ function buildRequestBaseUrl(req, port) {
   return `${protocol}://${host}`.replace(/\/+$/g, '');
 }
 
+function createProfileStudentSession({
+  className = '',
+  port,
+  req,
+  studentSessions
+} = {}) {
+  const sessionId = crypto.randomUUID();
+  const studentUrl = buildStudentUrl(req, sessionId, port);
+  const session = {
+    sessionId,
+    className: safeText(className),
+    createdAt: new Date().toISOString(),
+    studentUrl,
+    messages: [],
+    anonymousHubs: Object.create(null)
+  };
+
+  studentSessions[sessionId] = session;
+  return session;
+}
+
+function findQuestionsStandardsSessionMetadata({
+  archiveDir,
+  logFilePath,
+  sessionId
+} = {}) {
+  const selectedSessionId = safeText(sessionId);
+  if (!selectedSessionId) return null;
+
+  const records = loadQuestionsStandardsRecords({
+    logFilePath,
+    archiveDir,
+    readCurrentRecords: readStudentInteractions
+  });
+  const matching = (Array.isArray(records) ? records : [])
+    .filter((record) => recordMatchesRestartKey(record, selectedSessionId));
+
+  if (!matching.length) return null;
+
+  const archivedRecord = matching.find((record) => record?.archived === true || safeText(record?.archiveId));
+  const firstRecord = archivedRecord || matching[0] || {};
+  const className = firstNonEmptyText(
+    firstRecord.className,
+    firstRecord.sessionLabel,
+    firstRecord.label,
+    firstRecord.debug?.className
+  );
+  const archiveCreatedAt = latestText(matching.map((record) => record?.archiveCreatedAt));
+  const archiveId = firstNonEmptyText(firstRecord.archiveId, ...matching.map((record) => record?.archiveId));
+
+  return {
+    sessionId: firstNonEmptyText(firstRecord.sessionId, firstRecord.classSessionId, selectedSessionId),
+    sessionKey: selectedSessionId,
+    className,
+    sessionLabel: className,
+    label: className,
+    archived: matching.some((record) => record?.archived === true || safeText(record?.archiveId)),
+    archiveCreatedAt,
+    archiveId,
+    questionCount: matching.length
+  };
+}
+
+function recordMatchesRestartKey(record, restartKey) {
+  const selectedKey = safeText(restartKey);
+  if (!selectedKey || !record || typeof record !== 'object') return false;
+
+  const sessionId = safeText(record.sessionId || record.classSessionId);
+  if (sessionId && sessionId === selectedKey) return true;
+
+  const archiveId = safeText(record.archiveId);
+  if (archiveId && selectedKey === `archive:${archiveId}`) return true;
+  if (!sessionId && archiveId && selectedKey === archiveId) return true;
+
+  const archiveCsvFilename = safeText(record.archiveCsvFilename);
+  if (archiveCsvFilename && selectedKey === `archive-file:${archiveCsvFilename}`) return true;
+  if (!sessionId && archiveCsvFilename && selectedKey === archiveCsvFilename) return true;
+
+  const questionId = safeText(record.id);
+  if (questionId && selectedKey === `question:${questionId}`) return true;
+
+  return false;
+}
+
 function serializeClassSession(session) {
   const now = Date.now();
   const hubs = Object.values(session.anonymousHubs || {})
@@ -581,6 +739,13 @@ function serializeLiveClassSession(session, {
       stableDisplayIndex: displayOrderByHubId.get(safeText(hub?.studentHubId))
     }))
     .sort(compareLiveStudentHubs);
+  const activeAnonymousHubCount = hubs.filter((hub) => hub.active).length;
+  const hubMessageCount = hubs.reduce((sum, hub) => sum + Number(hub.messageCount || 0), 0);
+  const sessionMessageCount = Array.isArray(session?.messages) ? session.messages.length : 0;
+  const totalMessageCount = hubMessageCount || sessionMessageCount;
+  const createdMs = new Date(session?.createdAt || '').getTime();
+  const runningDurationMs = Number.isFinite(createdMs) && createdMs > 0 ? Math.max(0, now - createdMs) : 0;
+  const messageSummary = summarizeLiveSessionMessages(hubs);
 
   return {
     className: session?.className || '',
@@ -588,8 +753,19 @@ function serializeLiveClassSession(session, {
     classSessionId: session?.sessionId || '',
     createdAt: session?.createdAt || '',
     studentUrl: session?.studentUrl || (session?.sessionId ? `/student.html?sessionId=${encodeURIComponent(session.sessionId)}` : ''),
-    activeAnonymousHubCount: hubs.filter((hub) => hub.active).length,
+    runningDurationMs,
+    runningSeconds: Math.floor(runningDurationMs / 1000),
+    activeAnonymousHubCount,
     anonymousHubCount: hubs.length,
+    activeStudentCount: activeAnonymousHubCount,
+    totalStudentCount: hubs.length,
+    idleStudentCount: Math.max(0, hubs.length - activeAnonymousHubCount),
+    messageCount: totalMessageCount,
+    totalMessageCount,
+    totalQuestions: totalMessageCount,
+    recentQuestionCount: messageSummary.recentQuestionCount,
+    topStandardId: messageSummary.topStandardId,
+    topTopic: messageSummary.topTopic,
     anonymousHubs: hubs,
     students: hubs
   };
@@ -680,10 +856,46 @@ function serializeRecentLiveMessage(entry) {
 
   addOptionalText(serialized, 'topic', entry.topic || entry.title || entry.sourceTopic);
   addOptionalText(serialized, 'source', entry.source || entry.sourceName);
-  addOptionalSafeObject(serialized, 'debug', entry.debug);
-  addOptionalSafeObject(serialized, 'sourceMetadata', entry.sourceMetadata || entry.sourceDebug);
 
   return serialized;
+}
+
+function summarizeLiveSessionMessages(hubs) {
+  const standardCounts = new Map();
+  const topicCounts = new Map();
+  let recentQuestionCount = 0;
+
+  for (const hub of Array.isArray(hubs) ? hubs : []) {
+    incrementCount(standardCounts, hub?.standardId);
+    incrementCount(topicCounts, hub?.topic);
+
+    const messages = Array.isArray(hub?.recentMessages) ? hub.recentMessages : [];
+    for (const message of messages) {
+      if (safeText(message?.question || message?.message)) recentQuestionCount += 1;
+      incrementCount(standardCounts, message?.standardId);
+      incrementCount(topicCounts, message?.topic);
+    }
+  }
+
+  return {
+    recentQuestionCount,
+    topStandardId: topCountLabel(standardCounts),
+    topTopic: topCountLabel(topicCounts)
+  };
+}
+
+function incrementCount(map, value) {
+  const text = safeText(value);
+  if (!text) return;
+  map.set(text, (map.get(text) || 0) + 1);
+}
+
+function topCountLabel(map) {
+  return Array.from(map.entries())
+    .sort(([labelA, countA], [labelB, countB]) => {
+      if (countB !== countA) return countB - countA;
+      return String(labelA).localeCompare(String(labelB));
+    })[0]?.[0] || '';
 }
 
 function serializeHubRateLimit({
@@ -756,19 +968,24 @@ function addOptionalText(target, field, value) {
   if (text) target[field] = text;
 }
 
-function addOptionalSafeObject(target, field, value) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return;
-  const safe = {};
-  Object.entries(value).forEach(([key, item]) => {
-    if (typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean' || item === null) {
-      safe[key] = item;
-    }
-  });
-  if (Object.keys(safe).length) target[field] = safe;
-}
-
 function safeText(value) {
   return typeof value === 'string' ? value.trim() : '';
+}
+
+function firstNonEmptyText(...values) {
+  for (const value of values) {
+    const text = safeText(value);
+    if (text) return text;
+  }
+  return '';
+}
+
+function latestText(values) {
+  return (Array.isArray(values) ? values : [])
+    .map(safeText)
+    .filter(Boolean)
+    .sort()
+    .pop() || '';
 }
 
 function isRecentlyActive(value, now = Date.now()) {
@@ -788,6 +1005,8 @@ function escapeHtml(value) {
 
 module.exports = {
   buildStudentUrl,
+  createProfileStudentSession,
+  findQuestionsStandardsSessionMetadata,
   getConfiguredPublicBaseUrl,
   registerProfileRoutes,
   serializeLiveStudentActivity

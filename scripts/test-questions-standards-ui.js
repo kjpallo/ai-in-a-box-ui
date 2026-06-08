@@ -8,6 +8,7 @@ const profileUi = read(path.join(projectRoot, 'public', 'profile.js'));
 const bladeUi = read(path.join(projectRoot, 'public', 'blade-ui.js'));
 const exportHandler = between(profileUi, 'async function exportReportCsv()', 'function printReport()');
 const purgeHandler = between(profileUi, 'async function purgeQuestionsStandardsExport()', 'function printReport()');
+const restartHandler = between(profileUi, 'async function restartStudentSessionFromReport(button)', 'function formatLiveQuestionsLeft');
 
 assert.match(
   profileUi,
@@ -83,6 +84,51 @@ assert.match(
   bladeUi,
   /id="reportCopySummary"[\s\S]*Copy Summary/,
   'Questions & Standards should keep the Copy Summary button.'
+);
+assert.match(
+  bladeUi,
+  /id="reportSessionGroups"/,
+  'Questions & Standards should render archived/completed session groups.'
+);
+assert.match(
+  bladeUi,
+  /id="reportSessionGroupCount"/,
+  'Questions & Standards should show an archived session group count.'
+);
+assert.match(
+  profileUi,
+  /function buildReportSessionGroups[\s\S]*sessionKey[\s\S]*archive:\$\{question\.archiveId\}[\s\S]*Restarted Session/,
+  'Questions & Standards should group archived questions by session id or safe fallback key.'
+);
+assert.match(
+  profileUi,
+  /data-restart-student-session="\$\{escapeAttr\(group\.restartKey\)\}"/,
+  'Archived session groups should render Restart Session buttons with the correct session key.'
+);
+assert.match(
+  profileUi,
+  /byId\('reportSessionGroups'\)\?\.addEventListener\('click'[\s\S]*data-restart-student-session[\s\S]*restartStudentSessionFromReport/,
+  'Restart buttons should be wired from the Questions & Standards session group area.'
+);
+assert.match(
+  restartHandler,
+  /\/api\/profile\/student-sessions\/\$\{encodeURIComponent\(sessionKey\)\}\/restart/,
+  'Restart Session should call the teacher-only restart route.'
+);
+assert.match(
+  restartHandler,
+  /body: JSON\.stringify\(\{ className: sessionLabel \|\| 'Restarted Session' \}\)/,
+  'Restart Session should reuse the old label when available and fall back safely.'
+);
+assert.match(
+  restartHandler,
+  /loadStudentSessions\(\)[\s\S]*loadStandardsSummaryReport\(\)/,
+  'Restart Session should refresh Live Activity and keep Questions & Standards refreshed.'
+);
+assert.doesNotMatch(
+  restartHandler,
+  /purgeQuestionsStandardsExport|reportPurgeRawHistory|archiveStudentSession/,
+  'Restart Session should not purge, archive, or mutate old Questions & Standards history.'
 );
 assert.match(
   profileUi,

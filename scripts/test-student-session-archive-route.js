@@ -209,6 +209,13 @@ async function main() {
     ['session-a-1', 'session-a-2'],
     'archive CSV should contain only selected session rows'
   );
+  const archiveManifestPath = path.join(archiveDir, archiveResponse.body.csvFilename.replace(/\.csv$/i, '.manifest.json'));
+  const archiveManifestBeforeRestart = fs.readFileSync(archiveManifestPath, 'utf8');
+  assert.equal(
+    JSON.parse(archiveManifestBeforeRestart).className,
+    'Science A',
+    'archive manifest should retain the safe class label for restart'
+  );
 
   const mergedRecords = loadQuestionsStandardsRecords({
     logFilePath,
@@ -227,6 +234,89 @@ async function main() {
   assert.equal(summary.totalQuestions, 3, 'Questions & Standards should still include archived records after raw deletion');
   assert.equal(summary.questions.some((question) => question.id === 'session-a-1'), true);
   assert.equal(summary.standards.some((standard) => standard.standardId === 'ARCHIVE.ROUTE.1'), true);
+
+  const unauthorizedRestart = await request(
+    handlers,
+    'POST',
+    '/api/profile/student-sessions/:sessionId/restart',
+    {},
+    { sessionId: 'session-a' }
+  );
+  assert.equal(unauthorizedRestart.statusCode, 401, 'restart endpoint should require teacher auth');
+  assert.equal(unauthorizedRestart.body.error, 'Teacher login required.');
+
+  const missingRestart = await request(
+    handlers,
+    'POST',
+    '/api/profile/student-sessions/:sessionId/restart',
+    {},
+    { sessionId: 'missing-session' },
+    {},
+    authorizedExtras
+  );
+  assert.equal(missingRestart.statusCode, 404, 'restart should 404 when the old session metadata cannot be found');
+
+  const archiveFilesBeforeRestart = fs.readdirSync(archiveDir).sort();
+  const restartResponse = await request(
+    handlers,
+    'POST',
+    '/api/profile/student-sessions/:sessionId/restart',
+    {},
+    { sessionId: 'session-a' },
+    {},
+    authorizedExtras
+  );
+  assert.equal(restartResponse.statusCode, 201, 'restart should create a brand-new live session');
+  assert.equal(restartResponse.body.ok, true);
+  assert.equal(restartResponse.body.restarted, true);
+  assert.notEqual(restartResponse.body.sessionId, 'session-a', 'restart should generate a fresh sessionId');
+  assert.match(restartResponse.body.sessionId, /^[0-9a-f-]{32,36}$/i);
+  assert.notEqual(restartResponse.body.studentUrl, '/student.html?sessionId=session-a', 'restart should generate a fresh studentUrl');
+  assert.match(restartResponse.body.studentUrl, new RegExp(encodeURIComponent(restartResponse.body.sessionId)));
+  assert.equal(restartResponse.body.className, 'Science A', 'restart should reuse the archived class label');
+  assert.equal(studentSessions['session-a'], undefined, 'restart should not resurrect the old archived runtime session');
+  assert.ok(studentSessions[restartResponse.body.sessionId], 'restart should create a new runtime session');
+  assert.equal(studentSessions[restartResponse.body.sessionId].className, 'Science A');
+  assert.deepEqual(
+    fs.readdirSync(archiveDir).sort(),
+    archiveFilesBeforeRestart,
+    'restart should not add, delete, or rename archive files'
+  );
+  assert.equal(
+    fs.readFileSync(archiveManifestPath, 'utf8'),
+    archiveManifestBeforeRestart,
+    'restart should not mutate old archive metadata'
+  );
+
+  const liveAfterRestart = await request(
+    handlers,
+    'GET',
+    '/api/profile/live-student-activity',
+    {},
+    {},
+    {},
+    authorizedExtras
+  );
+  assert.equal(liveAfterRestart.statusCode, 200);
+  assert.equal(
+    liveAfterRestart.body.sessions[0].classSessionId,
+    restartResponse.body.sessionId,
+    'restarted sessions should appear at the top of Active Sessions'
+  );
+  assert.equal(
+    liveAfterRestart.body.sessions.some((session) => session.classSessionId === 'session-a'),
+    false,
+    'archived sessions should stay out of Active Sessions after restart'
+  );
+  assert.equal(
+    buildStandardsSummaryReport(loadQuestionsStandardsRecords({
+      logFilePath,
+      archiveDir,
+      readCurrentRecords: loadStudentInteractionLogs
+    }), { date: '2026-05-05' }).questions.some((question) => question.id === 'session-a-1'),
+    true,
+    'restart should keep archived Questions & Standards history visible'
+  );
 
   await assertArchiveFailureDoesNotDeleteRawRecords();
   assertNoStudentPageChanges();

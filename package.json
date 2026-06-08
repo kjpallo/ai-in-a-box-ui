@@ -15,6 +15,7 @@
     "test:auth": "node scripts/test-teacher-auth.js",
     "test:classroom-controls": "node scripts/test-classroom-controls.js",
     "test:live-activity-ui": "node scripts/test-live-activity-ui.js",
+    "test:live-student-activity": "node scripts/test-live-student-activity.js",
     "reset:teacher-auth": "node scripts/reset-teacher-auth.js",
 
     "test:bank": "node scripts/test-router-bank.js",
