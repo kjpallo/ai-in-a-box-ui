@@ -1031,6 +1031,91 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'math only compact multiplication',
+    question: 'what is 5x5',
+    type: 'math_only',
+    includes: ['5 × 5 = 25.'],
+    aiAllowed: false
+  },
+  {
+    name: 'math only symbol multiplication',
+    question: '5 * 5',
+    type: 'math_only',
+    includes: ['5 × 5 = 25.'],
+    aiAllowed: false
+  },
+  {
+    name: 'math only word addition',
+    question: '5 plus 5',
+    type: 'math_only',
+    includes: ['5 + 5 = 10.'],
+    aiAllowed: false
+  },
+  {
+    name: 'math only symbol addition',
+    question: '5 + 5',
+    type: 'math_only',
+    includes: ['5 + 5 = 10.'],
+    aiAllowed: false
+  },
+  {
+    name: 'math only word division',
+    question: '10 divided by 2',
+    type: 'math_only',
+    includes: ['10 ÷ 2 = 5.'],
+    aiAllowed: false
+  },
+  {
+    name: 'math only symbol division',
+    question: '10 / 2',
+    type: 'math_only',
+    includes: ['10 ÷ 2 = 5.'],
+    aiAllowed: false
+  },
+  {
+    name: 'math only word subtraction',
+    question: '8 minus 3',
+    type: 'math_only',
+    includes: ['8 - 3 = 5.'],
+    aiAllowed: false
+  },
+  {
+    name: 'math only equality true',
+    question: '4 = 4',
+    type: 'math_only',
+    includes: ['Yes, 4 = 4 is true.'],
+    aiAllowed: false
+  },
+  {
+    name: 'math only equality question true',
+    question: 'is 4 = 4',
+    type: 'math_only',
+    includes: ['Yes, 4 = 4 is true.'],
+    aiAllowed: false
+  },
+  {
+    name: 'math only equality false',
+    question: '4 = 5',
+    type: 'math_only',
+    includes: ['No, 4 = 5 is false.'],
+    aiAllowed: false
+  },
+  {
+    name: 'math only equality what is true',
+    question: 'what is 4 = 4',
+    type: 'math_only',
+    includes: ['Yes, 4 = 4 is true.'],
+    aiAllowed: false
+  },
+  {
+    name: 'math guard speed formula still routes to tutor',
+    question: 'What is speed if distance is 10 m and time is 2 s?',
+    type: 'science_formula',
+    includes: ['Use the motion formula: speed = distance / time.', 'speed = 10 m / 2 s', 'speed = 5 m/s'],
+    excludes: ['10 ÷ 2 = 5.'],
+    aiAllowed: false
+  },
+  {
     name: 'conceptual force energy motion relation',
     question: 'How are force and energy related to motion?',
     type: 'science_concept',
