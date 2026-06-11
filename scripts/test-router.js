@@ -203,6 +203,47 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'router precision longitudinal transverse comparison reversed',
+    question: 'What is the difference between longitudinal and transverse waves?',
+    matchedKnowledge: matchedKnowledgeFor('What is the difference between longitudinal and transverse waves?'),
+    type: 'definition',
+    includes: ['Transverse and longitudinal waves', 'longitudinal wave', 'parallel', 'transverse wave', 'perpendicular'],
+    aiAllowed: false
+  },
+  {
+    name: 'router precision kinetic potential energy comparison',
+    question: 'How is kinetic energy and potential energy related?',
+    matchedKnowledge: matchedKnowledgeFor('How is kinetic energy and potential energy related?'),
+    type: 'definition',
+    includes: ['Kinetic energy and potential energy are related', 'Kinetic energy is the energy an object has because it is moving', 'Gravitational potential energy is stored energy', 'motion'],
+    excludes: ['In 9th-grade science'],
+    aiAllowed: false
+  },
+  {
+    name: 'router precision kinetic potential energy multi definition',
+    question: 'Define kinetic energy and potential energy',
+    matchedKnowledge: matchedKnowledgeFor('Define kinetic energy and potential energy'),
+    type: 'definition',
+    includes: ['Kinetic energy and potential energy are related', 'KE = 1/2 × m × v^2', 'GPE = m × g × h'],
+    aiAllowed: false
+  },
+  {
+    name: 'router precision mass weight comparison',
+    question: 'Compare mass and weight',
+    matchedKnowledge: matchedKnowledgeFor('Compare mass and weight'),
+    type: 'definition',
+    includes: ['Mass and weight are related', 'Mass is the amount of matter in an object', 'Weight is the force of gravity', 'gravity changes'],
+    aiAllowed: false
+  },
+  {
+    name: 'router precision distance displacement vs comparison',
+    question: 'distance vs displacement',
+    type: 'definition',
+    includes: ['Distance and displacement', 'Distance is the total length traveled', 'Displacement is how far and in what direction', 'straight-line change'],
+    excludes: ['I need the starting position'],
+    aiAllowed: false
+  },
+  {
     name: 'router precision transverse wave beats generic wave',
     question: 'What is the transverse wave?',
     matchedKnowledge: matchedKnowledgeFor('What is the transverse wave?'),
