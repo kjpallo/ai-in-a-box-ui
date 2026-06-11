@@ -18,7 +18,9 @@ const {
 } = require('../routes/classroomControlsRoutes');
 const {
   buildStudentUrl,
-  getConfiguredPublicBaseUrl
+  getConfiguredPublicBaseUrl,
+  getPrivateLanIpv4Addresses,
+  registerProfileRoutes
 } = require('../routes/profileRoutes');
 const {
   createStudentQuestionRateLimiter,
@@ -29,6 +31,7 @@ async function main() {
   await testClassroomControlsStoreAndRoutes();
   testClassroomControlsLanSuggestions();
   testStudentLinkBaseUrlGeneration();
+  await testCreateStudentSessionRouteLanUrl();
   testStudentQuestionTokenBucket();
   await testStudentSafeControlsAndRateLimit();
   await testInvalidStudentControlsFallBackSafely();
@@ -123,6 +126,13 @@ function testClassroomControlsLanSuggestions() {
 function testStudentLinkBaseUrlGeneration() {
   const originalPublicBaseUrl = process.env.PUBLIC_BASE_URL;
   const originalAppBaseUrl = process.env.APP_BASE_URL;
+  const networkInterfaces = {
+    lo0: [{ family: 'IPv4', address: '127.0.0.1', internal: true }],
+    WiFi: [{ family: 'IPv4', address: '192.168.1.42', internal: false }],
+    Ethernet: [{ family: 'IPv4', address: '10.0.0.9', internal: false }],
+    Public: [{ family: 'IPv4', address: '8.8.8.8', internal: false }],
+    Duplicate: [{ family: 4, address: '192.168.1.42', internal: false }]
+  };
 
   try {
     process.env.PUBLIC_BASE_URL = 'http://192.168.1.42:3000/';
@@ -143,13 +153,85 @@ function testStudentLinkBaseUrlGeneration() {
 
     delete process.env.PUBLIC_BASE_URL;
     delete process.env.APP_BASE_URL;
+    assert.deepEqual(getPrivateLanIpv4Addresses(networkInterfaces), ['10.0.0.9', '192.168.1.42']);
+    assert.equal(
+      buildStudentUrl(createRequest('localhost:3000'), 'class localhost', 3000, { networkInterfaces }),
+      'http://10.0.0.9:3000/student.html?sessionId=class%20localhost'
+    );
+    assert.equal(
+      buildStudentUrl(createRequest('127.0.0.1:3000'), 'class loopback', 3000, { networkInterfaces }),
+      'http://10.0.0.9:3000/student.html?sessionId=class%20loopback'
+    );
+    assert.equal(
+      buildStudentUrl(createRequest('192.168.1.99:3000'), 'class lan', 3000, { networkInterfaces }),
+      'http://192.168.1.99:3000/student.html?sessionId=class%20lan'
+    );
     assert.equal(
       buildStudentUrl(createRequest('teacher-mac.local:3000', 'https'), 'class local', 3000),
       'https://teacher-mac.local:3000/student.html?sessionId=class%20local'
     );
+    assert.equal(
+      buildStudentUrl(createRequest('localhost:3000'), 'class fallback', 3000, {
+        networkInterfaces: {
+          lo0: [{ family: 'IPv4', address: '127.0.0.1', internal: true }],
+          Public: [{ family: 'IPv4', address: '8.8.8.8', internal: false }]
+        }
+      }),
+      'http://localhost:3000/student.html?sessionId=class%20fallback'
+    );
   } finally {
     restoreEnv('PUBLIC_BASE_URL', originalPublicBaseUrl);
     restoreEnv('APP_BASE_URL', originalAppBaseUrl);
+  }
+}
+
+async function testCreateStudentSessionRouteLanUrl() {
+  const originalNetworkInterfaces = os.networkInterfaces;
+  const handlers = new Map();
+  const studentSessions = Object.create(null);
+
+  try {
+    os.networkInterfaces = () => ({
+      Loopback: [{ family: 'IPv4', address: '127.0.0.1', internal: true }],
+      WiFi: [{ family: 'IPv4', address: '192.168.50.12', internal: false }]
+    });
+
+    registerProfileRoutes(createApp(handlers), {
+      clearGoogleIdentity() {},
+      completeGoogleConnect() {},
+      createGoogleConnectUrl() {},
+      disconnectGoogle() {},
+      getAvailableProfileDates() {
+        return { dates: [] };
+      },
+      getClassroomControls() {
+        return DEFAULT_CLASSROOM_CONTROLS;
+      },
+      getDailyQuestionSummary() {
+        return {};
+      },
+      getProfileStatus() {
+        return {};
+      },
+      getStandardsSummaryReport() {
+        return {};
+      },
+      linkGoogleIdentity() {},
+      port: 3000,
+      sendDailySummaryEmail() {},
+      studentSessions
+    });
+
+    const created = await request(handlers, 'POST', '/api/profile/create-student-session', {}, {}, {
+      headers: { host: 'localhost:3000' },
+      protocol: 'http'
+    });
+
+    assert.equal(created.statusCode, 201);
+    assert.match(created.body.studentUrl, /^http:\/\/192\.168\.50\.12:3000\/student\.html\?sessionId=/);
+    assert.doesNotMatch(created.body.studentUrl, /localhost/);
+  } finally {
+    os.networkInterfaces = originalNetworkInterfaces;
   }
 }
 
@@ -417,11 +499,19 @@ async function getRateLimitStatus(handlers, classSessionId, studentHubId) {
   });
 }
 
-async function request(handlers, method, route, body = {}, query = {}) {
+async function request(handlers, method, route, body = {}, query = {}, context = {}) {
   const handler = handlers.get(`${method} ${route}`);
   assert.ok(handler, `Missing handler: ${method} ${route}`);
 
-  const req = { body, query, headers: {} };
+  const req = {
+    body,
+    query,
+    headers: context.headers || {},
+    protocol: context.protocol,
+    get(name) {
+      return this.headers[String(name).toLowerCase()] || '';
+    }
+  };
   const res = createResponse();
   await handler(req, res);
   return res;

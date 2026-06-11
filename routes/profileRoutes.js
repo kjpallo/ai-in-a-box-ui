@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const os = require('os');
 const {
   writeQuestionsStandardsExportManifest
 } = require('../lib/profile/questionsStandardsExportManifest');
@@ -555,8 +556,8 @@ function textField(item, field) {
   return typeof item?.[field] === 'string' ? item[field].trim() : '';
 }
 
-function buildStudentUrl(req, sessionId, port) {
-  const baseUrl = getConfiguredPublicBaseUrl() || buildRequestBaseUrl(req, port);
+function buildStudentUrl(req, sessionId, port, options = {}) {
+  const baseUrl = getConfiguredPublicBaseUrl() || buildRequestBaseUrl(req, port, options);
   return `${baseUrl}/student.html?sessionId=${encodeURIComponent(sessionId)}`;
 }
 
@@ -575,13 +576,79 @@ function getConfiguredPublicBaseUrl(env = process.env) {
   }
 }
 
-function buildRequestBaseUrl(req, port) {
+function buildRequestBaseUrl(req, port, options = {}) {
   const getHeader = typeof req?.get === 'function'
     ? (name) => req.get(name)
     : (name) => req?.headers?.[String(name).toLowerCase()];
   const host = getHeader('host') || `localhost:${port}`;
   const protocol = req?.protocol || getHeader('x-forwarded-proto') || 'http';
-  return `${protocol}://${host}`.replace(/\/+$/g, '');
+  const shareableHost = buildShareableHost(host, port, options);
+  return `${String(protocol).split(',')[0].trim() || 'http'}://${shareableHost}`.replace(/\/+$/g, '');
+}
+
+function buildShareableHost(host, port, options = {}) {
+  const parsedHost = parseHostHeader(host || `localhost:${port}`, port);
+  if (!isLocalOnlyHost(parsedHost.hostname)) return parsedHost.host;
+
+  const lanAddress = getPrivateLanIpv4Addresses(options.networkInterfaces)[0];
+  if (!lanAddress) return parsedHost.host;
+
+  return parsedHost.port ? `${lanAddress}:${parsedHost.port}` : lanAddress;
+}
+
+function parseHostHeader(host, fallbackPort) {
+  const rawHost = safeText(host) || `localhost:${fallbackPort || ''}`;
+  try {
+    const url = new URL(`http://${rawHost}`);
+    return {
+      hostname: url.hostname,
+      port: url.port,
+      host: url.host
+    };
+  } catch {
+    const colonCount = (rawHost.match(/:/g) || []).length;
+    const hasSinglePortSeparator = colonCount === 1;
+    const [hostname, port = ''] = hasSinglePortSeparator ? rawHost.split(':') : [rawHost, ''];
+    return {
+      hostname: hostname.replace(/^\[|\]$/g, ''),
+      port,
+      host: rawHost
+    };
+  }
+}
+
+function isLocalOnlyHost(hostname) {
+  const host = safeText(hostname).toLowerCase().replace(/^\[|\]$/g, '');
+  if (!host) return true;
+  if (host === 'localhost' || host === '::1' || host === '0.0.0.0' || host === '::') return true;
+  return /^127(?:\.\d{1,3}){3}$/.test(host);
+}
+
+function getPrivateLanIpv4Addresses(networkInterfaces = os.networkInterfaces()) {
+  return Object.values(networkInterfaces || {})
+    .flat()
+    .filter((item) => item && (item.family === 'IPv4' || item.family === 4) && !item.internal)
+    .map((item) => safeText(item.address))
+    .filter(isPrivateIpv4)
+    .filter((address, index, addresses) => addresses.indexOf(address) === index)
+    .sort(compareIpv4);
+}
+
+function isPrivateIpv4(address) {
+  const parts = safeText(address).split('.').map((part) => Number(part));
+  if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return false;
+  if (parts[0] === 10) return true;
+  if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
+  return parts[0] === 192 && parts[1] === 168;
+}
+
+function compareIpv4(left, right) {
+  const leftParts = left.split('.').map((part) => Number(part));
+  const rightParts = right.split('.').map((part) => Number(part));
+  for (let index = 0; index < 4; index += 1) {
+    if (leftParts[index] !== rightParts[index]) return leftParts[index] - rightParts[index];
+  }
+  return 0;
 }
 
 function createProfileStudentSession({
@@ -1004,10 +1071,13 @@ function escapeHtml(value) {
 }
 
 module.exports = {
+  buildRequestBaseUrl,
+  buildShareableHost,
   buildStudentUrl,
   createProfileStudentSession,
   findQuestionsStandardsSessionMetadata,
   getConfiguredPublicBaseUrl,
+  getPrivateLanIpv4Addresses,
   registerProfileRoutes,
   serializeLiveStudentActivity
 };

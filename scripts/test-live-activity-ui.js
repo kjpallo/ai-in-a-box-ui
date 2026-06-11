@@ -19,6 +19,16 @@ assert.doesNotMatch(
   'Live Activity should not use the older student-session summary endpoint.'
 );
 assert.match(
+  profileUi,
+  /fetchJson\('\/api\/profile\/create-student-session'[\s\S]*renderStudentLink\(result\.studentUrl \|\| ''\)/,
+  'Create Student Link should display the backend-provided studentUrl.'
+);
+assert.doesNotMatch(
+  profileUi,
+  /window\.location\.origin/,
+  'Create Student Link should not rebuild shareable links from window.location.origin.'
+);
+assert.match(
   bladeUi,
   /<h4>Students Live Now<\/h4>/,
   'Live Activity should make the live student grid the main panel.'
