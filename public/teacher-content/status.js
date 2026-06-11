@@ -52,12 +52,21 @@
 
     function setUploadProgressError(title, failedStep, error, suggestions = []) {
       const detail = makeUploadProgressTeacherMessage(error);
+      const failedBatchDetails = Array.isArray(error?.data?.failedBatches)
+        ? error.data.failedBatches.flatMap((batch) => [
+          formatFailedBatchDetail(batch),
+          ...(Array.isArray(batch?.errors) ? batch.errors : [])
+        ])
+        : [];
       const backendDetails = uniqueStrings([
         error?.status ? `HTTP status: ${error.status}` : error?.data?.status ? `HTTP status: ${error.data.status}` : '',
+        error?.message,
+        error?.data?.message,
+        error?.data?.teacherFriendlyError,
         ...(Array.isArray(error?.errors) ? error.errors : []),
         ...(Array.isArray(error?.data?.errors) ? error.data.errors : []),
         ...(Array.isArray(error?.data?.technicalErrors) ? error.data.technicalErrors : []),
-        ...(Array.isArray(error?.data?.failedBatches) ? error.data.failedBatches.map(formatFailedBatchDetail) : []),
+        ...failedBatchDetails,
         error?.data?.model ? `Model: ${error.data.model}` : '',
         error?.data?.importEstimate?.previewMaxCharacters ? `Preview character limit: ${error.data.importEstimate.previewMaxCharacters}` : '',
         error?.data?.details,

@@ -1145,22 +1145,17 @@
       const failure = state.uploadPrepareReviewLastFailure;
       if (!failure || (mode && failure.mode !== mode)) return '';
       const isPreview = failure.mode === 'preview';
-      const teacherMessage = failure.teacherFriendlyError || failure.message || 'Prepare Review failed.';
-      const technical = Array.isArray(failure.technicalErrors) && failure.technicalErrors.length
-        ? failure.technicalErrors
-        : Array.isArray(failure.errors) ? failure.errors.slice(1) : [];
-      const backendDetails = makePrepareReviewBackendDetails(failure);
-      const suggestions = makePrepareReviewRecoverySuggestions(failure);
+      const failureView = buildTeacherContentUploadFailureView({ failure });
       return `
-        <section class="teacher-content-issues blocked teacher-content-recovery-panel" data-prepare-review-failure-message data-full-import-failure-message data-preview-retry-panel>
+        <section class="teacher-content-issues blocked teacher-content-recovery-panel" data-prepare-review-failure-message data-full-import-failure-message data-preview-retry-panel data-teacher-content-upload-failure-panel>
           <div>
-            <h5>${isPreview ? 'Preview failed' : 'Full import failed'}</h5>
-            <p>${escapeHtml(teacherMessage)}</p>
+            <h5 data-teacher-content-upload-failure-headline>${escapeHtml(failureView.headline || (isPreview ? 'Preview failed' : 'Full import failed'))}</h5>
+            <p data-teacher-content-upload-failure-explanation>${escapeHtml(failureView.explanation)}</p>
           </div>
-          ${suggestions.length ? `
+          ${failureView.suggestions.length ? `
             <div class="teacher-content-backend-details" data-prepare-review-retry-guidance>
               <strong>Suggested next steps</strong>
-              <ul>${suggestions.map((suggestion) => `<li>${escapeHtml(suggestion)}</li>`).join('')}</ul>
+              <ul>${failureView.suggestions.map((suggestion) => `<li>${escapeHtml(suggestion)}</li>`).join('')}</ul>
             </div>
           ` : ''}
           ${Array.isArray(failure.failedBatches) && failure.failedBatches.length ? renderFailedBatchSummary(failure.failedBatches) : ''}
@@ -1172,17 +1167,10 @@
               <button type="button" class="small-button secondary-small" data-handoff-tab="upload">Return to Upload / Start</button>
             </div>
           ` : ''}
-          ${technical.length || failure.rawModelResponsePath ? `
+          ${failureView.technicalDetails.length ? `
             <details class="teacher-content-upload-details teacher-content-backend-details" data-full-import-technical-details data-prepare-review-backend-details>
               <summary>Technical details</summary>
-              ${backendDetails.length ? `<ul>${backendDetails.map((detail) => `<li>${escapeHtml(detail)}</li>`).join('')}</ul>` : ''}
-              ${technical.length ? `<ul>${technical.map((item) => `<li>${escapeHtml(formatBackendDetail(item))}</li>`).join('')}</ul>` : ''}
-              ${failure.rawModelResponsePath ? `<p class="teacher-content-upload-note">Raw model response: ${escapeHtml(failure.rawModelResponsePath)}</p>` : ''}
-            </details>
-          ` : backendDetails.length ? `
-            <details class="teacher-content-upload-details teacher-content-backend-details" data-full-import-technical-details data-prepare-review-backend-details>
-              <summary>Technical details</summary>
-              <ul>${backendDetails.map((detail) => `<li>${escapeHtml(detail)}</li>`).join('')}</ul>
+              <ul>${failureView.technicalDetails.map((detail) => `<li>${escapeHtml(detail)}</li>`).join('')}</ul>
             </details>
           ` : ''}
         </section>
@@ -1557,26 +1545,66 @@
     function renderUploadProgressErrorPanel() {
       const error = state.uploadProgressError;
       if (!error) return '';
+      const failureView = buildTeacherContentUploadFailureView({
+        progressError: error,
+        failure: state.uploadPrepareReviewLastFailure
+      });
       return `
-        <section class="teacher-content-progress-error-panel" data-upload-progress-error-panel>
-          <h5>${escapeHtml(error.title || 'Import needs attention')}</h5>
-          <p data-upload-progress-error-failed>${escapeHtml(error.failedStep || 'Import failed')}</p>
-          <p data-upload-progress-error-detail>${escapeHtml(error.detail || 'Something went wrong.')}</p>
-          ${error.failedBatchNotice && error.failedBatchNotice !== 'Some source chunks were not analyzed.' ? `<p data-upload-progress-failed-pages>${escapeHtml(error.failedBatchNotice)}</p>` : ''}
-          ${Array.isArray(error.backendDetails) && error.backendDetails.length ? `
-            <details class="teacher-content-backend-details" data-upload-progress-error-backend-details>
-              <summary>Technical details</summary>
-              <ul>${error.backendDetails.map((detail) => `<li>${escapeHtml(detail)}</li>`).join('')}</ul>
-            </details>
-          ` : ''}
-          ${Array.isArray(error.suggestions) && error.suggestions.length ? `
+        <section class="teacher-content-progress-error-panel" data-upload-progress-error-panel data-teacher-content-upload-failure-panel>
+          <h5 data-teacher-content-upload-failure-headline>${escapeHtml(failureView.headline)}</h5>
+          <p data-upload-progress-error-detail data-teacher-content-upload-failure-explanation>${escapeHtml(failureView.explanation)}</p>
+          ${failureView.suggestions.length ? `
             <div class="teacher-content-backend-details" data-upload-progress-error-suggestions>
               <strong>Try this</strong>
-              <ul>${error.suggestions.map((suggestion) => `<li>${escapeHtml(suggestion)}</li>`).join('')}</ul>
+              <ul>${failureView.suggestions.map((suggestion) => `<li>${escapeHtml(suggestion)}</li>`).join('')}</ul>
             </div>
+          ` : ''}
+          ${failureView.technicalDetails.length ? `
+            <details class="teacher-content-backend-details" data-upload-progress-error-backend-details>
+              <summary>Technical details</summary>
+              <ul>${failureView.technicalDetails.map((detail) => `<li>${escapeHtml(detail)}</li>`).join('')}</ul>
+            </details>
           ` : ''}
         </section>
       `;
+    }
+
+    function buildTeacherContentUploadFailureView({ progressError = null, failure = null } = {}) {
+      const failureForDetection = failure || {
+        message: progressError?.detail,
+        errors: progressError?.backendDetails || []
+      };
+      const isAnalysisFailure = isTeacherContentAnalysisFailurePayload(failureForDetection);
+      const headline = isAnalysisFailure
+        ? 'Charlemagne could not finish analyzing this file.'
+        : progressError?.title || 'Import needs attention.';
+      const message = isAnalysisFailure
+        ? 'The local model stopped, timed out, or returned an error before Charlemagne could finish the import.'
+        : progressError?.detail || failure?.teacherFriendlyError || failure?.message || 'Something went wrong while preparing the import.';
+      const failedBatchNotice = progressError?.failedBatchNotice && progressError.failedBatchNotice !== 'Some source chunks were not analyzed.'
+        ? progressError.failedBatchNotice
+        : Array.isArray(failure?.failedBatches) && failure.failedBatches.length
+          ? formatFailedBatchPageNotice(failure.failedBatches)
+          : '';
+      const explanation = uniqueStrings([message, failedBatchNotice]).join(' ');
+      const suggestions = uniqueStrings([
+        ...(Array.isArray(progressError?.suggestions) ? progressError.suggestions : []),
+        ...(failure ? makePrepareReviewRecoverySuggestions(failure) : [])
+      ]).slice(0, 2);
+      const technicalDetails = uniqueStrings([
+        progressError?.failedStep ? `Failed step: ${progressError.failedStep}` : '',
+        ...(Array.isArray(progressError?.backendDetails) ? progressError.backendDetails : []),
+        ...(failure ? makePrepareReviewBackendDetails(failure) : []),
+        ...(Array.isArray(failure?.technicalErrors) ? failure.technicalErrors : []),
+        ...(Array.isArray(failure?.failedBatches) ? failure.failedBatches.map(formatFailedBatchDetail) : []),
+        failure?.rawModelResponsePath ? `Raw model response: ${failure.rawModelResponsePath}` : ''
+      ].map(formatBackendDetail).filter((detail) => detail && detail !== message && detail !== failedBatchNotice));
+      return {
+        headline,
+        explanation,
+        suggestions,
+        technicalDetails
+      };
     }
 
     function getPlannedBatchDetail(planOrEstimate) {
@@ -1960,6 +1988,7 @@
       renderUploadCreateProgress,
       normalizeUploadProgress,
       renderUploadProgressErrorPanel,
+      buildTeacherContentUploadFailureView,
       getPlannedBatchDetail,
       getGenerateProgressDetail,
       renderImportActivityPanel,

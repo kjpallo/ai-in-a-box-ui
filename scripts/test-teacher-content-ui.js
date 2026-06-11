@@ -367,9 +367,14 @@ function assertTeacherFriendlyModelFailureUi() {
   const progressMessage = extractFunctionSource(ui, 'makeUploadProgressTeacherMessage');
   const normalizeFailure = extractFunctionSource(ui, 'normalizePrepareReviewFailureMessage');
   const suggestions = extractFunctionSource(ui, 'makePrepareReviewRecoverySuggestions');
+  const failureView = extractFunctionSource(ui, 'buildTeacherContentUploadFailureView');
+  const progressPanel = extractFunctionSource(ui, 'renderUploadProgressErrorPanel');
+  const preparePanel = extractFunctionSource(ui, 'renderPrepareReviewFailurePanel');
   const analysisPredicate = extractFunctionSource(ui, 'isTeacherContentAnalysisFailurePayload');
   const invalidPredicate = extractFunctionSource(ui, 'isInvalidModelResponsePayload');
   const unavailablePredicate = extractFunctionSource(ui, 'isModelUnavailablePayload');
+  const crashPredicate = extractFunctionSource(ui, 'isModelRuntimeCrashPayload');
+  const timeoutPredicate = extractFunctionSource(ui, 'isModelRuntimeTimeoutPayload');
 
   assert.match(progressMessage, /Charlemagne had trouble analyzing this file\./, 'Upload progress should use friendly model-analysis failure copy.');
   assert.doesNotMatch(progressMessage, /Local Gemma took too long while reading this batch|Local Gemma crashed while reading this batch/, 'Technical model runtime detail should not be the primary progress message.');
@@ -381,6 +386,18 @@ function assertTeacherFriendlyModelFailureUi() {
   assert.match(analysisPredicate, /isInvalidModelResponsePayload/, 'Teacher-friendly analysis failure detection should include bad model output.');
   assert.match(invalidPredicate, /model response was empty/, 'UI should recognize empty model results.');
   assert.match(unavailablePredicate, /econnrefused/, 'UI should recognize local Ollama connection failures.');
+  assert.match(crashPredicate, /ama returned http 500/, 'UI should recognize Ollama HTTP 500 model-runner crashes.');
+  assert.match(crashPredicate, /ggml_assert/, 'UI should recognize ggml crash details.');
+  assert.match(timeoutPredicate, /local gemma took too long while reading this batch/, 'UI should recognize local Gemma timeout details.');
+  assert.match(timeoutPredicate, /request timed out/, 'UI should recognize Ollama request timeout details.');
+  assert.match(failureView, /Charlemagne could not finish analyzing this file\./, 'Failure panel should show one calm teacher-friendly headline.');
+  assert.match(failureView, /The local model stopped, timed out, or returned an error/, 'Failure panel should show one concise teacher-facing explanation.');
+  assert.match(failureView, /formatFailedBatchPageNotice\(failure\.failedBatches\)/, 'Partial imports should keep failed batch/page context in the teacher-facing explanation.');
+  assert.match(failureView, /uniqueStrings\(\[[\s\S]*progressError\?\.backendDetails[\s\S]*makePrepareReviewBackendDetails\(failure\)[\s\S]*failure\?\.technicalErrors[\s\S]*formatFailedBatchDetail/, 'Backend, prepare-review, and failed-batch details should be deduped into one technical list.');
+  assert.match(failureView, /\.slice\(0, 2\)/, 'Failure panel should show at most two action suggestions.');
+  assert.match(progressPanel, /data-teacher-content-upload-failure-panel/, 'Upload progress failures should use the shared calm failure panel.');
+  assert.match(preparePanel, /data-teacher-content-upload-failure-panel/, 'Prepare-review failures should use the shared calm failure panel.');
+  assert.doesNotMatch(progressPanel, /data-upload-progress-error-failed/, 'Progress panel should not render a second teacher-facing failed-step line.');
 }
 
 function assertExcludeSelectedRoutesAcrossDraftPacks() {
