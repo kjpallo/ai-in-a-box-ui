@@ -12,6 +12,10 @@
         overflow: hidden;
       }
 
+      body:has(.student-tutor-card:not([hidden])) {
+        overflow-y: auto;
+      }
+
       .student-shell {
         width: min(1240px, calc(100% - 1.25rem));
         height: 100vh;
@@ -20,6 +24,11 @@
         padding: 0.65rem 0;
         display: grid;
         min-height: 0;
+      }
+
+      body:has(.student-tutor-card:not([hidden])) .student-shell {
+        height: auto;
+        min-height: 100dvh;
       }
 
       .student-workspace {
@@ -39,7 +48,8 @@
       }
 
       .student-main-stack:has(.student-tutor-card:not([hidden])) {
-        grid-template-rows: auto minmax(0, 1fr) minmax(96px, 0.34fr) minmax(126px, 0.46fr);
+        grid-template-rows: auto auto minmax(104px, auto) minmax(150px, auto);
+        align-content: start;
       }
 
       .student-panel {
@@ -316,14 +326,18 @@
       .student-tutor-card {
         z-index: 4;
         display: grid;
-        grid-template-rows: auto minmax(0, 1fr) auto;
+        grid-template-rows: auto auto auto;
         gap: 0.55rem;
-        overflow: hidden;
+        overflow: visible;
         border-color: rgba(102,247,209,0.28);
         background:
           radial-gradient(circle at 18% 0%, rgba(102,247,209,0.14), transparent 34%),
           radial-gradient(circle at 88% 12%, rgba(126,233,255,0.12), transparent 32%),
           rgba(3,12,14,0.9);
+      }
+
+      .student-main-stack:has(.student-tutor-card:not([hidden])) .student-tutor-card {
+        min-height: clamp(430px, 58dvh, 620px);
       }
 
       .student-tutor-card[hidden] {
@@ -358,10 +372,8 @@
         align-items: start;
         gap: 0.65rem;
         min-height: 0;
-        overflow-y: auto;
-        overscroll-behavior: contain;
+        overflow-y: visible;
         padding-right: 0.15rem;
-        scrollbar-gutter: stable;
       }
 
       .student-tutor-body:has(.student-calculator[hidden]) {
