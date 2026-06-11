@@ -99,6 +99,15 @@ async function main() {
   const teacherDirect = await questionAnswer.answerStudentMessage(forceQuestion);
   assert.match(teacherDirect.response, /F = 30 N/i);
 
+  const speedContext = await questionAnswer.answerStudentMessage('What is speed?');
+  const wavelengthStandalone = await questionAnswer.answerStudentMessage('What is the wavelength of a wave that has a frequency of 20?', {
+    lastAnsweredPrompt: 'What is speed?',
+    lastAnsweredAnswer: speedContext.response
+  });
+  assert.doesNotMatch(wavelengthStandalone.response, /You were asking about speed/i);
+  assert.match(wavelengthStandalone.response, /I need wave speed/i);
+  assert.doesNotMatch(wavelengthStandalone.response, /wavelength = 20 m/i);
+
   const forceTutorStart = await request('POST', '/api/student/message', {
     sessionId: classSessionId,
     studentHubId: 'student-a',

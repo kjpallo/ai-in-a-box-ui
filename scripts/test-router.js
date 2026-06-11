@@ -1,6 +1,7 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const { findRelevantKnowledge } = require('../lib/knowledge/teacherKnowledge');
 const { routeStudentQuestion } = require('../lib/router/questionRouter');
 const {
   nextPendingClarification,
@@ -11,6 +12,20 @@ const { assertRouterCase } = require('./test-helpers/routerAssertions');
 const teacherFactsPath = path.join(__dirname, '..', 'knowledge', 'teacher_facts.json');
 const teacherFactsRaw = JSON.parse(fs.readFileSync(teacherFactsPath, 'utf8'));
 const teacherFacts = Array.isArray(teacherFactsRaw) ? teacherFactsRaw : teacherFactsRaw.items;
+const teacherKnowledge = teacherFacts.map((item, index) => ({
+  id: item.id || `knowledge-${index + 1}`,
+  category: item.category || 'reference',
+  title: item.title || item.term || `Knowledge item ${index + 1}`,
+  terms: Array.isArray(item.terms) ? item.terms : [],
+  fact: item.fact || item.definition || item.text || '',
+  formula: item.formula || '',
+  examples: Array.isArray(item.examples) ? item.examples : [],
+  source: item.source || 'Teacher-created local knowledge base'
+}));
+
+function matchedKnowledgeFor(question) {
+  return findRelevantKnowledge(question, teacherKnowledge, 8);
+}
 
 function factById(id) {
   const item = teacherFacts.find((fact) => fact.id === id);
@@ -168,6 +183,65 @@ const tests = [
     type: 'definition',
     includes: ['Distance is the total path traveled', 'Displacement is the straight-line change'],
     excludes: ['Recognized displacement problem', 'displacement = final position - initial position'],
+    aiAllowed: false
+  },
+  {
+    name: 'router precision speed of light beats generic speed',
+    question: 'What is the speed of light',
+    matchedKnowledge: matchedKnowledgeFor('What is the speed of light'),
+    type: 'science_concept',
+    includes: ['speed of light', '3.0 × 10^8 m/s', '300,000,000 m/s', 'vacuum'],
+    excludes: ['speed = distance / time'],
+    aiAllowed: false
+  },
+  {
+    name: 'router precision transverse longitudinal comparison',
+    question: 'What is the difference between transverse and longitudinal waves?',
+    matchedKnowledge: matchedKnowledgeFor('What is the difference between transverse and longitudinal waves?'),
+    type: 'definition',
+    includes: ['Transverse and longitudinal waves', 'transverse wave', 'perpendicular', 'longitudinal wave', 'parallel'],
+    aiAllowed: false
+  },
+  {
+    name: 'router precision transverse wave beats generic wave',
+    question: 'What is the transverse wave?',
+    matchedKnowledge: matchedKnowledgeFor('What is the transverse wave?'),
+    type: 'definition',
+    includes: ['A transverse wave is a wave', 'perpendicular', 'right angles', 'direction the wave travels'],
+    excludes: ['A wave is a rhythmic disturbance'],
+    aiAllowed: false
+  },
+  {
+    name: 'router precision wavelength frequency needs wave speed',
+    question: 'What is the wavelength of a wave that has a frequency of 20?',
+    matchedKnowledge: matchedKnowledgeFor('What is the wavelength of a wave that has a frequency of 20?'),
+    type: 'science_formula',
+    includes: ['Use wavelength = wave speed / frequency.', 'frequency = 20 Hz', 'I need wave speed'],
+    excludes: ['You were asking about speed', 'wavelength = 1 m', 'wavelength = 20 m'],
+    aiAllowed: false
+  },
+  {
+    name: 'router precision generic speed still answers speed',
+    question: 'What is speed?',
+    matchedKnowledge: matchedKnowledgeFor('What is speed?'),
+    type: 'definition',
+    includes: ['Speed tells how fast an object moves', 'speed = distance / time'],
+    aiAllowed: false
+  },
+  {
+    name: 'router precision generic wave still answers wave',
+    question: 'What is a wave?',
+    matchedKnowledge: matchedKnowledgeFor('What is a wave?'),
+    type: 'definition',
+    includes: ['A wave is a rhythmic disturbance', 'transfers energy'],
+    aiAllowed: false
+  },
+  {
+    name: 'router precision wave speed still answers wave formula',
+    question: 'What is wave speed?',
+    matchedKnowledge: matchedKnowledgeFor('What is wave speed?'),
+    type: 'definition',
+    includes: ['Wave speed tells how fast a wave travels', 'v = wavelength × frequency'],
     aiAllowed: false
   },
   {

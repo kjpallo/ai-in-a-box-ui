@@ -1924,9 +1924,9 @@
         "freqency"
       ],
       "fact": "Wave speed tells how fast a wave travels. It is measured in meters per second. Wave speed depends on the type of wave and the properties of the medium it travels through.",
-      "formula": "v = wavelength x frequency; v = lambda x f",
+      "formula": "v = wavelength × frequency; v = λ × f",
       "examples": [
-        "If wavelength = 2 m and frequency = 3 Hz, wave speed = 2 x 3 = 6 m/s."
+        "If wavelength = 2 m and frequency = 3 Hz, wave speed = 2 × 3 = 6 m/s."
       ],
       "source": "Concept 1 Notes - Nature and Properties.pptx, slides 11-12"
     },
