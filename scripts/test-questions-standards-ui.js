@@ -97,13 +97,23 @@ assert.match(
 );
 assert.match(
   profileUi,
-  /function buildReportSessionGroups[\s\S]*sessionKey[\s\S]*archive:\$\{question\.archiveId\}[\s\S]*Restarted Session/,
+  /function buildReportSessionGroups[\s\S]*sessionKey[\s\S]*archive:\$\{question\.archiveId\}[\s\S]*normalizeRestartedSessionTitle/,
   'Questions & Standards should group archived questions by session id or safe fallback key.'
 );
 assert.match(
   profileUi,
   /data-restart-student-session="\$\{escapeAttr\(group\.restartKey\)\}"/,
   'Archived session groups should render Restart Session buttons with the correct session key.'
+);
+assert.match(
+  profileUi,
+  /data-restart-session-class-name="\$\{escapeAttr\(group\.restartClassName \|\| ''\)\}"/,
+  'Archived session restart buttons should only send a clean stored class name when one exists.'
+);
+assert.match(
+  profileUi,
+  /function renderRestartedReportSessionLink[\s\S]*Session restarted[\s\S]*New student link is ready:[\s\S]*data-copy-restarted-student-url[\s\S]*Open Student Link/,
+  'Restart success should render the new student link and actions inline with Archived Sessions.'
 );
 assert.match(
   profileUi,
@@ -117,8 +127,23 @@ assert.match(
 );
 assert.match(
   restartHandler,
-  /body: JSON\.stringify\(\{ className: sessionLabel \|\| 'Restarted Session' \}\)/,
-  'Restart Session should reuse the old label when available and fall back safely.'
+  /body: JSON\.stringify\(sessionClassName \? \{ className: sessionClassName \} : \{\}\)/,
+  'Restart Session should not send fallback-only labels as className.'
+);
+assert.match(
+  restartHandler,
+  /restartedReportSessions\.set\(sessionKey[\s\S]*renderStudentLink\(studentUrl\)/,
+  'Restart Session should use the returned studentUrl and keep it visible in Archived Sessions.'
+);
+assert.match(
+  profileUi,
+  /function stripRestartedPrefixes[\s\S]*function cleanRestartSessionBaseName[\s\S]*function normalizeRestartedSessionTitle/,
+  'Restart Session should normalize repeated Restarted prefixes on the frontend.'
+);
+assert.doesNotMatch(
+  restartHandler,
+  /Restarted \$\{result|result\?\.message \|\| 'Session restarted/,
+  'Restart Session should use safe local success copy instead of trusting confusing doubled backend copy.'
 );
 assert.match(
   restartHandler,

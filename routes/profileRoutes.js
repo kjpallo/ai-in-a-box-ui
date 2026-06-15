@@ -155,13 +155,13 @@ function registerProfileRoutes(app, {
           return;
         }
 
-        const className = firstNonEmptyText(
+        const cleanRestartName = firstCleanRestartSessionBaseName(
           req.body?.className,
           sourceSession.className,
           sourceSession.sessionLabel,
-          sourceSession.label,
-          'Restarted Session'
+          sourceSession.label
         );
+        const className = restartSessionTitle(cleanRestartName);
         const session = createProfileStudentSession({
           className,
           port,
@@ -189,7 +189,7 @@ function registerProfileRoutes(app, {
             archiveId: sourceSession.archiveId,
             questionCount: sourceSession.questionCount
           },
-          message: `Restarted ${className}. A new student link is ready.`
+          message: restartSessionMessage(cleanRestartName)
         });
       } catch (error) {
         sendProfileError(res, error);
@@ -1045,6 +1045,39 @@ function firstNonEmptyText(...values) {
     if (text) return text;
   }
   return '';
+}
+
+function stripRestartedPrefixes(value) {
+  let text = safeText(value).replace(/\s+/g, ' ');
+  while (/^Restarted\s+/iu.test(text)) {
+    text = text.replace(/^Restarted\s+/iu, '').trim();
+  }
+  return text;
+}
+
+function cleanRestartSessionBaseName(value) {
+  const cleanName = stripRestartedPrefixes(value);
+  return cleanName && !/^session$/iu.test(cleanName) ? cleanName : '';
+}
+
+function firstCleanRestartSessionBaseName(...values) {
+  for (const value of values) {
+    const cleanName = cleanRestartSessionBaseName(value);
+    if (cleanName) return cleanName;
+  }
+  return '';
+}
+
+function restartSessionTitle(value) {
+  const cleanName = cleanRestartSessionBaseName(value);
+  return cleanName ? `Restarted ${cleanName}` : 'Restarted Session';
+}
+
+function restartSessionMessage(value) {
+  const cleanName = cleanRestartSessionBaseName(value);
+  return cleanName
+    ? `Restarted ${cleanName}. A new student link is ready.`
+    : 'Session restarted. A new student link is ready.';
 }
 
 function latestText(values) {

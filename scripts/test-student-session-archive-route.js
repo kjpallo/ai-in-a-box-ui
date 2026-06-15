@@ -273,10 +273,15 @@ async function main() {
   assert.match(restartResponse.body.sessionId, /^[0-9a-f-]{32,36}$/i);
   assert.notEqual(restartResponse.body.studentUrl, '/student.html?sessionId=session-a', 'restart should generate a fresh studentUrl');
   assert.match(restartResponse.body.studentUrl, new RegExp(encodeURIComponent(restartResponse.body.sessionId)));
-  assert.equal(restartResponse.body.className, 'Science A', 'restart should reuse the archived class label');
+  assert.equal(restartResponse.body.className, 'Restarted Science A', 'restart should create a normalized restarted class label');
+  assert.equal(
+    restartResponse.body.message,
+    'Restarted Science A. A new student link is ready.',
+    'restart should not double-prefix the success message'
+  );
   assert.equal(studentSessions['session-a'], undefined, 'restart should not resurrect the old archived runtime session');
   assert.ok(studentSessions[restartResponse.body.sessionId], 'restart should create a new runtime session');
-  assert.equal(studentSessions[restartResponse.body.sessionId].className, 'Science A');
+  assert.equal(studentSessions[restartResponse.body.sessionId].className, 'Restarted Science A');
   assert.deepEqual(
     fs.readdirSync(archiveDir).sort(),
     archiveFilesBeforeRestart,
@@ -316,6 +321,91 @@ async function main() {
     }), { date: '2026-05-05' }).questions.some((question) => question.id === 'session-a-1'),
     true,
     'restart should keep archived Questions & Standards history visible'
+  );
+
+  const doublePrefixRestart = await request(
+    handlers,
+    'POST',
+    '/api/profile/student-sessions/:sessionId/restart',
+    { className: 'Restarted Restarted Session' },
+    { sessionId: 'session-a' },
+    {},
+    authorizedExtras
+  );
+  assert.equal(doublePrefixRestart.statusCode, 201);
+  assert.equal(
+    doublePrefixRestart.body.className,
+    'Restarted Science A',
+    'restart should ignore a generic repeated Restarted fallback when archive metadata has a clean name'
+  );
+  assert.equal(
+    doublePrefixRestart.body.message,
+    'Restarted Science A. A new student link is ready.',
+    'restart should use the recovered clean archive name when the request body only has fallback copy'
+  );
+  assert.doesNotMatch(
+    doublePrefixRestart.body.message,
+    /Restarted Restarted/u,
+    'restart response should never say Restarted Restarted Session'
+  );
+
+  const legacyCsvFilename = 'questions-standards-session-legacy-session.csv';
+  fs.writeFileSync(
+    path.join(archiveDir, legacyCsvFilename),
+    [
+      'id,timestamp,date,sessionId,question,response',
+      'legacy-session-1,2026-05-05T15:00:00.000Z,2026-05-05,legacy-session,What is momentum?,Mass times velocity.'
+    ].join('\n') + '\n',
+    'utf8'
+  );
+
+  const legacyRestart = await request(
+    handlers,
+    'POST',
+    '/api/profile/student-sessions/:sessionId/restart',
+    {},
+    { sessionId: 'legacy-session' },
+    {},
+    authorizedExtras
+  );
+  assert.equal(legacyRestart.statusCode, 201, 'legacy archives without class metadata should still restart');
+  assert.equal(legacyRestart.body.ok, true);
+  assert.match(legacyRestart.body.studentUrl, new RegExp(encodeURIComponent(legacyRestart.body.sessionId)));
+  assert.equal(
+    legacyRestart.body.className,
+    'Restarted Session',
+    'legacy archives without class metadata should use a safe generic session title'
+  );
+  assert.equal(
+    legacyRestart.body.message,
+    'Session restarted. A new student link is ready.',
+    'legacy archives without class metadata should not imply a friendly name was recovered'
+  );
+
+  const legacyDoublePrefixRestart = await request(
+    handlers,
+    'POST',
+    '/api/profile/student-sessions/:sessionId/restart',
+    { className: 'Restarted Restarted Session' },
+    { sessionId: 'legacy-session' },
+    {},
+    authorizedExtras
+  );
+  assert.equal(legacyDoublePrefixRestart.statusCode, 201);
+  assert.equal(
+    legacyDoublePrefixRestart.body.className,
+    'Restarted Session',
+    'restart title normalization should collapse repeated generic Restarted prefixes'
+  );
+  assert.equal(
+    legacyDoublePrefixRestart.body.message,
+    'Session restarted. A new student link is ready.',
+    'generic restarted labels should use safe generic copy'
+  );
+  assert.doesNotMatch(
+    legacyDoublePrefixRestart.body.message,
+    /Restarted Restarted/u,
+    'generic legacy restart response should never say Restarted Restarted Session'
   );
 
   await assertArchiveFailureDoesNotDeleteRawRecords();

@@ -9,6 +9,7 @@
   let currentReportQuestions = [];
   let reportQuestionFilter = 'all';
   let questionsStandardsExportState = null;
+  const restartedReportSessions = new Map();
   let availableActivityDates = [];
   const standardDetailsCache = new Map();
   let showingReviewQuestions = false;
@@ -661,9 +662,13 @@
         question?.id ? `question:${question.id}` : '',
         `archived-session-${index + 1}`
       );
+      const storedLabel = firstText(question?.className, question?.sessionLabel);
+      const restartClassName = cleanRestartSessionBaseName(storedLabel);
       const existing = groups.get(restartKey) || {
         restartKey,
-        label: firstText(question?.className, question?.sessionLabel) || 'Restarted Session',
+        label: normalizeRestartedSessionTitle(storedLabel),
+        restartClassName,
+        restartedLink: restartedReportSessions.get(restartKey) || null,
         archivedAt: '',
         questionCount: 0,
         standardIds: new Set(),
@@ -673,7 +678,9 @@
       };
 
       existing.questionCount += 1;
-      existing.label = firstText(existing.label, question?.className, question?.sessionLabel) || 'Restarted Session';
+      existing.label = normalizeRestartedSessionTitle(firstText(storedLabel, existing.label));
+      existing.restartClassName = firstText(existing.restartClassName, restartClassName);
+      existing.restartedLink = restartedReportSessions.get(restartKey) || existing.restartedLink;
       existing.archivedAt = latestLabel(existing.archivedAt, question?.archiveCreatedAt, question?.timestamp);
       addQuestionStandardsToGroup(existing, question);
       incrementClientCount(existing.topics, question?.topic);
@@ -738,14 +745,32 @@
               </div>
             `).join('')}
           </dl>
+          ${renderRestartedReportSessionLink(group.restartedLink)}
         </div>
         <button
           type="button"
           class="small-button secondary-small report-session-restart-button"
           data-restart-student-session="${escapeAttr(group.restartKey)}"
-          data-restart-session-label="${escapeAttr(group.label || 'Restarted Session')}"
+          data-restart-session-class-name="${escapeAttr(group.restartClassName || '')}"
         >Restart Session</button>
       </article>
+    `;
+  }
+
+  function renderRestartedReportSessionLink(restartedLink) {
+    const studentUrl = firstText(restartedLink?.studentUrl);
+    if (!studentUrl) return '';
+
+    return `
+      <div class="active-session-link" data-restarted-session-link-panel role="status" aria-live="polite">
+        <strong>Session restarted</strong>
+        <span>New student link is ready:</span>
+        <code>${escapeHtml(studentUrl)}</code>
+        <div class="active-session-actions">
+          <button type="button" class="small-button secondary-small" data-copy-restarted-student-url="${escapeAttr(studentUrl)}">Copy Link</button>
+          <a class="small-button secondary-small active-session-open-button" href="${escapeAttr(studentUrl)}" target="_blank" rel="noreferrer">Open Student Link</a>
+        </div>
+      </div>
     `;
   }
 
@@ -888,6 +913,12 @@
     });
 
     byId('reportSessionGroups')?.addEventListener('click', (event) => {
+      const copyButton = event.target.closest('[data-copy-restarted-student-url]');
+      if (copyButton) {
+        copyRestartedReportSessionLink(copyButton);
+        return;
+      }
+
       const button = event.target.closest('[data-restart-student-session]');
       if (!button) return;
       restartStudentSessionFromReport(button);
@@ -1820,7 +1851,7 @@
 
   async function restartStudentSessionFromReport(button) {
     const sessionKey = button?.getAttribute('data-restart-student-session') || '';
-    const sessionLabel = button?.getAttribute('data-restart-session-label') || '';
+    const sessionClassName = cleanRestartSessionBaseName(button?.getAttribute('data-restart-session-class-name') || '');
     if (!sessionKey) return;
 
     try {
@@ -1831,16 +1862,41 @@
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ className: sessionLabel || 'Restarted Session' })
+        body: JSON.stringify(sessionClassName ? { className: sessionClassName } : {})
       });
 
-      if (result?.studentUrl) renderStudentLink(result.studentUrl);
-      setText('reportExportStatus', result?.message || 'Session restarted. A new student link is ready.');
-      setText('profileStudentLinkStatus', result?.message || 'Session restarted. A new student link is ready.');
+      const studentUrl = firstText(result?.studentUrl);
+      const successMessage = restartedSessionStatusMessage(result);
+      if (studentUrl) {
+        restartedReportSessions.set(sessionKey, {
+          studentUrl,
+          className: firstText(result?.className),
+          createdAt: firstText(result?.createdAt)
+        });
+        renderStudentLink(studentUrl);
+      }
+      setText('reportExportStatus', successMessage);
+      setText('profileStudentLinkStatus', successMessage);
       await loadStudentSessions();
       await loadStandardsSummaryReport();
     } catch (error) {
       setText('reportExportStatus', error.message || 'Could not restart this session.');
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  async function copyRestartedReportSessionLink(button) {
+    const studentUrl = button?.getAttribute('data-copy-restarted-student-url') || '';
+    if (!studentUrl) return;
+
+    try {
+      button.disabled = true;
+      await copyText(studentUrl);
+      setText('reportExportStatus', 'Student link copied.');
+      setText('profileStudentLinkStatus', 'Student link copied.');
+    } catch {
+      setText('reportExportStatus', 'Could not copy student link.');
     } finally {
       button.disabled = false;
     }
@@ -2118,6 +2174,43 @@
       if (text) return text;
     }
     return '';
+  }
+
+  function stripRestartedPrefixes(value) {
+    let text = firstText(value);
+    while (/^Restarted\s+/iu.test(text)) {
+      text = text.replace(/^Restarted\s+/iu, '').trim();
+    }
+    return text;
+  }
+
+  function cleanRestartSessionBaseName(value) {
+    const cleanName = stripRestartedPrefixes(value);
+    return cleanName && !/^session$/iu.test(cleanName) ? cleanName : '';
+  }
+
+  function firstCleanRestartSessionBaseName(...values) {
+    for (const value of values) {
+      const cleanName = cleanRestartSessionBaseName(value);
+      if (cleanName) return cleanName;
+    }
+    return '';
+  }
+
+  function normalizeRestartedSessionTitle(value) {
+    const cleanName = cleanRestartSessionBaseName(value);
+    return cleanName ? (/^Restarted\s+/iu.test(firstText(value)) ? `Restarted ${cleanName}` : cleanName) : 'Restarted Session';
+  }
+
+  function restartedSessionStatusMessage(result) {
+    const cleanName = firstCleanRestartSessionBaseName(
+      result?.sourceSession?.className,
+      result?.sourceSession?.sessionLabel,
+      result?.className
+    );
+    return cleanName
+      ? `Restarted ${cleanName}. A new student link is ready.`
+      : 'Session restarted. A new student link is ready.';
   }
 
   function titleCaseLabel(value) {
