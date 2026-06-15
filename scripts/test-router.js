@@ -870,6 +870,145 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'unit 1 speed 2 km in 10 min',
+    question: 'Suppose you ran 2 km in 10 min. With what speed did you run?',
+    type: 'science_formula',
+    includes: ['speed = distance / time', 'speed = 2 km / 10 min', 'speed = 0.2 km/min'],
+    excludes: ['north', 'south', 'east', 'west'],
+    formulaWork: {
+      formulaId: 'speed_distance_time',
+      finalAnswerValue: 0.2,
+      finalAnswerDisplay: '0.2 km/min',
+      minStepCount: 4
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'unit 1 sound m per s converts 2 km to seconds',
+    question: 'Sound travels at 343 m/s through dry air. If lightning is 2 km away, how long will sound take?',
+    type: 'science_formula',
+    includes: ['Convert: 2 km = 2000 m.', 'time = 2000 m / 343 m/s', 'time = about 5.83 s'],
+    formulaWork: {
+      formulaId: 'speed_distance_time',
+      finalAnswerValue: 2000 / 343,
+      minStepCount: 4
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'unit 1 average speed regular happy path',
+    question: 'A student runs 250 m in 30 s. What is her average speed?',
+    type: 'science_formula',
+    includes: ['speed = distance / time', 'speed = 250 m / 30 s', 'speed = about 8.33 m/s'],
+    formulaWork: {
+      formulaId: 'speed_distance_time',
+      finalAnswerValue: 250 / 30,
+      finalAnswerDisplay: '8.33 m/s',
+      minStepCount: 4
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'unit 1 velocity preserves explicit north direction',
+    question: 'A car traveled 75 km north in 1.5 hours. What is its velocity?',
+    type: 'science_formula',
+    includes: ['velocity = distance / time', 'velocity = 75 km / 1.5 hr', 'velocity = 50 km/hr north'],
+    excludes: ['speed = 50 km/h'],
+    formulaWork: {
+      formulaId: 'speed_distance_time',
+      finalAnswerValue: 50,
+      finalAnswerDisplay: '50 km/hr north',
+      minStepCount: 4
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'unit 1 distance space shuttle speed time',
+    question: 'A space shuttle travels at 21,000 km/hr for 5 hours. How far?',
+    type: 'science_formula',
+    includes: ['distance = speed × time', 'distance = 21000 km/hr × 5 hr', 'distance = 105000 km'],
+    formulaWork: {
+      formulaId: 'speed_distance_time',
+      finalAnswerValue: 105000,
+      finalAnswerDisplay: '105000 km',
+      minStepCount: 4
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'unit 1 velocity new york to california implies west',
+    question: 'A plane traveled 3,000 miles from New York to California in 4.5 hours. What is its velocity?',
+    type: 'science_formula',
+    includes: ['velocity = distance / time', 'velocity = 3000 miles / 4.5 hr', 'velocity = about 666.67 mi/hr west'],
+    formulaWork: {
+      formulaId: 'speed_distance_time',
+      finalAnswerValue: 3000 / 4.5,
+      finalAnswerDisplay: '666.67 mi/hr west',
+      minStepCount: 4
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'unit 1 time school bus rounded direct answer',
+    question: 'A school bus moves 35 mi/hr for 20 miles. How long?',
+    type: 'science_formula',
+    includes: ['time = distance / speed', 'time = 20 miles / 35 mile/hr', 'time = about 0.57 hr'],
+    formulaWork: {
+      formulaId: 'speed_distance_time',
+      finalAnswerValue: 20 / 35,
+      minStepCount: 4
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'unit 1 hogwarts how far apart routes distance not acceleration',
+    question: 'Hogwarts Express moving at 120 mi/hr for 3.5 hours. How far apart are they?',
+    type: 'science_formula',
+    includes: ['distance = speed × time', 'distance = 120 mile/hr × 3.5 hr', 'distance = 420 miles'],
+    excludes: ['acceleration', 'a ='],
+    formulaWork: {
+      formulaId: 'speed_distance_time',
+      finalAnswerValue: 420,
+      finalAnswerDisplay: '420 miles',
+      minStepCount: 4
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'unit 1 velocity mi per hr to m per s challenge',
+    question: 'A car travels 240 miles south in 3 hours. Find velocity in mi/hr and m/s.',
+    type: 'science_formula',
+    includes: ['velocity = 240 miles / 3 hr', 'Convert: 80 mi/hr × 0.44704 = 35.76 m/s.', 'velocity = 80 mi/hr south and about 35.76 m/s south'],
+    formulaWork: {
+      formulaId: 'speed_distance_time',
+      finalAnswerValue: 80,
+      finalAnswerDisplay: '80 mi/hr south',
+      minStepCount: 4
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'unit 1 time 200 km at 55 km per hr',
+    question: 'A car travels 200 km at 55 km/hr. How long?',
+    type: 'science_formula',
+    includes: ['time = 200 km / 55 km/hr', 'time = about 3.64 hr'],
+    aiAllowed: false
+  },
+  {
+    name: 'unit 1 supersonic jet speed',
+    question: 'A supersonic jet flies 10 miles in 0.008 hours. How fast?',
+    type: 'science_formula',
+    includes: ['speed = 10 miles / 0.008 hr', 'speed = 1250 miles per hour'],
+    aiAllowed: false
+  },
+  {
+    name: 'unit 1 ostrich how much ground converts minutes',
+    question: 'An ostrich runs 43 mi/hr for 15 minutes. How much ground?',
+    type: 'science_formula',
+    includes: ['Convert: 15 min = 0.25 hr.', 'distance = 43 mile/hr × 0.25 hr', 'distance = 10.75 miles'],
+    aiAllowed: false
+  },
+  {
     name: 'Newton second law mass from failed student wording',
     question: 'what is the mass of an object has an acceleration of 3m/sec/sec and a force of 2n',
     matchedKnowledge: [massFact],

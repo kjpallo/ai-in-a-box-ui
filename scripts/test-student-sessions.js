@@ -1022,6 +1022,11 @@ async function testFormulaTutorAnswerParsing() {
     assert.match(response.body.response, /What is 12 \/ 4\?/i, `speed alias should be accepted: ${answer}`);
   }
 
+  const roundedSchoolBusTime = await answerSchoolBusTimeCalculationStep('.6');
+  assert.equal(roundedSchoolBusTime.statusCode, 200);
+  assert.match(roundedSchoolBusTime.body.response, /0\.57(?:14)? hours/i);
+  assert.equal(roundedSchoolBusTime.body.tutor.completed, true, 'one-decimal rounded school bus time should complete');
+
   const { request, classSessionId } = await setupDensityTutorAtVolumeStep();
   const wrong = await request('POST', '/api/student/message', {
     sessionId: classSessionId,
@@ -1339,6 +1344,25 @@ async function answerMotionTutorSpeedStep(answer) {
   await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: 'time' });
   await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: '1' });
   await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: '12 km' });
+  return request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: answer });
+}
+
+async function answerSchoolBusTimeCalculationStep(answer) {
+  const { request } = createRouteHarness();
+  const create = await request('POST', '/api/profile/create-student-session');
+  assert.equal(create.statusCode, 201);
+  const classSessionId = create.body.sessionId;
+  const studentHubId = `school-bus-rounded-${answer.replace(/\W+/g, '-')}`;
+
+  await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId,
+    message: 'A school bus moves 35 mi/hr for 20 miles. How long?'
+  });
+  await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: 'time' });
+  await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: '1' });
+  await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: '20 miles' });
+  await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: '35 mi/hr' });
   return request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: answer });
 }
 
