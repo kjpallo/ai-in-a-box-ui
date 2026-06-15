@@ -191,6 +191,7 @@ async function main() {
   await testElectricityVoltageCurrentClarification();
   await testPointFollowUpAfterDirectFormulaAnswer();
   await testActiveFormulaTutorStopsWhenDisabled();
+  await testActiveFormulaTutorNegativeFeedbackStopsCleanly();
   await testGuidedFormulaTutorActiveSessionControls();
   await testGuidedFormulaTutorRequiredFormulaPaths();
   await testPhase6FormulaTutorCoverage();
@@ -2443,6 +2444,38 @@ async function testActiveFormulaTutorStopsWhenDisabled() {
   assert.equal(studentSessions[classSessionId].anonymousHubs['student-a'].currentTutorProblem, null);
 }
 
+async function testActiveFormulaTutorNegativeFeedbackStopsCleanly() {
+  const { request, studentSessions } = createRouteHarness();
+
+  const create = await request('POST', '/api/profile/create-student-session');
+  assert.equal(create.statusCode, 201);
+  const classSessionId = create.body.sessionId;
+  const forceQuestion = 'A box has a mass of 10 kg and accelerates at 3 m/s². What force is needed?';
+
+  const start = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'student-a',
+    message: forceQuestion
+  });
+  assert.equal(start.statusCode, 200);
+  assert.equal(start.body.routeType, 'formula_tutor');
+  assert.ok(studentSessions[classSessionId].anonymousHubs['student-a'].currentTutorProblem);
+
+  const feedback = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'student-a',
+    message: "I don't like this"
+  });
+  assert.equal(feedback.statusCode, 200);
+  assert.equal(feedback.body.routeType, 'formula_tutor');
+  assert.doesNotMatch(feedback.body.response, /Not quite/i);
+  assert.match(feedback.body.response, /stop the Guided Formula Tutor/i);
+  assert.match(feedback.body.response, /force = 30 N/i);
+  assert.equal(feedback.body.tutor.active, false);
+  assert.equal(feedback.body.tutor.stopped, true);
+  assert.equal(studentSessions[classSessionId].anonymousHubs['student-a'].currentTutorProblem, null);
+}
+
 async function testGuidedFormulaTutorActiveSessionControls() {
   const { request, studentSessions } = createRouteHarness();
   const create = await request('POST', '/api/profile/create-student-session');
@@ -2460,6 +2493,18 @@ async function testGuidedFormulaTutorActiveSessionControls() {
   assert.equal(start.body.routeType, 'formula_tutor');
   assert.equal(start.body.tutor.solveFor, 'mass');
   assert.match(start.body.response, /What variable are we solving for\?/i);
+
+  const stuck = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId,
+    message: "I don't get it"
+  });
+  assert.equal(stuck.statusCode, 200);
+  assert.equal(stuck.body.routeType, 'formula_tutor');
+  assert.match(stuck.body.response, /trying to identify what the question asks/i);
+  assert.match(stuck.body.response, /mass/i);
+  assert.match(stuck.body.response, /Next action/i);
+  assert.doesNotMatch(stuck.body.response, /Try looking back at the values in the question/i);
 
   const firstWrong = await request('POST', '/api/student/message', {
     sessionId: classSessionId,
@@ -2503,6 +2548,17 @@ async function testGuidedFormulaTutorActiveSessionControls() {
   assert.match(stopped.body.response, /Guided Formula Tutor stopped/i);
   assert.equal(studentSessions[classSessionId].anonymousHubs['student-b'].currentTutorProblem, null);
 
+  const secondStop = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'student-b',
+    message: 'stop'
+  });
+  assert.equal(secondStop.statusCode, 200);
+  assert.equal(secondStop.body.routeType, 'tutor_control');
+  assert.match(secondStop.body.response, /There is no active tutor to stop/i);
+  assert.doesNotMatch(secondStop.body.response, /trusted local fact/i);
+  assert.equal(studentSessions[classSessionId].anonymousHubs['student-b'].currentTutorProblem, null);
+
   const afterStop = await request('POST', '/api/student/message', {
     sessionId: classSessionId,
     studentHubId: 'student-b',
@@ -2542,7 +2598,7 @@ async function testGuidedFormulaTutorActiveSessionControls() {
   const newQuestion = await request('POST', '/api/student/message', {
     sessionId: classSessionId,
     studentHubId: 'student-d',
-    message: 'A train moves at 25 m/s for 12 seconds. How far does it travel?'
+    message: 'Find the distance for a train that moves at 25 m/s for 12 seconds.'
   });
   assert.equal(newQuestion.statusCode, 200);
   assert.equal(newQuestion.body.routeType, 'formula_tutor');

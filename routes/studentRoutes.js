@@ -166,6 +166,44 @@ function registerStudentRoutes(app, {
         });
       }
 
+      if (!hub.currentTutorProblem && isTutorStopCommand(message)) {
+        const response = 'There is no active tutor to stop. You can ask a new question whenever you’re ready.';
+        const entry = appendStudentHubEntry({
+          session,
+          hub,
+          message,
+          response,
+          routeType: 'tutor_control',
+          confidence: 'strong',
+          reportableForStandards: false
+        });
+
+        logCompletedInteraction({
+          message,
+          questionRoute: makeTutorControlRoute(entry),
+          answerGiven: response,
+          source: 'student',
+          sessionId,
+          reportableForStandards: false,
+          debug: {
+            className: session.className || '',
+            studentHubId,
+            tutorControl: {
+              active: false,
+              command: 'stop'
+            }
+          }
+        });
+
+        return res.json({
+          response,
+          routeType: 'tutor_control',
+          confidence: 'strong',
+          rateLimit: rateLimitInfo,
+          tutor: null
+        });
+      }
+
       // Guided tutor messages are already inside a teacher-safe scaffold, so they do not spend question energy.
       if (hub.currentTutorProblem) {
         const previousTutorProblem = hub.currentTutorProblem;
@@ -614,6 +652,16 @@ function isLikelyNewQuestionDuringTutor(message) {
   return false;
 }
 
+function isTutorStopCommand(message) {
+  const text = String(message || '')
+    .toLowerCase()
+    .replace(/[’']/g, '')
+    .replace(/[?.!,;:]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return /^(?:stop|cancel|exit|quit|nevermind|never mind)$/.test(text);
+}
+
 function createStudentQuestionRateLimiter({ now = () => Date.now() } = {}) {
   const buckets = new Map();
 
@@ -970,6 +1018,24 @@ function makeMotionForceKnowledgeTutorRoute(currentTutorProblem) {
   };
 }
 
+function makeTutorControlRoute() {
+  return {
+    type: 'tutor_control',
+    confidence: 'strong',
+    toolsUsed: ['tutor_control'],
+    notes: 'Handled tutor control command without an active tutor.',
+    directAnswer: 'There is no active tutor to stop. You can ask a new question whenever you’re ready.',
+    aiAllowed: false,
+    public: {
+      type: 'tutor_control',
+      confidence: 'strong',
+      toolsUsed: ['tutor_control'],
+      notes: 'Handled tutor control command without an active tutor.',
+      aiAllowed: false
+    }
+  };
+}
+
 function findLastAnsweredContext(messages) {
   if (!Array.isArray(messages)) return { prompt: '', answer: '' };
 
@@ -977,6 +1043,7 @@ function findLastAnsweredContext(messages) {
     const entry = messages[index];
     if (!entry?.message || entry.isStandardsFollowUp) continue;
     if (entry.routeType === 'no_match') continue;
+    if (entry.routeType === 'tutor_control') continue;
     if (isInstructionalFollowUpPrompt(entry.message) && !isResolvedNumberChoice(entry)) continue;
     if (!entry.response) continue;
     return {
@@ -996,6 +1063,7 @@ function findLastStandardIdForCurrentContext(messages) {
     const entry = messages[index];
     if (!entry?.message || entry.isStandardsFollowUp) continue;
     if (entry.routeType === 'no_match') continue;
+    if (entry.routeType === 'tutor_control') continue;
     if (isInstructionalFollowUpPrompt(entry.message) && !isResolvedNumberChoice(entry)) continue;
     if (!entry.response) continue;
     contextIndex = index;
