@@ -2,6 +2,9 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { findRelevantKnowledge } = require('../lib/knowledge/teacherKnowledge');
+const {
+  createQuestionAnswerService
+} = require('../lib/server/questionAnswerService');
 const { routeStudentQuestion } = require('../lib/router/questionRouter');
 const {
   nextPendingClarification,
@@ -52,6 +55,7 @@ const weightFact = factById('weight-definition');
 const gravityFact = factById('gravity-earth-acceleration');
 const densityFact = factById('density');
 const massFact = factById('mass-definition');
+const newtonsSecondLawFact = factById('newtons-second-law');
 
 const tests = [
   {
@@ -147,6 +151,86 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'student transcript compares protons neutrons and electrons despite typo',
+    question: 'what is the difrence between protons and neutrons and electrons?',
+    matchedKnowledge: matchedKnowledgeFor('what is the difrence between protons and neutrons and electrons?'),
+    type: 'definition',
+    includes: ['Protons, neutrons, and electrons are particles found in atoms', 'Proton:', 'Neutron:', 'Electron:'],
+    excludes: ['only have a trusted local fact for electron'],
+    aiAllowed: false
+  },
+  {
+    name: 'student transcript relationship does not answer with nearby power definition',
+    question: 'how is power and force relater',
+    matchedKnowledge: matchedKnowledgeFor('how is power and force relater'),
+    type: 'no_match',
+    includes: ['do not have a trusted local fact that explains that relationship'],
+    excludes: ['Power is how quickly work is done'],
+    aiAllowed: false
+  },
+  {
+    name: 'student transcript bare force does not return gravity acceleration',
+    question: 'what is a force',
+    matchedKnowledge: matchedKnowledgeFor('what is a force'),
+    type: 'no_match',
+    includes: ['do not have a trusted local science fact'],
+    excludes: ['acceleration due to gravity', '9.8 m/s'],
+    aiAllowed: false
+  },
+  {
+    name: 'student transcript Isaac Newton person question does not return a law',
+    question: 'who is Issac newton',
+    matchedKnowledge: matchedKnowledgeFor('who is Issac newton'),
+    type: 'no_match',
+    includes: ['do not have a trusted local fact for that person'],
+    excludes: ['Newton\'s Second Law says'],
+    aiAllowed: false
+  },
+  {
+    name: 'student transcript point of science does not return unrelated covalent compounds',
+    question: 'what is the point of scince',
+    matchedKnowledge: matchedKnowledgeFor('what is the point of scince'),
+    type: 'no_match',
+    includes: ['do not have a trusted local fact for the point or purpose'],
+    excludes: ['Covalent compounds'],
+    aiAllowed: false
+  },
+  {
+    name: 'student transcript amps and volts relationship uses Ohm law',
+    question: 'how are amps and volts related?',
+    matchedKnowledge: matchedKnowledgeFor('how are amps and volts related?'),
+    type: 'definition',
+    includes: ['Ohm\'s Law shows the relationship', 'V = I × R', 'amps', 'volts'],
+    excludes: ['Electric current is the net movement'],
+    aiAllowed: false
+  },
+  {
+    name: 'student transcript oms law normalizes to Ohm law',
+    question: 'what is oms law',
+    matchedKnowledge: matchedKnowledgeFor('what is oms law'),
+    type: 'definition',
+    includes: ['Ohm\'s Law shows the relationship', 'V = I × R'],
+    aiAllowed: false
+  },
+  {
+    name: 'student transcript moms law asks if student meant Ohm law',
+    question: 'what is moms law',
+    matchedKnowledge: matchedKnowledgeFor('what is moms law'),
+    type: 'no_match',
+    includes: ['Did you mean Ohm’s Law?'],
+    excludes: ['V = I × R'],
+    aiAllowed: false
+  },
+  {
+    name: 'student transcript displacement distance typo still compares both',
+    question: 'what is the differs between displacement and distance',
+    matchedKnowledge: matchedKnowledgeFor('what is the differs between displacement and distance'),
+    type: 'definition',
+    includes: ['Distance and displacement', 'Displacement:', 'Distance:', 'straight-line change'],
+    excludes: ['only have a trusted local fact'],
+    aiAllowed: false
+  },
+  {
     name: 'phase 7a vocab free-body diagram',
     question: 'what is a free-body diagram',
     type: 'definition',
@@ -211,6 +295,32 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'router precision longitudinal transverse comparison exact prompt',
+    question: 'difference between longitudinal and transverse waves',
+    matchedKnowledge: matchedKnowledgeFor('difference between longitudinal and transverse waves'),
+    type: 'definition',
+    includes: ['Transverse and longitudinal waves', 'longitudinal wave', 'parallel', 'transverse wave', 'perpendicular'],
+    aiAllowed: false
+  },
+  {
+    name: 'router precision Newton laws comparison with all local facts',
+    question: 'what is the difference between newtons first second and third law?',
+    matchedKnowledge: matchedKnowledgeFor('what is the difference between newtons first second and third law?'),
+    type: 'definition',
+    includes: ['Newton\'s laws describe different ideas about forces and motion', 'Newton\'s First Law', 'Newton\'s Second Law', 'Newton\'s Third Law'],
+    excludes: ['I only have a trusted local fact'],
+    aiAllowed: false
+  },
+  {
+    name: 'router precision Newton laws comparison reports missing local facts',
+    question: 'what is the difference between newtons first second and third law?',
+    matchedKnowledge: [newtonsSecondLawFact],
+    type: 'definition',
+    includes: ['I only have a trusted local fact for Newton\'s Second Law right now. I do not have trusted local facts for Newton\'s First Law and Newton\'s Third Law yet. Ask your teacher to add them to a knowledge pack.'],
+    excludes: ['Newton\'s Second Law says an object\'s acceleration depends'],
+    aiAllowed: false
+  },
+  {
     name: 'router precision kinetic potential energy comparison',
     question: 'How is kinetic energy and potential energy related?',
     matchedKnowledge: matchedKnowledgeFor('How is kinetic energy and potential energy related?'),
@@ -228,9 +338,60 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'router precision kinetic potential comparison handles potetial typo',
+    question: 'what is the difference between kinetic and potetial energy',
+    matchedKnowledge: matchedKnowledgeFor('what is the difference between kinetic and potetial energy'),
+    type: 'definition',
+    includes: ['Kinetic energy and potential energy are related', 'Kinetic Energy:', 'Gravitational Potential Energy:', 'motion'],
+    excludes: ['do not have a trusted local science fact'],
+    aiAllowed: false
+  },
+  {
+    name: 'knowledge pack potential energy handles potietal typo',
+    question: 'what is potietal energy',
+    matchedKnowledge: matchedKnowledgeFor('what is potietal energy'),
+    type: 'definition',
+    includes: ['Gravitational potential energy is stored energy', 'GPE = m × g × h'],
+    excludes: ['do not have a trusted local science fact'],
+    aiAllowed: false
+  },
+  {
+    name: 'knowledge pack chemical energy answers stored potential energy',
+    question: 'what type of energy is chemical energy',
+    matchedKnowledge: matchedKnowledgeFor('what type of energy is chemical energy'),
+    type: 'class_fact',
+    includes: ['Chemical energy is stored potential energy', 'bonds between atoms and molecules', 'Food, batteries, and fuel'],
+    aiAllowed: false
+  },
+  {
+    name: 'knowledge pack elastic energy fragment answers elastic potential energy',
+    question: 'elastic energy is',
+    matchedKnowledge: matchedKnowledgeFor('elastic energy is'),
+    type: 'class_fact',
+    includes: ['Elastic potential energy is stored energy', 'stretched or compressed', 'spring or rubber band'],
+    aiAllowed: false
+  },
+  {
+    name: 'knowledge pack elastic potential energy beats gravitational potential energy',
+    question: 'what is elastic potential energy',
+    matchedKnowledge: matchedKnowledgeFor('what is elastic potential energy'),
+    type: 'definition',
+    includes: ['Elastic potential energy is stored energy', 'stretched or compressed'],
+    excludes: ['Gravitational potential energy is stored energy', 'GPE = m × g × h'],
+    aiAllowed: false
+  },
+  {
     name: 'router precision mass weight comparison',
     question: 'Compare mass and weight',
     matchedKnowledge: matchedKnowledgeFor('Compare mass and weight'),
+    type: 'definition',
+    includes: ['Mass and weight are related', 'Mass is the amount of matter in an object', 'Weight is the force of gravity', 'gravity changes'],
+    aiAllowed: false
+  },
+  {
+    name: 'router precision mass weight comparison normalizes typo',
+    question: 'what is the difference between mass and wieght',
+    matchedKnowledge: matchedKnowledgeFor('what is the difference between mass and wieght'),
     type: 'definition',
     includes: ['Mass and weight are related', 'Mass is the amount of matter in an object', 'Weight is the force of gravity', 'gravity changes'],
     aiAllowed: false
@@ -262,11 +423,177 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'knowledge pack heat definition answers directly',
+    question: 'what is heat',
+    matchedKnowledge: matchedKnowledgeFor('what is heat'),
+    type: 'definition',
+    includes: ['Heat is energy transferred', 'warmer object', 'cooler object', 'temperature difference'],
+    excludes: ['Conduction transfers heat', 'Convection transfers heat', 'Radiation transfers heat'],
+    aiAllowed: false
+  },
+  {
+    name: 'knowledge pack heat move typo answers transfer modes',
+    question: 'how does heat move or travle',
+    matchedKnowledge: matchedKnowledgeFor('how does heat move or travle'),
+    type: 'class_fact',
+    includes: ['Heat can move by conduction, convection, and radiation', 'Conduction transfers heat', 'Convection transfers heat', 'Radiation transfers heat'],
+    excludes: ['Heat is energy transferred from a warmer object'],
+    aiAllowed: false
+  },
+  {
+    name: 'knowledge pack heat travel answers transfer modes',
+    question: 'how does heat travel',
+    matchedKnowledge: matchedKnowledgeFor('how does heat travel'),
+    type: 'class_fact',
+    includes: ['Heat can move by conduction, convection, and radiation', 'Conduction transfers heat', 'Convection transfers heat', 'Radiation transfers heat'],
+    excludes: ['Heat is energy transferred from a warmer object'],
+    aiAllowed: false
+  },
+  {
+    name: 'knowledge pack specific heat answers direct concept',
+    question: 'what is specific heat',
+    matchedKnowledge: matchedKnowledgeFor('what is specific heat'),
+    type: 'definition',
+    includes: ['Specific heat is the amount of energy needed', '1 gram', '1°C', 'q = m × c × ΔT'],
+    excludes: ['Heat is energy transferred from a warmer object'],
+    aiAllowed: false
+  },
+  {
+    name: 'knowledge pack specific tempituer maps safely to specific heat',
+    question: 'what is specific tempituer',
+    matchedKnowledge: matchedKnowledgeFor('what is specific tempituer'),
+    type: 'definition',
+    includes: ['Specific heat is the amount of energy needed', 'q = m × c × ΔT'],
+    excludes: ['Temperature measures how hot or cold something is'],
+    aiAllowed: false
+  },
+  {
+    name: 'knowledge pack temperature definition answers directly',
+    question: 'what is temperature',
+    matchedKnowledge: matchedKnowledgeFor('what is temperature'),
+    type: 'definition',
+    includes: ['Temperature measures how hot or cold something is', 'average kinetic energy of particles'],
+    aiAllowed: false
+  },
+  {
+    name: 'knowledge pack temperature units answers directly',
+    question: 'what are the units for temperature',
+    matchedKnowledge: matchedKnowledgeFor('what are the units for temperature'),
+    type: 'definition',
+    includes: ['degrees Celsius', '°C', 'Kelvin', 'K'],
+    aiAllowed: false
+  },
+  {
+    name: 'knowledge pack variable definition answers directly',
+    question: 'what is a variable',
+    matchedKnowledge: matchedKnowledgeFor('what is a variable'),
+    type: 'definition',
+    includes: ['A variable is a letter or symbol', 'quantity that can change or is unknown'],
+    aiAllowed: false
+  },
+  {
+    name: 'knowledge pack variable typo answers directly',
+    question: 'what is a vraiable',
+    matchedKnowledge: matchedKnowledgeFor('what is a vraiable'),
+    type: 'definition',
+    includes: ['A variable is a letter or symbol', 'quantity that can change or is unknown'],
+    aiAllowed: false
+  },
+  {
+    name: 'knowledge pack time unit answers second directly',
+    question: 'what is the unit for time',
+    matchedKnowledge: matchedKnowledgeFor('what is the unit for time'),
+    type: 'units_only',
+    includes: ['Time is measured in seconds (s).'],
+    excludes: ['Speed = distance / time', 'speed = distance / time', 'Speed tells how fast'],
+    aiAllowed: false
+  },
+  {
+    name: 'knowledge pack hertz definition answers directly',
+    question: 'what are hertz',
+    matchedKnowledge: matchedKnowledgeFor('what are hertz'),
+    type: 'definition',
+    includes: ['Hertz, written Hz, is the unit for frequency', 'One hertz means one cycle per second'],
+    aiAllowed: false
+  },
+  {
+    name: 'knowledge pack frequency wavelength relationship answers directly',
+    question: 'how is frequency related to wavelength',
+    matchedKnowledge: matchedKnowledgeFor('how is frequency related to wavelength'),
+    type: 'class_fact',
+    includes: ['Frequency and wavelength have an inverse relationship', 'Higher frequency means shorter wavelength', 'Lower frequency means longer wavelength'],
+    excludes: ['do not have a trusted local fact that explains that relationship'],
+    aiAllowed: false
+  },
+  {
+    name: 'router precision frequency wavelength relationship normalizes wave length',
+    question: 'how are frequency and wave length related',
+    matchedKnowledge: matchedKnowledgeFor('how are frequency and wave length related'),
+    type: 'class_fact',
+    includes: ['Frequency and wavelength have an inverse relationship', 'Higher frequency means shorter wavelength'],
+    excludes: ['do not have a trusted local fact that explains that relationship'],
+    aiAllowed: false
+  },
+  {
+    name: 'router precision frequency hertz time relationship does not drift',
+    question: 'how are frequency herts and time related',
+    matchedKnowledge: matchedKnowledgeFor('how are frequency herts and time related'),
+    type: 'class_fact',
+    includes: ['Frequency is measured in hertz, Hz', 'One hertz means one cycle per second', 'Period is the time for one cycle', 'frequency = 1 / period'],
+    excludes: ['do not have a trusted local fact that explains that relationship', 'Basic Energy Level Capacity', 'first energy level', 'Power is how quickly work is done'],
+    aiAllowed: false
+  },
+  {
     name: 'router precision generic speed still answers speed',
     question: 'What is speed?',
     matchedKnowledge: matchedKnowledgeFor('What is speed?'),
     type: 'definition',
     includes: ['Speed tells how fast an object moves', 'speed = distance / time'],
+    aiAllowed: false
+  },
+  {
+    name: 'example request Newton second law typo leads with approved example',
+    question: 'give me and example of newtons second law',
+    matchedKnowledge: matchedKnowledgeFor('give me and example of newtons second law'),
+    type: 'class_fact',
+    includes: [
+      'Example: If mass = 3 kg and acceleration = 2 m/s^2, net force = 6 N.',
+      'This shows Newton\'s Second Law because Fnet = m × a.'
+    ],
+    excludes: ['Newton\'s Second Law says an object\'s acceleration depends'],
+    aiAllowed: false
+  },
+  {
+    name: 'example request speed leads with approved example',
+    question: 'give me an example of speed',
+    matchedKnowledge: matchedKnowledgeFor('give me an example of speed'),
+    type: 'class_fact',
+    includes: [
+      'Example: If distance = 100 m and time = 20 s, speed = 5 m/s.',
+      'This shows Speed because speed = distance / time; s = d / t.'
+    ],
+    excludes: ['Speed tells how fast an object moves'],
+    aiAllowed: false
+  },
+  {
+    name: 'example request kinetic energy leads with approved example',
+    question: 'example of kinetic energy',
+    matchedKnowledge: matchedKnowledgeFor('example of kinetic energy'),
+    type: 'class_fact',
+    includes: [
+      'Example: If mass = 2 kg and velocity = 3 m/s, KE = 0.5 × 2 × 9 = 9 J.',
+      'This shows Kinetic Energy because KE = 1/2 × m × v^2.'
+    ],
+    excludes: ['Kinetic energy is the energy an object has because it is moving'],
+    aiAllowed: false
+  },
+  {
+    name: 'example request each without context blocks weak unrelated fact',
+    question: 'can you give an example of each',
+    matchedKnowledge: matchedKnowledgeFor('can you give an example of each'),
+    type: 'no_match',
+    includes: ['What topic do you want an example of?'],
+    excludes: ['Basic Energy Level Capacity', 'first energy level', 'electrons'],
     aiAllowed: false
   },
   {
@@ -353,12 +680,6 @@ const tests = [
     question: 'A person walks 3 m east and 4 m north. What is the displacement?',
     type: 'science_formula',
     includes: ['x = 3 m east', 'y = 4 m north', 'd = √(x² + y²)', 'd = √(3² + 4²)', 'd = 5 m', 'The displacement is 5 m from the starting point.'],
-    formulaWork: {
-      formulaId: 'two_dimensional_displacement',
-      finalAnswerValue: 5,
-      finalAnswerDisplay: '5 m',
-      minStepCount: 5
-    },
     aiAllowed: false
   },
   {
@@ -453,6 +774,94 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'unit 1 soccer distance and displacement opposite directions',
+    question: 'A soccer player runs 50 m north then 20 m south. What are the distance and displacement?',
+    type: 'science_formula',
+    includes: ['Distance adds the path.', 'distance = 50 m + 20 m = 70 m', 'Displacement is start-to-finish.', 'displacement = 30 m north', 'Answer: distance = 70 m; displacement = 30 m north'],
+    excludes: ['Phase 6A', 'only handles one-dimensional displacement'],
+    aiAllowed: false
+  },
+  {
+    name: 'unit 1 delivery truck 2d distance and displacement',
+    question: 'A delivery truck drives 4 mi west then 6 mi north. Find the distance and displacement.',
+    type: 'science_formula',
+    includes: ['distance = 4 mi + 6 mi = 10 mi', 'x = 4 mi west', 'y = 6 mi north', 'd = √(4² + 6²)', 'displacement = about 7.21 mi NW', 'Answer: distance = 10 mi; displacement = about 7.21 mi NW'],
+    excludes: ['Phase 6A', 'only handles one-dimensional displacement'],
+    aiAllowed: false
+  },
+  {
+    name: 'unit 1 around block closed loop distance and displacement',
+    question: 'PJ walks 0.35 mi around the block and returns back to the starting doorstep. What are distance and displacement?',
+    type: 'science_formula',
+    includes: ['Distance adds the path.', 'distance = 0.35 mi', 'Displacement is start-to-finish.', 'displacement = 0 mi', 'Answer: distance = 0.35 mi; displacement = 0 mi'],
+    excludes: ['Phase 6A', 'only handles one-dimensional displacement'],
+    aiAllowed: false
+  },
+  {
+    name: 'unit 1 Nicole north back south distance and displacement',
+    question: 'Nicole walks 150 ft north then 50 ft back south. What are distance and displacement?',
+    type: 'science_formula',
+    includes: ['distance = 150 ft + 50 ft = 200 ft', '150 ft north - 50 ft south = 100 ft north', 'Answer: distance = 200 ft; displacement = 100 ft north'],
+    excludes: ['Phase 6A', 'only handles one-dimensional displacement'],
+    aiAllowed: false
+  },
+  {
+    name: 'unit 1 Maria canceling path distance and displacement',
+    question: 'Maria walks 20 ft north, 35 ft east, and 20 ft south. Find distance and displacement.',
+    type: 'science_formula',
+    includes: ['distance = 20 ft + 35 ft + 20 ft = 75 ft', 'x = 35 ft east', 'y = 0 ft north', 'displacement = 35 ft east', 'Answer: distance = 75 ft; displacement = 35 ft east'],
+    excludes: ['Phase 6A', 'only handles one-dimensional displacement'],
+    aiAllowed: false
+  },
+  {
+    name: 'unit 1 Mali spins in place distance and displacement',
+    question: 'Mali spins in place and falls where she was standing. What are distance and displacement?',
+    type: 'science_formula',
+    includes: ['distance = 0', 'displacement = 0', 'Answer: distance = 0; displacement = 0'],
+    excludes: ['Phase 6A', 'only handles one-dimensional displacement'],
+    aiAllowed: false
+  },
+  {
+    name: 'unit 1 Stefan south east distance and displacement',
+    question: 'Stefan walks 8 mi south and 3 mi east. What are distance and displacement?',
+    type: 'science_formula',
+    includes: ['distance = 8 mi + 3 mi = 11 mi', 'x = 3 mi east', 'y = 8 mi south', 'displacement = about 8.54 mi SE', 'Answer: distance = 11 mi; displacement = about 8.54 mi SE'],
+    excludes: ['Phase 6A', 'only handles one-dimensional displacement'],
+    aiAllowed: false
+  },
+  {
+    name: 'unit 1 Kai pool lengths distance and displacement',
+    question: 'Kai swims a 50 m pool length three times. What are distance and displacement?',
+    type: 'science_formula',
+    includes: ['distance = 50 m × 3 = 150 m', 'displacement = 50 m away from the side started on', 'Answer: distance = 150 m; displacement = 50 m away from the side started on'],
+    excludes: ['Phase 6A', 'only handles one-dimensional displacement'],
+    aiAllowed: false
+  },
+  {
+    name: 'unit 1 Taylor north west distance and displacement',
+    question: 'Taylor walks 25 m north and 10 m west. What are distance and displacement?',
+    type: 'science_formula',
+    includes: ['distance = 25 m + 10 m = 35 m', 'x = 10 m west', 'y = 25 m north', 'displacement = about 26.9 m NW', 'Answer: distance = 35 m; displacement = about 26.9 m NW'],
+    excludes: ['Phase 6A', 'only handles one-dimensional displacement'],
+    aiAllowed: false
+  },
+  {
+    name: 'unit 1 delivery truck blocks canceling 2d',
+    question: 'A delivery truck drives 18 blocks north, 10 blocks east, and 16 blocks south. Find distance and displacement.',
+    type: 'science_formula',
+    includes: ['distance = 18 blocks + 10 blocks + 16 blocks = 44 blocks', 'x = 10 blocks east', 'y = 2 blocks north', 'displacement = about 10.2 blocks NE', 'Answer: distance = 44 blocks; displacement = about 10.2 blocks NE'],
+    excludes: ['Phase 6A', 'only handles one-dimensional displacement'],
+    aiAllowed: false
+  },
+  {
+    name: 'unit 1 school bus east north distance and displacement',
+    question: 'A school bus drives 2 miles east then 3 miles north. What are distance and displacement?',
+    type: 'science_formula',
+    includes: ['distance = 2 mi + 3 mi = 5 mi', 'x = 2 mi east', 'y = 3 mi north', 'displacement = about 3.61 mi NE', 'Answer: distance = 5 mi; displacement = about 3.61 mi NE'],
+    excludes: ['Phase 6A', 'only handles one-dimensional displacement'],
+    aiAllowed: false
+  },
+  {
     name: 'motion distance remains speed distance time',
     question: 'A runner moves at 4 m/s for 6 seconds. What distance does the runner travel?',
     type: 'science_formula',
@@ -484,6 +893,16 @@ const tests = [
     matchedKnowledge: [massFact],
     type: 'definition',
     includes: ['Mass is the amount of matter in an object', 'Formula: mass can be found from m = F/a'],
+    aiAllowed: false
+  },
+  {
+    name: 'acceleration definition remains trusted fact without tutor work',
+    question: 'what is acceleration',
+    matchedKnowledge: matchedKnowledgeFor('what is acceleration'),
+    type: 'definition',
+    includes: ['Acceleration is the rate that velocity changes over time', 'speeding up', 'slowing down', 'changing direction'],
+    excludes: ['Let’s figure it out', 'What variable are we solving for?'],
+    noFormulaWork: true,
     aiAllowed: false
   },
   {
@@ -744,6 +1163,24 @@ const tests = [
     type: 'units_only',
     includes: ['Resistance is measured in Ω.'],
     excludes: ['R = V / I', 'Ohm’s law'],
+    aiAllowed: false
+  },
+  {
+    name: 'work units answer joules directly',
+    question: 'what is the unit for work',
+    matchedKnowledge: matchedKnowledgeFor('what is the unit for work'),
+    type: 'units_only',
+    includes: ['Work is measured in joules (J).'],
+    excludes: ['work = force × distance', 'W = F × d'],
+    aiAllowed: false
+  },
+  {
+    name: 'bare power prefers general teacher fact',
+    question: 'what is power',
+    matchedKnowledge: matchedKnowledgeFor('what is power'),
+    type: 'definition',
+    includes: ['Power is the rate at which work is done or energy is transferred', 'watts', 'W', 'power = work / time'],
+    excludes: ['device converts electrical energy'],
     aiAllowed: false
   },
   {
@@ -1157,6 +1594,79 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'plain English speed from moved feet after an hour',
+    question: 'what is the speed of an object that move 3 feet after an hour',
+    type: 'science_formula',
+    includes: ['Use the motion formula: speed = distance / time.', 'speed = 3 ft / 1 hr', 'speed = 3 ft/hour'],
+    excludes: ['Speed tells how fast an object moves'],
+    formulaWork: {
+      formulaId: 'speed_distance_time',
+      finalAnswerValue: 3,
+      finalAnswerDisplay: '3 ft/hour',
+      minStepCount: 4
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'plain English speed from travels miles in minutes',
+    question: 'what is speed if it travels 10 miles in 2 min',
+    type: 'science_formula',
+    includes: ['Use the motion formula: speed = distance / time.', 'speed = 10 miles / 2 min', 'speed = 5 miles/min'],
+    formulaWork: {
+      formulaId: 'speed_distance_time',
+      finalAnswerValue: 5,
+      finalAnswerDisplay: '5 miles/min',
+      minStepCount: 4
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'plain English acceleration from mass and force with assumed units',
+    question: 'if I have a mass of 3 and a force of 5 what its my acceleration',
+    type: 'science_formula',
+    includes: [
+      'Use Newton’s second law: acceleration = force / mass.',
+      'Units were not included, so I am assuming force is in newtons (N) and mass is in kilograms (kg) to solve for acceleration.',
+      'a = 5 N / 3 kg',
+      'The acceleration is about 1.67 m/s².'
+    ],
+    formulaWork: {
+      formulaId: 'force_mass_acceleration',
+      massValue: 3,
+      finalAnswerValue: 5 / 3,
+      minStepCount: 5
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'calculate acceleration still routes to formula work',
+    question: 'calculate acceleration if force is 4 N and mass is 2 kg',
+    matchedKnowledge: matchedKnowledgeFor('calculate acceleration if force is 4 N and mass is 2 kg'),
+    type: 'science_formula',
+    includes: ['Use Newton’s second law: acceleration = force / mass.', 'a = 4 N / 2 kg', 'a = 2 m/s²'],
+    formulaWork: {
+      formulaId: 'force_mass_acceleration',
+      massValue: 2,
+      finalAnswerValue: 2,
+      finalAnswerDisplay: '2 m/s²',
+      minStepCount: 5
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'plain English acceleration from force is and mass is',
+    question: 'force is 5 and mass is 3 what is acceleration',
+    type: 'science_formula',
+    includes: ['a = 5 N / 3 kg', 'The acceleration is about 1.67 m/s².'],
+    formulaWork: {
+      formulaId: 'force_mass_acceleration',
+      massValue: 3,
+      finalAnswerValue: 5 / 3,
+      minStepCount: 5
+    },
+    aiAllowed: false
+  },
+  {
     name: 'conceptual force energy motion relation',
     question: 'How are force and energy related to motion?',
     type: 'science_concept',
@@ -1500,6 +2010,85 @@ const tests = [
       finalAnswerValue: 30,
       minStepCount: 4
     },
+    aiAllowed: false
+  },
+  {
+    name: 'gravity constant direct question',
+    question: 'what is acceleration due to gravity',
+    type: 'science_formula',
+    includes: ['Near Earth, acceleration due to gravity is about 9.8 m/s² downward.', 'g = 9.8 m/s²'],
+    noFormulaWork: true,
+    aiAllowed: false
+  },
+  {
+    name: 'gravity constant typo direct question',
+    question: 'what is accretion due to gracvity',
+    type: 'science_formula',
+    includes: ['Near Earth, acceleration due to gravity is about 9.8 m/s² downward.', 'g = 9.8 m/s²'],
+    noFormulaWork: true,
+    aiAllowed: false
+  },
+  {
+    name: 'gravity constant acceleration typo direct question',
+    question: 'what is acceleration due to gracvity',
+    type: 'science_formula',
+    includes: ['Near Earth, acceleration due to gravity is about 9.8 m/s² downward.', 'g = 9.8 m/s²'],
+    noFormulaWork: true,
+    aiAllowed: false
+  },
+  {
+    name: 'weight uses earth gravity constant',
+    question: 'what is the weight of a 10 kg object on Earth',
+    type: 'science_formula',
+    includes: ['Use the weight formula: Fg = m × g.', 'For Earth, use g = 9.8 m/s².', 'Fg = 10 kg × 9.8 m/s²', 'Fg = 98 N'],
+    aiAllowed: false
+  },
+  {
+    name: 'force of gravity uses earth gravity constant',
+    question: 'what is the force of gravity on a 5 kg object',
+    type: 'science_formula',
+    includes: ['Use the weight formula: Fg = m × g.', 'For Earth, use g = 9.8 m/s².', 'Fg = 5 kg × 9.8 m/s²', 'Fg = 49 N'],
+    aiAllowed: false
+  },
+  {
+    name: 'potential energy uses earth gravity constant',
+    question: 'what is the potential energy of a 2 kg object 5 m high',
+    type: 'science_formula',
+    includes: ['Use the potential energy formula: PE = m × g × h.', 'For Earth, use g = 9.8 m/s².', 'PE = 2 kg × 9.8 m/s² × 5 m', 'PE = 98 J'],
+    aiAllowed: false
+  },
+  {
+    name: 'gravitational potential energy uses earth gravity constant',
+    question: 'calculate gravitational potential energy for mass 3 kg and height 4 m',
+    type: 'science_formula',
+    includes: ['Use the potential energy formula: PE = m × g × h.', 'For Earth, use g = 9.8 m/s².', 'PE = 3 kg × 9.8 m/s² × 4 m', 'PE = 117.6 J'],
+    aiAllowed: false
+  },
+  {
+    name: 'everyday pounds body weight converts to mass',
+    question: 'what is the mass of a 200 lb dog on earth',
+    type: 'science_formula',
+    includes: ['A 200 lb dog has a mass of about 90.7 kg on Earth.', 'In everyday speech, pounds are often used for body weight, while kilograms measure mass.'],
+    excludes: ['newtons', 'N'],
+    noFormulaWork: true,
+    aiAllowed: false
+  },
+  {
+    name: 'everyday pounds typo weigh converts to mass',
+    question: 'if a dog has a weigh of 5 lb what is its mass',
+    type: 'science_formula',
+    includes: ['A 5 lb dog has a mass of about 2.27 kg on Earth.', 'In everyday speech, pounds are often used for body weight, while kilograms measure mass.'],
+    excludes: ['newtons', 'N', 'Mass is the amount of matter'],
+    noFormulaWork: true,
+    aiAllowed: false
+  },
+  {
+    name: 'everyday pounds object has what mass',
+    question: 'a 10 pound object has what mass',
+    type: 'science_formula',
+    includes: ['A 10 lb object has a mass of about 4.54 kg on Earth.', 'In everyday speech, pounds are often used for body weight, while kilograms measure mass.'],
+    excludes: ['newtons', 'N'],
+    noFormulaWork: true,
     aiAllowed: false
   },
   {
@@ -3130,12 +3719,20 @@ for (const test of tests) {
 
 runPendingClarificationTests();
 
-if (process.exitCode) {
-  process.exit(process.exitCode);
-}
+runContextCarryoverTests()
+  .then(() => {
+    if (process.exitCode) {
+      process.exit(process.exitCode);
+    }
 
-console.log(`\n${passed}/${tests.length} router tests passed.`);
-process.exit(0);
+    console.log(`\n${passed}/${tests.length} router tests passed.`);
+    process.exit(0);
+  })
+  .catch((error) => {
+    console.error('❌ context carryover tests');
+    console.error(error.message);
+    process.exit(1);
+  });
 
 function runPendingClarificationTests() {
   const powerClarificationRoute = routeStudentQuestion('how do I solve for power', []);
@@ -3179,9 +3776,94 @@ function runPendingClarificationTests() {
     assert.equal(normalQuestionRoute.type, 'formula_only');
     assert.ok(normalQuestionRoute.directAnswer.includes('F = m × a.'));
 
+    const frictionFormulaRoute = routeStudentQuestion(
+      'what is the formula for friction',
+      matchedKnowledgeFor('what is the formula for friction')
+    );
+    const pendingFrictionClarification = nextPendingClarification(frictionFormulaRoute);
+    assert.ok(pendingFrictionClarification, 'friction formula clarification should expose pending choices');
+    const frictionForceChoice = resolvePendingClarification('1', pendingFrictionClarification);
+    assert.equal(frictionForceChoice.handled, true);
+    assert.equal(frictionForceChoice.pendingClarification, null);
+    assert.equal(frictionForceChoice.questionRoute.type, 'formula_only');
+    assert.equal(frictionForceChoice.questionRoute.confidence, 'none');
+    assert.ok(frictionForceChoice.questionRoute.directAnswer.includes('does not include a formula yet'));
+    assert.ok(frictionForceChoice.questionRoute.directAnswer.includes('should not switch to a different friction topic'));
+    assert.ok(!frictionForceChoice.questionRoute.directAnswer.includes('Density'));
+    assert.ok(!frictionForceChoice.questionRoute.directAnswer.includes('static electricity'));
+
     console.log('✅ pending clarification: power choices resolve by number');
   } catch (error) {
     console.error('❌ pending clarification: power choices resolve by number');
+    console.error(error.message);
+    process.exitCode = 1;
+  }
+}
+
+async function runContextCarryoverTests() {
+  const questionAnswer = createQuestionAnswerService({
+    teacherFactsFile: teacherFactsPath,
+    maxKnowledgeItems: 8,
+    loadTeacherKnowledge: () => teacherKnowledge,
+    findRelevantKnowledge,
+    routeStudentQuestion,
+    ollama: {
+      buildTeacherPrompt: () => '',
+      stream: async () => {}
+    },
+    logProblem: () => {},
+    logStudentInteraction: () => {},
+    initialTeacherKnowledge: teacherKnowledge
+  });
+
+  try {
+    const formulaFollowUp = await questionAnswer.answerStudentMessage('what is the formula', {
+      lastAnsweredPrompt: 'what is friction',
+      lastAnsweredAnswer: 'Friction is a force that resists motion when surfaces rub or slide against each other.'
+    });
+    assert.equal(formulaFollowUp.routeType, 'ambiguous_vocab');
+    assert.ok(formulaFollowUp.response.includes('You were asking about friction.'));
+    assert.ok(formulaFollowUp.response.includes('Friction can mean more than one thing.'));
+
+    const fragmentFollowUp = await questionAnswer.answerStudentMessage('for friction', {
+      lastAnsweredPrompt: 'what is the formula',
+      lastAnsweredAnswer: ''
+    });
+    assert.equal(fragmentFollowUp.routeType, 'ambiguous_vocab');
+    assert.ok(fragmentFollowUp.response.includes('You were asking about friction.'));
+    assert.ok(fragmentFollowUp.response.includes('Friction can mean more than one thing.'));
+
+    const selectedFriction = await questionAnswer.answerStudentMessage('1', {
+      pendingClarification: fragmentFollowUp.pendingClarification
+    });
+    assert.equal(selectedFriction.routeType, 'formula_only');
+    assert.equal(selectedFriction.confidence, 'none');
+    assert.ok(selectedFriction.response.includes('does not include a formula yet'));
+    assert.ok(!selectedFriction.response.includes('Density'));
+
+    const newtonComparison = await questionAnswer.answerStudentMessage('what is the difference between newtons first and second law');
+    assert.equal(newtonComparison.routeType, 'definition');
+    assert.ok(newtonComparison.response.includes('Newton\'s First Law'));
+    assert.ok(newtonComparison.response.includes('Newton\'s Second Law'));
+
+    const newtonExamples = await questionAnswer.answerStudentMessage('can you give and example of each', {
+      lastAnsweredPrompt: 'what is the difference between newtons first and second law',
+      lastAnsweredAnswer: newtonComparison.response
+    });
+    assert.equal(newtonExamples.routeType, 'class_fact');
+    assert.ok(newtonExamples.response.includes('Newton\'s First Law example'));
+    assert.ok(newtonExamples.response.includes('Newton\'s Second Law example'));
+    assert.ok(!newtonExamples.response.includes('electron energy level'));
+    assert.ok(!newtonExamples.response.includes('first energy level'));
+
+    const bareEachExample = await questionAnswer.answerStudentMessage('can you give an example of each');
+    assert.equal(bareEachExample.routeType, 'student_context_clarification');
+    assert.ok(!bareEachExample.response.includes('electron energy level'));
+    assert.ok(!bareEachExample.response.includes('first energy level'));
+
+    console.log('✅ context carryover: friction fragments and comparison examples preserve topic');
+  } catch (error) {
+    console.error('❌ context carryover: friction fragments and comparison examples preserve topic');
     console.error(error.message);
     process.exitCode = 1;
   }

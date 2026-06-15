@@ -193,6 +193,7 @@ async function main() {
   await testActiveFormulaTutorStopsWhenDisabled();
   await testActiveFormulaTutorNegativeFeedbackStopsCleanly();
   await testGuidedFormulaTutorActiveSessionControls();
+  await testDistanceDisplacementDirectNoTutorAndFollowUp();
   await testGuidedFormulaTutorRequiredFormulaPaths();
   await testPhase6FormulaTutorCoverage();
   await testFormulaTutorAnswerParsing();
@@ -2605,6 +2606,48 @@ async function testGuidedFormulaTutorActiveSessionControls() {
   assert.equal(newQuestion.body.tutor.solveFor, 'distance');
   assert.match(newQuestion.body.response, /starting a new problem/i);
   assert.doesNotMatch(newQuestion.body.response, /^Not quite yet\./i);
+}
+
+async function testDistanceDisplacementDirectNoTutorAndFollowUp() {
+  const { request, studentSessions } = createRouteHarness();
+  const create = await request('POST', '/api/profile/create-student-session');
+  assert.equal(create.statusCode, 201);
+  const classSessionId = create.body.sessionId;
+
+  const soccerDisplacement = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-displacement',
+    message: 'A soccer player runs 50 m north then 20 m south. What is the displacement?'
+  });
+  assert.equal(soccerDisplacement.statusCode, 200);
+  assert.equal(soccerDisplacement.body.routeType, 'science_formula');
+  assert.match(soccerDisplacement.body.response, /displacement = 30 m north/i);
+  assert.doesNotMatch(soccerDisplacement.body.response, /Phase 6A only handles one-dimensional displacement/i);
+  assert.equal(studentSessions[classSessionId].anonymousHubs['distance-displacement'].currentTutorProblem, null);
+
+  const distanceFollowUp = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-displacement',
+    message: 'what is the distance?'
+  });
+  assert.equal(distanceFollowUp.statusCode, 200);
+  assert.equal(distanceFollowUp.body.routeType, 'science_formula');
+  assert.match(distanceFollowUp.body.response, /distance = 50 m \+ 20 m = 70 m/i);
+  assert.match(distanceFollowUp.body.response, /Answer: distance = 70 m; displacement = 30 m north/i);
+  assert.doesNotMatch(distanceFollowUp.body.response, /trusted local fact/i);
+  assert.equal(studentSessions[classSessionId].anonymousHubs['distance-displacement'].currentTutorProblem, null);
+
+  const truckBoth = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-displacement-2d',
+    message: 'A delivery truck drives 4 mi west then 6 mi north. Find the distance and displacement.'
+  });
+  assert.equal(truckBoth.statusCode, 200);
+  assert.equal(truckBoth.body.routeType, 'science_formula');
+  assert.match(truckBoth.body.response, /distance = 4 mi \+ 6 mi = 10 mi/i);
+  assert.match(truckBoth.body.response, /displacement = about 7\.21 mi NW/i);
+  assert.doesNotMatch(truckBoth.body.response, /Phase 6A only handles one-dimensional displacement/i);
+  assert.equal(studentSessions[classSessionId].anonymousHubs['distance-displacement-2d'].currentTutorProblem, null);
 }
 
 function escapeRegExp(value) {
