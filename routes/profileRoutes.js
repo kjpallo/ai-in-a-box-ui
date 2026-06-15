@@ -168,6 +168,15 @@ function registerProfileRoutes(app, {
           req,
           studentSessions
         });
+        const joinable = getJoinableStudentSessionFromUrl(session.studentUrl, studentSessions);
+        if (!joinable || joinable.sessionId !== session.sessionId) {
+          if (studentSessions && session.sessionId && studentSessions[session.sessionId]) {
+            delete studentSessions[session.sessionId];
+          }
+          const error = new Error('Restarted session could not create a joinable student link.');
+          error.statusCode = 500;
+          throw error;
+        }
 
         res.status(201).json({
           ok: true,
@@ -672,6 +681,31 @@ function createProfileStudentSession({
   return session;
 }
 
+function getJoinableStudentSessionFromUrl(studentUrl, studentSessions) {
+  const sessionId = parseStudentSessionIdFromUrl(studentUrl);
+  if (!sessionId || !studentSessions) return null;
+
+  const session = studentSessions[sessionId];
+  if (!session || safeText(session.sessionId) !== sessionId) return null;
+
+  return {
+    sessionId,
+    session
+  };
+}
+
+function parseStudentSessionIdFromUrl(studentUrl) {
+  const rawUrl = safeText(studentUrl);
+  if (!rawUrl) return '';
+
+  try {
+    const url = new URL(rawUrl, 'http://localhost');
+    return safeText(url.searchParams.get('sessionId') || url.searchParams.get('classSessionId'));
+  } catch {
+    return '';
+  }
+}
+
 function findQuestionsStandardsSessionMetadata({
   archiveDir,
   logFilePath,
@@ -1110,7 +1144,9 @@ module.exports = {
   createProfileStudentSession,
   findQuestionsStandardsSessionMetadata,
   getConfiguredPublicBaseUrl,
+  getJoinableStudentSessionFromUrl,
   getPrivateLanIpv4Addresses,
+  parseStudentSessionIdFromUrl,
   registerProfileRoutes,
   serializeLiveStudentActivity
 };

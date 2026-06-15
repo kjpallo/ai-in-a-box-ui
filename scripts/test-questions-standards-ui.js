@@ -169,6 +169,16 @@ assert.match(
 );
 assert.match(
   restartHandler,
+  /if \(!result\?\.ok \|\| !studentUrl \|\| !restartSessionLinkMatchesResponse\(studentUrl, result\)\)[\s\S]*Restart did not return a joinable student link\./,
+  'Restart Session should reject malformed restart responses instead of rendering a broken link.'
+);
+assert.match(
+  profileUi,
+  /function restartSessionLinkMatchesResponse\(studentUrl, result\)[\s\S]*searchParams\.get\('sessionId'\)[\s\S]*searchParams\.get\('classSessionId'\)[\s\S]*linkedSessionId === expectedSessionId/,
+  'Restart Session should verify the returned studentUrl contains the returned live session id.'
+);
+assert.match(
+  restartHandler,
   /restartedReportSessions\.set\(sessionKey[\s\S]*renderStudentLink\(studentUrl\)/,
   'Restart Session should use the returned studentUrl and keep it visible in Archived Sessions.'
 );

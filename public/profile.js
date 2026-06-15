@@ -1885,15 +1885,16 @@
       });
 
       const studentUrl = firstText(result?.studentUrl);
-      const successMessage = restartedSessionStatusMessage(result);
-      if (studentUrl) {
-        restartedReportSessions.set(sessionKey, {
-          studentUrl,
-          className: firstText(result?.className),
-          createdAt: firstText(result?.createdAt)
-        });
-        renderStudentLink(studentUrl);
+      if (!result?.ok || !studentUrl || !restartSessionLinkMatchesResponse(studentUrl, result)) {
+        throw new Error('Restart did not return a joinable student link.');
       }
+      const successMessage = restartedSessionStatusMessage(result);
+      restartedReportSessions.set(sessionKey, {
+        studentUrl,
+        className: firstText(result?.className),
+        createdAt: firstText(result?.createdAt)
+      });
+      renderStudentLink(studentUrl);
       setText('reportExportStatus', successMessage);
       setText('profileStudentLinkStatus', successMessage);
       await loadStudentSessions();
@@ -2230,6 +2231,22 @@
     return cleanName
       ? `Restarted ${cleanName}. A new student link is ready.`
       : 'Session restarted. A new student link is ready.';
+  }
+
+  function restartSessionLinkMatchesResponse(studentUrl, result) {
+    const expectedSessionId = firstText(result?.sessionId, result?.classSessionId);
+    if (!studentUrl || !expectedSessionId) return false;
+
+    try {
+      const parsedUrl = new URL(studentUrl, 'http://localhost');
+      const linkedSessionId = firstText(
+        parsedUrl.searchParams.get('sessionId'),
+        parsedUrl.searchParams.get('classSessionId')
+      );
+      return linkedSessionId === expectedSessionId;
+    } catch {
+      return false;
+    }
   }
 
   function titleCaseLabel(value) {

@@ -4,7 +4,11 @@ const os = require('os');
 const path = require('path');
 const { spawnSync } = require('node:child_process');
 const { parse } = require('csv-parse/sync');
-const { registerProfileRoutes } = require('../routes/profileRoutes');
+const {
+  parseStudentSessionIdFromUrl,
+  registerProfileRoutes
+} = require('../routes/profileRoutes');
+const { registerStudentRoutes } = require('../routes/studentRoutes');
 const {
   createTeacherSessionStore,
   requireTeacherAuth,
@@ -135,6 +139,12 @@ registerProfileRoutes(app, {
   studentSessions,
   questionsStandardsArchiveDir: archiveDir,
   questionsStandardsExportManifestDir: manifestDir
+});
+registerStudentRoutes(app, {
+  answerStudentMessage: async () => ({ response: 'ok' }),
+  getClassroomControls: () => ({}),
+  logCompletedInteraction: () => {},
+  studentSessions
 });
 
 const authorizedExtras = {
@@ -273,6 +283,24 @@ async function main() {
   assert.match(restartResponse.body.sessionId, /^[0-9a-f-]{32,36}$/i);
   assert.notEqual(restartResponse.body.studentUrl, '/student.html?sessionId=session-a', 'restart should generate a fresh studentUrl');
   assert.match(restartResponse.body.studentUrl, new RegExp(encodeURIComponent(restartResponse.body.sessionId)));
+  const restartedSessionIdFromUrl = parseStudentSessionIdFromUrl(restartResponse.body.studentUrl);
+  assert.equal(
+    restartedSessionIdFromUrl,
+    restartResponse.body.sessionId,
+    'restart studentUrl should contain the new live session id expected by student join'
+  );
+  const joinRestarted = await request(
+    handlers,
+    'POST',
+    '/api/student/join',
+    { sessionId: restartedSessionIdFromUrl, studentHubId: 'restart-route-student' }
+  );
+  assert.equal(
+    joinRestarted.statusCode,
+    200,
+    'id parsed from restart studentUrl should be joinable through the real student join route'
+  );
+  assert.equal(joinRestarted.body.classSessionId, restartResponse.body.sessionId);
   assert.equal(restartResponse.body.className, 'Restarted Science A', 'restart should create a normalized restarted class label');
   assert.equal(
     restartResponse.body.message,
@@ -371,6 +399,24 @@ async function main() {
   assert.equal(legacyRestart.statusCode, 201, 'legacy archives without class metadata should still restart');
   assert.equal(legacyRestart.body.ok, true);
   assert.match(legacyRestart.body.studentUrl, new RegExp(encodeURIComponent(legacyRestart.body.sessionId)));
+  const legacySessionIdFromUrl = parseStudentSessionIdFromUrl(legacyRestart.body.studentUrl);
+  assert.equal(
+    legacySessionIdFromUrl,
+    legacyRestart.body.sessionId,
+    'legacy restart studentUrl should contain the new live session id'
+  );
+  const joinLegacyRestart = await request(
+    handlers,
+    'POST',
+    '/api/student/join',
+    { sessionId: legacySessionIdFromUrl, studentHubId: 'legacy-restart-route-student' }
+  );
+  assert.equal(
+    joinLegacyRestart.statusCode,
+    200,
+    'legacy restart URL should be joinable through the real student join route'
+  );
+  assert.equal(joinLegacyRestart.body.classSessionId, legacyRestart.body.sessionId);
   assert.equal(
     legacyRestart.body.className,
     'Restarted Session',
