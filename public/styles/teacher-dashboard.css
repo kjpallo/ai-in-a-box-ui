@@ -687,11 +687,11 @@
 
 .questions-standards-table .profile-table-head,
 .questions-standards-table .profile-table-row {
-  grid-template-columns: minmax(108px, 0.13fr) minmax(320px, 0.53fr) minmax(118px, 0.16fr) minmax(150px, 0.18fr);
+  grid-template-columns: minmax(132px, 0.12fr) minmax(500px, 0.52fr) minmax(170px, 0.16fr) minmax(220px, 0.2fr);
   align-items: center;
-  gap: 10px;
-  min-width: 820px;
-  padding: 12px 18px;
+  gap: 12px;
+  min-width: 1080px;
+  padding: 14px 16px;
 }
 
 .questions-standards-table .profile-table-head {
@@ -730,7 +730,7 @@
 }
 
 .questions-standards-table.has-many-rows {
-  max-height: min(58vh, 620px);
+  max-height: min(68vh, 760px);
   overflow-y: hidden;
 }
 
@@ -739,7 +739,7 @@
 }
 
 .questions-standards-table .profile-table-row {
-  min-height: 72px;
+  min-height: 84px;
   border-top: 1px solid rgba(181, 216, 211, 0.11);
   background: rgba(3, 20, 24, 0.28);
 }
@@ -753,16 +753,19 @@
 
 .questions-standards-table .profile-table-row > span {
   min-width: 0;
-  line-height: 1.5;
+  font-size: 0.96rem;
+  line-height: 1.55;
   align-self: center;
   color: #edfdf8;
   overflow-wrap: anywhere;
-  padding-inline: 8px;
+  padding-inline: 10px;
 }
 
 .questions-standards-table .profile-table-head > span {
   min-width: 0;
-  padding-inline: 8px;
+  font-size: 0.84rem;
+  line-height: 1.4;
+  padding-inline: 10px;
 }
 
 .questions-standards-table .profile-table-head > span:nth-child(2),
@@ -786,7 +789,7 @@
   color: #f8fffc;
   font-size: 1.05rem;
   font-weight: 680;
-  line-height: 1.45;
+  line-height: 1.55;
   justify-self: stretch;
 }
 
