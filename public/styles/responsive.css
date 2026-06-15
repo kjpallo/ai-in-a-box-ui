@@ -495,6 +495,14 @@
     min-width: 1040px;
   }
 
+  .report-session-group {
+    grid-template-columns: 1fr;
+  }
+
+  .report-session-restart-button {
+    width: 100%;
+  }
+
   .standard-details-modal {
     padding: 12px;
   }

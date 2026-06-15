@@ -671,13 +671,18 @@
         restartedLink: restartedReportSessions.get(restartKey) || null,
         archivedAt: '',
         questionCount: 0,
+        needsReviewCount: 0,
+        missingStandardCount: 0,
         standardIds: new Set(),
         standardCounts: new Map(),
         topics: new Map(),
         status: question?.archived === true ? 'Archived' : 'Completed'
       };
 
+      const review = reviewStatusForQuestion(question);
       existing.questionCount += 1;
+      if (review.needsReview) existing.needsReviewCount += 1;
+      if (!hasQuestionStandard(question)) existing.missingStandardCount += 1;
       existing.label = normalizeRestartedSessionTitle(firstText(storedLabel, existing.label));
       existing.restartClassName = firstText(existing.restartClassName, restartClassName);
       existing.restartedLink = restartedReportSessions.get(restartKey) || existing.restartedLink;
@@ -720,23 +725,36 @@
   }
 
   function renderReportSessionGroup(group) {
-    const standardLabel = group.standardCount
-      ? `${group.standardCount} standard${group.standardCount === 1 ? '' : 's'}${group.topStandardId ? ` / top ${group.topStandardId}` : ''}`
-      : (group.topTopic ? `Top topic ${group.topTopic}` : 'No standard matched');
+    const canRestart = Boolean(firstText(group.restartKey));
+    const standardLabel = `${group.standardCount || 0} matched standard${group.standardCount === 1 ? '' : 's'}`;
+    const needsReviewLabel = group.needsReviewCount
+      ? `${group.needsReviewCount} question${group.needsReviewCount === 1 ? '' : 's'}`
+      : 'None';
+    const missingStandardLabel = group.missingStandardCount
+      ? `${group.missingStandardCount} question${group.missingStandardCount === 1 ? '' : 's'}`
+      : 'None';
+    const statusText = group.needsReviewCount
+      ? 'Review recommended before export.'
+      : 'Ready to restart or export.';
     const metaRows = [
       ['Archived', group.archivedAt ? formatDateTime(group.archivedAt) : 'Not available'],
       ['Questions', `${group.questionCount}`],
-      ['Standards', standardLabel],
-      ['Topic', group.topTopic]
+      ['Matched standards', standardLabel],
+      ['Needs review', needsReviewLabel],
+      ['Missing standards', missingStandardLabel],
+      ['Top topic', group.topTopic],
+      ['Top standard', group.topStandardId],
+      ['Status', statusText]
     ].filter(([, value]) => firstText(value));
 
     return `
       <article class="report-session-group" data-report-session-group data-session-key="${escapeAttr(group.restartKey)}">
         <div class="report-session-group-copy">
           <div class="report-session-group-title">
-            <strong>${escapeHtml(group.label || 'Restarted Session')}</strong>
+            <strong>${escapeHtml(group.label || 'Archived Session')}</strong>
             <span class="report-session-state-pill">${escapeHtml(group.status || 'Archived')}</span>
           </div>
+          <span class="report-session-group-key">${escapeHtml(truncate(group.restartKey || 'No session key available', 96))}</span>
           <dl class="report-session-group-meta">
             ${metaRows.map(([label, value]) => `
               <div>
@@ -752,7 +770,8 @@
           class="small-button secondary-small report-session-restart-button"
           data-restart-student-session="${escapeAttr(group.restartKey)}"
           data-restart-session-class-name="${escapeAttr(group.restartClassName || '')}"
-        >Restart Session</button>
+          ${canRestart ? '' : 'disabled aria-disabled="true" title="Restart unavailable: no archived session key."'}
+        >${canRestart ? 'Restart Session' : 'Restart unavailable'}</button>
       </article>
     `;
   }

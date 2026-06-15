@@ -184,7 +184,7 @@
   height: 100%;
   min-height: 0;
   display: grid;
-  grid-template-rows: auto auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto auto minmax(0, 1fr);
   gap: 12px;
   padding: 4px 6px 6px;
 }
@@ -565,8 +565,11 @@
 }
 
 .report-session-groups-card {
+  min-height: 0;
   padding: 0;
-  overflow: hidden;
+  overflow: visible;
+  align-content: start;
+  grid-template-rows: auto minmax(0, auto);
 }
 
 .report-session-groups-card > .profile-section-head {
@@ -588,22 +591,36 @@
 
 .report-session-groups {
   display: grid;
-  gap: 0;
+  gap: 12px;
+  max-height: min(42vh, 520px);
+  min-height: 118px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 16px 18px 18px;
+}
+
+.report-session-groups > .profile-empty-state {
+  align-self: stretch;
+  display: grid;
+  align-content: center;
+  min-height: 86px;
+  padding: 18px;
+  border: 1px dashed rgba(126, 233, 255, 0.18);
+  border-radius: 10px;
+  background: rgba(3, 20, 24, 0.2);
 }
 
 .report-session-group {
   min-width: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 14px;
-  align-items: center;
-  border-top: 1px solid rgba(181, 216, 211, 0.11);
-  padding: 14px 18px;
-  background: rgba(3, 20, 24, 0.24);
-}
-
-.report-session-group:first-child {
-  border-top: 0;
+  gap: 18px;
+  align-items: stretch;
+  border: 1px solid rgba(126, 233, 255, 0.16);
+  border-radius: 10px;
+  padding: 18px;
+  background:
+    linear-gradient(180deg, rgba(11, 38, 43, 0.74), rgba(4, 22, 26, 0.86));
 }
 
 .report-session-group-copy {
@@ -627,6 +644,13 @@
   overflow-wrap: anywhere;
 }
 
+.report-session-group-key {
+  color: #9fc6c0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
 .report-session-state-pill {
   display: inline-flex;
   align-items: center;
@@ -643,15 +667,15 @@
 
 .report-session-group-meta {
   margin: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 14px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 10px 14px;
 }
 
 .report-session-group-meta div {
   min-width: 0;
   display: inline-grid;
-  gap: 2px;
+  gap: 3px;
 }
 
 .report-session-group-meta dt {
@@ -663,15 +687,29 @@
 .report-session-group-meta dd {
   margin: 0;
   color: #effcf8;
-  font-size: 0.78rem;
-  line-height: 1.25;
+  font-size: 0.84rem;
+  line-height: 1.35;
   overflow-wrap: anywhere;
 }
 
 .report-session-restart-button {
-  min-width: 138px;
+  min-width: 156px;
+  min-height: 46px;
   justify-content: center;
   white-space: normal;
+  align-self: center;
+  border-color: rgba(102, 247, 209, 0.58);
+  color: #041412;
+  background:
+    linear-gradient(180deg, rgba(132, 255, 225, 0.98), rgba(71, 221, 190, 0.98));
+  box-shadow: 0 0 18px rgba(102, 247, 209, 0.16);
+}
+
+.report-session-restart-button:disabled {
+  border-color: rgba(181, 216, 211, 0.18);
+  color: #9fbab6;
+  background: rgba(255, 255, 255, 0.055);
+  box-shadow: none;
 }
 
 .questions-standards-table {

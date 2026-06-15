@@ -6,6 +6,8 @@ const { spawnSync } = require('node:child_process');
 const projectRoot = path.join(__dirname, '..');
 const profileUi = read(path.join(projectRoot, 'public', 'profile.js'));
 const bladeUi = read(path.join(projectRoot, 'public', 'blade-ui.js'));
+const teacherDashboardCss = read(path.join(projectRoot, 'public', 'styles', 'teacher-dashboard.css'));
+const responsiveCss = read(path.join(projectRoot, 'public', 'styles', 'responsive.css'));
 const exportHandler = between(profileUi, 'async function exportReportCsv()', 'function printReport()');
 const purgeHandler = between(profileUi, 'async function purgeQuestionsStandardsExport()', 'function printReport()');
 const restartHandler = between(profileUi, 'async function restartStudentSessionFromReport(button)', 'function formatLiveQuestionsLeft');
@@ -96,14 +98,49 @@ assert.match(
   'Questions & Standards should show an archived session group count.'
 );
 assert.match(
+  teacherDashboardCss,
+  /\.reports-panel\s*\{[\s\S]*grid-template-rows:\s*auto auto auto auto minmax\(0,\s*1fr\)/,
+  'Questions & Standards should reserve a real row for Archived Sessions above Student Questions.'
+);
+assert.match(
+  teacherDashboardCss,
+  /\.report-session-groups\s*\{[\s\S]*max-height:[\s\S]*overflow-y:\s*auto[\s\S]*padding:/,
+  'Archived Sessions should render in a readable list area instead of a clipped band.'
+);
+assert.doesNotMatch(
+  teacherDashboardCss,
+  /\.report-session-groups-card\s*\{[^}]*overflow:\s*hidden/,
+  'Archived Sessions card should not clip session details or restart actions.'
+);
+assert.match(
+  responsiveCss,
+  /\.report-session-group\s*\{[\s\S]*grid-template-columns:\s*1fr[\s\S]*\.report-session-restart-button\s*\{[\s\S]*width:\s*100%/,
+  'Archived session cards should stack cleanly with a full-width restart button on small screens.'
+);
+assert.match(
   profileUi,
   /function buildReportSessionGroups[\s\S]*sessionKey[\s\S]*archive:\$\{question\.archiveId\}[\s\S]*normalizeRestartedSessionTitle/,
   'Questions & Standards should group archived questions by session id or safe fallback key.'
 );
 assert.match(
   profileUi,
+  /needsReviewCount[\s\S]*missingStandardCount[\s\S]*reviewStatusForQuestion\(question\)[\s\S]*hasQuestionStandard\(question\)/,
+  'Archived session groups should track needs-review and missing-standard counts.'
+);
+assert.match(
+  profileUi,
+  /Matched standards[\s\S]*Needs review[\s\S]*Missing standards[\s\S]*Status/,
+  'Archived session cards should show readable metadata for questions, standards, review state, and status.'
+);
+assert.match(
+  profileUi,
   /data-restart-student-session="\$\{escapeAttr\(group\.restartKey\)\}"/,
   'Archived session groups should render Restart Session buttons with the correct session key.'
+);
+assert.match(
+  profileUi,
+  /Restart Session[\s\S]*Restart unavailable/,
+  'Archived session groups should show a visible restart button or a disabled unavailable state.'
 );
 assert.match(
   profileUi,
