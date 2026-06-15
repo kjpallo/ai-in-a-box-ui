@@ -88,6 +88,21 @@
       "source": "Teacher-approved 9th-grade physical science reference"
     },
     {
+      "id": "science-variable",
+      "category": "vocabulary",
+      "title": "Variable",
+      "terms": [
+        "variable",
+        "what is a variable",
+        "define variable",
+        "formula variable",
+        "science variable",
+        "vraiable"
+      ],
+      "fact": "A variable is a letter or symbol that stands for a number or quantity that can change or is unknown.",
+      "source": "Teacher-approved 9th-grade physical science reference"
+    },
+    {
       "id": "speed",
       "category": "formula",
       "title": "Speed",
@@ -102,6 +117,22 @@
       "examples": [
         "If distance = 100 m and time = 20 s, speed = 5 m/s."
       ],
+      "source": "Teacher-approved 9th-grade physical science reference"
+    },
+    {
+      "id": "time-unit",
+      "category": "vocabulary",
+      "title": "Time Unit",
+      "terms": [
+        "time",
+        "unit for time",
+        "units for time",
+        "time unit",
+        "time units",
+        "second",
+        "seconds"
+      ],
+      "fact": "The standard SI unit for time is the second, written s.",
       "source": "Teacher-approved 9th-grade physical science reference"
     },
     {
@@ -238,6 +269,10 @@
         "gravitational potential energy",
         "stored energy",
         "height energy",
+        "potetial",
+        "potetial energy",
+        "potietal",
+        "potietal energy",
         "potental",
         "potental energy",
         "potenital",
@@ -257,15 +292,113 @@
       "source": "Teacher-approved 9th-grade physical science reference"
     },
     {
+      "id": "chemical-energy",
+      "category": "vocabulary",
+      "title": "Chemical Energy",
+      "terms": [
+        "chemical energy",
+        "chemical potential energy",
+        "type of energy chemical energy",
+        "energy in chemical bonds"
+      ],
+      "fact": "Chemical energy is stored potential energy in the bonds between atoms and molecules. Food, batteries, and fuel store chemical energy.",
+      "source": "Teacher-approved 9th-grade physical science reference"
+    },
+    {
+      "id": "elastic-potential-energy",
+      "category": "vocabulary",
+      "title": "Elastic Potential Energy",
+      "terms": [
+        "elastic potential energy",
+        "elastic energy",
+        "stretched energy",
+        "compressed energy",
+        "spring energy",
+        "rubber band energy"
+      ],
+      "fact": "Elastic potential energy is stored energy in an object that is stretched or compressed, such as a spring or rubber band.",
+      "source": "Teacher-approved 9th-grade physical science reference"
+    },
+    {
+      "id": "heat-definition",
+      "category": "vocabulary",
+      "title": "Heat",
+      "terms": [
+        "heat",
+        "what is heat",
+        "define heat"
+      ],
+      "fact": "Heat is energy transferred from a warmer object or substance to a cooler object or substance because of a temperature difference.",
+      "source": "Teacher-approved 9th-grade physical science reference"
+    },
+    {
+      "id": "heat-transfer",
+      "category": "vocabulary",
+      "title": "Heat Transfer",
+      "terms": [
+        "heat transfer",
+        "thermal energy transfer",
+        "heat move",
+        "heat moves",
+        "heat travel",
+        "heat travels",
+        "heat travle",
+        "how does heat move",
+        "how does heat travel",
+        "how does heat travle",
+        "conduction",
+        "convection",
+        "radiation",
+        "conduction convection radiation"
+      ],
+      "fact": "Heat can move by conduction, convection, and radiation. Conduction transfers heat by direct contact. Convection transfers heat by the movement of liquids or gases. Radiation transfers heat by electromagnetic waves and can travel through empty space.",
+      "source": "Teacher-approved 9th-grade physical science reference"
+    },
+    {
+      "id": "specific-heat",
+      "category": "formula",
+      "title": "Specific Heat",
+      "terms": [
+        "specific heat",
+        "specific heat capacity",
+        "specific temperature",
+        "specific tempituer",
+        "heat capacity"
+      ],
+      "fact": "Specific heat is the amount of energy needed to raise the temperature of 1 gram of a substance by 1°C.",
+      "formula": "q = m × c × ΔT, where q is heat energy, m is mass, c is specific heat, and ΔT is change in temperature",
+      "source": "Teacher-approved 9th-grade physical science reference"
+    },
+    {
+      "id": "temperature-definition",
+      "category": "vocabulary",
+      "title": "Temperature",
+      "terms": [
+        "temperature",
+        "what is temperature",
+        "define temperature",
+        "temperature units",
+        "unit for temperature",
+        "units for temperature",
+        "tempter",
+        "tempituer"
+      ],
+      "fact": "Temperature measures how hot or cold something is. In science, it is related to the average kinetic energy of particles in a substance. Temperature is commonly measured in degrees Celsius, written °C. Kelvin, written K, is also used in science.",
+      "source": "Teacher-approved 9th-grade physical science reference"
+    },
+    {
       "id": "power",
       "category": "formula",
       "title": "Power",
       "terms": [
         "power",
         "calculate power",
-        "work divided by time"
+        "work divided by time",
+        "rate work is done",
+        "energy transferred",
+        "watts"
       ],
-      "fact": "Power is how quickly work is done or energy is transferred.",
+      "fact": "Power is the rate at which work is done or energy is transferred. Power is measured in watts, written W.",
       "formula": "power = work / time; P = W / t",
       "source": "Teacher-approved 9th-grade physical science reference"
     },
@@ -282,6 +415,23 @@
       ],
       "fact": "In physics, work happens when a force moves an object over a distance in the direction of the force.",
       "formula": "work = force × distance; W = F × d",
+      "source": "Teacher-approved 9th-grade physical science reference"
+    },
+    {
+      "id": "work-unit",
+      "category": "vocabulary",
+      "title": "Work Unit",
+      "terms": [
+        "unit for work",
+        "units for work",
+        "work unit",
+        "work units",
+        "joule",
+        "joules",
+        "newton meter",
+        "newton-meter"
+      ],
+      "fact": "The unit for work is the joule, written J. One joule is equal to one newton-meter.",
       "source": "Teacher-approved 9th-grade physical science reference"
     },
     {
@@ -1830,6 +1980,7 @@
         "wave frequency",
         "hertz",
         "Hz",
+        "herts",
         "waves per second",
         "f equals one over T",
         "frequencies",
@@ -1840,7 +1991,7 @@
         "wave frequencey",
         "wave freqency"
       ],
-      "fact": "Frequency is the number of waves that pass a given point in one second. Frequency is measured in Hertz, or Hz.",
+      "fact": "Frequency is the number of waves that pass a given point in one second. Hertz, written Hz, is the unit for frequency. One hertz means one cycle per second.",
       "formula": "f = 1 / T",
       "source": "Concept 1 Notes - Nature and Properties.pptx, slide 9"
     },
@@ -1851,9 +2002,15 @@
       "terms": [
         "frequency and period",
         "period and frequency",
+        "frequency and time",
+        "hertz and time",
+        "herts and time",
+        "frequency hertz and time",
+        "frequency herts and time",
         "inverse relationship",
         "T equals one over f",
         "f equals one over T",
+        "period",
         "frequncy",
         "frequncy and period",
         "frequencey",
@@ -1868,7 +2025,7 @@
         "relationsip",
         "inverse relationsip"
       ],
-      "fact": "Frequency and period have an inverse relationship. If frequency increases, period decreases. If period increases, frequency decreases.",
+      "fact": "Frequency is measured in hertz, Hz. One hertz means one cycle per second. Period is the time for one cycle, and frequency = 1 / period.",
       "formula": "T = 1 / f; f = 1 / T",
       "examples": [
         "If frequency is 4 Hz, period is 1 / 4 = 0.25 s."
@@ -1882,6 +2039,8 @@
       "terms": [
         "frequency and wavelength",
         "wavelength and frequency",
+        "frequency related to wavelength",
+        "wavelength related to frequency",
         "shorter wavelength higher frequency",
         "longer wavelength lower frequency",
         "frequncy",
