@@ -452,7 +452,7 @@
       setTutorText(tutorSubstitution, work.substitution || '');
       tutorPrompt.textContent = 'Final answer unlocked.';
       setTutorHint('');
-      setTutorFinal(work.answer || formatTutorAnswer(tutor.solveFor, tutor.finalAnswerDisplay));
+      setTutorFinal(work.answer || formatTutorAnswer(tutor.solveFor, tutor.finalAnswerDisplay), { showPending: true });
       maybeCelebrateTutorCompletion(tutor, work, context);
       return;
     }
@@ -470,7 +470,7 @@
     renderKnownValues(work.knownValues || tutor.knownValues);
     setTutorText(tutorSubstitution, work.substitution || '');
     setTutorHint(tutor.currentHint || '');
-    setTutorFinal('');
+    setTutorFinal('', { showPending: true });
   }
 
   function renderKnownValues(values) {
@@ -516,11 +516,13 @@
     tutorHint.textContent = text;
   }
 
-  function setTutorFinal(value) {
+  function setTutorFinal(value, options = {}) {
     if (!tutorFinalWrap || !tutorFinal) return;
     const text = String(value || '').trim();
-    tutorFinalWrap.hidden = !text;
-    tutorFinal.textContent = text;
+    const showPending = options.showPending === true;
+    tutorFinalWrap.hidden = !text && !showPending;
+    tutorFinal.textContent = text || 'Waiting for the final answer.';
+    tutorFinal.classList.toggle('student-tutor-pending', !text);
   }
 
   function showCalculator() {

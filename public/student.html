@@ -9,7 +9,7 @@
       body {
         min-height: 100vh;
         min-height: 100dvh;
-        overflow: hidden;
+        overflow-y: auto;
       }
 
       body:has(.student-tutor-card:not([hidden])) {
@@ -18,12 +18,13 @@
 
       .student-shell {
         width: min(1240px, calc(100% - 1.25rem));
-        height: 100vh;
-        height: 100dvh;
+        height: auto;
         margin: 0 auto;
         padding: 0.65rem 0;
         display: grid;
-        min-height: 0;
+        grid-template-rows: auto minmax(0, 1fr);
+        gap: 0.65rem;
+        min-height: 100dvh;
       }
 
       body:has(.student-tutor-card:not([hidden])) .student-shell {
@@ -40,15 +41,17 @@
       }
 
       .student-main-stack {
+        grid-column: 1;
+        grid-row: 1;
         display: grid;
-        grid-template-rows: auto auto minmax(104px, 0.72fr) minmax(126px, 0.78fr);
+        grid-template-rows: auto;
         gap: 0.55rem;
         min-width: 0;
         min-height: 0;
       }
 
       .student-main-stack:has(.student-tutor-card:not([hidden])) {
-        grid-template-rows: auto auto minmax(104px, auto) minmax(150px, auto);
+        grid-template-rows: auto;
         align-content: start;
       }
 
@@ -76,11 +79,6 @@
         text-transform: uppercase;
       }
 
-      .student-response-panel {
-        position: relative;
-        overflow: hidden;
-      }
-
       .student-session {
         margin: 0;
         color: #b9d8d1;
@@ -89,21 +87,88 @@
         overflow-wrap: anywhere;
       }
 
+      .student-interaction-console {
+        align-content: start;
+        gap: 0.7rem;
+        overflow: visible;
+        border-color: rgba(102,247,209,0.32);
+        background:
+          radial-gradient(circle at 14% 0%, rgba(102,247,209,0.13), transparent 34%),
+          radial-gradient(circle at 92% 8%, rgba(126,233,255,0.12), transparent 30%),
+          rgba(3,12,14,0.9);
+      }
+
+      .student-console-head {
+        display: flex;
+        align-items: start;
+        justify-content: space-between;
+        gap: 0.8rem;
+        flex-wrap: wrap;
+      }
+
+      .student-console-head .panel-title-row {
+        display: grid;
+        gap: 0.3rem;
+      }
+
+      .student-console-meta {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0.45rem;
+        flex-wrap: wrap;
+      }
+
+      .student-console-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.42fr) minmax(290px, 0.78fr);
+        align-items: stretch;
+        gap: 0.7rem;
+        min-height: 0;
+      }
+
+      .student-console-primary,
+      .student-console-response,
+      .student-history-panel {
+        display: grid;
+        min-height: 0;
+      }
+
+      .student-console-primary {
+        gap: 0.62rem;
+      }
+
       .student-form {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(220px, 260px);
-        align-items: stretch;
+        grid-template-columns: minmax(0, 1fr) minmax(170px, 220px);
+        align-items: start;
         gap: 0.45rem;
       }
 
       .student-form textarea {
         width: 100%;
-        min-height: 48px;
-        max-height: 76px;
+        min-height: 98px;
+        max-height: 180px;
         resize: vertical;
       }
 
+      .student-console-actions {
+        display: grid;
+        gap: 0.45rem;
+      }
+
+      .student-console-response {
+        gap: 0.55rem;
+        padding: 0.68rem;
+        border: 1px solid rgba(126,233,255,0.17);
+        border-radius: 10px;
+        background: rgba(2,8,10,0.34);
+        overflow: visible;
+      }
+
       .student-action-column {
+        grid-column: 2;
+        grid-row: 1;
         position: sticky;
         top: 0.65rem;
         display: grid;
@@ -174,6 +239,7 @@
       }
 
       .student-energy {
+        grid-column: 1 / -1;
         display: grid;
         align-content: center;
         gap: 0.3rem;
@@ -247,11 +313,12 @@
       }
 
       .student-response {
-        height: 100%;
-        min-height: 86px;
-        max-height: 20vh;
+        height: auto;
+        min-height: 154px;
+        max-height: none;
         padding: 1rem 1.1rem;
         border-radius: 14px;
+        overflow: visible;
         white-space: pre-wrap;
       }
 
@@ -259,7 +326,7 @@
         position: relative;
         display: grid;
         min-height: 0;
-        overflow: hidden;
+        overflow: visible;
         z-index: 1;
       }
 
@@ -327,7 +394,7 @@
         z-index: 4;
         display: grid;
         grid-template-rows: auto auto auto;
-        gap: 0.55rem;
+        gap: 0.72rem;
         overflow: visible;
         border-color: rgba(102,247,209,0.28);
         background:
@@ -368,12 +435,11 @@
 
       .student-tutor-body {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(260px, 330px);
+        grid-template-columns: minmax(0, 1fr) minmax(320px, 360px);
         align-items: start;
-        gap: 0.65rem;
+        gap: 0.82rem;
         min-height: 0;
         overflow-y: visible;
-        padding-right: 0.15rem;
       }
 
       .student-tutor-body:has(.student-calculator[hidden]) {
@@ -382,9 +448,22 @@
 
       .student-tutor-grid {
         display: grid;
-        grid-template-columns: minmax(160px, 0.85fr) minmax(220px, 1.15fr);
-        gap: 0.45rem;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: stretch;
+        gap: 0.55rem;
         min-height: 0;
+      }
+
+      .student-tutor-detail {
+        display: grid;
+        align-content: start;
+        gap: 0.26rem;
+        min-width: 0;
+        min-height: 0;
+        padding: 0.58rem 0.64rem;
+        border: 1px solid rgba(126,233,255,0.14);
+        border-radius: 8px;
+        background: rgba(2,8,10,0.36);
       }
 
       .student-tutor-detail.student-tutor-question {
@@ -407,29 +486,33 @@
       }
 
       .student-tutor-detail.student-tutor-current-step {
-        padding: 0.62rem 0.68rem;
-        border-color: rgba(126,233,255,0.36);
+        grid-column: 1 / -1;
+        padding: 0.82rem 0.88rem;
+        border-color: rgba(126,233,255,0.56);
         background:
-          linear-gradient(180deg, rgba(126,233,255,0.09), rgba(102,247,209,0.05)),
-          rgba(2,8,10,0.48);
+          linear-gradient(180deg, rgba(126,233,255,0.16), rgba(102,247,209,0.08)),
+          rgba(2,8,10,0.56);
         box-shadow:
-          0 0 16px rgba(126,233,255,0.1),
-          inset 0 1px 0 rgba(255,255,255,0.07);
+          0 0 24px rgba(126,233,255,0.16),
+          inset 0 1px 0 rgba(255,255,255,0.1);
       }
 
       .student-tutor-detail.student-tutor-current-step p {
-        font-size: 1rem;
-        font-weight: 750;
-        line-height: 1.38;
+        color: #f7fffb;
+        font-size: clamp(1.06rem, 1.35vw, 1.24rem);
+        font-weight: 850;
+        line-height: 1.42;
       }
 
-      .student-tutor-detail {
+      .student-tutor-detail.student-tutor-hint,
+      .student-tutor-detail.student-tutor-answer {
+        border-color: rgba(102,247,209,0.24);
+        background: rgba(4,17,18,0.46);
+      }
+
+      .student-tutor-detail.student-tutor-hint:not([hidden]),
+      .student-tutor-detail.student-tutor-answer:not([hidden]) {
         display: grid;
-        gap: 0.22rem;
-        padding: 0.5rem 0.55rem;
-        border: 1px solid rgba(126,233,255,0.14);
-        border-radius: 8px;
-        background: rgba(2,8,10,0.36);
       }
 
       .student-tutor-detail strong {
@@ -445,11 +528,18 @@
         color: #effff8;
         line-height: 1.3;
         white-space: pre-wrap;
+        overflow-wrap: anywhere;
       }
 
       .student-tutor-pending {
-        color: rgba(223,253,246,0.58);
+        color: rgba(223,253,246,0.54);
+        font-size: 0.88rem;
         font-style: italic;
+      }
+
+      .student-tutor-detail:has(.student-tutor-pending) {
+        border-color: rgba(126,233,255,0.1);
+        background: rgba(2,8,10,0.24);
       }
 
       .student-tutor-known-values {
@@ -461,6 +551,7 @@
       .student-tutor-known-values div {
         display: flex;
         justify-content: space-between;
+        align-items: baseline;
         gap: 0.75rem;
         color: #effff8;
       }
@@ -478,11 +569,16 @@
         display: flex;
         gap: 0.45rem;
         flex-wrap: wrap;
+        align-items: center;
+        justify-content: flex-start;
+        padding-top: 0.08rem;
       }
 
       .student-calculator {
         display: grid;
         gap: 0.45rem;
+        align-self: start;
+        min-width: 0;
         width: 100%;
         margin: 0;
         padding: 0.55rem;
@@ -523,12 +619,13 @@
 
       .student-calculator-keys {
         display: grid;
-        grid-template-columns: repeat(4, minmax(48px, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 0.42rem;
       }
 
       .student-calculator-button {
         min-height: 42px;
+        min-width: 0;
         border: 1px solid rgba(126,233,255,0.34);
         border-radius: 8px;
         background:
@@ -798,18 +895,24 @@
 
       .student-history-panel {
         min-height: 0;
-        overflow: hidden;
+        grid-template-rows: auto minmax(0, 1fr);
+        gap: 0.55rem;
+        overflow: visible;
+        padding: 0.68rem;
+        border: 1px solid rgba(126,233,255,0.17);
+        border-radius: 10px;
+        background: rgba(2,8,10,0.34);
       }
 
       .student-history {
         position: relative;
         z-index: 1;
-        height: 100%;
+        height: auto;
         display: grid;
         gap: 0.5rem;
         align-content: start;
-        max-height: none;
-        min-height: 0;
+        max-height: clamp(210px, 34dvh, 340px);
+        min-height: 210px;
         overflow-y: auto;
         padding: 0.25rem 0.35rem 0.25rem 0;
         overscroll-behavior: contain;
@@ -861,6 +964,27 @@
         white-space: pre-wrap;
       }
 
+      @media (max-width: 980px) {
+        .student-tutor-body {
+          grid-template-columns: 1fr;
+        }
+
+        .student-calculator {
+          width: min(100%, 420px);
+        }
+      }
+
+      @media (max-width: 900px) {
+        .student-console-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .student-history {
+          max-height: 240px;
+          min-height: 170px;
+        }
+      }
+
       @media (max-width: 760px) {
         body {
           overflow-y: auto;
@@ -878,6 +1002,11 @@
         }
 
         .student-main-stack {
+          grid-column: 1;
+          grid-row: 2;
+        }
+
+        .student-main-stack {
           grid-template-rows: none;
         }
 
@@ -889,15 +1018,24 @@
           grid-template-columns: 1fr;
         }
 
+        .student-console-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .student-console-actions {
+          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        }
+
         .student-action-column {
           position: static;
-          grid-row: 2;
+          grid-column: 1;
+          grid-row: 1;
           max-height: none;
         }
 
         .student-history {
           max-height: 260px;
-          min-height: 150px;
+          min-height: 160px;
         }
 
         .student-response-wrap {
@@ -954,24 +1092,32 @@
   </head>
   <body>
     <main class="student-shell">
-      <div class="student-workspace">
-        <div class="student-main-stack">
-          <section class="panel student-panel">
-            <div class="panel-title-row">
-              <h1>Ask Charlemagne</h1>
-              <span id="studentStatus" class="status-pill">Checking link</span>
-            </div>
+      <section id="studentInteractionConsole" class="panel student-panel student-interaction-console" aria-labelledby="studentInteractionConsoleTitle">
+        <div class="student-console-head">
+          <div class="panel-title-row">
+            <h1 id="studentInteractionConsoleTitle">Student Interaction Console</h1>
             <p class="student-session" id="studentSessionMessage">Checking your classroom session...</p>
             <p class="student-session">Session: <strong id="sessionIdText">Missing session</strong></p>
+          </div>
+          <div class="student-console-meta">
+            <span id="studentStatus" class="status-pill">Checking link</span>
+          </div>
+        </div>
 
+        <div class="student-console-grid">
+          <div class="student-console-primary">
             <form id="studentMessageForm" class="student-form">
               <label class="sr-only" for="studentMessageInput">Message</label>
               <textarea
                 id="studentMessageInput"
                 name="message"
                 placeholder="Ask a science question..."
-                rows="3"
+                rows="4"
               ></textarea>
+              <div class="student-console-actions">
+                <button type="submit" id="studentSendButton" class="student-action-button student-send-button">Send</button>
+                <button type="button" id="studentAskHighlightButton" class="student-action-button student-highlight-button">Ask about highlighted text</button>
+              </div>
               <div id="studentQuestionEnergy" class="student-energy" role="status" aria-live="polite" hidden>
                 <div class="student-energy-top">
                   <strong>Question Energy</strong>
@@ -983,7 +1129,49 @@
                 <span id="studentQuestionEnergyHelper" class="student-energy-helper"></span>
               </div>
             </form>
-          </section>
+
+            <div class="student-console-response" aria-labelledby="studentLatestResponseTitle">
+              <div class="panel-title-row">
+                <h2 id="studentLatestResponseTitle">Latest Response</h2>
+                <div class="student-answer-actions">
+                  <span id="studentRouteInfo" class="stream-status">No route yet</span>
+                  <button type="button" id="studentCopyAnswerButton" class="panel-action-button">Copy Answer</button>
+                  <button type="button" id="studentClearButton" class="panel-action-button">Clear</button>
+                </div>
+              </div>
+              <div class="student-response-wrap">
+                <div id="studentResponse" class="response-text student-response">Ask a question to see the response here.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="student-history-panel" aria-labelledby="studentHistoryTitle">
+            <div class="panel-title-row">
+              <h2 id="studentHistoryTitle">Chat History</h2>
+              <span id="studentHistoryCount" class="stream-status">0 messages</span>
+            </div>
+            <div id="studentHistory" class="student-history" aria-live="polite" aria-label="Chat history">
+              <p class="student-session">Your questions and answers will stay here during this page session.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="student-workspace">
+        <aside class="student-action-column" aria-label="Student actions">
+          <button
+            type="button"
+            id="studentPointButton"
+            class="student-point-button"
+            aria-label="What’s the point?"
+            title="What’s the point?"
+          >
+            <span class="student-point-base" aria-hidden="true"></span>
+            <span class="student-point-cap">Point?</span>
+          </button>
+        </aside>
+
+        <div class="student-main-stack">
 
           <section id="studentTutorCard" class="panel student-panel student-tutor-card" aria-labelledby="studentTutorTitle" hidden>
             <div class="student-tutor-meta">
@@ -1000,11 +1188,11 @@
                   <strong>Solving for</strong>
                   <span id="studentTutorSolveFor"></span>
                 </div>
-                <div class="student-tutor-detail">
+                <div class="student-tutor-detail student-tutor-formula">
                   <strong>Formula</strong>
                   <span id="studentTutorFormula"></span>
                 </div>
-                <div class="student-tutor-detail">
+                <div class="student-tutor-detail student-tutor-known">
                   <strong>Known values</strong>
                   <dl id="studentTutorKnownValues" class="student-tutor-known-values"></dl>
                 </div>
@@ -1012,15 +1200,15 @@
                   <strong>Current step</strong>
                   <p id="studentTutorPrompt"></p>
                 </div>
-                <div class="student-tutor-detail">
+                <div class="student-tutor-detail student-tutor-substitution">
                   <strong>Substitution</strong>
                   <span id="studentTutorSubstitution"></span>
                 </div>
-                <div id="studentTutorHintWrap" class="student-tutor-detail" hidden>
+                <div id="studentTutorHintWrap" class="student-tutor-detail student-tutor-hint" hidden>
                   <strong>Hint</strong>
                   <p id="studentTutorHint"></p>
                 </div>
-                <div id="studentTutorFinalWrap" class="student-tutor-detail" hidden>
+                <div id="studentTutorFinalWrap" class="student-tutor-detail student-tutor-answer" hidden>
                   <strong>Answer</strong>
                   <span id="studentTutorFinal"></span>
                 </div>
@@ -1056,46 +1244,7 @@
               <button type="button" class="panel-action-button" data-tutor-action="stop">Stop</button>
             </div>
           </section>
-
-          <section class="panel student-panel student-response-panel">
-            <div class="panel-title-row">
-              <h2>Response</h2>
-              <div class="student-answer-actions">
-                <span id="studentRouteInfo" class="stream-status">No route yet</span>
-                <button type="button" id="studentCopyAnswerButton" class="panel-action-button">Copy Answer</button>
-                <button type="button" id="studentClearButton" class="panel-action-button">Clear</button>
-              </div>
-            </div>
-            <div class="student-response-wrap">
-              <div id="studentResponse" class="response-text student-response">Ask a question to see the response here.</div>
-            </div>
-          </section>
-
-          <section class="panel student-panel student-history-panel" aria-labelledby="studentHistoryTitle">
-            <div class="panel-title-row">
-              <h2 id="studentHistoryTitle">Chat History</h2>
-              <span id="studentHistoryCount" class="stream-status">0 messages</span>
-            </div>
-            <div id="studentHistory" class="student-history" aria-live="polite" aria-label="Chat history">
-              <p class="student-session">Your questions and answers will stay here during this page session.</p>
-            </div>
-          </section>
         </div>
-
-        <aside class="student-action-column" aria-label="Student actions">
-          <button type="submit" form="studentMessageForm" id="studentSendButton" class="student-action-button student-send-button">Send</button>
-          <button type="button" id="studentAskHighlightButton" class="student-action-button student-highlight-button">Ask about highlighted text</button>
-          <button
-            type="button"
-            id="studentPointButton"
-            class="student-point-button"
-            aria-label="What’s the point?"
-            title="What’s the point?"
-          >
-            <span class="student-point-base" aria-hidden="true"></span>
-            <span class="student-point-cap">Point?</span>
-          </button>
-        </aside>
       </div>
     </main>
     <div id="studentTutorFireworks" class="student-fireworks" aria-hidden="true" hidden>
