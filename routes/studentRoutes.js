@@ -208,7 +208,7 @@ function registerStudentRoutes(app, {
       if (hub.currentTutorProblem) {
         const previousTutorProblem = hub.currentTutorProblem;
         const previousTutorIsMotionForceKnowledge = isMotionForceKnowledgeTutorProblem(previousTutorProblem);
-        if (isLikelyNewQuestionDuringTutor(message)) {
+        if (isLikelyNewQuestionDuringTutor(message) && !isTutorCorrectionDuringTutor(message, previousTutorProblem)) {
           const result = await answerStudentMessage(message, {
             intent,
             lastAnsweredPrompt: lastAnsweredContext.prompt,
@@ -646,6 +646,27 @@ function isLikelyNewQuestionDuringTutor(message) {
 
   if (/^(?:what|which)\s+law\s+is\s+this$/.test(text)) return true;
   if (/\b(?:what|why|which|how)\b/.test(text) && /\b(?:inertia|friction|slope|graph|distance\s+time|distance\s+versus\s+time|flat\s+line|law|paper|crumpled|air\s+resistance|force|motion|velocity|acceleration)\b/.test(text)) {
+    return true;
+  }
+
+  return false;
+}
+
+function isTutorCorrectionDuringTutor(message, currentTutorProblem) {
+  if (!currentTutorProblem) return false;
+
+  const text = String(message || '')
+    .toLowerCase()
+    .replace(/[’']/g, '')
+    .replace(/[?.!,;:]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!text) return false;
+  if (/\blook\s+at\s+(?:the|this)?\s*problem\b/.test(text)) return true;
+  if (/^(?:yes\s+)?(?:it\s+is|that\s+is|thats)\s+(?:right|correct)\b/.test(text)) return true;
+  if (/^(?:yes\s+)?it\s+is\s+look\b/.test(text)) return true;
+  if (/^no\b/.test(text) && /\b(?:is|equals?|=)\s+(?:the\s+)?(?:distance|time|speed|mass|volume|density|force|acceleration|current|resistance|voltage|power|energy|work|momentum|wavelength|frequency)\b/.test(text)) {
     return true;
   }
 

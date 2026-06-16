@@ -201,6 +201,7 @@ async function main() {
   await testCircuitDiagramYesNoFollowUp();
   await testAmbiguousVocabNumberedContinuation();
   await testExpandedFormulaTutorFlows();
+  await testGuidedFormulaTutorUnitConversionAndCorrections();
   await testGuidedNetForceTutorFlows();
   await testPhase9CNetForceTutorRegression();
   await testExpandedFormulaTutorIsolation();
@@ -415,6 +416,20 @@ async function testExpandedFormulaTutorFlows() {
       { message: '72 m', match: /time/i },
       { message: '12 s', match: /What is 72 \/ 12\?/i },
       { message: '6', match: /6 m\/s/i }
+    ]
+  });
+
+  await runGuidedFormulaFlow({
+    name: 'speed-km-min',
+    question: 'Suppose you ran 2 km in 10 min. With what speed did you run?',
+    finalAnswer: '0.2 km/min',
+    formulaId: 'speed_distance_time',
+    steps: [
+      { message: 'speed', match: /Which formula should we use\?/i },
+      { message: '1', match: /distance/i },
+      { message: '2 km', match: /time/i },
+      { message: '10 min', match: /What is 2 \/ 10\?/i },
+      { message: '0.2', match: /0\.2 km\/min/i }
     ]
   });
 
@@ -709,6 +724,81 @@ async function testExactParallelTutorDisabledDirectAnswer() {
     disabled.studentSessions[disabledCreate.body.sessionId].anonymousHubs['parallel-resistance-current-dynamic-direct'].currentTutorProblem,
     null
   );
+}
+
+async function testGuidedFormulaTutorUnitConversionAndCorrections() {
+  const lightningQuestion = 'Sound travels at 343 m/s through dry air. If a lightning bolt strikes the ground 2 km away from you, how long will it take for the sound to reach you?';
+
+  for (const answer of ['2', '2 km', '2000 m']) {
+    const { request, studentSessions } = createRouteHarness();
+    const create = await request('POST', '/api/profile/create-student-session');
+    assert.equal(create.statusCode, 201);
+    const classSessionId = create.body.sessionId;
+    const studentHubId = `lightning-${answer.replace(/\s+/g, '-')}`;
+
+    const start = await request('POST', '/api/student/message', {
+      sessionId: classSessionId,
+      studentHubId,
+      message: lightningQuestion
+    });
+    assert.equal(start.statusCode, 200);
+    assert.equal(start.body.routeType, 'formula_tutor');
+    assert.equal(start.body.tutor.solveFor, 'time');
+
+    await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: 'time' });
+    await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: '1' });
+
+    const distance = await request('POST', '/api/student/message', {
+      sessionId: classSessionId,
+      studentHubId,
+      message: answer
+    });
+    assert.equal(distance.statusCode, 200);
+    assert.equal(distance.body.routeType, 'formula_tutor');
+    assert.match(distance.body.response, /Correct\./i);
+    assert.match(distance.body.response, /convert 2 km to 2000 m/i);
+    assert.match(distance.body.response, /What number should go in for speed\?/i);
+    assert.equal(studentSessions[classSessionId].anonymousHubs[studentHubId].currentTutorProblem.currentStepIndex, 3);
+
+    const speed = await request('POST', '/api/student/message', {
+      sessionId: classSessionId,
+      studentHubId,
+      message: '343 m/s'
+    });
+    assert.equal(speed.statusCode, 200);
+    assert.match(speed.body.response, /What is 2000 \/ 343\?/i);
+
+    const calculation = await request('POST', '/api/student/message', {
+      sessionId: classSessionId,
+      studentHubId,
+      message: '5.83'
+    });
+    assert.equal(calculation.statusCode, 200);
+    assert.equal(calculation.body.tutor.completed, true);
+    assert.match(calculation.body.response, /time = 5\.83 s/i);
+  }
+
+  const { request, studentSessions } = createRouteHarness();
+  const create = await request('POST', '/api/profile/create-student-session');
+  assert.equal(create.statusCode, 201);
+  const classSessionId = create.body.sessionId;
+  const studentHubId = 'lightning-correction';
+
+  await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: lightningQuestion });
+  await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: 'time' });
+  await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: '1' });
+
+  const correction = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId,
+    message: `no, 2 km is the distance. look at the problem: ${lightningQuestion}`
+  });
+  assert.equal(correction.statusCode, 200);
+  assert.equal(correction.body.routeType, 'formula_tutor');
+  assert.doesNotMatch(correction.body.response, /starting a new problem/i);
+  assert.match(correction.body.response, /Correct\. The distance is 2 km\. Since speed is in m\/s, convert 2 km to 2000 m\./i);
+  assert.match(correction.body.response, /What number should go in for speed\?/i);
+  assert.equal(studentSessions[classSessionId].anonymousHubs[studentHubId].currentTutorProblem.originalQuestion, lightningQuestion);
 }
 
 async function testGuidedNetForceTutorFlows() {

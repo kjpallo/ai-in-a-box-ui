@@ -782,6 +782,14 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'unit 1 soccer distance and displacement turns around',
+    question: 'If a soccer player runs 50 m north, then turns around and chases 20 m south, what is his distance and displacement?',
+    type: 'science_formula',
+    includes: ['Distance adds the path.', 'distance = 50 m + 20 m = 70 m', 'Displacement is start-to-finish.', '50 m north - 20 m south = 30 m north', 'Answer: distance = 70 m; displacement = 30 m north'],
+    excludes: ['Phase 6A', 'only handles one-dimensional displacement'],
+    aiAllowed: false
+  },
+  {
     name: 'unit 1 delivery truck 2d distance and displacement',
     question: 'A delivery truck drives 4 mi west then 6 mi north. Find the distance and displacement.',
     type: 'science_formula',
@@ -790,8 +798,24 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'unit 1 delivery truck right turn 2d distance and displacement',
+    question: 'A delivery truck drives 4 miles west before turning right and driving 6 miles north. What are the distance and displacement?',
+    type: 'science_formula',
+    includes: ['distance = 4 mi + 6 mi = 10 mi', 'x = 4 mi west', 'y = 6 mi north', 'd = √(4² + 6²)', 'displacement = about 7.21 mi NW', 'Answer: distance = 10 mi; displacement = about 7.21 mi NW'],
+    excludes: ['Phase 6A', 'only handles one-dimensional displacement'],
+    aiAllowed: false
+  },
+  {
     name: 'unit 1 around block closed loop distance and displacement',
     question: 'PJ walks 0.35 mi around the block and returns back to the starting doorstep. What are distance and displacement?',
+    type: 'science_formula',
+    includes: ['Distance adds the path.', 'distance = 0.35 mi', 'Displacement is start-to-finish.', 'displacement = 0 mi', 'Answer: distance = 0.35 mi; displacement = 0 mi'],
+    excludes: ['Phase 6A', 'only handles one-dimensional displacement'],
+    aiAllowed: false
+  },
+  {
+    name: 'unit 1 around block rides later closed loop distance and displacement',
+    question: 'PJ rides around the block and returns to his doorstep 0.35 miles later. What are his distance and displacement?',
     type: 'science_formula',
     includes: ['Distance adds the path.', 'distance = 0.35 mi', 'Displacement is start-to-finish.', 'displacement = 0 mi', 'Answer: distance = 0.35 mi; displacement = 0 mi'],
     excludes: ['Phase 6A', 'only handles one-dimensional displacement'],
