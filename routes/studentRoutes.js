@@ -3,7 +3,7 @@ const {
   answerFormulaTutorStep,
   buildFormulaTutorMetadata,
   buildFormulaTutorPrompt,
-  canStartFormulaTutor,
+  getFormulaTutorDecisionDebug,
   isLikelyNewFormulaQuestionDuringTutor,
   startFormulaTutor
 } = require('../lib/tutor/formulaTutor');
@@ -218,17 +218,26 @@ function registerStudentRoutes(app, {
             recentMessages: contextMessages
           });
 
-          if (controls.studentGuidedFormulaTutoringEnabled && canStartFormulaTutor(result.questionRoute)) {
+          const formulaTutorDecision = getFormulaTutorDecisionDebug(result, { controls });
+
+          if (formulaTutorDecision.guidedFormulaTutoringEnabled && formulaTutorDecision.canStartFormulaTutor) {
             hub.currentTutorProblem = startFormulaTutor({
               questionRoute: result.questionRoute,
               originalQuestion: message
             });
+            const startedFormulaTutorDecision = getFormulaTutorDecisionDebug(result, {
+              controls,
+              startedTutor: true
+            });
+            logFormulaTutorDecisionDebug('student_message_new_tutor_question_started', startedFormulaTutorDecision);
             const response = [
               'It looks like you are starting a new problem. I’ll start a new Guided Formula Tutor problem for this question.',
               '',
               buildFormulaTutorPrompt(hub.currentTutorProblem)
             ].join('\n');
-            const tutorMetadata = buildFormulaTutorMetadata(hub.currentTutorProblem);
+            const tutorMetadata = buildFormulaTutorMetadata(hub.currentTutorProblem, {
+              latestStudentReply: message
+            });
             const entry = appendStudentHubEntry({
               session,
               hub,
@@ -255,7 +264,8 @@ function registerStudentRoutes(app, {
                   active: true,
                   restartedWithNewQuestion: true,
                   previousQuestion: previousTutorProblem.originalQuestion || ''
-                }
+                },
+                formulaTutorDecision: maybeFormulaTutorDecisionDebug(startedFormulaTutorDecision)
               }
             });
 
@@ -320,6 +330,7 @@ function registerStudentRoutes(app, {
 
           hub.currentTutorProblem = null;
           hub.pendingClarification = result.pendingClarification || null;
+          logFormulaTutorDecisionDebug('student_message_new_tutor_question_bypassed', formulaTutorDecision);
           const entry = appendStudentHubEntry({
             session,
             hub,
@@ -345,6 +356,7 @@ function registerStudentRoutes(app, {
                 stoppedForNewQuestion: true,
                 previousQuestion: previousTutorProblem.originalQuestion || ''
               },
+              formulaTutorDecision: maybeFormulaTutorDecisionDebug(formulaTutorDecision),
               previousTutorType: previousTutorIsMotionForceKnowledge ? 'motion_force_knowledge' : 'formula'
             }
           });
@@ -410,9 +422,14 @@ function registerStudentRoutes(app, {
 
         const tutorResult = answerFormulaTutorStep(previousTutorProblem, message);
         hub.currentTutorProblem = tutorResult.currentTutorProblem;
+        const tutorProblemForResponse = hub.currentTutorProblem || tutorResult.completedTutorProblem || previousTutorProblem;
         const tutorMetadata = buildFormulaTutorMetadata(
-          hub.currentTutorProblem || previousTutorProblem,
-          { completed: tutorResult.completed, stopped: tutorResult.stopped }
+          tutorProblemForResponse,
+          {
+            completed: tutorResult.completed,
+            stopped: tutorResult.stopped,
+            latestStudentReply: message
+          }
         );
 
         const entry = appendStudentHubEntry({
@@ -430,7 +447,7 @@ function registerStudentRoutes(app, {
 
         logCompletedInteraction({
           message,
-          questionRoute: makeFormulaTutorRoute(hub.currentTutorProblem || previousTutorProblem, entry),
+          questionRoute: makeFormulaTutorRoute(tutorProblemForResponse, entry),
           answerGiven: tutorResult.response,
           source: 'student',
           sessionId,
@@ -465,14 +482,22 @@ function registerStudentRoutes(app, {
         currentStandardId: findLastStandardIdForCurrentContext(contextMessages),
         recentMessages: contextMessages
       });
+      const formulaTutorDecision = getFormulaTutorDecisionDebug(result, { controls });
       // Starting a guided tutor also bypasses energy; normal student questions still spend energy below.
-      if (controls.studentGuidedFormulaTutoringEnabled && canStartFormulaTutor(result.questionRoute)) {
+      if (formulaTutorDecision.guidedFormulaTutoringEnabled && formulaTutorDecision.canStartFormulaTutor) {
         hub.currentTutorProblem = startFormulaTutor({
           questionRoute: result.questionRoute,
           originalQuestion: message
         });
+        const startedFormulaTutorDecision = getFormulaTutorDecisionDebug(result, {
+          controls,
+          startedTutor: true
+        });
+        logFormulaTutorDecisionDebug('student_message_started', startedFormulaTutorDecision);
         const response = buildFormulaTutorPrompt(hub.currentTutorProblem);
-        const tutorMetadata = buildFormulaTutorMetadata(hub.currentTutorProblem);
+        const tutorMetadata = buildFormulaTutorMetadata(hub.currentTutorProblem, {
+          latestStudentReply: message
+        });
         const entry = appendStudentHubEntry({
           session,
           hub,
@@ -495,7 +520,8 @@ function registerStudentRoutes(app, {
           debug: {
             className: session.className || '',
             studentHubId,
-            originalRouteType: result.routeType
+            originalRouteType: result.routeType,
+            formulaTutorDecision: maybeFormulaTutorDecisionDebug(startedFormulaTutorDecision)
           }
         });
 
@@ -550,6 +576,8 @@ function registerStudentRoutes(app, {
         });
       }
 
+      logFormulaTutorDecisionDebug('student_message_bypassed', formulaTutorDecision);
+
       const consumed = consumeStudentQuestionEnergy({
         controls,
         questionRateLimiter,
@@ -591,7 +619,8 @@ function registerStudentRoutes(app, {
         sessionId,
         debug: {
           className: session.className || '',
-          studentHubId
+          studentHubId,
+          formulaTutorDecision: maybeFormulaTutorDecisionDebug(formulaTutorDecision)
         }
       });
 
@@ -624,6 +653,22 @@ function normalizeStudentControls(value = {}) {
       : true,
     studentQuestionsPerMinute: normalizeQuestionLimit(controls.studentQuestionsPerMinute)
   };
+}
+
+function logFormulaTutorDecisionDebug(context, decision) {
+  if (!isFormulaTutorDebugEnabled()) return;
+  console.log('[formula-tutor-debug]', JSON.stringify({
+    context,
+    ...decision
+  }));
+}
+
+function maybeFormulaTutorDecisionDebug(decision) {
+  return isFormulaTutorDebugEnabled() ? decision : undefined;
+}
+
+function isFormulaTutorDebugEnabled() {
+  return process.env.FORMULA_TUTOR_DEBUG === '1';
 }
 
 function isLikelyNewQuestionDuringTutor(message) {
