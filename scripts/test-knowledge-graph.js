@@ -1,4 +1,5 @@
 const assert = require('node:assert/strict');
+const path = require('node:path');
 
 const {
   buildKnowledgeGraph,
@@ -6,9 +7,22 @@ const {
   findGraphContext,
   normalizeGraphTerm
 } = require('../lib/knowledge/knowledgeGraph');
+const {
+  findRelevantKnowledge,
+  loadTeacherKnowledge
+} = require('../lib/knowledge/teacherKnowledge');
+const { createQuestionAnswerService } = require('../lib/server/questionAnswerService');
+const { routeStudentQuestion } = require('../lib/router/questionRouter');
+const {
+  buildFormulaTutorPrompt,
+  canStartFormulaTutor,
+  startFormulaTutor
+} = require('../lib/tutor/formulaTutor');
 const motionForceKnowledge = require('../lib/knowledge/physics/motion-force');
 const teacherFacts = require('../knowledge/teacher_facts.json');
 
+const teacherFactsPath = path.join(__dirname, '..', 'knowledge', 'teacher_facts.json');
+const teacherKnowledge = loadTeacherKnowledge(teacherFactsPath);
 const graph = buildKnowledgeGraph([
   {
     pack: {
@@ -24,7 +38,7 @@ const graph = buildKnowledgeGraph([
     packId: 'motion-force-local',
     title: 'Motion and Force Local Knowledge'
   }
-], teacherFacts.items);
+], teacherKnowledge.length ? teacherKnowledge : teacherFacts.items);
 
 assert.ok(graph, 'graph should build');
 assert.ok(Object.keys(graph.nodes).length > 0, 'graph should contain nodes');
@@ -88,6 +102,77 @@ assert.ok(
 assert.ok(
   displacementVelocityContext.possiblePaths.length > 0,
   'displacement/velocity context should include a possible path'
+);
+
+const questionAnswer = createQuestionAnswerService({
+  teacherFactsFile: teacherFactsPath,
+  maxKnowledgeItems: 8,
+  loadTeacherKnowledge: () => teacherKnowledge,
+  loadKnowledgeGraph: () => graph,
+  findRelevantKnowledge,
+  routeStudentQuestion,
+  ollama: {
+    buildTeacherPrompt: () => '',
+    stream: async () => {}
+  },
+  logProblem: () => {},
+  logStudentInteraction: () => {},
+  initialTeacherKnowledge: teacherKnowledge,
+  initialKnowledgeGraph: graph
+});
+
+const speedVelocityRoute = questionAnswer.routeMessage('How are speed and velocity related?').questionRoute;
+assert.ok(speedVelocityRoute.graphContext, 'route metadata should include graphContext for speed/velocity');
+assert.equal(speedVelocityRoute.graphContext.aiAllowed, false, 'graph context must not allow AI fallback');
+assert.ok(speedVelocityRoute.public.graphContext, 'public route metadata should include graphContext');
+assert.ok(
+  includesNodeLabel(speedVelocityRoute.graphContext.matchedNodes, 'speed'),
+  'route graphContext should include matched speed node'
+);
+assert.ok(
+  includesNodeLabel(speedVelocityRoute.graphContext.matchedNodes, 'velocity'),
+  'route graphContext should include matched velocity node'
+);
+
+const displacementVelocityRoute = questionAnswer.routeMessage('How are displacement and velocity connected?').questionRoute;
+assert.ok(displacementVelocityRoute.graphContext, 'route metadata should include graphContext for displacement/velocity');
+assert.equal(displacementVelocityRoute.graphContext.aiAllowed, false, 'displacement/velocity graph context must not allow AI');
+assert.ok(
+  includesNodeLabel(displacementVelocityRoute.graphContext.matchedNodes, 'displacement'),
+  'route graphContext should include matched displacement node'
+);
+assert.ok(
+  includesNodeLabel(displacementVelocityRoute.graphContext.matchedNodes, 'velocity'),
+  'route graphContext should include matched velocity node'
+);
+assert.ok(
+  displacementVelocityRoute.graphContext.possiblePaths.length > 0,
+  'route graphContext should include a displacement/velocity path'
+);
+
+const formulaQuestion = 'A car travels 100 m in 20 s. What is its speed?';
+const plainFormulaRoute = routeStudentQuestion(formulaQuestion, findRelevantKnowledge(formulaQuestion, teacherKnowledge, 8));
+const graphFormulaRoute = questionAnswer.routeMessage(formulaQuestion).questionRoute;
+assert.equal(graphFormulaRoute.type, 'science_formula', 'formula question should still route as science_formula');
+assert.equal(graphFormulaRoute.confidence, plainFormulaRoute.confidence, 'formula route confidence should be unchanged');
+assert.equal(graphFormulaRoute.directAnswer, plainFormulaRoute.directAnswer, 'formula answer text should be unchanged');
+assert.deepEqual(graphFormulaRoute.public.formulaWork, plainFormulaRoute.public.formulaWork, 'public formula work should be unchanged');
+assert.equal(graphFormulaRoute.aiAllowed, false, 'formula route should keep aiAllowed false');
+
+assert.equal(canStartFormulaTutor(graphFormulaRoute), true, 'formula tutor should still be able to start');
+const plainTutorProblem = startFormulaTutor({
+  questionRoute: plainFormulaRoute,
+  originalQuestion: formulaQuestion
+});
+const graphTutorProblem = startFormulaTutor({
+  questionRoute: graphFormulaRoute,
+  originalQuestion: formulaQuestion
+});
+assert.deepEqual(graphTutorProblem, plainTutorProblem, 'graph metadata should not change formula tutor state');
+assert.equal(
+  buildFormulaTutorPrompt(graphTutorProblem),
+  buildFormulaTutorPrompt(plainTutorProblem),
+  'formula tutor should start with the same first prompt'
 );
 
 function findNodeByLabel(graph, label) {
