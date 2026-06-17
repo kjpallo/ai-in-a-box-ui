@@ -191,8 +191,9 @@ async function main() {
   await testElectricityVoltageCurrentClarification();
   await testPointFollowUpAfterDirectFormulaAnswer();
   await testActiveFormulaTutorStopsWhenDisabled();
-  await testActiveFormulaTutorNegativeFeedbackStopsCleanly();
+  await testActiveFormulaTutorAnswerRevealRequestsStayGuided();
   await testGuidedFormulaTutorActiveSessionControls();
+  await testFormulaTutorStateProgression();
   await testDistanceDisplacementDirectNoTutorAndFollowUp();
   await testGuidedFormulaTutorRequiredFormulaPaths();
   await testPhase6FormulaTutorCoverage();
@@ -768,14 +769,25 @@ async function testGuidedFormulaTutorUnitConversionAndCorrections() {
     assert.equal(speed.statusCode, 200);
     assert.match(speed.body.response, /What is 2000 \/ 343\?/i);
 
+    const calculationMessage = answer === '2' ? '2000 / 343' : '5.83';
     const calculation = await request('POST', '/api/student/message', {
       sessionId: classSessionId,
       studentHubId,
-      message: '5.83'
+      message: calculationMessage
     });
     assert.equal(calculation.statusCode, 200);
     assert.equal(calculation.body.tutor.completed, true);
     assert.match(calculation.body.response, /time = 5\.83 s/i);
+    assert.equal(calculation.body.tutor.work.originalQuestion, lightningQuestion);
+    assert.equal(calculation.body.tutor.work.solveFor, 'time');
+    assert.equal(calculation.body.tutor.work.formula, 'time = distance / speed');
+    assert.deepEqual(
+      calculation.body.tutor.work.knownValues.map((value) => value.display),
+      ['2 km = 2000 m', '343 m/s']
+    );
+    assert.equal(calculation.body.tutor.work.substitution, 'time = 2000 / 343');
+    assert.equal(calculation.body.tutor.work.calculatorCheck.display, '2000 ÷ 343 = 5.83');
+    assert.equal(calculation.body.tutor.work.finalAnswer, 'time = 5.83 s');
   }
 
   const { request, studentSessions } = createRouteHarness();
@@ -1650,9 +1662,15 @@ async function testFormulaTutorBypassesQuestionEnergy() {
   assert.equal(forceTutorStart.body.tutor.active, true);
   assert.equal(forceTutorStart.body.tutor.currentStepIndex, 0);
   assert.equal(forceTutorStart.body.tutor.work.originalQuestion, forceQuestion);
-  assert.equal(forceTutorStart.body.tutor.work.solveFor, '');
-  assert.equal(forceTutorStart.body.tutor.work.formula, '');
-  assert.deepEqual(forceTutorStart.body.tutor.work.knownValues, []);
+  assert.equal(forceTutorStart.body.tutor.work.solveFor, 'force');
+  assert.equal(forceTutorStart.body.tutor.work.formula, 'F = m × a');
+  assert.deepEqual(forceTutorStart.body.tutor.work.knownValues, [
+    { label: 'mass', symbol: 'm', display: '10 kg' },
+    { label: 'acceleration', symbol: 'a', display: '3 m/s²' }
+  ]);
+  assert.equal(forceTutorStart.body.tutor.work.calculatorCheck, null);
+  assert.equal(forceTutorStart.body.tutor.work.finalAnswer, '');
+  assert.equal(forceTutorStart.body.tutor.work.isComplete, false);
   assert.doesNotMatch(forceTutorStart.body.response, /30 N/i);
   assert.ok(studentSessions[classSessionId].anonymousHubs['student-a'].currentTutorProblem);
 
@@ -1664,11 +1682,17 @@ async function testFormulaTutorBypassesQuestionEnergy() {
   assert.equal(identifyTarget.statusCode, 200);
   assert.equal(identifyTarget.body.rateLimit.remainingWhole, 0);
   assert.equal(identifyTarget.body.tutor.currentStepIndex, 1);
-  assert.deepEqual(identifyTarget.body.tutor.knownValues, []);
+  assert.deepEqual(identifyTarget.body.tutor.knownValues, [
+    { label: 'mass', symbol: 'm', display: '10 kg' },
+    { label: 'acceleration', symbol: 'a', display: '3 m/s²' }
+  ]);
   assert.equal(identifyTarget.body.tutor.work.originalQuestion, forceQuestion);
   assert.equal(identifyTarget.body.tutor.work.solveFor, 'force');
-  assert.equal(identifyTarget.body.tutor.work.formula, '');
-  assert.deepEqual(identifyTarget.body.tutor.work.knownValues, []);
+  assert.equal(identifyTarget.body.tutor.work.formula, 'F = m × a');
+  assert.deepEqual(identifyTarget.body.tutor.work.knownValues, [
+    { label: 'mass', symbol: 'm', display: '10 kg' },
+    { label: 'acceleration', symbol: 'a', display: '3 m/s²' }
+  ]);
 
   const chooseFormula = await request('POST', '/api/student/message', {
     sessionId: classSessionId,
@@ -1678,10 +1702,16 @@ async function testFormulaTutorBypassesQuestionEnergy() {
   assert.equal(chooseFormula.statusCode, 200);
   assert.equal(chooseFormula.body.rateLimit.remainingWhole, 0);
   assert.equal(chooseFormula.body.tutor.currentStepIndex, 2);
-  assert.deepEqual(chooseFormula.body.tutor.knownValues, []);
+  assert.deepEqual(chooseFormula.body.tutor.knownValues, [
+    { label: 'mass', symbol: 'm', display: '10 kg' },
+    { label: 'acceleration', symbol: 'a', display: '3 m/s²' }
+  ]);
   assert.equal(chooseFormula.body.tutor.work.solveFor, 'force');
   assert.equal(chooseFormula.body.tutor.work.formula, 'F = m × a');
-  assert.deepEqual(chooseFormula.body.tutor.work.knownValues, []);
+  assert.deepEqual(chooseFormula.body.tutor.work.knownValues, [
+    { label: 'mass', symbol: 'm', display: '10 kg' },
+    { label: 'acceleration', symbol: 'a', display: '3 m/s²' }
+  ]);
 
   const mass = await request('POST', '/api/student/message', {
     sessionId: classSessionId,
@@ -1691,10 +1721,12 @@ async function testFormulaTutorBypassesQuestionEnergy() {
   assert.equal(mass.statusCode, 200);
   assert.equal(mass.body.rateLimit.remainingWhole, 0);
   assert.deepEqual(mass.body.tutor.knownValues, [
-    { label: 'mass', symbol: 'm', display: '10 kg' }
+    { label: 'mass', symbol: 'm', display: '10 kg' },
+    { label: 'acceleration', symbol: 'a', display: '3 m/s²' }
   ]);
   assert.deepEqual(mass.body.tutor.work.knownValues, [
-    { label: 'mass', symbol: 'm', display: '10 kg' }
+    { label: 'mass', symbol: 'm', display: '10 kg' },
+    { label: 'acceleration', symbol: 'a', display: '3 m/s²' }
   ]);
 
   const acceleration = await request('POST', '/api/student/message', {
@@ -2559,7 +2591,7 @@ async function testActiveFormulaTutorStopsWhenDisabled() {
   assert.equal(studentSessions[classSessionId].anonymousHubs['student-a'].currentTutorProblem, null);
 }
 
-async function testActiveFormulaTutorNegativeFeedbackStopsCleanly() {
+async function testActiveFormulaTutorAnswerRevealRequestsStayGuided() {
   const { request, studentSessions } = createRouteHarness();
 
   const create = await request('POST', '/api/profile/create-student-session');
@@ -2579,16 +2611,32 @@ async function testActiveFormulaTutorNegativeFeedbackStopsCleanly() {
   const feedback = await request('POST', '/api/student/message', {
     sessionId: classSessionId,
     studentHubId: 'student-a',
-    message: "I don't like this"
+    message: 'tell me the answer'
   });
   assert.equal(feedback.statusCode, 200);
   assert.equal(feedback.body.routeType, 'formula_tutor');
   assert.doesNotMatch(feedback.body.response, /Not quite/i);
-  assert.match(feedback.body.response, /stop the Guided Formula Tutor/i);
-  assert.match(feedback.body.response, /force = 30 N/i);
-  assert.equal(feedback.body.tutor.active, false);
-  assert.equal(feedback.body.tutor.stopped, true);
-  assert.equal(studentSessions[classSessionId].anonymousHubs['student-a'].currentTutorProblem, null);
+  assert.doesNotMatch(feedback.body.response, /force = 30 N/i);
+  assert.match(feedback.body.response, /will not give the final answer/i);
+  assert.match(feedback.body.response, /Step 1 of 5/i);
+  assert.match(feedback.body.response, /What variable are we solving for\?/i);
+  assert.match(feedback.body.response, /1\. force/i);
+  assert.equal(feedback.body.tutor.active, true);
+  assert.equal(feedback.body.tutor.stopped, undefined);
+  assert.equal(feedback.body.tutor.currentStepIndex, 0);
+  assert.ok(studentSessions[classSessionId].anonymousHubs['student-a'].currentTutorProblem);
+
+  const stopAndExplain = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'student-a',
+    message: 'stop and explain'
+  });
+  assert.equal(stopAndExplain.statusCode, 200);
+  assert.equal(stopAndExplain.body.routeType, 'formula_tutor');
+  assert.doesNotMatch(stopAndExplain.body.response, /force = 30 N/i);
+  assert.match(stopAndExplain.body.response, /will not give the final answer/i);
+  assert.equal(stopAndExplain.body.tutor.active, true);
+  assert.equal(stopAndExplain.body.tutor.currentStepIndex, 0);
 }
 
 async function testGuidedFormulaTutorActiveSessionControls() {
@@ -2722,46 +2770,607 @@ async function testGuidedFormulaTutorActiveSessionControls() {
   assert.doesNotMatch(newQuestion.body.response, /^Not quite yet\./i);
 }
 
-async function testDistanceDisplacementDirectNoTutorAndFollowUp() {
+async function testFormulaTutorStateProgression() {
   const { request, studentSessions } = createRouteHarness();
   const create = await request('POST', '/api/profile/create-student-session');
   assert.equal(create.statusCode, 201);
   const classSessionId = create.body.sessionId;
+  const studentHubId = 'speed-state-progression';
+  const question = 'Suppose you ran 2 km in 10 min. With what speed did you run?';
 
+  const start = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId,
+    message: question
+  });
+  assert.equal(start.statusCode, 200);
+  assert.equal(start.body.routeType, 'formula_tutor');
+  assert.equal(start.body.tutor.active, true);
+  assert.match(start.body.response, /Step 1 of 5/i);
+  assert.match(start.body.response, /What variable are we solving for\?/i);
+  assert.match(start.body.response, /1\. speed/i);
+  assert.match(start.body.response, /2\. distance/i);
+  assert.match(start.body.response, /3\. time/i);
+  assert.equal(start.body.tutor.work.originalQuestion, question);
+  assert.equal(start.body.tutor.work.solveFor, 'speed');
+  assert.equal(start.body.tutor.work.formula, 'speed = distance / time');
+  assert.equal(start.body.tutor.work.currentStep.id, 'identify_solve_target');
+  assert.equal(start.body.tutor.work.stepNumber, 1);
+  assert.equal(start.body.tutor.work.totalSteps, 5);
+  assert.equal(start.body.tutor.work.latestStudentReply, question);
+  assert.deepEqual(
+    start.body.tutor.work.knownValues.map((value) => value.display),
+    ['2 km', '10 minutes']
+  );
+  assert.equal(start.body.tutor.work.substitution, '');
+  assert.equal(start.body.tutor.work.calculatorCheck, null);
+  assert.equal(start.body.tutor.work.finalAnswer, '');
+  assert.equal(start.body.tutor.work.isComplete, false);
+
+  const help = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId,
+    message: 'help'
+  });
+  assert.equal(help.statusCode, 200);
+  assert.equal(help.body.routeType, 'formula_tutor');
+  assert.equal(help.body.tutor.currentStepIndex, 0);
+  assert.match(help.body.response, /typed worksheet/i);
+  assert.match(help.body.response, /Step 1 of 5/i);
+  assert.match(help.body.response, /What variable are we solving for\?/i);
+  assert.match(help.body.response, /1\. speed/i);
+  assert.doesNotMatch(help.body.response, /^Not quite yet\./i);
+
+  const variable = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId,
+    message: 'speed'
+  });
+  assert.equal(variable.statusCode, 200);
+  assert.equal(variable.body.tutor.work.latestStudentReply, 'speed');
+  assert.equal(variable.body.tutor.work.stepNumber, 2);
+  assert.equal(variable.body.tutor.work.solveFor, 'speed');
+  assert.equal(variable.body.tutor.work.formula, 'speed = distance / time');
+
+  const formula = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId,
+    message: 's=d/t'
+  });
+  assert.equal(formula.statusCode, 200);
+  assert.equal(formula.body.tutor.work.stepNumber, 3);
+  assert.equal(formula.body.tutor.work.currentStep.id, 'identify_distance');
+  assert.equal(formula.body.tutor.work.formula, 'speed = distance / time');
+
+  const distance = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId,
+    message: '2 km'
+  });
+  assert.equal(distance.statusCode, 200);
+  assert.deepEqual(
+    distance.body.tutor.work.knownValues.map((value) => value.display),
+    ['2 km', '10 minutes']
+  );
+  assert.equal(distance.body.tutor.work.substitution, '');
+
+  const time = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId,
+    message: '10 min'
+  });
+  assert.equal(time.statusCode, 200);
+  assert.deepEqual(
+    time.body.tutor.work.knownValues.map((value) => value.display),
+    ['2 km', '10 minutes']
+  );
+  assert.equal(time.body.tutor.work.substitution, 'speed = 2 / 10');
+  assert.equal(time.body.tutor.work.calculatorCheck, null);
+  assert.equal(time.body.tutor.work.finalAnswer, '');
+
+  const solved = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId,
+    message: '.2'
+  });
+  assert.equal(solved.statusCode, 200);
+  assert.equal(solved.body.tutor.active, false);
+  assert.equal(solved.body.tutor.completed, true);
+  assert.equal(solved.body.tutor.work.isComplete, true);
+  assert.equal(solved.body.tutor.work.calculatorCheck.display, '2 ÷ 10 = 0.2');
+  assert.equal(solved.body.tutor.work.finalAnswer, 'speed = 0.2 km/min');
+  assert.match(solved.body.response, /speed = 0\.2 km\/min/i);
+  assert.equal(studentSessions[classSessionId].anonymousHubs[studentHubId].currentTutorProblem, null);
+}
+
+async function testDistanceDisplacementDirectNoTutorAndFollowUp() {
+  const enabled = createRouteHarness();
+  const { request, studentSessions } = enabled;
+  const create = await enabled.request('POST', '/api/profile/create-student-session');
+  assert.equal(create.statusCode, 201);
+  const classSessionId = create.body.sessionId;
+
+  const soccerQuestion = 'If a soccer player runs after his opponent 50 m north, then turns around and chases him 20 m south, what is his distance and displacement?';
   const soccerDisplacement = await request('POST', '/api/student/message', {
     sessionId: classSessionId,
     studentHubId: 'distance-displacement',
-    message: 'A soccer player runs 50 m north then 20 m south. What is the displacement?'
+    message: soccerQuestion
   });
   assert.equal(soccerDisplacement.statusCode, 200);
-  assert.equal(soccerDisplacement.body.routeType, 'science_formula');
-  assert.match(soccerDisplacement.body.response, /displacement = 30 m north/i);
-  assert.doesNotMatch(soccerDisplacement.body.response, /Phase 6A only handles one-dimensional displacement/i);
-  assert.equal(studentSessions[classSessionId].anonymousHubs['distance-displacement'].currentTutorProblem, null);
+  assert.equal(soccerDisplacement.body.routeType, 'formula_tutor');
+  assert.equal(soccerDisplacement.body.tutor.formulaId, 'distance_displacement');
+  assert.equal(soccerDisplacement.body.tutor.active, true);
+  assert.equal(soccerDisplacement.body.tutor.originalQuestion, soccerQuestion);
+  assert.equal(soccerDisplacement.body.tutor.currentStepIndex, 0);
+  assert.equal(soccerDisplacement.body.tutor.stepNumber, 1);
+  assert.equal(soccerDisplacement.body.tutor.totalSteps, 6);
+  assert.equal(soccerDisplacement.body.tutor.currentStep.prompt, 'What quantities are we solving for?');
+  assert.equal(soccerDisplacement.body.tutor.latestStudentReply, soccerQuestion);
+  assert.equal(soccerDisplacement.body.tutor.work.stepNumber, 1);
+  assert.equal(soccerDisplacement.body.tutor.work.totalSteps, 6);
+  assert.equal(soccerDisplacement.body.tutor.work.currentStep.prompt, 'What quantities are we solving for?');
+  assert.equal(soccerDisplacement.body.tutor.work.latestStudentReply, soccerQuestion);
+  assert.equal(soccerDisplacement.body.tutor.formula, 'distance = total path; displacement = final position - initial position');
+  assert.ok(studentSessions[classSessionId].anonymousHubs['distance-displacement'].currentTutorProblem);
+  assert.equal(studentSessions[classSessionId].anonymousHubs['distance-displacement'].currentTutorProblem.originalQuestion, soccerQuestion);
+  assert.equal(studentSessions[classSessionId].anonymousHubs['distance-displacement'].currentTutorProblem.steps.length, 6);
+  assert.deepEqual(
+    studentSessions[classSessionId].anonymousHubs['distance-displacement'].currentTutorProblem.steps
+      .filter((step) => step.type === 'calculation')
+      .map((step) => [step.id, step.prompt, step.expectedValue]),
+    [
+      ['calculate_distance', 'What is the total distance? Use distance = 50 + 20.', 70],
+      ['calculate_displacement', 'What is the displacement? Use displacement = 50 - 20.', 30]
+    ]
+  );
+  assert.equal(
+    studentSessions[classSessionId].anonymousHubs['distance-displacement'].currentTutorProblem.finalAnswer.display,
+    'distance = 70 m; displacement = 30 m north'
+  );
+  assert.doesNotMatch(soccerDisplacement.body.response, /distance = 70 m; displacement = 30 m north/i);
 
-  const distanceFollowUp = await request('POST', '/api/student/message', {
+  let soccerStep = await request('POST', '/api/student/message', {
     sessionId: classSessionId,
     studentHubId: 'distance-displacement',
-    message: 'what is the distance?'
+    message: '1'
   });
-  assert.equal(distanceFollowUp.statusCode, 200);
-  assert.equal(distanceFollowUp.body.routeType, 'science_formula');
-  assert.match(distanceFollowUp.body.response, /distance = 50 m \+ 20 m = 70 m/i);
-  assert.match(distanceFollowUp.body.response, /Answer: distance = 70 m; displacement = 30 m north/i);
-  assert.doesNotMatch(distanceFollowUp.body.response, /trusted local fact/i);
+  assert.equal(soccerStep.statusCode, 200);
+  assert.equal(soccerStep.body.tutor.currentStepIndex, 1);
+  assert.equal(soccerStep.body.tutor.stepNumber, 2);
+  assert.equal(soccerStep.body.tutor.latestStudentReply, '1');
+  assert.equal(soccerStep.body.tutor.work.latestStudentReply, '1');
+  assert.match(soccerStep.body.response, /Which idea should we use\?/i);
+
+  soccerStep = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-displacement',
+    message: '1'
+  });
+  assert.equal(soccerStep.statusCode, 200);
+  assert.equal(soccerStep.body.tutor.currentStepIndex, 2);
+  assert.match(soccerStep.body.response, /What is movement 1\?/i);
+
+  soccerStep = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-displacement',
+    message: '50 m north'
+  });
+  assert.equal(soccerStep.statusCode, 200);
+  assert.equal(soccerStep.body.tutor.currentStepIndex, 3);
+  assert.equal(soccerStep.body.tutor.stepNumber, 4);
+  assert.equal(soccerStep.body.tutor.currentStep.prompt, 'What is movement 2?');
+  assert.equal(soccerStep.body.tutor.latestStudentReply, '50 m north');
+  assert.equal(soccerStep.body.tutor.work.currentStep.prompt, 'What is movement 2?');
+  assert.deepEqual(
+    soccerStep.body.tutor.work.knownValues.map((value) => value.display),
+    ['50 m north', '20 m south']
+  );
+  assert.match(soccerStep.body.response, /What is movement 2\?/i);
+
+  soccerStep = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-displacement',
+    message: '20 m south'
+  });
+  assert.equal(soccerStep.statusCode, 200);
+  assert.equal(soccerStep.body.tutor.currentStepIndex, 4);
+  assert.equal(soccerStep.body.tutor.stepNumber, 5);
+  assert.equal(soccerStep.body.tutor.currentStep.prompt, 'What is the total distance? Use distance = 50 + 20.');
+  assert.equal(soccerStep.body.tutor.work.substitution, 'distance = 50 + 20');
+  assert.match(soccerStep.body.response, /What is the total distance\? Use distance = 50 \+ 20\./i);
+  assert.doesNotMatch(soccerStep.body.response, /Now substitute: displacement = 50 - 20\. What is 50 - 20\?/i);
+
+  soccerStep = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-displacement',
+    message: '70'
+  });
+  assert.equal(soccerStep.statusCode, 200);
+  assert.equal(soccerStep.body.tutor.active, true);
+  assert.equal(soccerStep.body.tutor.completed, false);
+  assert.equal(soccerStep.body.tutor.currentStepIndex, 5);
+  assert.equal(soccerStep.body.tutor.stepNumber, 6);
+  assert.equal(soccerStep.body.tutor.currentStep.prompt, 'What is the displacement? Use displacement = 50 - 20.');
+  assert.equal(soccerStep.body.tutor.work.substitution, 'displacement = 50 - 20');
+  assert.match(soccerStep.body.response, /What is the displacement\? Use displacement = 50 - 20\./i);
+  assert.ok(studentSessions[classSessionId].anonymousHubs['distance-displacement'].currentTutorProblem);
+
+  const soccerWrongDisplacement = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-displacement',
+    message: '70'
+  });
+  assert.equal(soccerWrongDisplacement.statusCode, 200);
+  assert.equal(soccerWrongDisplacement.body.tutor.currentStepIndex, 5);
+  assert.match(soccerWrongDisplacement.body.response, /For displacement, subtract movement in the opposite direction/i);
+  assert.doesNotMatch(soccerWrongDisplacement.body.response, /Distance is the total path, so add the path lengths/i);
+
+  soccerStep = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-displacement',
+    message: '30'
+  });
+  assert.equal(soccerStep.statusCode, 200);
+  assert.equal(soccerStep.body.tutor.active, false);
+  assert.equal(soccerStep.body.tutor.completed, true);
+  assert.equal(soccerStep.body.tutor.currentStep, null);
+  assert.equal(soccerStep.body.tutor.stepNumber, 6);
+  assert.equal(soccerStep.body.tutor.totalSteps, 6);
+  assert.equal(soccerStep.body.tutor.latestStudentReply, '30');
+  assert.equal(soccerStep.body.tutor.work.originalQuestion, soccerQuestion);
+  assert.equal(soccerStep.body.tutor.work.solveFor, 'distance and displacement');
+  assert.equal(soccerStep.body.tutor.work.currentStep, null);
+  assert.equal(soccerStep.body.tutor.work.stepNumber, 6);
+  assert.equal(soccerStep.body.tutor.work.totalSteps, 6);
+  assert.equal(soccerStep.body.tutor.work.latestStudentReply, '30');
+  assert.equal(soccerStep.body.tutor.work.formula, 'distance = total path; displacement = final position - initial position');
+  assert.deepEqual(
+    soccerStep.body.tutor.work.knownValues.map((value) => value.display),
+    ['50 m north', '20 m south']
+  );
+  assert.equal(soccerStep.body.tutor.work.substitution, 'distance = 50 + 20; displacement = 50 - 20');
+  assert.equal(soccerStep.body.tutor.work.calculatorCheck.display, '50 - 20 = 30');
+  assert.equal(soccerStep.body.tutor.work.finalAnswer, 'distance = 70 m; displacement = 30 m north');
+  assert.match(soccerStep.body.response, /Distance = 70 m/i);
+  assert.match(soccerStep.body.response, /Displacement = 30 m north/i);
   assert.equal(studentSessions[classSessionId].anonymousHubs['distance-displacement'].currentTutorProblem, null);
 
+  const soccerCombinedStart = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-displacement-combined',
+    message: soccerQuestion
+  });
+  assert.equal(soccerCombinedStart.statusCode, 200);
+  for (const message of ['1', '1', '50', '20']) {
+    const response = await request('POST', '/api/student/message', {
+      sessionId: classSessionId,
+      studentHubId: 'distance-displacement-combined',
+      message
+    });
+    assert.equal(response.statusCode, 200);
+  }
+
+  let soccerCombinedStep = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-displacement-combined',
+    message: '70 30'
+  });
+  assert.equal(soccerCombinedStep.statusCode, 200);
+  assert.equal(soccerCombinedStep.body.tutor.active, true);
+  assert.equal(soccerCombinedStep.body.tutor.completed, false);
+  assert.equal(soccerCombinedStep.body.tutor.currentStepIndex, 5);
+  assert.equal(soccerCombinedStep.body.tutor.currentStep.prompt, 'What is the displacement? Use displacement = 50 - 20.');
+  assert.ok(studentSessions[classSessionId].anonymousHubs['distance-displacement-combined'].currentTutorProblem);
+
+  soccerCombinedStep = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-displacement-combined',
+    message: '70; 30'
+  });
+  assert.equal(soccerCombinedStep.statusCode, 200);
+  assert.equal(soccerCombinedStep.body.tutor.completed, true);
+  assert.match(soccerCombinedStep.body.response, /Distance = 70 m/i);
+  assert.match(soccerCombinedStep.body.response, /Displacement = 30 m north/i);
+  assert.equal(studentSessions[classSessionId].anonymousHubs['distance-displacement-combined'].currentTutorProblem, null);
+
+  const truckQuestion = 'A delivery truck drives 4 miles west before turning right and driving 6 miles north to make a delivery. Find the delivery truck’s distance and displacement.';
   const truckBoth = await request('POST', '/api/student/message', {
     sessionId: classSessionId,
     studentHubId: 'distance-displacement-2d',
-    message: 'A delivery truck drives 4 mi west then 6 mi north. Find the distance and displacement.'
+    message: truckQuestion
   });
   assert.equal(truckBoth.statusCode, 200);
-  assert.equal(truckBoth.body.routeType, 'science_formula');
-  assert.match(truckBoth.body.response, /distance = 4 mi \+ 6 mi = 10 mi/i);
-  assert.match(truckBoth.body.response, /displacement = about 7\.21 mi NW/i);
-  assert.doesNotMatch(truckBoth.body.response, /Phase 6A only handles one-dimensional displacement/i);
+  assert.equal(truckBoth.body.routeType, 'formula_tutor');
+  assert.equal(truckBoth.body.tutor.formulaId, 'distance_displacement_2d');
+  assert.equal(truckBoth.body.tutor.active, true);
+  assert.equal(truckBoth.body.tutor.originalQuestion, truckQuestion);
+  assert.equal(truckBoth.body.tutor.currentStepIndex, 0);
+  assert.equal(truckBoth.body.tutor.stepNumber, 1);
+  assert.equal(truckBoth.body.tutor.totalSteps, 6);
+  assert.equal(truckBoth.body.tutor.currentStep.prompt, 'What quantities are we solving for?');
+  assert.equal(truckBoth.body.tutor.latestStudentReply, truckQuestion);
+  assert.equal(truckBoth.body.tutor.work.currentStep.prompt, 'What quantities are we solving for?');
+  assert.equal(truckBoth.body.tutor.work.latestStudentReply, truckQuestion);
+  assert.equal(truckBoth.body.tutor.formula, 'distance = total path; displacement = √(x² + y²)');
+  assert.ok(studentSessions[classSessionId].anonymousHubs['distance-displacement-2d'].currentTutorProblem);
+  assert.equal(studentSessions[classSessionId].anonymousHubs['distance-displacement-2d'].currentTutorProblem.originalQuestion, truckQuestion);
+  assert.equal(studentSessions[classSessionId].anonymousHubs['distance-displacement-2d'].currentTutorProblem.steps.length, 6);
+  assert.equal(
+    studentSessions[classSessionId].anonymousHubs['distance-displacement-2d'].currentTutorProblem.finalAnswer.display,
+    'distance = 10 mi; displacement = about 7.21 mi NW'
+  );
+  assert.doesNotMatch(truckBoth.body.response, /distance = 10 mi; displacement = about 7\.21 mi NW/i);
+
+  await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-displacement-2d',
+    message: '1'
+  });
+  await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-displacement-2d',
+    message: '1'
+  });
+  await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-displacement-2d',
+    message: '4 miles west'
+  });
+  const truckSubstitution = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-displacement-2d',
+    message: '6 miles north'
+  });
+  assert.equal(truckSubstitution.statusCode, 200);
+  assert.deepEqual(
+    truckSubstitution.body.tutor.work.knownValues.map((value) => value.display),
+    ['4 mi west', '6 mi north']
+  );
+  assert.equal(truckSubstitution.body.tutor.currentStep.prompt, 'What is the total distance? Use distance = 4 + 6.');
+  assert.equal(truckSubstitution.body.tutor.work.substitution, 'distance = 4 + 6');
+
+  const truckDistance = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-displacement-2d',
+    message: '10'
+  });
+  assert.equal(truckDistance.statusCode, 200);
+  assert.equal(truckDistance.body.tutor.active, true);
+  assert.equal(truckDistance.body.tutor.completed, false);
+  assert.equal(truckDistance.body.tutor.currentStep.prompt, 'What is the displacement? Use displacement = sqrt(4^2 + 6^2).');
+  assert.equal(truckDistance.body.tutor.work.substitution, 'displacement = sqrt(4^2 + 6^2)');
+
+  const truckSolved = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-displacement-2d',
+    message: 'sqrt(4^2 + 6^2)'
+  });
+  assert.equal(truckSolved.statusCode, 200);
+  assert.equal(truckSolved.body.tutor.completed, true);
+  assert.equal(truckSolved.body.tutor.work.isComplete, true);
+  assert.equal(truckSolved.body.tutor.work.substitution, 'distance = 4 + 6; displacement = sqrt(4^2 + 6^2)');
+  assert.match(truckSolved.body.tutor.work.calculatorCheck.display, /sqrt\(4² \+ 6²\) = 7\.21/);
+  assert.equal(truckSolved.body.tutor.work.finalAnswer, 'distance = 10 mi; displacement = about 7.21 mi northwest');
   assert.equal(studentSessions[classSessionId].anonymousHubs['distance-displacement-2d'].currentTutorProblem, null);
+
+  const pjQuestion = 'PJ likes to ride his bike around the block. If he rides out of his house west, the sidewalk circles his block, and brings him back to his doorstep 0.35 miles later. Find his distance and displacement.';
+  const pjStart = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-displacement-pj-loop',
+    message: pjQuestion
+  });
+  assert.equal(pjStart.statusCode, 200);
+  assert.equal(pjStart.body.routeType, 'formula_tutor');
+  assert.equal(pjStart.body.tutor.formulaId, 'distance_displacement_closed_loop');
+  assert.equal(pjStart.body.tutor.totalSteps, 5);
+  assert.equal(pjStart.body.tutor.currentStep.prompt, 'What quantities are we solving for?');
+  assert.equal(
+    studentSessions[classSessionId].anonymousHubs['distance-displacement-pj-loop'].currentTutorProblem.finalAnswer.display,
+    'distance = 0.35 mi; displacement = 0 mi'
+  );
+
+  for (const message of ['1', '1']) {
+    const response = await request('POST', '/api/student/message', {
+      sessionId: classSessionId,
+      studentHubId: 'distance-displacement-pj-loop',
+      message
+    });
+    assert.equal(response.statusCode, 200);
+  }
+
+  const pjDistance = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-displacement-pj-loop',
+    message: '0.35'
+  });
+  assert.equal(pjDistance.statusCode, 200);
+  assert.equal(pjDistance.body.tutor.currentStep.prompt, 'Where does PJ finish compared to where he started?');
+
+  const pjFinish = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-displacement-pj-loop',
+    message: 'back at his doorstep'
+  });
+  assert.equal(pjFinish.statusCode, 200);
+  assert.equal(pjFinish.body.tutor.currentStep.prompt, 'What is his displacement?');
+
+  const pjSolved = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-displacement-pj-loop',
+    message: '0'
+  });
+  assert.equal(pjSolved.statusCode, 200);
+  assert.equal(pjSolved.body.tutor.completed, true);
+  assert.match(pjSolved.body.response, /Distance = 0\.35 mi/i);
+  assert.match(pjSolved.body.response, /Displacement = 0 mi/i);
+  assert.equal(pjSolved.body.tutor.work.finalAnswer, 'distance = 0.35 mi; displacement = 0 mi');
+  assert.equal(studentSessions[classSessionId].anonymousHubs['distance-displacement-pj-loop'].currentTutorProblem, null);
+
+  const maliQuestion = 'Mali loves to make herself dizzy. She spins around in place 7 times before falling down right where she was standing. Find her distance and displacement.';
+  const maliStart = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-displacement-mali-spin',
+    message: maliQuestion
+  });
+  assert.equal(maliStart.statusCode, 200);
+  assert.equal(maliStart.body.routeType, 'formula_tutor');
+  assert.equal(maliStart.body.tutor.formulaId, 'distance_displacement_special_case');
+  assert.equal(maliStart.body.tutor.totalSteps, 5);
+
+  for (const message of ['1', '1']) {
+    const response = await request('POST', '/api/student/message', {
+      sessionId: classSessionId,
+      studentHubId: 'distance-displacement-mali-spin',
+      message
+    });
+    assert.equal(response.statusCode, 200);
+  }
+
+  const maliSpin = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-displacement-mali-spin',
+    message: 'same place'
+  });
+  assert.equal(maliSpin.statusCode, 200);
+  assert.equal(maliSpin.body.tutor.currentStep.prompt, 'What is her distance traveled from place to place?');
+
+  const maliDistance = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-displacement-mali-spin',
+    message: '0'
+  });
+  assert.equal(maliDistance.statusCode, 200);
+  assert.equal(maliDistance.body.tutor.currentStep.prompt, 'What is her displacement?');
+
+  const maliSolved = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-displacement-mali-spin',
+    message: '0'
+  });
+  assert.equal(maliSolved.statusCode, 200);
+  assert.equal(maliSolved.body.tutor.completed, true);
+  assert.match(maliSolved.body.response, /Distance = 0/i);
+  assert.match(maliSolved.body.response, /Displacement = 0/i);
+  assert.match(maliSolved.body.response, /spun in place, so her position did not change/i);
+  assert.equal(maliSolved.body.tutor.work.finalAnswer, 'distance = 0; displacement = 0');
+  assert.equal(studentSessions[classSessionId].anonymousHubs['distance-displacement-mali-spin'].currentTutorProblem, null);
+
+  const maliSpinWordStart = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-displacement-mali-spin-wording',
+    message: maliQuestion
+  });
+  assert.equal(maliSpinWordStart.statusCode, 200);
+  for (const message of ['1', '1']) {
+    const response = await request('POST', '/api/student/message', {
+      sessionId: classSessionId,
+      studentHubId: 'distance-displacement-mali-spin-wording',
+      message
+    });
+    assert.equal(response.statusCode, 200);
+  }
+  const maliSpinWord = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-displacement-mali-spin-wording',
+    message: 'spin in place'
+  });
+  assert.equal(maliSpinWord.statusCode, 200);
+  assert.equal(maliSpinWord.body.tutor.currentStep.prompt, 'What is her distance traveled from place to place?');
+
+  const kaiQuestion = 'Kai swims for the school swim team. He specializes in a backstroke event where he has to swim the 50-m length of the pool three times. Find his distance and displacement.';
+  const kaiStart = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-displacement-kai-swim',
+    message: kaiQuestion
+  });
+  assert.equal(kaiStart.statusCode, 200);
+  assert.equal(kaiStart.body.routeType, 'formula_tutor');
+  assert.equal(kaiStart.body.tutor.formulaId, 'distance_displacement_pool_lengths');
+  assert.equal(kaiStart.body.tutor.totalSteps, 7);
+
+  for (const message of ['1', '1']) {
+    const response = await request('POST', '/api/student/message', {
+      sessionId: classSessionId,
+      studentHubId: 'distance-displacement-kai-swim',
+      message
+    });
+    assert.equal(response.statusCode, 200);
+  }
+
+  const kaiLength = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-displacement-kai-swim',
+    message: '50'
+  });
+  assert.equal(kaiLength.statusCode, 200);
+  assert.equal(kaiLength.body.tutor.currentStep.prompt, 'How many lengths does Kai swim?');
+
+  const kaiCount = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-displacement-kai-swim',
+    message: '3'
+  });
+  assert.equal(kaiCount.statusCode, 200);
+  assert.equal(kaiCount.body.tutor.currentStep.prompt, 'What is the total distance? Use distance = 50 × 3.');
+
+  const kaiDistance = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-displacement-kai-swim',
+    message: '150'
+  });
+  assert.equal(kaiDistance.statusCode, 200);
+  assert.equal(kaiDistance.body.tutor.currentStep.prompt, 'After 3 lengths, is Kai back where he started or at the opposite side?');
+
+  const kaiSide = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-displacement-kai-swim',
+    message: 'opposite side'
+  });
+  assert.equal(kaiSide.statusCode, 200);
+  assert.equal(kaiSide.body.tutor.currentStep.prompt, 'What is his displacement?');
+
+  const kaiSolved = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'distance-displacement-kai-swim',
+    message: '50'
+  });
+  assert.equal(kaiSolved.statusCode, 200);
+  assert.equal(kaiSolved.body.tutor.completed, true);
+  assert.match(kaiSolved.body.response, /Distance = 150 m/i);
+  assert.match(kaiSolved.body.response, /Displacement = 50 m away from the side started on/i);
+  assert.equal(kaiSolved.body.tutor.work.finalAnswer, 'distance = 150 m; displacement = 50 m away from the side started on');
+  assert.equal(studentSessions[classSessionId].anonymousHubs['distance-displacement-kai-swim'].currentTutorProblem, null);
+
+  const disabled = createRouteHarness({ studentGuidedFormulaTutoringEnabled: false });
+  const disabledCreate = await disabled.request('POST', '/api/profile/create-student-session');
+  assert.equal(disabledCreate.statusCode, 201);
+  const disabledSessionId = disabledCreate.body.sessionId;
+
+  const soccerDirect = await disabled.request('POST', '/api/student/message', {
+    sessionId: disabledSessionId,
+    studentHubId: 'distance-displacement-direct',
+    message: soccerQuestion
+  });
+  assert.equal(soccerDirect.statusCode, 200);
+  assert.equal(soccerDirect.body.routeType, 'science_formula');
+  assert.match(soccerDirect.body.response, /distance = 50 m \+ 20 m = 70 m/i);
+  assert.match(soccerDirect.body.response, /displacement = 30 m north/i);
+  assert.match(soccerDirect.body.response, /Answer: distance = 70 m; displacement = 30 m north/i);
+  assert.doesNotMatch(soccerDirect.body.response, /Phase 6A only handles one-dimensional displacement/i);
+  assert.equal(disabled.studentSessions[disabledSessionId].anonymousHubs['distance-displacement-direct'].currentTutorProblem, null);
+
+  const truckDirect = await disabled.request('POST', '/api/student/message', {
+    sessionId: disabledSessionId,
+    studentHubId: 'distance-displacement-2d-direct',
+    message: truckQuestion
+  });
+  assert.equal(truckDirect.statusCode, 200);
+  assert.equal(truckDirect.body.routeType, 'science_formula');
+  assert.match(truckDirect.body.response, /distance = 4 mi \+ 6 mi = 10 mi/i);
+  assert.match(truckDirect.body.response, /displacement = about 7\.21 mi NW/i);
+  assert.match(truckDirect.body.response, /Answer: distance = 10 mi; displacement = about 7\.21 mi NW/i);
+  assert.doesNotMatch(truckDirect.body.response, /Phase 6A only handles one-dimensional displacement/i);
+  assert.equal(disabled.studentSessions[disabledSessionId].anonymousHubs['distance-displacement-2d-direct'].currentTutorProblem, null);
 }
 
 function escapeRegExp(value) {
