@@ -168,7 +168,11 @@ const graphTutorProblem = startFormulaTutor({
   questionRoute: graphFormulaRoute,
   originalQuestion: formulaQuestion
 });
-assert.deepEqual(graphTutorProblem, plainTutorProblem, 'graph metadata should not change formula tutor state');
+assert.deepEqual(
+  stripTutorTimestamps(graphTutorProblem),
+  stripTutorTimestamps(plainTutorProblem),
+  'graph metadata should not change formula tutor state'
+);
 assert.equal(
   buildFormulaTutorPrompt(graphTutorProblem),
   buildFormulaTutorPrompt(plainTutorProblem),
@@ -200,6 +204,13 @@ function hasPathBetweenLabels(graph, fromLabel, toLabel) {
 function includesNodeLabel(nodes, label) {
   const normalizedLabel = normalizeGraphTerm(label);
   return nodes.some((node) => normalizeGraphTerm(node.label) === normalizedLabel);
+}
+
+function stripTutorTimestamps(problem) {
+  const clone = JSON.parse(JSON.stringify(problem));
+  delete clone.startedAt;
+  delete clone.updatedAt;
+  return clone;
 }
 
 console.log('Knowledge graph tests passed.');
