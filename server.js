@@ -6,7 +6,11 @@ const {
   loadTeacherKnowledge,
   findRelevantKnowledge
 } = require('./lib/knowledge/teacherKnowledge');
-const { loadEnabledApprovedKnowledgeItems } = require('./lib/knowledge/loadEnabledApprovedKnowledgeItems');
+const {
+  loadEnabledApprovedKnowledgeItems,
+  loadEnabledApprovedKnowledgePackRecords
+} = require('./lib/knowledge/loadEnabledApprovedKnowledgeItems');
+const { buildKnowledgeGraph } = require('./lib/knowledge/knowledgeGraph');
 const { createOllamaClient } = require('./lib/ollama/client');
 const { createTtsService } = require('./lib/tts/piper');
 const {
@@ -136,16 +140,27 @@ function loadStudentKnowledge() {
   return [...teacherFacts, ...enabledApprovedPackItems];
 }
 
+function loadStudentKnowledgeGraph({ teacherKnowledge } = {}) {
+  const enabledApprovedPackRecords = loadEnabledApprovedKnowledgePackRecords({ approvedPacksDir });
+  const graphTeacherKnowledge = Array.isArray(teacherKnowledge)
+    ? teacherKnowledge
+    : loadStudentKnowledge();
+
+  return buildKnowledgeGraph(enabledApprovedPackRecords, graphTeacherKnowledge);
+}
+
 const questionAnswer = createQuestionAnswerService({
   teacherFactsFile,
   maxKnowledgeItems: MAX_KNOWLEDGE_ITEMS,
   loadTeacherKnowledge: loadStudentKnowledge,
+  loadKnowledgeGraph: loadStudentKnowledgeGraph,
   findRelevantKnowledge,
   routeStudentQuestion,
   ollama,
   logProblem,
   logStudentInteraction,
-  initialTeacherKnowledge: loadStudentKnowledge()
+  initialTeacherKnowledge: loadStudentKnowledge(),
+  initialKnowledgeGraph: loadStudentKnowledgeGraph()
 });
 
 tts.pruneAudioDir();
