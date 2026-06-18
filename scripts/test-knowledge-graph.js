@@ -169,10 +169,11 @@ const graphTutorProblem = startFormulaTutor({
   originalQuestion: formulaQuestion
 });
 assert.deepEqual(
-  stripTutorTimestamps(graphTutorProblem),
+  stripGraphTutorSupport(stripTutorTimestamps(graphTutorProblem)),
   stripTutorTimestamps(plainTutorProblem),
-  'graph metadata should not change formula tutor state'
+  'graph metadata should not change formula tutor steps or work'
 );
+assert.ok(graphTutorProblem.graphTutorSupport, 'formula tutor state should carry graph tutor support metadata');
 assert.equal(
   buildFormulaTutorPrompt(graphTutorProblem),
   buildFormulaTutorPrompt(plainTutorProblem),
@@ -210,6 +211,12 @@ function stripTutorTimestamps(problem) {
   const clone = JSON.parse(JSON.stringify(problem));
   delete clone.startedAt;
   delete clone.updatedAt;
+  return clone;
+}
+
+function stripGraphTutorSupport(problem) {
+  const clone = JSON.parse(JSON.stringify(problem));
+  delete clone.graphTutorSupport;
   return clone;
 }
 

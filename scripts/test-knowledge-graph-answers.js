@@ -93,7 +93,8 @@ const questionAnswer = createQuestionAnswerService({
     questionRoute: graphFormulaRoute,
     originalQuestion: formulaQuestion
   });
-  assert.deepEqual(stripTutorTimestamps(graphTutorProblem), stripTutorTimestamps(plainTutorProblem));
+  assert.deepEqual(stripGraphTutorSupport(stripTutorTimestamps(graphTutorProblem)), stripTutorTimestamps(plainTutorProblem));
+  assert.ok(graphTutorProblem.graphTutorSupport, 'formula tutor should carry graph tutor support metadata');
   assert.equal(
     buildFormulaTutorPrompt(graphTutorProblem),
     buildFormulaTutorPrompt(plainTutorProblem)
@@ -117,5 +118,11 @@ function stripTutorTimestamps(problem) {
   const clone = JSON.parse(JSON.stringify(problem));
   delete clone.startedAt;
   delete clone.updatedAt;
+  return clone;
+}
+
+function stripGraphTutorSupport(problem) {
+  const clone = JSON.parse(JSON.stringify(problem));
+  delete clone.graphTutorSupport;
   return clone;
 }

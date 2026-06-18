@@ -1000,7 +1000,7 @@ function appendStudentHubEntry({
 
 function makeFormulaTutorRoute(currentTutorProblem) {
   const problem = currentTutorProblem || {};
-  return {
+  const route = {
     type: 'formula_tutor',
     confidence: 'strong',
     toolsUsed: ['formula_tutor'],
@@ -1038,6 +1038,28 @@ function makeFormulaTutorRoute(currentTutorProblem) {
       }
     }
   };
+
+  if (isGraphTutorSupport(problem.graphTutorSupport)) {
+    route.graphTutorSupport = clonePlain(problem.graphTutorSupport);
+    route.public.graphTutorSupport = clonePlain(problem.graphTutorSupport);
+  }
+
+  return route;
+}
+
+function isGraphTutorSupport(value) {
+  return value &&
+    value.aiAllowed === false &&
+    value.source === 'approved_knowledge_graph' &&
+    Array.isArray(value.connectedConcepts) &&
+    Array.isArray(value.prerequisiteConcepts) &&
+    Array.isArray(value.commonMisconceptions) &&
+    Array.isArray(value.whyItMatters) &&
+    Array.isArray(value.graphPaths);
+}
+
+function clonePlain(value) {
+  return JSON.parse(JSON.stringify(value));
 }
 
 function makeMotionForceKnowledgeTutorRoute(currentTutorProblem) {
