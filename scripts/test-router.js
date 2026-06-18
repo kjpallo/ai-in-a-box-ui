@@ -634,6 +634,86 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'motion force cloze motion changes position',
+    question: 'Motion occurs anytime an object changes its?',
+    matchedKnowledge: matchedKnowledgeFor('Motion occurs anytime an object changes its?'),
+    type: 'cloze_completion',
+    includes: ['Motion occurs when an object changes its position.'],
+    excludes: ['I do not have', 'No trusted', 'Kinetic Energy'],
+    aiAllowed: false
+  },
+  {
+    name: 'motion force cloze slowing down negative acceleration',
+    question: 'When an object slows down, it has a',
+    matchedKnowledge: matchedKnowledgeFor('When an object slows down, it has a'),
+    type: 'cloze_completion',
+    includes: ['negative acceleration', 'deceleration'],
+    excludes: ['reactivity', 'chemistry', 'I found something related'],
+    aiAllowed: false
+  },
+  {
+    name: 'motion force incomplete fragment does not guess',
+    question: 'This is entirely dependent on the',
+    matchedKnowledge: matchedKnowledgeFor('This is entirely dependent on the'),
+    type: 'no_match',
+    includes: ['incomplete question or sentence fragment', 'full question'],
+    excludes: ['Velocity is', 'speed in a specific direction', 'I found something related'],
+    aiAllowed: false
+  },
+  {
+    name: 'motion force balanced unbalanced comparison',
+    question: 'Explain how balanced and unbalanced forces affect an object’s motion differently.',
+    matchedKnowledge: matchedKnowledgeFor('Explain how balanced and unbalanced forces affect an object’s motion differently.'),
+    type: 'science_concept',
+    includes: ['Balanced forces have a net force of 0 N', 'do not change an object’s motion', 'Unbalanced forces have a nonzero net force', 'change an object’s speed, direction, or both'],
+    excludes: ['Newton\'s Second Law says', 'Fnet = m × a'],
+    aiAllowed: false
+  },
+  {
+    name: 'motion force object at rest can have balanced forces',
+    question: 'Can there be forces acting on an object at rest?',
+    matchedKnowledge: matchedKnowledgeFor('Can there be forces acting on an object at rest?'),
+    type: 'science_concept',
+    includes: ['Yes.', 'object at rest can have forces acting on it', 'forces are balanced', 'net force is 0 N'],
+    excludes: ['Newton\'s First Law says'],
+    aiAllowed: false
+  },
+  {
+    name: 'motion force balanced forces net force zero',
+    question: 'What is the net force on an object that has balanced forces acting on it?',
+    matchedKnowledge: matchedKnowledgeFor('What is the net force on an object that has balanced forces acting on it?'),
+    type: 'science_concept',
+    includes: ['net force is 0 N', 'balanced'],
+    excludes: ['Newton\'s Second Law says', 'Fnet = m × a'],
+    aiAllowed: false
+  },
+  {
+    name: 'motion force grouped same opposite pushes each 50',
+    question: 'Two students push on a box in the same direction and a third student pushes in the opposite direction. What is the net force on the box if each push with a force of 50 N?',
+    matchedKnowledge: matchedKnowledgeFor('Two students push on a box in the same direction and a third student pushes in the opposite direction. What is the net force on the box if each push with a force of 50 N?'),
+    type: 'science_formula',
+    includes: ['Two students push one way: 50 N + 50 N = 100 N', 'One student pushes opposite: 50 N', 'Net force = 100 N - 50 N = 50 N in the direction of the two students'],
+    excludes: ['Newton\'s Second Law says', 'Fnet = m × a'],
+    aiAllowed: false
+  },
+  {
+    name: 'motion force law of inertia cloze',
+    question: 'Which law is known as the Law of Inertia?',
+    matchedKnowledge: matchedKnowledgeFor('Which law is known as the Law of Inertia?'),
+    type: 'cloze_completion',
+    includes: ['Newton’s First Law', 'Law of Inertia'],
+    aiAllowed: false
+  },
+  {
+    name: 'motion force preserves weight vs mass comparison',
+    question: 'Weight vs. mass.',
+    matchedKnowledge: matchedKnowledgeFor('Weight vs. mass.'),
+    type: 'definition',
+    includes: ['Mass and weight are related', 'Mass', 'amount of matter', 'Weight', 'force of gravity', 'gravity changes'],
+    excludes: ['only have a trusted local fact'],
+    aiAllowed: false
+  },
+  {
     name: 'acceleration landing and parking implies final velocity zero',
     question: 'A jet is traveling at 80 m/s when it starts to approach a runway. It is able to land and park in 10 s. What is its acceleration?',
     type: 'science_formula',
@@ -668,6 +748,34 @@ const tests = [
       formulaId: 'acceleration_velocity_time',
       finalAnswerValue: 3,
       finalAnswerDisplay: '3 m/s',
+      minStepCount: 4
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'acceleration final speed with initial speed beats distance fallback',
+    question: 'Challenge: A cart rolling down an incline for 5.0 seconds has an acceleration of 4.0 m/s2. If the cart has an initial speed of 2.0 m/s, what is its final speed?',
+    type: 'science_formula',
+    includes: ['Use the formula: vf = vi + a × t.', 'vf = 2 m/s + 4 m/s² × 5 s', 'vf = 2 m/s + 20 m/s', 'vf = 22 m/s'],
+    excludes: ['distance = speed × time', 'distance = 10 m'],
+    formulaWork: {
+      formulaId: 'acceleration_velocity_time',
+      finalAnswerValue: 22,
+      finalAnswerDisplay: '22 m/s',
+      minStepCount: 4
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'acceleration final speed supports initial speed wording',
+    question: 'A runner has an initial speed of 10 m/s and is accelerating at 5 m/s² for 3 s. What is the final speed?',
+    type: 'science_formula',
+    includes: ['Use the formula: vf = vi + a × t.', 'vf = 10 m/s + 5 m/s² × 3 s', 'vf = 10 m/s + 15 m/s', 'vf = 25 m/s'],
+    excludes: ['distance = 10 m/s × 3 s', 'distance = 30 m'],
+    formulaWork: {
+      formulaId: 'acceleration_velocity_time',
+      finalAnswerValue: 25,
+      finalAnswerDisplay: '25 m/s',
       minStepCount: 4
     },
     aiAllowed: false
@@ -991,6 +1099,22 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'unit 1 school bus direction first stops distance and displacement',
+    question: 'A school bus leaves school and heads east for 2 miles before making its first stop. It then turns left and heads north 3 miles before making another stop. Find the distance and displacement of the school bus after completing its first two stops.',
+    type: 'science_formula',
+    includes: ['distance = 2 mi + 3 mi = 5 mi', 'x = 2 mi east', 'y = 3 mi north', 'd = √(2² + 3²)', 'displacement = √13 mi', 'd = about 3.61 mi', 'direction = northeast, about 56.3° north of east', 'Answer: distance = 5 mi; displacement = about 3.61 mi NE'],
+    excludes: ['I need', 'missing needed values', 'Phase 6A', 'only handles one-dimensional displacement'],
+    aiAllowed: false
+  },
+  {
+    name: 'unit 1 direction first west south distance and displacement',
+    question: 'A courier then goes west 5 km before making a stop, then goes south 12 km before making another stop. Find distance and displacement.',
+    type: 'science_formula',
+    includes: ['distance = 5 km + 12 km = 17 km', 'x = 5 km west', 'y = 12 km south', 'd = √(5² + 12²)', 'displacement = √169 km', 'd = 13 km', 'direction = southwest, about 67.4° south of west', 'Answer: distance = 17 km; displacement = 13 km SW'],
+    excludes: ['I need', 'missing needed values', 'Phase 6A', 'only handles one-dimensional displacement'],
+    aiAllowed: false
+  },
+  {
     name: 'motion distance remains speed distance time',
     question: 'A runner moves at 4 m/s for 6 seconds. What distance does the runner travel?',
     type: 'science_formula',
@@ -1135,6 +1259,20 @@ const tests = [
     question: 'An ostrich runs 43 mi/hr for 15 minutes. How much ground?',
     type: 'science_formula',
     includes: ['Convert: 15 min = 0.25 hr.', 'distance = 43 mile/hr × 0.25 hr', 'distance = 10.75 miles'],
+    aiAllowed: false
+  },
+  {
+    name: 'unit 1 ostrich how much ground can cover converts minutes',
+    question: 'An ostrich can run at 43 mi/hr for 15 minutes. How much ground can it cover?',
+    type: 'science_formula',
+    includes: ['Use the motion formula: distance = speed × time.', 'Convert: 15 min = 0.25 hr.', 'distance = 43 mile/hr × 0.25 hr', 'distance = 10.75 miles'],
+    excludes: ['vf = vi + a × t'],
+    formulaWork: {
+      formulaId: 'speed_distance_time',
+      finalAnswerValue: 10.75,
+      finalAnswerDisplay: '10.75 miles',
+      minStepCount: 4
+    },
     aiAllowed: false
   },
   {

@@ -79,6 +79,30 @@ assert.ok(
   hasLabeledEdge(graph, 'acceleration', 'time', 'uses_concept'),
   'acceleration should link to time'
 );
+assert.ok(
+  hasLabeledEdge(graph, 'motion', 'position', 'uses_concept'),
+  'motion should link to position'
+);
+assert.ok(
+  hasLabeledEdge(graph, 'negative acceleration', 'deceleration', 'related_to'),
+  'negative acceleration should link to deceleration'
+);
+assert.ok(
+  hasLabeledEdge(graph, 'balanced forces', 'net force', 'uses_concept'),
+  'balanced forces should link to net force'
+);
+assert.ok(
+  hasLabeledEdge(graph, 'unbalanced forces', 'net force', 'uses_concept'),
+  'unbalanced forces should link to net force'
+);
+assert.ok(
+  hasLabeledEdge(graph, 'balanced forces', 'object at rest', 'related_to'),
+  'balanced forces should link to an object at rest'
+);
+assert.ok(
+  hasLabeledEdge(graph, "Newton's first law", 'inertia', 'related_to'),
+  'Newton’s first law should link to inertia'
+);
 
 const speedVelocityContext = findGraphContext('How are speed and velocity related?', graph);
 assert.ok(
