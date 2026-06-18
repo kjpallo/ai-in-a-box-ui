@@ -1,6 +1,12 @@
 const assert = require('node:assert/strict');
 
-const { createStudentRouteHarness: createRouteHarness } = require('./test-helpers/studentRouteHarness');
+const { buildKnowledgeGraph } = require('../lib/knowledge/knowledgeGraph');
+const { loadTeacherKnowledge } = require('../lib/knowledge/teacherKnowledge');
+const motionForceKnowledge = require('../lib/knowledge/physics/motion-force');
+const {
+  createStudentRouteHarness: createRouteHarness,
+  teacherFactsFile
+} = require('./test-helpers/studentRouteHarness');
 
 async function main() {
   const { request, questionAnswer, studentSessions } = createRouteHarness();
@@ -194,6 +200,7 @@ async function main() {
   await testActiveFormulaTutorAnswerRevealRequestsStayGuided();
   await testGuidedFormulaTutorActiveSessionControls();
   await testFormulaTutorStateProgression();
+  await testFormulaTutorGraphSupportDoesNotChangeProgression();
   await testDistanceDisplacementDirectNoTutorAndFollowUp();
   await testGuidedFormulaTutorRequiredFormulaPaths();
   await testPhase6FormulaTutorCoverage();
@@ -2881,6 +2888,83 @@ async function testFormulaTutorStateProgression() {
   assert.equal(solved.body.tutor.work.finalAnswer, 'speed = 0.2 km/min');
   assert.match(solved.body.response, /speed = 0\.2 km\/min/i);
   assert.equal(studentSessions[classSessionId].anonymousHubs[studentHubId].currentTutorProblem, null);
+
+  const hub = studentSessions[classSessionId].anonymousHubs[studentHubId];
+  assert.equal(hub.messages.length, 7, 'formula tutor should record the start, help turn, and five answer turns');
+  assert.equal(hub.messages.filter((entry) => entry.routeType === 'formula_tutor').length, 7);
+  assert.equal(hub.messages.filter((entry) => entry.isTutorStep).length, 6);
+  assert.deepEqual(
+    hub.messages.map((entry) => entry.message),
+    [question, 'help', 'speed', 's=d/t', '2 km', '10 min', '.2']
+  );
+}
+
+async function testFormulaTutorGraphSupportDoesNotChangeProgression() {
+  const graph = buildMotionForceKnowledgeGraph();
+  const {
+    request,
+    studentInteractionLog,
+    studentSessions
+  } = createRouteHarness({
+    initialKnowledgeGraph: graph,
+    loadKnowledgeGraph: () => graph
+  });
+  const create = await request('POST', '/api/profile/create-student-session');
+  assert.equal(create.statusCode, 201);
+  const classSessionId = create.body.sessionId;
+  const studentHubId = 'graph-speed-state-progression';
+  const question = 'A car travels 100 m in 20 s. What is its speed?';
+
+  const start = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId,
+    message: question
+  });
+  assert.equal(start.statusCode, 200);
+  assert.equal(start.body.routeType, 'formula_tutor');
+  assert.equal(start.body.tutor.stepNumber, 1);
+  assert.ok(start.body.tutor.graphTutorSupport, 'graph-enabled formula tutor should expose graph metadata');
+  assert.equal(start.body.tutor.graphTutorSupport.aiAllowed, false);
+
+  let hub = studentSessions[classSessionId].anonymousHubs[studentHubId];
+  assert.ok(hub.currentTutorProblem.graphTutorSupport, 'live tutor state should retain graph metadata');
+  assert.equal(studentInteractionLog[0].debug.route.graphTutorSupport.aiAllowed, false);
+
+  const replies = [
+    ['speed', 2, 'choose_formula'],
+    ['s=d/t', 3, 'identify_distance'],
+    ['100 m', 4, 'identify_time'],
+    ['20 s', 5, 'calculate'],
+    ['5', 5, null]
+  ];
+
+  for (const [message, expectedStepNumber, expectedStepId] of replies) {
+    const response = await request('POST', '/api/student/message', {
+      sessionId: classSessionId,
+      studentHubId,
+      message
+    });
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.body.routeType, 'formula_tutor');
+    assert.equal(response.body.tutor.work.stepNumber, expectedStepNumber, `${message} should advance to expected step`);
+    assert.equal(response.body.tutor.work.currentStep?.id || null, expectedStepId);
+    assert.ok(
+      response.body.tutor.graphTutorSupport,
+      `${message} should keep graph metadata without changing tutor metadata shape`
+    );
+  }
+
+  const solved = studentInteractionLog[studentInteractionLog.length - 1];
+  assert.equal(solved.debug.route.graphTutorSupport.aiAllowed, false);
+  hub = studentSessions[classSessionId].anonymousHubs[studentHubId];
+  assert.equal(hub.currentTutorProblem, null);
+  assert.equal(hub.messages.length, 6, 'graph metadata should not reduce the recorded message count');
+  assert.equal(hub.messages.filter((entry) => entry.routeType === 'formula_tutor').length, 6);
+  assert.equal(hub.messages.filter((entry) => entry.isTutorStep).length, 5);
+  assert.deepEqual(
+    hub.messages.map((entry) => entry.message),
+    [question, 'speed', 's=d/t', '100 m', '20 s', '5']
+  );
 }
 
 async function testDistanceDisplacementDirectNoTutorAndFollowUp() {
@@ -3375,6 +3459,26 @@ async function testDistanceDisplacementDirectNoTutorAndFollowUp() {
 
 function escapeRegExp(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function buildMotionForceKnowledgeGraph() {
+  const teacherKnowledge = loadTeacherKnowledge(teacherFactsFile);
+  return buildKnowledgeGraph([
+    {
+      pack: {
+        packId: 'motion-force-local',
+        title: 'Motion and Force Local Knowledge',
+        source: 'local Motion/Force pack',
+        vocabulary: motionForceKnowledge.vocabulary,
+        concepts: motionForceKnowledge.concepts,
+        referenceFormulas: motionForceKnowledge.formulas,
+        problemBank: motionForceKnowledge.problemBank,
+        standardsMap: []
+      },
+      packId: 'motion-force-local',
+      title: 'Motion and Force Local Knowledge'
+    }
+  ], teacherKnowledge);
 }
 
 main().catch((error) => {

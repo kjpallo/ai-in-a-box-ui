@@ -18,6 +18,7 @@ function createStudentRouteHarness(options = {}) {
   const handlers = new Map();
   const app = createApp(handlers, ['get', 'post']);
   const studentSessions = Object.create(null);
+  const studentInteractionLog = [];
   const questionRateLimiter = createStudentQuestionRateLimiter(options.rateLimitClock ? { now: options.rateLimitClock } : undefined);
   const classroomControls = {
     studentCopyInspectLockEnabled: true,
@@ -29,6 +30,7 @@ function createStudentRouteHarness(options = {}) {
     teacherFactsFile,
     maxKnowledgeItems: 6,
     loadTeacherKnowledge,
+    loadKnowledgeGraph: typeof options.loadKnowledgeGraph === 'function' ? options.loadKnowledgeGraph : null,
     findRelevantKnowledge,
     routeStudentQuestion,
     ollama: {
@@ -40,8 +42,11 @@ function createStudentRouteHarness(options = {}) {
       }
     },
     logProblem() {},
-    logStudentInteraction() {},
-    initialTeacherKnowledge: loadTeacherKnowledge(teacherFactsFile)
+    logStudentInteraction(entry) {
+      studentInteractionLog.push(entry);
+    },
+    initialTeacherKnowledge: loadTeacherKnowledge(teacherFactsFile),
+    initialKnowledgeGraph: options.initialKnowledgeGraph || null
   });
 
   registerProfileRoutes(app, {
@@ -89,6 +94,7 @@ function createStudentRouteHarness(options = {}) {
     },
     questionAnswer,
     questionRateLimiter,
+    studentInteractionLog,
     studentSessions,
     classroomControls
   };
