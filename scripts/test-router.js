@@ -686,6 +686,59 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'acceleration preserves km per hour over hours worksheet units',
+    question: 'A car traveling 35 km/hr accelerates to a speed of 45 km/hr in 0.25 hr. What is its acceleration?',
+    type: 'science_formula',
+    includes: ['Use the acceleration formula: a = (vf - vi) / t.', 'a = (45 km/hr - 35 km/hr) / 0.25 hr', 'a = 40 km/hr²'],
+    excludes: ['a = 0.0031 m/s²'],
+    formulaWork: {
+      formulaId: 'acceleration_velocity_time',
+      finalAnswerValue: 40,
+      finalAnswerDisplay: '40 km/hr²',
+      minStepCount: 4
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'acceleration converts seconds to hours when km per hour prompt hints it',
+    question: 'A car advertisement claims that a certain car can accelerate from rest to 70 km/hr in 7 seconds (hint: convert to hours first!!) Find the car’s acceleration.',
+    type: 'science_formula',
+    includes: ['Use the acceleration formula: a = (vf - vi) / t.', 'Convert: 7 s = 0.00194 hr', 'a = (70 km/hr - 0 km/hr) / 0.00194 hr', 'a = about 36000 km/hr²'],
+    excludes: ['a = 2.7778 m/s²'],
+    formulaWork: {
+      formulaId: 'acceleration_velocity_time',
+      finalAnswerValue: 36000,
+      finalAnswerDisplay: '36000 km/hr²',
+      minStepCount: 4
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'acceleration m per second over seconds remains si style',
+    question: 'A cyclist accelerates from 0 m/s to 8 m/s in 3 seconds. What is his acceleration?',
+    type: 'science_formula',
+    includes: ['Use the acceleration formula: a = (vf - vi) / t.', 'a = (8 m/s - 0 m/s) / 3 s', 'a = about 2.67 m/s²'],
+    formulaWork: {
+      formulaId: 'acceleration_velocity_time',
+      finalAnswerDisplay: '2.6667 m/s²',
+      minStepCount: 4
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'acceleration explicit m per second squared request overrides worksheet units',
+    question: 'A car traveling 35 km/hr accelerates to a speed of 45 km/hr in 0.25 hr. What is its acceleration in m/s²?',
+    type: 'science_formula',
+    includes: ['Use the acceleration formula: a = (vf - vi) / t.', 'a = (12.5 m/s - 9.7222 m/s) / 900 s', 'a = about 0.0031 m/s²'],
+    excludes: ['a = 40 km/hr²'],
+    formulaWork: {
+      formulaId: 'acceleration_velocity_time',
+      finalAnswerDisplay: '0.0031 m/s²',
+      minStepCount: 4
+    },
+    aiAllowed: false
+  },
+  {
     name: 'displacement from initial and final position',
     question: 'An object starts at 2 m and ends at 10 m. What is its displacement?',
     type: 'science_formula',
@@ -3087,7 +3140,7 @@ const tests = [
     matchedKnowledge: matchedKnowledgeFor('A cyclist accelerates from 0 m/s to 8 m/s in 3 seconds. What is his acceleration?'),
     type: 'science_formula',
     confidence: 'strong',
-    includes: ['a = (8 m/s - 0 m/s) / 3 s', 'a = 2.6667 m/s²'],
+    includes: ['a = (8 m/s - 0 m/s) / 3 s', 'a = about 2.67 m/s²'],
     excludes: ['Class Fact', 'Acceleration is the rate that velocity changes over time'],
     formulaWork: {
       formulaId: 'acceleration_velocity_time',
