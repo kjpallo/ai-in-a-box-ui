@@ -8,37 +8,19 @@
   const sendButton = document.getElementById('studentSendButton');
   const pointButton = document.getElementById('studentPointButton');
   const askHighlightButton = document.getElementById('studentAskHighlightButton');
-  const responseBox = document.getElementById('studentResponse');
+  const clearButton = document.getElementById('studentClearButton');
+  const timeline = document.getElementById('studentTimeline');
   const sessionText = document.getElementById('sessionIdText');
   const status = document.getElementById('studentStatus');
   const routeInfo = document.getElementById('studentRouteInfo');
-  const copyAnswerButton = document.getElementById('studentCopyAnswerButton');
-  const clearButton = document.getElementById('studentClearButton');
-  const tutorCard = document.getElementById('studentTutorCard');
-  const tutorTitle = document.getElementById('studentTutorTitle');
-  const tutorProgress = document.getElementById('studentTutorProgress');
-  const tutorOriginalQuestion = document.getElementById('studentTutorOriginalQuestion');
-  const tutorSolveFor = document.getElementById('studentTutorSolveFor');
-  const tutorFormula = document.getElementById('studentTutorFormula');
-  const tutorKnownValues = document.getElementById('studentTutorKnownValues');
-  const tutorPrompt = document.getElementById('studentTutorPrompt');
-  const tutorSubstitution = document.getElementById('studentTutorSubstitution');
-  const tutorHintWrap = document.getElementById('studentTutorHintWrap');
-  const tutorHint = document.getElementById('studentTutorHint');
-  const tutorFinalWrap = document.getElementById('studentTutorFinalWrap');
-  const tutorFinal = document.getElementById('studentTutorFinal');
-  const calculator = document.getElementById('studentTutorCalculator');
-  const calculatorDisplay = document.getElementById('studentCalculatorDisplay');
   const fireworks = document.getElementById('studentTutorFireworks');
   const sessionMessage = document.getElementById('studentSessionMessage');
-  const historyBox = document.getElementById('studentHistory');
-  const historyCount = document.getElementById('studentHistoryCount');
   const frictionWarning = document.getElementById('studentFrictionWarning');
   const energyPanel = document.getElementById('studentQuestionEnergy');
   const energyValue = document.getElementById('studentQuestionEnergyValue');
   const energyHelper = document.getElementById('studentQuestionEnergyHelper');
   const energyFill = document.getElementById('studentQuestionEnergyFill');
-  const chatHistory = [];
+  const chatTurns = [];
   const controls = {
     studentCopyInspectLockEnabled: true,
     studentQuestionRateLimitEnabled: true,
@@ -63,17 +45,21 @@
   let resetTickTimer = null;
   let warningTimer = null;
   let devtoolsTimer = null;
-  let activeTutorQuestion = '';
   let calculatorExpression = '';
   let calculatorJustEvaluated = false;
+  const calculatorOpenTurnIds = new Set();
+  const tutorSessionExpandedState = new Map();
   let completedCelebrationKey = '';
   let fireworksTimer = null;
+  let turnCounter = 0;
+  let lastAnswerText = '';
 
   async function init() {
-    if (!form || !input || !sendButton) return;
+    if (!form || !input || !sendButton || !timeline) return;
 
     sessionText.textContent = sessionId || 'Missing session';
     setFormEnabled(false);
+    renderTimeline();
     await loadStudentControls();
     renderRateLimitEnergy();
     await validateSession();
@@ -82,10 +68,8 @@
     input.addEventListener('keydown', handleInputKeydown);
     pointButton?.addEventListener('click', handlePointClick);
     askHighlightButton?.addEventListener('click', handleAskHighlightClick);
-    copyAnswerButton?.addEventListener('click', handleCopyAnswerClick);
     clearButton?.addEventListener('click', handleClearClick);
-    tutorCard?.addEventListener('click', handleTutorCardClick);
-    calculator?.addEventListener('click', handleCalculatorClick);
+    timeline.addEventListener('click', handleTimelineClick);
     installClassroomFrictionHandlers();
   }
 
@@ -94,21 +78,15 @@
     const message = input.value.trim();
     if (!message || !sessionIsValid) return;
 
-    setFormEnabled(false);
-    status.textContent = 'Sending';
-    responseBox.textContent = 'Thinking...';
-    routeInfo.textContent = 'Routing';
+    const turnId = addPendingTurn(message);
+    setSendingState();
 
     try {
       const data = await sendStudentMessage(message);
-      renderStudentMessageResult(data, message);
+      renderStudentMessageResult(data, message, { turnId });
       input.value = '';
     } catch (error) {
-      const message = error.message || 'Could not send message.';
-      updateRateLimitState(error.rateLimit);
-      responseBox.textContent = friendlyStudentError(message);
-      routeInfo.textContent = 'Error';
-      status.textContent = 'Error';
+      renderStudentError(turnId, error);
       if (/session/i.test(error.message || '')) {
         showInvalidSession(error.message);
       }
@@ -134,20 +112,15 @@
 
     flashPointButton();
     playPointClick();
-    setFormEnabled(false);
-    status.textContent = 'Sending';
-    responseBox.textContent = 'Thinking...';
-    routeInfo.textContent = 'Routing';
+    const prompt = "What's the point?";
+    const turnId = addPendingTurn(prompt);
+    setSendingState();
 
     try {
       const data = await window.Charlemagne.api.sendStudentWhyThisMatters(sessionId, studentHubId);
-      renderStudentMessageResult(data, "What's the point?");
+      renderStudentMessageResult(data, prompt, { turnId });
     } catch (error) {
-      const message = error.message || 'Could not send message.';
-      updateRateLimitState(error.rateLimit);
-      responseBox.textContent = friendlyStudentError(message);
-      routeInfo.textContent = 'Error';
-      status.textContent = 'Error';
+      renderStudentError(turnId, error);
       if (/session/i.test(error.message || '')) {
         showInvalidSession(error.message);
       }
@@ -171,7 +144,6 @@
       sessionText.textContent = sessionId;
       sessionMessage.textContent = 'Connected to session.';
       status.textContent = 'Connected';
-      responseBox.textContent = 'Ask a question to see the response here.';
       setFormEnabled(true);
       startHeartbeat();
       startRateLimitRefresh();
@@ -301,13 +273,13 @@
     energyFill.style.width = `${percent}%`;
 
     if (!rateLimitState.enabled) {
-      energyValue.textContent = 'Question limit: Off';
+      energyValue.textContent = 'Limit off';
       if (energyHelper) energyHelper.textContent = '';
       energyFill.style.width = '100%';
       return;
     }
 
-    energyValue.textContent = `${remainingWhole} / ${max} questions ready`;
+    energyValue.textContent = `${remainingWhole}/${max} ready`;
     if (energyHelper) {
       const nextQuestionSeconds = normalizeNonNegativeInteger(rateLimitState.secondsUntilNextQuestion, 0);
       const fullSeconds = normalizeNonNegativeInteger(rateLimitState.secondsUntilFull, 0);
@@ -315,7 +287,7 @@
         ? `Next question in ${nextQuestionSeconds}s`
         : fullSeconds > 0 && remainingWhole <= Math.max(1, Math.floor(max * 0.25))
           ? `Full in ${fullSeconds}s`
-        : '';
+          : '';
     }
   }
 
@@ -324,8 +296,14 @@
     sessionMessage.textContent = message;
     status.textContent = 'Invalid session';
     routeInfo.textContent = 'Unavailable';
-    responseBox.textContent = message;
+    addSystemMessage(message);
     setFormEnabled(false);
+  }
+
+  function setSendingState() {
+    setFormEnabled(false);
+    status.textContent = 'Sending';
+    routeInfo.textContent = 'Routing';
   }
 
   function setFormEnabled(enabled) {
@@ -333,10 +311,9 @@
     sendButton.disabled = !enabled;
     if (pointButton) pointButton.disabled = !enabled;
     if (askHighlightButton) askHighlightButton.disabled = !enabled;
-    if (copyAnswerButton) copyAnswerButton.disabled = !enabled;
     if (clearButton) clearButton.disabled = !enabled;
-    if (tutorCard) {
-      for (const button of tutorCard.querySelectorAll('[data-tutor-action]')) {
+    if (timeline) {
+      for (const button of timeline.querySelectorAll('button')) {
         button.disabled = !enabled;
       }
     }
@@ -346,47 +323,821 @@
     return window.Charlemagne.api.sendStudentMessage(sessionId, message, studentHubId);
   }
 
-  function renderStudentMessageResult(data, message) {
-    updateRateLimitState(data.rateLimit);
-    responseBox.textContent = data.response || 'No response returned.';
-    routeInfo.textContent = `${data.routeType || 'unknown'} / ${data.confidence || 'unknown'}`;
-    status.textContent = 'Ready';
-    renderTutorCard(data.tutor, {
-      response: data.response || '',
-      submittedMessage: message
-    });
-    addHistoryItem(message, data.response || 'No response returned.');
+  function addPendingTurn(message) {
+    collapseTutorCardsForNewTurn();
+    const turn = {
+      id: createTurnId(),
+      message,
+      response: 'Thinking...',
+      routeType: '',
+      confidence: '',
+      tutor: null,
+      tutorCollapsed: false,
+      pending: true,
+      error: false,
+      createdAt: new Date().toISOString()
+    };
+    chatTurns.push(turn);
+    renderTimeline();
+    scrollTimelineToBottom();
+    return turn.id;
   }
 
-  async function handleTutorCardClick(event) {
-    const button = event.target.closest('[data-tutor-action]');
-    if (!button || !sessionIsValid) return;
+  function renderStudentMessageResult(data, message, options = {}) {
+    updateRateLimitState(data.rateLimit);
 
-    const command = button.getAttribute('data-tutor-action') || '';
-    if (!command) return;
+    const turn = findTurn(options.turnId) || createCompletedTurn(message);
+    turn.response = data.response || 'No response returned.';
+    turn.routeType = data.routeType || '';
+    turn.confidence = data.confidence || '';
+    turn.tutor = data.tutor && typeof data.tutor === 'object' ? clonePlain(data.tutor) : null;
+    turn.tutorSubmittedMessage = message;
+    turn.tutorCollapsed = false;
+    turn.pending = false;
+    turn.error = false;
+    if (turn.tutor) {
+      collapsePriorTutorCards(turn.id);
+    }
+    lastAnswerText = turn.response;
+    routeInfo.textContent = formatRouteStatusLabel(data.routeType, data.confidence);
+    status.textContent = 'Ready';
 
-    setFormEnabled(false);
-    status.textContent = 'Sending';
-    responseBox.textContent = 'Thinking...';
-    routeInfo.textContent = 'Routing';
+    renderTimeline();
+    maybeCelebrateTutorCompletion(turn.tutor, getTutorWork(turn.tutor), { submittedMessage: message });
+    scrollTimelineToBottom();
+  }
 
-    try {
-      const data = await sendStudentMessage(command);
-      renderStudentMessageResult(data, command);
-    } catch (error) {
-      const message = error.message || 'Could not send message.';
-      updateRateLimitState(error.rateLimit);
-      responseBox.textContent = friendlyStudentError(message);
-      routeInfo.textContent = 'Error';
-      status.textContent = 'Error';
-    } finally {
-      setFormEnabled(sessionIsValid);
-      if (sessionIsValid) input.focus();
+  function renderStudentError(turnId, error) {
+    const turn = findTurn(turnId);
+    const message = error?.message || 'Could not send message.';
+    updateRateLimitState(error?.rateLimit);
+    if (turn) {
+      turn.response = friendlyStudentError(message);
+      turn.pending = false;
+      turn.error = true;
+      turn.routeType = 'error';
+      turn.confidence = '';
+      lastAnswerText = turn.response;
+    } else {
+      addSystemMessage(friendlyStudentError(message));
+    }
+    routeInfo.textContent = 'Error';
+    status.textContent = 'Error';
+    renderTimeline();
+    scrollTimelineToBottom();
+  }
+
+  function createCompletedTurn(message) {
+    const turn = {
+      id: createTurnId(),
+      message,
+      response: '',
+      routeType: '',
+      confidence: '',
+      tutor: null,
+      tutorCollapsed: false,
+      pending: false,
+      error: false,
+      createdAt: new Date().toISOString()
+    };
+    chatTurns.push(turn);
+    return turn;
+  }
+
+  function addSystemMessage(message) {
+    const duplicate = chatTurns.some((turn) => turn.system && turn.response === message);
+    if (duplicate) return;
+    chatTurns.push({
+      id: createTurnId(),
+      system: true,
+      response: message,
+      pending: false,
+      error: false,
+      createdAt: new Date().toISOString()
+    });
+    renderTimeline();
+  }
+
+  function createTurnId() {
+    turnCounter += 1;
+    return `turn-${turnCounter}`;
+  }
+
+  function findTurn(turnId) {
+    return chatTurns.find((turn) => turn.id === turnId) || null;
+  }
+
+  function collapseTutorCardsForNewTurn() {
+    for (const turn of chatTurns) {
+      if (turn.tutor && !getTutorSessionKey(turn)) turn.tutorCollapsed = true;
     }
   }
 
-  async function handleCopyAnswerClick() {
-    const text = responseBox?.textContent?.trim() || '';
+  function collapsePriorTutorCards(currentTurnId) {
+    const currentTurn = findTurn(currentTurnId);
+    const currentSessionKey = getTutorSessionKey(currentTurn);
+    if (currentSessionKey) {
+      const previousSessionKey = findLatestTutorSessionKeyBeforeTurn(currentTurnId);
+      if (previousSessionKey && previousSessionKey !== currentSessionKey) {
+        collapsePriorTutorSessions(currentSessionKey);
+      }
+      tutorSessionExpandedState.set(currentSessionKey, true);
+      return;
+    }
+
+    for (const turn of chatTurns) {
+      if (turn.id !== currentTurnId && turn.tutor && !getTutorSessionKey(turn)) {
+        turn.tutorCollapsed = true;
+      }
+    }
+  }
+
+  function findLatestTutorSessionKeyBeforeTurn(currentTurnId) {
+    let latestSessionKey = '';
+    for (const turn of chatTurns) {
+      if (turn.id === currentTurnId) return latestSessionKey;
+      latestSessionKey = getTutorSessionKey(turn) || latestSessionKey;
+    }
+    return latestSessionKey;
+  }
+
+  function collapsePriorTutorSessions(currentSessionKey) {
+    for (const turn of chatTurns) {
+      const sessionKey = getTutorSessionKey(turn);
+      if (sessionKey && sessionKey !== currentSessionKey) {
+        tutorSessionExpandedState.set(sessionKey, false);
+      }
+    }
+  }
+
+  function renderTimeline() {
+    if (!timeline) return;
+
+    if (chatTurns.length === 0) {
+      timeline.innerHTML = '<p class="student-empty-timeline">Ask a question to start a conversation. Guided tutor work, calculator checks, and final answers will appear here.</p>';
+      return;
+    }
+
+    const copyableTurnId = findLatestCopyableTurnId();
+    timeline.innerHTML = buildTimelineItems().map((item) => {
+      if (item.type === 'tutorSession') return renderTutorSession(item, copyableTurnId);
+      return item.turn.system
+        ? renderSystemTurn(item.turn)
+        : renderChatTurn(item.turn, copyableTurnId);
+    }).join('');
+  }
+
+  function buildTimelineItems() {
+    const items = [];
+    const sessionsByKey = new Map();
+    let latestFormulaSessionKey = '';
+
+    for (const turn of chatTurns) {
+      const sessionKey = getTutorSessionKey(turn);
+      if (!sessionKey) {
+        items.push({ type: 'turn', turn });
+        continue;
+      }
+
+      let session = sessionsByKey.get(sessionKey);
+      if (!session) {
+        session = {
+          type: 'tutorSession',
+          key: sessionKey,
+          turns: [],
+          firstTurn: turn,
+          lastTurn: turn,
+          isActive: false,
+          isComplete: false,
+          isStopped: false,
+          isCurrent: false
+        };
+        sessionsByKey.set(sessionKey, session);
+        items.push(session);
+      }
+
+      session.turns.push(turn);
+      session.lastTurn = turn;
+      latestFormulaSessionKey = sessionKey;
+    }
+
+    for (const session of sessionsByKey.values()) {
+      const latestTutor = session.lastTurn?.tutor || {};
+      session.isActive = latestTutor.active === true && !latestTutor.completed && !latestTutor.stopped;
+      session.isComplete = latestTutor.completed === true;
+      session.isStopped = latestTutor.stopped === true;
+      session.isCurrent = session.key === latestFormulaSessionKey;
+    }
+
+    return items;
+  }
+
+  function getTutorSessionKey(turn) {
+    if (!turn || turn.system || turn.pending || turn.error || !turn.tutor) return '';
+
+    const tutor = turn.tutor;
+    const work = getTutorWork(tutor);
+    if (!isStructuredFormulaTutor(tutor, work)) return '';
+
+    const originalQuestion = normalizeTutorSessionPart(
+      work.originalQuestion ||
+      tutor.originalQuestion ||
+      turn.tutorSubmittedMessage ||
+      turn.message
+    );
+    if (!originalQuestion) return `formula-session:${turn.id}`;
+
+    const formulaId = normalizeTutorSessionPart(tutor.formulaId || work.formulaId || tutor.formula || work.formula);
+    const solveFor = normalizeTutorSessionPart(work.solveFor || work.solvingFor || tutor.solveFor || tutor.solvingFor);
+    return ['formula-session', originalQuestion, formulaId, solveFor].join('|');
+  }
+
+  function findLatestCopyableTurnId() {
+    for (let index = chatTurns.length - 1; index >= 0; index -= 1) {
+      const turn = chatTurns[index];
+      if (isCopyableAnswerTurn(turn)) return turn.id;
+    }
+    return '';
+  }
+
+  function isCopyableAnswerTurn(turn) {
+    if (!turn || turn.system || turn.pending || turn.error || !String(turn.response || '').trim()) return false;
+
+    if (!turn.tutor) return true;
+
+    const work = getTutorWork(turn.tutor);
+    const finalAnswer = work.finalAnswer || work.answer || turn.tutor.finalAnswerDisplay;
+    return turn.tutor.completed === true && Boolean(String(finalAnswer || '').trim());
+  }
+
+  function renderSystemTurn(turn) {
+    return `
+      <article class="student-chat-turn" data-turn-id="${escapeAttr(turn.id)}">
+        <div class="student-chat-message is-system">
+          <div class="student-message-meta"><strong>Status</strong></div>
+          <div class="student-message-bubble">${escapeHtml(turn.response)}</div>
+        </div>
+      </article>
+    `;
+  }
+
+  function renderChatTurn(turn, copyableTurnId) {
+    const route = turn.routeType
+      ? `<span class="student-route-chip">${escapeHtml(formatRouteStatusLabel(turn.routeType, turn.confidence))}</span>`
+      : '';
+    const copyButton = turn.id !== copyableTurnId
+      ? ''
+      : `<button type="button" class="student-inline-button" data-copy-turn-id="${escapeAttr(turn.id)}">Copy Answer</button>`;
+    const assistantClasses = [
+      'student-chat-message',
+      'is-assistant',
+      turn.tutor ? 'has-tutor' : '',
+      turn.pending ? 'is-pending' : '',
+      turn.error ? 'is-system' : ''
+    ].filter(Boolean).join(' ');
+    const assistantResponseHtml = renderAssistantResponseHtml(turn);
+
+    return `
+      <article class="student-chat-turn" data-turn-id="${escapeAttr(turn.id)}">
+        <div class="student-chat-message is-user">
+          <div class="student-message-meta"><strong>You</strong></div>
+          <div class="student-message-bubble">${escapeHtml(turn.message)}</div>
+        </div>
+        <div class="${assistantClasses}">
+          <div class="student-message-meta">
+            <strong>Charlemagne</strong>
+            ${route}
+            <span class="student-message-actions">${copyButton}</span>
+          </div>
+          <div class="student-message-bubble">
+            ${assistantResponseHtml}
+            ${renderTutorCardHtml(turn)}
+          </div>
+        </div>
+      </article>
+    `;
+  }
+
+  function renderAssistantResponseHtml(turn) {
+    const responseText = String(turn?.response || '').trim();
+    if (!responseText) return '';
+    if (!turn?.tutor || turn.pending || turn.error) return escapeHtml(responseText);
+
+    const work = getTutorWork(turn.tutor);
+    if (!isStructuredFormulaTutor(turn.tutor, work)) return escapeHtml(responseText);
+
+    return escapeHtml(responseText);
+  }
+
+  function renderTutorSession(session, copyableTurnId) {
+    const expanded = getTutorSessionExpandedState(session);
+    const latestTurn = session.lastTurn || {};
+    const question = getTutorSessionQuestion(session);
+    const questionSummary = summarizeTutorQuestion(question || latestTurn.message || 'Formula problem');
+    const label = getTutorSessionLabel(session);
+    const progress = formatTutorSessionProgress(session);
+    const stateClass = session.isComplete ? 'is-complete' : session.isStopped ? 'is-stopped' : session.isActive ? 'is-active' : 'is-paused';
+    const copyButton = session.turns.some((turn) => turn.id === copyableTurnId)
+      ? `<button type="button" class="student-inline-button" data-copy-turn-id="${escapeAttr(copyableTurnId)}">Copy Answer</button>`
+      : '';
+
+    return `
+      <article class="student-chat-turn student-tutor-session ${stateClass} ${expanded ? 'is-expanded' : 'is-collapsed'}" data-tutor-session-id="${escapeAttr(session.key)}">
+        <div class="student-tutor-session-header">
+          <div class="student-tutor-session-summary">
+            <strong>${escapeHtml(questionSummary)}</strong>
+            <span>${escapeHtml(label)}</span>
+          </div>
+          <div class="student-tutor-session-meta">
+            <span>${escapeHtml(progress)}</span>
+            ${copyButton}
+            <button
+              type="button"
+              class="student-tutor-session-toggle"
+              data-toggle-tutor-session-id="${escapeAttr(session.key)}"
+              aria-expanded="${expanded ? 'true' : 'false'}"
+            >${expanded ? 'Minimize' : 'Expand'}</button>
+          </div>
+        </div>
+        <div class="student-tutor-session-panel" aria-hidden="${expanded ? 'false' : 'true'}">
+          <div class="student-tutor-session-scroll">
+            <div class="student-tutor-session-steps">
+              ${session.turns.map((turn, index) => renderTutorSessionStep(turn, {
+                isLatestActiveStep: session.isActive && turn.id === latestTurn.id,
+                stepIndex: index
+              })).join('')}
+            </div>
+          </div>
+        </div>
+      </article>
+    `;
+  }
+
+  function renderTutorSessionStep(turn, options = {}) {
+    const tutor = turn.tutor || {};
+    const work = getTutorWork(tutor);
+    const isCurrentStep = options.isLatestActiveStep === true;
+    const stateClass = tutor.completed ? 'is-complete' : tutor.stopped ? 'is-stopped' : isCurrentStep ? 'is-current' : 'is-prior';
+    const knownValues = getKnownValuesForTutor(tutor, work);
+    const originalQuestion = work.originalQuestion || tutor.originalQuestion || '';
+    const solveFor = work.solveFor || work.solvingFor || tutor.solveFor || tutor.solvingFor || '';
+    const currentStep = getCurrentTutorPrompt(tutor, work);
+    const answer = work.finalAnswer || work.answer || formatTutorAnswer(tutor.solveFor, tutor.finalAnswerDisplay);
+    const calculatorCheck = formatTutorCalculatorCheck(work.calculatorCheck);
+    const isFormulaTutor = isStructuredFormulaTutor(tutor, work);
+    const canUseCalculator = isCurrentStep && isFormulaTutor && tutor.active === true && !tutor.completed && !tutor.stopped;
+    const showCalculator = canUseCalculator && shouldShowCalculator(turn.id, tutor, work, currentStep);
+    const responseText = String(turn.response || '').trim();
+    const stepStatus = getTutorStepStatus(tutor, isCurrentStep);
+    const answerHtml = renderTutorSessionAnswer(turn, options.stepIndex);
+    const sideAnswerClass = answerHtml ? 'has-side-answer' : 'has-no-side-answer';
+
+    return `
+      <section class="student-tutor-session-step ${stateClass} ${sideAnswerClass}" data-tutor-turn-id="${escapeAttr(turn.id)}">
+        ${answerHtml}
+        <div class="student-tutor-session-step-work">
+          <div class="student-tutor-session-step-head">
+            <strong>${escapeHtml(formatTutorProgress(tutor, work) || stepStatus)}</strong>
+            <span>${escapeHtml(stepStatus)}</span>
+          </div>
+          ${responseText ? `<p class="student-tutor-session-response">${escapeHtml(responseText)}</p>` : ''}
+          <div class="student-tutor-grid">
+            ${isFormulaTutor ? renderTutorDetail('Original Question', originalQuestion, 'student-tutor-original-question is-wide', { showWaiting: true }) : ''}
+            ${renderTutorDetail('Current Step', currentStep, 'student-tutor-current-step', { showWaiting: true })}
+            ${isFormulaTutor ? renderTutorDetail('Solving For', solveFor, '', { showWaiting: true }) : ''}
+            ${isFormulaTutor ? renderTutorDetail('Formula', work.formula || tutor.formula || '', 'student-tutor-formula', { showWaiting: true }) : ''}
+            ${isFormulaTutor ? renderKnownValuesDetail(knownValues) : ''}
+            ${isFormulaTutor && work.substitution ? renderTutorDetail('Substitution', work.substitution, 'student-tutor-substitution') : ''}
+            ${calculatorCheck ? renderTutorDetail('Calculator check', calculatorCheck, 'student-tutor-check') : ''}
+            ${answer ? renderTutorDetail('Final answer', answer, 'student-tutor-answer') : ''}
+            ${tutor.currentHint ? renderTutorDetail('Hint', tutor.currentHint, 'is-wide') : ''}
+          </div>
+          ${canUseCalculator ? renderCalculatorArea(turn.id, showCalculator) : ''}
+          ${isCurrentStep ? renderTutorActions(turn, tutor, { hideCompletedAction: true }) : ''}
+        </div>
+      </section>
+    `;
+  }
+
+  function renderTutorSessionAnswer(turn, stepIndex) {
+    if (stepIndex === 0) return '';
+
+    const message = String(turn.tutorSubmittedMessage || turn.message || '').trim();
+    if (!message) return '';
+
+    return `
+      <div class="student-tutor-session-answer">
+        <strong>Student answer</strong>
+        <p>${escapeHtml(formatTutorSubmittedMessage(message))}</p>
+      </div>
+    `;
+  }
+
+  function formatTutorSubmittedMessage(message) {
+    const text = String(message || '').trim();
+    if (text === 'hint') return 'Asked for a hint';
+    if (text === 'restart') return 'Restarted the tutor';
+    if (text === 'stop') return 'Stopped the tutor';
+    return text;
+  }
+
+  function getTutorSessionExpandedState(session) {
+    if (!session) return false;
+    if (tutorSessionExpandedState.has(session.key)) {
+      return tutorSessionExpandedState.get(session.key) === true;
+    }
+    return session.isActive || session.isCurrent;
+  }
+
+  function toggleTutorSession(sessionKey) {
+    if (!sessionKey) return;
+
+    const session = buildTimelineItems()
+      .find((item) => item.type === 'tutorSession' && item.key === sessionKey);
+    const expanded = getTutorSessionExpandedState(session);
+    tutorSessionExpandedState.set(sessionKey, !expanded);
+    renderTimeline();
+  }
+
+  function getTutorSessionQuestion(session) {
+    for (const turn of session?.turns || []) {
+      const tutor = turn.tutor || {};
+      const work = getTutorWork(tutor);
+      const question = String(work.originalQuestion || tutor.originalQuestion || turn.tutorSubmittedMessage || turn.message || '').trim();
+      if (question) return question;
+    }
+    return '';
+  }
+
+  function summarizeTutorQuestion(question) {
+    return summarizeText(question, 112);
+  }
+
+  function summarizeText(value, maxLength) {
+    const text = String(value || '').replace(/\s+/g, ' ').trim();
+    if (text.length <= maxLength) return text;
+    return `${text.slice(0, Math.max(0, maxLength - 1)).trim()}...`;
+  }
+
+  function getTutorSessionLabel(session) {
+    const turn = session?.lastTurn || {};
+    if (turn.routeType || turn.confidence) {
+      return formatRouteStatusLabel(turn.routeType || 'formula_tutor', turn.confidence);
+    }
+
+    const tutor = turn.tutor || {};
+    return getTutorTitle(tutor, getTutorWork(tutor));
+  }
+
+  function formatTutorSessionProgress(session) {
+    const tutor = session?.lastTurn?.tutor || {};
+    const work = getTutorWork(tutor);
+    if (tutor.completed) return 'Complete';
+    if (tutor.stopped) return 'Stopped';
+    return formatTutorProgress(tutor, work) || 'In progress';
+  }
+
+  function getTutorStepStatus(tutor, isCurrentStep = false) {
+    if (tutor?.completed) return 'Complete';
+    if (tutor?.stopped) return 'Stopped';
+    if (isCurrentStep && tutor?.active === true) return 'Current';
+    return 'Saved';
+  }
+
+  function getTutorFeedbackLine(response) {
+    const text = String(response || '').replace(/\r/g, '').trim();
+    if (!text) return '';
+
+    if (/^correct\b/i.test(text)) return 'Correct.';
+    if (/^not quite yet\b/i.test(text)) return 'Not quite yet.';
+    if (/^guided formula tutor stopped\b/i.test(text)) return 'Guided Formula Tutor stopped.';
+    if (/^no problem\b/i.test(text)) return firstSentence(text);
+    if (/^okay\b/i.test(text)) return firstSentence(text);
+    return '';
+  }
+
+  function firstSentence(value) {
+    const sentence = String(value || '').trim().match(/^(.+?[.!?])(?:\s|$)/u);
+    return sentence ? sentence[1] : String(value || '').split(/\n+/)[0].trim();
+  }
+
+  function renderTutorCardHtml(turn) {
+    const tutor = turn.tutor;
+    if (!tutor || typeof tutor !== 'object') return '';
+
+    const work = getTutorWork(tutor);
+    if (turn.tutorCollapsed) {
+      if (!tutor.completed && !tutor.stopped) return '';
+      return renderCollapsedTutorCard(turn, tutor, work);
+    }
+
+    const title = getTutorTitle(tutor, work);
+    const stateClass = tutor.completed ? 'is-complete' : tutor.stopped ? 'is-stopped' : 'is-active';
+    const progress = formatTutorProgress(tutor, work) || (tutor.completed ? 'Complete' : tutor.stopped ? 'Stopped' : '');
+    const knownValues = getKnownValuesForTutor(tutor, work);
+    const answer = work.finalAnswer || work.answer || formatTutorAnswer(tutor.solveFor, tutor.finalAnswerDisplay);
+    const calculatorCheck = work.calculatorCheck?.display || '';
+    const isFormulaTutor = isStructuredFormulaTutor(tutor, work);
+    const solveFor = work.solveFor || work.solvingFor || tutor.solveFor || tutor.solvingFor || '';
+    const originalQuestion = work.originalQuestion || tutor.originalQuestion || '';
+    const currentStep = getCurrentTutorPrompt(tutor, work);
+    const canUseCalculator = isFormulaTutor && tutor.active === true && !tutor.completed && !tutor.stopped;
+    const showCalculator = canUseCalculator && shouldShowCalculator(turn.id, tutor, work, currentStep);
+
+    return `
+      <section class="student-tutor-card ${stateClass}" data-tutor-card data-tutor-turn-id="${escapeAttr(turn.id)}">
+        <div class="student-tutor-meta">
+          <h2>${escapeHtml(title)}</h2>
+          <span class="student-tutor-progress">${escapeHtml(progress)}</span>
+        </div>
+        <div class="student-tutor-body">
+          <div class="student-tutor-grid">
+            ${isFormulaTutor ? renderTutorDetail('ORIGINAL QUESTION', originalQuestion, 'student-tutor-original-question is-wide', { showWaiting: true }) : ''}
+            ${renderTutorDetail('Current Step', currentStep, 'student-tutor-current-step', { showWaiting: true })}
+            ${isFormulaTutor ? renderTutorDetail('Solving For', solveFor, '', { showWaiting: true }) : ''}
+            ${isFormulaTutor ? renderTutorDetail('Formula', work.formula || tutor.formula || '', 'student-tutor-formula', { showWaiting: true }) : ''}
+            ${isFormulaTutor ? renderKnownValuesDetail(knownValues) : ''}
+            ${isFormulaTutor && work.substitution ? renderTutorDetail('Substitution', work.substitution, 'student-tutor-substitution') : ''}
+            ${calculatorCheck ? renderTutorDetail('Calculator check', calculatorCheck, 'student-tutor-check') : ''}
+            ${answer ? renderTutorDetail('Final answer', answer, 'student-tutor-answer') : ''}
+            ${tutor.currentHint ? renderTutorDetail('Hint', tutor.currentHint, 'is-wide') : ''}
+          </div>
+          ${canUseCalculator ? renderCalculatorArea(turn.id, showCalculator) : ''}
+        </div>
+        ${renderTutorActions(turn, tutor)}
+      </section>
+    `;
+  }
+
+  function renderCollapsedTutorCard(turn, tutor, work) {
+    const summaryTitle = buildTutorSummaryTitle(tutor, work);
+    const answer = conciseTutorAnswer(tutor, work);
+    const action = turn.tutorExpanded ? 'Hide work' : 'Show work';
+    return `
+      <button type="button" class="student-tutor-summary" data-toggle-work-id="${escapeAttr(turn.id)}" aria-expanded="false">
+        <strong>${escapeHtml(summaryTitle)}</strong>
+        <span>${escapeHtml(answer ? `Answer: ${answer} — ${action}` : action)}</span>
+      </button>
+    `;
+  }
+
+  function renderTutorDetail(label, value, extraClass, options = {}) {
+    const text = String(value || '').trim();
+    if (!text && !options.showWaiting) return '';
+    return `
+      <div class="student-tutor-detail ${escapeAttr(extraClass || '')}">
+        <strong>${escapeHtml(label)}</strong>
+        <p class="${text ? '' : 'student-tutor-pending'}">${escapeHtml(text || 'Waiting...')}</p>
+      </div>
+    `;
+  }
+
+  function renderKnownValuesDetail(values) {
+    const safeValues = Array.isArray(values) ? values : [];
+    const content = safeValues.length > 0
+      ? safeValues.map((value) => {
+        const label = [value.label, value.symbol ? `(${value.symbol})` : ''].filter(Boolean).join(' ');
+        return `${label}: ${value.display || ''}`.trim();
+      }).join('; ')
+      : 'No known values yet.';
+
+    return renderTutorDetail('Known Values', content, 'student-tutor-known');
+  }
+
+  function getKnownValuesForTutor(tutor, work = {}) {
+    if (Array.isArray(work.knownValues) && work.knownValues.length > 0) return work.knownValues;
+    if (Array.isArray(tutor?.knownValues) && tutor.knownValues.length > 0) return tutor.knownValues;
+    if (Array.isArray(tutor?.formulaWork?.knownValues) && tutor.formulaWork.knownValues.length > 0) {
+      return tutor.formulaWork.knownValues;
+    }
+    return [];
+  }
+
+  function formatRouteStatusLabel(routeType, confidence) {
+    const routeLabel = formatRouteLabel(routeType || 'unknown');
+    const confidenceLabel = formatConfidenceLabel(confidence || '');
+    return confidenceLabel ? `${routeLabel} / ${confidenceLabel}` : routeLabel;
+  }
+
+  function formatRouteLabel(routeType) {
+    const normalized = String(routeType || '').trim().toLowerCase();
+    if (normalized === 'formula_tutor') return 'Formula Tutor';
+    if (normalized === 'motion_force_knowledge_tutor') return 'General Tutor';
+    if (normalized === 'tutor_control') return 'Tutor Control';
+    if (normalized === 'science_formula') return 'Formula Answer';
+    if (normalized === 'student_context_clarification') return 'Clarifying Question';
+    if (normalized === 'why_this_matters_followup') return 'Why This Matters';
+    return toTitleCase(String(routeType || 'unknown').replace(/[_-]+/g, ' '));
+  }
+
+  function formatConfidenceLabel(confidence) {
+    const text = String(confidence || '').trim();
+    return text ? toTitleCase(text.replace(/[_-]+/g, ' ')) : '';
+  }
+
+  function renderTutorActions(turn, tutor, options = {}) {
+    if (tutor.completed || tutor.stopped) {
+      if (options.hideCompletedAction) return '';
+      return `
+        <div class="student-tutor-actions">
+          <button type="button" class="panel-action-button" data-toggle-work-id="${escapeAttr(turn.id)}">Hide work</button>
+        </div>
+      `;
+    }
+    if (tutor.active !== true) return '';
+    return `
+      <div class="student-tutor-actions">
+        <button type="button" class="panel-action-button" data-tutor-action="hint">Hint</button>
+        <button type="button" class="panel-action-button" data-tutor-action="restart">Restart</button>
+        <button type="button" class="panel-action-button" data-tutor-action="stop">Stop</button>
+      </div>
+    `;
+  }
+
+  function renderCalculatorArea(turnId, showCalculator) {
+    if (!showCalculator) {
+      return `
+        <button
+          type="button"
+          class="panel-action-button student-calculator-toggle"
+          data-calculator-toggle-id="${escapeAttr(turnId)}"
+          aria-expanded="false"
+        >Calculator</button>
+      `;
+    }
+
+    return renderCalculatorHtml();
+  }
+
+  function renderCalculatorHtml() {
+    return `
+      <div class="student-calculator" aria-label="Guided Formula Tutor calculator">
+        <div class="student-calculator-display" role="status" aria-live="polite">${escapeHtml(formatCalculatorExpression(calculatorExpression) || '0')}</div>
+        <div class="student-calculator-keys">
+          <button type="button" class="student-calculator-button" data-calculator-key="7">7</button>
+          <button type="button" class="student-calculator-button" data-calculator-key="8">8</button>
+          <button type="button" class="student-calculator-button" data-calculator-key="9">9</button>
+          <button type="button" class="student-calculator-button is-operator" data-calculator-key="/">÷</button>
+          <button type="button" class="student-calculator-button" data-calculator-key="4">4</button>
+          <button type="button" class="student-calculator-button" data-calculator-key="5">5</button>
+          <button type="button" class="student-calculator-button" data-calculator-key="6">6</button>
+          <button type="button" class="student-calculator-button is-operator" data-calculator-key="*">×</button>
+          <button type="button" class="student-calculator-button" data-calculator-key="1">1</button>
+          <button type="button" class="student-calculator-button" data-calculator-key="2">2</button>
+          <button type="button" class="student-calculator-button" data-calculator-key="3">3</button>
+          <button type="button" class="student-calculator-button is-operator" data-calculator-key="-">−</button>
+          <button type="button" class="student-calculator-button" data-calculator-key="0">0</button>
+          <button type="button" class="student-calculator-button" data-calculator-key=".">.</button>
+          <button type="button" class="student-calculator-button is-clear" data-calculator-key="clear">C</button>
+          <button type="button" class="student-calculator-button is-operator" data-calculator-key="+">+</button>
+          <button type="button" class="student-calculator-button is-backspace" data-calculator-key="backspace">⌫</button>
+          <button type="button" class="student-calculator-button is-sqrt" data-calculator-key="sqrt">√</button>
+          <button type="button" class="student-calculator-button is-equals" data-calculator-key="equals">=</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function isStructuredFormulaTutor(tutor, work = {}) {
+    return Boolean(tutor?.tutorCategory === 'formula' || tutor?.formulaId || work.formula);
+  }
+
+  function shouldShowCalculator(turnId, tutor, work, currentStepText) {
+    if (calculatorOpenTurnIds.has(turnId)) return true;
+    return shouldAutoOpenCalculator(tutor, work, currentStepText);
+  }
+
+  function shouldAutoOpenCalculator(tutor, work, currentStepText) {
+    if (!tutor?.active || tutor.completed || tutor.stopped) return false;
+    if (work.calculatorCheck?.display || work.substitution) return true;
+
+    const currentStep = work.currentStep || tutor.currentStep || {};
+    const stepText = [
+      currentStep.id,
+      currentStep.type,
+      currentStep.prompt,
+      currentStepText
+    ].map((part) => String(part || '').toLowerCase()).join(' ');
+
+    return /\b(calculate|calculation|arithmetic|substitute|substitution)\b/.test(stepText) ||
+      /\bwhat is\s+[-+*\/×÷√()0-9.\s^]+\??$/i.test(String(currentStep.prompt || currentStepText || ''));
+  }
+
+  function getTutorWork(tutor) {
+    return tutor?.work && typeof tutor.work === 'object' ? tutor.work : {};
+  }
+
+  function formatTutorCalculatorCheck(calculatorCheck) {
+    if (!calculatorCheck) return '';
+    if (typeof calculatorCheck === 'string') return calculatorCheck;
+    if (calculatorCheck.display) return calculatorCheck.display;
+
+    const expression = String(calculatorCheck.expression || '').trim();
+    const value = String(calculatorCheck.displayValue || calculatorCheck.value || '').trim();
+    return [expression, value].filter(Boolean).join(' = ');
+  }
+
+  function getTutorTitle(tutor, work = {}) {
+    const isFormulaTutor = (tutor?.tutorCategory && tutor.tutorCategory !== 'general') || tutor?.formulaId || work.formula;
+    const baseTitle = isFormulaTutor ? 'Formula Tutor' : (tutor?.tutorLabel || 'Guided Tutor');
+    if (tutor?.completed) return `${baseTitle} Complete`;
+    if (tutor?.stopped) return `${baseTitle} Stopped`;
+    return baseTitle;
+  }
+
+  function getCurrentTutorPrompt(tutor, work = {}) {
+    if (tutor?.completed) return 'Final answer ready.';
+    if (tutor?.stopped) return 'Guided tutor stopped.';
+    return work.currentStep?.prompt || work.currentStep?.label || tutor?.currentStepPrompt || tutor?.currentStep?.prompt || '';
+  }
+
+  function formatTutorProgress(tutor, work = {}) {
+    const totalSteps = Number(work.totalSteps) || Number(tutor?.totalSteps) || 0;
+    if (!totalSteps) return '';
+    const stepNumber = Number(work.stepNumber) || Number(tutor?.stepNumber) || Number(tutor?.currentStepIndex) + 1;
+    return `Step ${stepNumber} of ${totalSteps}`;
+  }
+
+  function buildTutorSummaryTitle(tutor, work) {
+    const originalQuestion = String(work.originalQuestion || tutor?.originalQuestion || '').toLowerCase();
+    const solveFor = String(work.solveFor || tutor?.solveFor || '').trim();
+    if (solveFor === 'time' && /\bsound\b|\blightning\b/.test(originalQuestion)) return 'Sound travel time';
+    if (solveFor) return `${toTitleCase(solveFor)} work`;
+    return tutor?.tutorLabel || 'Guided tutor work';
+  }
+
+  function conciseTutorAnswer(tutor, work) {
+    const solveFor = String(work.solveFor || tutor?.solveFor || '').trim();
+    const fullAnswer = String(work.finalAnswer || work.answer || formatTutorAnswer(solveFor, tutor?.finalAnswerDisplay) || '').trim();
+    if (!fullAnswer) return '';
+    if (solveFor) {
+      return fullAnswer.replace(new RegExp(`^${escapeRegExp(solveFor)}\\s*=\\s*`, 'i'), '');
+    }
+    return fullAnswer;
+  }
+
+  function formatTutorAnswer(label, value) {
+    const answer = String(value || '').trim();
+    const solveFor = String(label || '').trim();
+    if (solveFor && answer) return `${solveFor} = ${answer}`;
+    return answer;
+  }
+
+  function handleTimelineClick(event) {
+    const sessionToggleButton = event.target.closest('[data-toggle-tutor-session-id]');
+    if (sessionToggleButton && timeline.contains(sessionToggleButton)) {
+      toggleTutorSession(sessionToggleButton.getAttribute('data-toggle-tutor-session-id') || '');
+      return;
+    }
+
+    const toggleButton = event.target.closest('[data-toggle-work-id]');
+    if (toggleButton && timeline.contains(toggleButton)) {
+      toggleTutorWork(toggleButton.getAttribute('data-toggle-work-id') || '');
+      return;
+    }
+
+    const calculatorToggle = event.target.closest('[data-calculator-toggle-id]');
+    if (calculatorToggle && timeline.contains(calculatorToggle)) {
+      openCalculatorForTurn(calculatorToggle.getAttribute('data-calculator-toggle-id') || '');
+      return;
+    }
+
+    const copyButton = event.target.closest('[data-copy-turn-id]');
+    if (copyButton && timeline.contains(copyButton)) {
+      copyTurnAnswer(copyButton.getAttribute('data-copy-turn-id') || '');
+      return;
+    }
+
+    const tutorButton = event.target.closest('[data-tutor-action]');
+    if (tutorButton && timeline.contains(tutorButton)) {
+      sendTutorCommand(tutorButton.getAttribute('data-tutor-action') || '');
+      return;
+    }
+
+    const calculatorButton = event.target.closest('[data-calculator-key]');
+    if (calculatorButton && timeline.contains(calculatorButton)) {
+      handleCalculatorKey(calculatorButton.getAttribute('data-calculator-key') || '');
+    }
+  }
+
+  function toggleTutorWork(turnId) {
+    const turn = findTurn(turnId);
+    if (!turn || !turn.tutor) return;
+    turn.tutorCollapsed = !turn.tutorCollapsed;
+    turn.tutorExpanded = !turn.tutorCollapsed;
+    renderTimeline();
+  }
+
+  function openCalculatorForTurn(turnId) {
+    if (!turnId) return;
+    calculatorOpenTurnIds.add(turnId);
+    renderTimeline();
+    updateCalculatorDisplay();
+  }
+
+  async function copyTurnAnswer(turnId) {
+    const turn = findTurn(turnId);
+    const text = buildCopyText(turn);
     if (!text) return;
 
     try {
@@ -397,151 +1148,46 @@
     }
   }
 
+  function buildCopyText(turn) {
+    if (!turn) return lastAnswerText;
+    const work = getTutorWork(turn.tutor);
+    return work.finalAnswer || work.answer || turn.response || lastAnswerText;
+  }
+
+  async function sendTutorCommand(command) {
+    if (!command || !sessionIsValid) return;
+
+    const turnId = addPendingTurn(command);
+    setSendingState();
+
+    try {
+      const data = await sendStudentMessage(command);
+      renderStudentMessageResult(data, command, { turnId });
+    } catch (error) {
+      renderStudentError(turnId, error);
+    } finally {
+      setFormEnabled(sessionIsValid);
+      if (sessionIsValid) input.focus();
+    }
+  }
+
   function handleClearClick() {
-    responseBox.textContent = 'Ask a question to see the response here.';
+    chatTurns.splice(0, chatTurns.length);
+    lastAnswerText = '';
     routeInfo.textContent = 'No route yet';
+    renderTimeline();
   }
 
-  function renderTutorCard(tutor, context = {}) {
-    if (!tutorCard) return;
-
-    if (!tutor || typeof tutor !== 'object') {
-      delete tutorCard.dataset.hasTutor;
-      tutorCard.hidden = true;
-      tutorCard.classList.remove('is-complete', 'is-stopped');
-      hideCalculator(true);
-      resetTutorWork();
-      activeTutorQuestion = '';
-      return;
+  function scrollTimelineToBottom() {
+    if (!timeline) return;
+    const activeSessionScroll = timeline.querySelector('.student-tutor-session.is-expanded.is-active .student-tutor-session-scroll');
+    if (activeSessionScroll) {
+      activeSessionScroll.scrollTop = activeSessionScroll.scrollHeight;
     }
-
-    const work = tutor.work && typeof tutor.work === 'object' ? tutor.work : {};
-    const submittedMessage = String(context.submittedMessage || '').trim();
-    const response = String(context.response || '');
-    if (work.originalQuestion) {
-      activeTutorQuestion = work.originalQuestion;
-    } else if (tutor.active === true && Number(tutor.currentStepIndex) === 0 && submittedMessage && /^We are solving for\b/i.test(response)) {
-      activeTutorQuestion = submittedMessage;
-    }
-
-    tutorCard.dataset.hasTutor = 'true';
-    tutorCard.hidden = false;
-    tutorCard.classList.toggle('is-complete', tutor.completed === true);
-    tutorCard.classList.toggle('is-stopped', tutor.stopped === true);
-
-    if (tutor.stopped) {
-      tutorTitle.textContent = 'Guided Tutor Stopped';
-      tutorProgress.textContent = '';
-      hideCalculator(true);
-      resetTutorWork();
-      tutorPrompt.textContent = 'Guided tutor stopped.';
-      setTutorHint('');
-      setTutorFinal('');
-      activeTutorQuestion = '';
-      return;
-    }
-
-    if (tutor.completed) {
-      tutorTitle.textContent = 'Guided Formula Tutor Complete';
-      tutorProgress.textContent = '';
-      hideCalculator(true);
-      setTutorText(tutorOriginalQuestion, work.originalQuestion || tutor.originalQuestion || activeTutorQuestion);
-      setTutorText(tutorSolveFor, work.solveFor || tutor.solveFor || '');
-      setTutorText(tutorFormula, work.formula || tutor.formula || '');
-      renderKnownValues(work.knownValues || tutor.knownValues);
-      setTutorText(tutorSubstitution, work.substitution || '');
-      tutorPrompt.textContent = 'Final answer unlocked.';
-      setTutorHint('');
-      setTutorFinal(work.answer || formatTutorAnswer(tutor.solveFor, tutor.finalAnswerDisplay), { showPending: true });
-      maybeCelebrateTutorCompletion(tutor, work, context);
-      return;
-    }
-
-    showCalculator();
-    completedCelebrationKey = '';
-    const stepNumber = Number(tutor.currentStepIndex) + 1;
-    const totalSteps = Number(tutor.totalSteps) || 0;
-    tutorTitle.textContent = 'Guided Formula Tutor';
-    tutorProgress.textContent = totalSteps > 0 ? `Step ${stepNumber} of ${totalSteps}` : '';
-    setTutorText(tutorOriginalQuestion, work.originalQuestion || tutor.originalQuestion || activeTutorQuestion);
-    setTutorText(tutorSolveFor, work.solveFor || '');
-    setTutorText(tutorFormula, work.formula || '');
-    tutorPrompt.textContent = tutor.currentStepPrompt || '';
-    renderKnownValues(work.knownValues || tutor.knownValues);
-    setTutorText(tutorSubstitution, work.substitution || '');
-    setTutorHint(tutor.currentHint || '');
-    setTutorFinal('', { showPending: true });
+    timeline.scrollTop = timeline.scrollHeight;
   }
 
-  function renderKnownValues(values) {
-    if (!tutorKnownValues) return;
-    const safeValues = Array.isArray(values) ? values : [];
-    if (!safeValues.length) {
-      tutorKnownValues.innerHTML = '<div class="student-tutor-pending"><dt>Waiting...</dt><dd></dd></div>';
-      return;
-    }
-
-    tutorKnownValues.innerHTML = safeValues.map((value) => {
-      const label = [value.label, value.symbol ? `(${value.symbol})` : ''].filter(Boolean).join(' ');
-      return `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value.display || '')}</dd></div>`;
-    }).join('');
-  }
-
-  function resetTutorWork() {
-    setTutorText(tutorOriginalQuestion, '');
-    setTutorText(tutorSolveFor, '');
-    setTutorText(tutorFormula, '');
-    setTutorText(tutorSubstitution, '');
-    if (tutorKnownValues) tutorKnownValues.innerHTML = '';
-  }
-
-  function setTutorText(element, value) {
-    if (!element) return;
-    const text = String(value || '').trim();
-    element.textContent = text || 'Waiting...';
-    element.classList.toggle('student-tutor-pending', !text);
-  }
-
-  function formatTutorAnswer(label, value) {
-    const answer = String(value || '').trim();
-    const solveFor = String(label || '').trim();
-    if (solveFor && answer) return `${solveFor} = ${answer}`;
-    return answer;
-  }
-
-  function setTutorHint(value) {
-    if (!tutorHintWrap || !tutorHint) return;
-    const text = String(value || '').trim();
-    tutorHintWrap.hidden = !text;
-    tutorHint.textContent = text;
-  }
-
-  function setTutorFinal(value, options = {}) {
-    if (!tutorFinalWrap || !tutorFinal) return;
-    const text = String(value || '').trim();
-    const showPending = options.showPending === true;
-    tutorFinalWrap.hidden = !text && !showPending;
-    tutorFinal.textContent = text || 'Waiting for the final answer.';
-    tutorFinal.classList.toggle('student-tutor-pending', !text);
-  }
-
-  function showCalculator() {
-    if (!calculator) return;
-    calculator.hidden = false;
-    updateCalculatorDisplay();
-  }
-
-  function hideCalculator(reset = false) {
-    if (!calculator) return;
-    calculator.hidden = true;
-    if (reset) resetCalculator();
-  }
-
-  function handleCalculatorClick(event) {
-    const button = event.target.closest('[data-calculator-key]');
-    if (!button || !calculator?.contains(button)) return;
-
-    const key = button.getAttribute('data-calculator-key') || '';
+  function handleCalculatorKey(key) {
     if (!key) return;
 
     if (key === 'clear') {
@@ -558,6 +1204,11 @@
 
     if (key === 'equals') {
       calculateExpression();
+      return;
+    }
+
+    if (key === 'sqrt') {
+      calculateSquareRoot();
       return;
     }
 
@@ -607,6 +1258,21 @@
     updateCalculatorDisplay();
   }
 
+  function calculateSquareRoot() {
+    try {
+      const value = calculatorExpression.trim()
+        ? evaluateCalculatorExpression(calculatorExpression)
+        : 0;
+      if (value < 0) throw new Error('Cannot take square root of negative value');
+      calculatorExpression = formatCalculatorResult(Math.sqrt(value));
+      calculatorJustEvaluated = true;
+    } catch {
+      calculatorExpression = 'Error';
+      calculatorJustEvaluated = true;
+    }
+    updateCalculatorDisplay();
+  }
+
   function resetCalculator() {
     calculatorExpression = '';
     calculatorJustEvaluated = false;
@@ -614,6 +1280,9 @@
   }
 
   function updateCalculatorDisplay() {
+    const calculatorDisplay = timeline?.querySelector(
+      '.student-tutor-session-step.is-current .student-calculator-display, .student-tutor-card.is-active .student-calculator-display'
+    );
     if (!calculatorDisplay) return;
     calculatorDisplay.textContent = formatCalculatorExpression(calculatorExpression) || '0';
   }
@@ -744,12 +1413,12 @@
   }
 
   function maybeCelebrateTutorCompletion(tutor, work, context = {}) {
-    if (!fireworks || !context.submittedMessage) return;
+    if (!fireworks || !context.submittedMessage || !tutor?.completed) return;
 
     const completionKey = [
-      work.originalQuestion || tutor.originalQuestion || activeTutorQuestion,
+      work.originalQuestion || tutor.originalQuestion,
       work.formula || tutor.formula,
-      work.answer || tutor.finalAnswerDisplay
+      work.finalAnswer || work.answer || tutor.finalAnswerDisplay
     ].map((part) => String(part || '').trim()).join('|');
 
     if (!completionKey || completionKey === completedCelebrationKey) return;
@@ -772,7 +1441,7 @@
   function handleAskHighlightClick() {
     const selectedText = getHighlightedText();
     if (!selectedText) {
-      showTeacherToolsWarning('Highlight part of the answer first.');
+      showTeacherToolsWarning('Highlight part of the conversation first.');
       return;
     }
 
@@ -828,10 +1497,7 @@
   }
 
   function selectionTouchesStudentAnswerArea(range) {
-    return [responseBox, historyBox].some((element) => {
-      if (!element) return false;
-      return range.intersectsNode(element);
-    });
+    return Boolean(timeline && range.intersectsNode(timeline));
   }
 
   function isInspectShortcut(event) {
@@ -900,31 +1566,6 @@
     }
   }
 
-  function addHistoryItem(message, response) {
-    chatHistory.push({ message, response });
-    renderHistory();
-  }
-
-  function renderHistory() {
-    if (!historyBox || !historyCount) return;
-
-    const messageCount = chatHistory.length * 2;
-    historyCount.textContent = `${messageCount} message${messageCount === 1 ? '' : 's'}`;
-    historyBox.innerHTML = chatHistory.map((item) => `
-      <article class="student-history-item">
-        <div class="student-history-message is-student">
-          <strong>You asked</strong>
-          <p>${escapeHtml(item.message)}</p>
-        </div>
-        <div class="student-history-message is-assistant">
-          <strong>Charlemagne answered</strong>
-          <p>${escapeHtml(item.response)}</p>
-        </div>
-      </article>
-    `).join('');
-    historyBox.scrollTop = historyBox.scrollHeight;
-  }
-
   function getOrCreateStudentHubId() {
     try {
       const existingId = window.localStorage.getItem(STUDENT_HUB_STORAGE_KEY);
@@ -967,6 +1608,29 @@
     return number;
   }
 
+  function toTitleCase(value) {
+    return String(value || '')
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1)}`)
+      .join(' ');
+  }
+
+  function normalizeTutorSessionPart(value) {
+    return String(value || '')
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, ' ');
+  }
+
+  function clonePlain(value) {
+    return JSON.parse(JSON.stringify(value));
+  }
+
+  function escapeRegExp(value) {
+    return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
   function escapeHtml(value) {
     return String(value ?? '')
       .replaceAll('&', '&amp;')
@@ -974,6 +1638,10 @@
       .replaceAll('>', '&gt;')
       .replaceAll('"', '&quot;')
       .replaceAll("'", '&#039;');
+  }
+
+  function escapeAttr(value) {
+    return escapeHtml(value);
   }
 
   if (document.readyState === 'loading') {

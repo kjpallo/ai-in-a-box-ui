@@ -12,314 +12,234 @@ const getCssBlock = (selector) => {
   return match ? match[1] : '';
 };
 
-const tutorCardIndex = studentHtml.indexOf('id="studentTutorCard"');
-const tutorBodyIndex = studentHtml.indexOf('<div class="student-tutor-body">', tutorCardIndex);
-const tutorActionsIndex = studentHtml.indexOf('<div class="student-tutor-actions">', tutorCardIndex);
-const consoleIndex = studentHtml.indexOf('id="studentInteractionConsole"');
-const workspaceIndex = studentHtml.indexOf('<div class="student-workspace">');
+const getCssBlocks = (selector) => {
+  const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return [...studentHtml.matchAll(new RegExp(`${escapedSelector}\\s*\\{([\\s\\S]*?)\\}`, 'g'))]
+    .map((match) => match[1]);
+};
+
+const statusIndex = studentHtml.indexOf('class="student-status-bar"');
+const timelineIndex = studentHtml.indexOf('id="studentTimeline"');
+const formIndex = studentHtml.indexOf('id="studentMessageForm"');
 const inputIndex = studentHtml.indexOf('id="studentMessageInput"');
 const sendIndex = studentHtml.indexOf('id="studentSendButton"');
 const askHighlightIndex = studentHtml.indexOf('id="studentAskHighlightButton"');
 const energyIndex = studentHtml.indexOf('id="studentQuestionEnergy"');
-const responseIndex = studentHtml.indexOf('id="studentResponse"');
-const historyIndex = studentHtml.indexOf('id="studentHistory"');
-const copyIndex = studentHtml.indexOf('id="studentCopyAnswerButton"');
+const pointIndex = studentHtml.indexOf('id="studentPointButton"');
 const clearIndex = studentHtml.indexOf('id="studentClearButton"');
 
-assert.equal(
-  (studentHtml.match(/id="studentInteractionConsole"/g) || []).length,
-  1,
-  'Student page should render exactly one combined Student Interaction Console.'
-);
-
-assert.match(
-  studentHtml,
-  /<section id="studentInteractionConsole" class="panel student-panel student-interaction-console"[\s\S]*<h1 id="studentInteractionConsoleTitle">Student Interaction Console<\/h1>/,
-  'Student page should render the combined interaction console as the top student panel.'
-);
+assert.ok(statusIndex !== -1, 'Student page should keep a compact top status area.');
+assert.ok(timelineIndex !== -1, 'Student page should render a single conversation timeline.');
+assert.ok(formIndex !== -1, 'Student page should keep the question composer at the bottom.');
+assert.ok(statusIndex < timelineIndex && timelineIndex < formIndex, 'Layout should be status, timeline, then input composer.');
 
 [
   ['question input', inputIndex],
   ['Send button', sendIndex],
-  ['Ask about highlighted text button', askHighlightIndex],
-  ['question energy', energyIndex],
-  ['latest response', responseIndex],
-  ['chat history', historyIndex],
-  ['Copy Answer control', copyIndex],
-  ['Clear control', clearIndex]
+  ['Ask highlighted text button', askHighlightIndex],
+  ['Question energy', energyIndex],
+  ['Point button', pointIndex],
+  ['Clear button', clearIndex]
 ].forEach(([label, index]) => {
-  assert.ok(
-    consoleIndex !== -1 && index > consoleIndex && index < workspaceIndex,
-    `${label} should live inside the combined interaction console.`
-  );
+  assert.ok(index !== -1, `${label} should remain available on the student page.`);
 });
 
-assert.match(
-  studentHtml,
-  /<section id="studentTutorCard" class="panel student-panel student-tutor-card"/,
-  'Student page should render the Guided Formula Tutor card.'
-);
+assert.ok(energyIndex > statusIndex && energyIndex < timelineIndex, 'Question energy should live in the top/status area.');
+assert.ok(inputIndex > formIndex && sendIndex > formIndex && askHighlightIndex > formIndex, 'Input controls should live in the bottom composer.');
 
-assert.match(
-  studentHtml,
-  /<div id="studentCalculatorDisplay" class="student-calculator-display" role="status" aria-live="polite">0<\/div>/,
-  'Student page should render the calculator display above the calculator keys.'
-);
+assert.doesNotMatch(studentHtml, /Latest Response/, 'Latest Response should not remain as a separate section.');
+assert.doesNotMatch(studentHtml, /Chat History/, 'Chat History should not remain as a separate side panel.');
+assert.doesNotMatch(studentHtml, /id="studentResponse"/, 'Separate latest response DOM should be removed.');
+assert.doesNotMatch(studentHtml, /id="studentHistory"/, 'Separate chat history DOM should be removed.');
+assert.doesNotMatch(studentHtml, /id="studentTutorCard"/, 'Tutor card should no longer be a standalone page panel.');
+assert.doesNotMatch(studentHtml, /student-workspace|student-main-stack|student-action-column/, 'Old side-by-side workspace shell should be removed.');
 
-assert.ok(
-  tutorCardIndex !== -1 && tutorBodyIndex !== -1 && tutorActionsIndex !== -1 && tutorBodyIndex < tutorActionsIndex,
-  'Tutor actions should appear after the tutor body in DOM order so they stay in normal layout flow.'
-);
-
-assert.match(
-  studentHtml,
-  /\.student-workspace\s*\{[\s\S]*grid-template-columns: minmax\(0, 1fr\) 164px;/,
-  'Student workspace should keep the right-side action column beside the tutor/work area on desktop.'
-);
-
-assert.ok(
-  consoleIndex !== -1 && workspaceIndex !== -1 && consoleIndex < workspaceIndex && workspaceIndex < tutorCardIndex,
-  'Formula tutor/work area should appear below the combined interaction console in DOM order.'
-);
-
-assert.ok(
-  responseIndex !== -1 && responseIndex < workspaceIndex && responseIndex < tutorCardIndex,
-  'Latest Response should stay above the tutor work area so it cannot hide tutor options.'
-);
-
-assert.match(
-  studentHtml,
-  /<aside class="student-action-column" aria-label="Student actions">[\s\S]*id="studentPointButton"[\s\S]*Point\?/,
-  'The right-side action rail should preserve the Point? control.'
-);
-
-assert.doesNotMatch(
-  studentHtml,
-  /<section class="panel student-panel student-response-panel">/,
-  'Latest Response should no longer be a separate page panel outside the interaction console.'
-);
-
-assert.doesNotMatch(
-  studentHtml,
-  /<section class="panel student-panel student-history-panel"/,
-  'Chat History should no longer be a separate page panel outside the interaction console.'
-);
-
-const tutorActionsBlock = getCssBlock('.student-tutor-actions');
+const shellBlock = getCssBlock('.student-shell');
+const timelineBlock = getCssBlock('.student-timeline');
+const composerBlock = getCssBlocks('.student-composer').find((block) => /grid-template-columns:/u.test(block)) || '';
+const sessionBlock = getCssBlock('.student-tutor-session');
+const sessionHeaderBlock = getCssBlock('.student-tutor-session-header');
+const sessionPanelBlock = getCssBlock('.student-tutor-session-panel');
+const collapsedPanelBlock = getCssBlock('.student-tutor-session.is-collapsed .student-tutor-session-panel');
+const sessionScrollBlock = getCssBlock('.student-tutor-session-scroll');
+const sessionStepBlock = getCssBlock('.student-tutor-session-step');
+const sessionSideAnswerStepBlock = getCssBlock('.student-tutor-session-step.has-side-answer');
 const tutorBodyBlock = getCssBlock('.student-tutor-body');
-const tutorGridBlock = getCssBlock('.student-tutor-grid');
-const tutorCardBlock = getCssBlock('.student-tutor-card');
-const currentStepBlock = getCssBlock('.student-tutor-detail.student-tutor-current-step');
 const calculatorBlock = getCssBlock('.student-calculator');
 const calculatorKeysBlock = getCssBlock('.student-calculator-keys');
-const calculatorButtonBlock = getCssBlock('.student-calculator-button');
 
-assert.ok(tutorActionsBlock, 'Tutor actions should have a CSS rule.');
-assert.doesNotMatch(
-  tutorActionsBlock,
-  /position\s*:\s*(?:absolute|fixed)\b/,
-  'Tutor actions should not use absolute or fixed positioning.'
-);
+assert.match(shellBlock, /grid-template-rows:\s*auto minmax\(0,\s*1fr\) auto;/, 'Student shell should reserve one central scroll lane plus bottom composer.');
+assert.match(timelineBlock, /overflow-y:\s*auto;/, 'Conversation timeline should remain the main page scroll area.');
+assert.match(timelineBlock, /overscroll-behavior:\s*contain;/, 'Timeline should contain scroll gestures.');
+assert.match(composerBlock, /grid-template-columns:\s*minmax\(0,\s*1fr\) auto;/, 'Desktop composer should keep input beside actions.');
 
-['Hint', 'Restart', 'Stop'].forEach((label) => {
-  assert.match(
-    studentHtml,
-    new RegExp(`<button type="button" class="panel-action-button" data-tutor-action="[a-z]+">${label}<\\/button>`),
-    `Tutor actions should include ${label}.`
-  );
-});
+const overflowMatches = [...studentHtml.matchAll(/overflow-y:\s*auto;/g)];
+assert.equal(overflowMatches.length, 2, 'Student page should expose the timeline scroll plus one scoped formula-session scroll.');
 
-[
-  'Original question',
-  'Solving for',
-  'Formula',
-  'Known values',
-  'Current step',
-  'Substitution',
-  'Hint',
-  'Answer'
-].forEach((label) => {
-  assert.match(
-    studentHtml,
-    new RegExp(`<strong>${label}<\\/strong>`),
-    `Tutor work area should include ${label}.`
-  );
-});
+assert.ok(sessionBlock, 'Formula tutor sessions should have a CSS rule.');
+assert.match(sessionHeaderBlock, /grid-template-columns:\s*minmax\(0,\s*1fr\) auto;/, 'Session header should keep summary beside controls on desktop.');
+assert.match(sessionPanelBlock, /transition:\s*max-height 220ms ease, opacity 180ms ease, visibility 180ms ease;/, 'Session panel should animate expand/collapse.');
+assert.match(collapsedPanelBlock, /max-height:\s*0;/, 'Collapsed formula sessions should hide the panel.');
+assert.match(collapsedPanelBlock, /visibility:\s*hidden;/, 'Collapsed formula sessions should remove hidden controls from focus.');
+assert.match(sessionPanelBlock, /max-height:\s*min\(980px,\s*calc\(100dvh - 11rem\)\);/, 'Expanded formula sessions should grow with content before hitting a panel limit.');
+assert.match(sessionScrollBlock, /max-height:\s*min\(760px,\s*calc\(100dvh - 15rem\)\);/, 'Expanded formula sessions should use a larger bounded inner step area.');
+assert.match(sessionScrollBlock, /overflow-y:\s*auto;/, 'Expanded formula sessions should use a scoped inner scroller.');
+assert.match(sessionScrollBlock, /overscroll-behavior:\s*contain;/, 'Formula session scroller should contain scroll gestures.');
+assert.match(sessionScrollBlock, /scrollbar-gutter:\s*stable;/, 'Formula session scroller should reserve stable scrollbar space.');
+assert.match(sessionStepBlock, /grid-template-columns:\s*minmax\(0,\s*1fr\);/, 'Tutor steps without a student-answer side panel should use the full work width.');
+assert.match(sessionSideAnswerStepBlock, /grid-template-columns:\s*minmax\(7\.4rem,\s*0\.2fr\) minmax\(0,\s*1fr\);/, 'Tutor steps with actual student answers should keep a compact side answer column.');
 
 assert.match(
-  studentHtml,
-  /body:has\(\.student-tutor-card:not\(\[hidden\]\)\)\s*\{[\s\S]*overflow-y: auto;[\s\S]*\}/,
-  'Tutor-visible desktop layout should allow page scrolling instead of clamping the tutor inside the viewport.'
-);
-
-assert.match(
-  studentHtml,
-  /body:has\(\.student-tutor-card:not\(\[hidden\]\)\) \.student-shell\s*\{[\s\S]*height: auto;[\s\S]*min-height: 100dvh;[\s\S]*\}/,
-  'Tutor-visible student shell should grow naturally while keeping the page at least viewport height.'
-);
-
-assert.match(
-  studentHtml,
-  /\.student-main-stack:has\(\.student-tutor-card:not\(\[hidden\]\)\)\s*\{[\s\S]*grid-template-rows: auto;[\s\S]*align-content: start;[\s\S]*\}/,
-  'Tutor-visible main stack should use natural tutor height below the interaction console.'
-);
-
-assert.doesNotMatch(
-  studentHtml,
-  /\.student-main-stack:has\(\.student-tutor-card:not\(\[hidden\]\)\)\s*\{[\s\S]*grid-template-rows: auto minmax\(0, 1fr\) minmax\(96px, 0\.34fr\) minmax\(126px, 0\.46fr\);[\s\S]*\}/,
-  'Old cramped tutor-visible viewport row split should not be the active layout.'
-);
-
-assert.match(
-  studentHtml,
-  /\.student-tutor-card\s*\{[\s\S]*grid-template-rows: auto auto auto;[\s\S]*overflow: visible;[\s\S]*\}/,
-  'Tutor card should keep header, body, and actions in normal flow instead of clipping the body.'
-);
-assert.ok(tutorCardBlock, 'Tutor card should have a CSS rule.');
-assert.doesNotMatch(
-  tutorCardBlock,
-  /overflow\s*:\s*(?:hidden|auto|scroll)\b/,
-  'Tutor card should not clip or create a small nested scroll region.'
-);
-
-assert.match(
-  studentHtml,
-  /\.student-main-stack:has\(\.student-tutor-card:not\(\[hidden\]\)\) \.student-tutor-card\s*\{[\s\S]*min-height: clamp\(430px, 58dvh, 620px\);[\s\S]*\}/,
-  'Tutor-visible card should receive moderate extra height without becoming full-screen.'
-);
-
-assert.match(
-  studentHtml,
-  /\.student-tutor-body\s*\{[\s\S]*min-height: 0;[\s\S]*overflow-y: visible;[\s\S]*\}/,
-  'Tutor body should not rely on a tiny nested scroller as the primary way to use the tutor.'
-);
-assert.ok(tutorBodyBlock, 'Tutor body should have a CSS rule.');
-assert.match(
-  tutorBodyBlock,
-  /grid-template-columns:\s*minmax\(0,\s*1fr\) minmax\(320px,\s*360px\);/,
-  'Desktop tutor body should use a wide work lane beside a readable calculator lane.'
-);
-assert.doesNotMatch(
-  tutorBodyBlock,
-  /(?:max-height|overflow-y\s*:\s*(?:auto|scroll)|overflow\s*:\s*(?:hidden|auto|scroll))/,
-  'Tutor body should avoid clipped or tiny nested scroll bands.'
-);
-
-assert.ok(tutorGridBlock, 'Tutor grid should have a CSS rule.');
-assert.match(
-  tutorGridBlock,
-  /grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);/,
-  'Tutor state cards should share the available left-side width on desktop.'
-);
-assert.doesNotMatch(
-  tutorGridBlock,
-  /(?:max-height|overflow-y\s*:\s*(?:auto|scroll)|overflow\s*:\s*(?:hidden|auto|scroll))/,
-  'Tutor state cards should not be placed inside a tiny nested scroller.'
-);
-
-assert.ok(currentStepBlock, 'Current step should have a CSS rule.');
-assert.match(
-  currentStepBlock,
-  /grid-column:\s*1\s*\/\s*-1;/,
-  'Current step should span the tutor work lane so it remains prominent.'
+  studentUi,
+  /function renderTimeline\(\)[\s\S]*buildTimelineItems\(\)\.map[\s\S]*renderTutorSession\(item, copyableTurnId\)/,
+  'Timeline rendering should pass through grouped tutor session items.'
 );
 assert.match(
-  currentStepBlock,
-  /padding:\s*0\.82rem 0\.88rem;/,
-  'Current step should have enough padding to read as the active learning prompt.'
+  studentUi,
+  /function buildTimelineItems\(\)[\s\S]*const sessionsByKey = new Map\(\);[\s\S]*getTutorSessionKey\(turn\)[\s\S]*items\.push\(session\)/,
+  'Timeline rendering should group formula tutor turns before mapping to HTML.'
 );
-
-assert.ok(calculatorBlock, 'Calculator should have a CSS rule.');
 assert.match(
-  calculatorBlock,
-  /min-width:\s*0;/,
-  'Calculator should be allowed to shrink within its lane instead of clipping.'
+  studentUi,
+  /function getTutorSessionKey\(turn\)[\s\S]*work\.originalQuestion[\s\S]*tutor\.originalQuestion[\s\S]*tutor\.formulaId[\s\S]*solveFor[\s\S]*join\('\|'\)/,
+  'Formula session keys should use original question, formula id, and solve-for target.'
 );
-assert.doesNotMatch(
-  calculatorBlock,
-  /(?:max-height|overflow\s*:\s*hidden|overflow-y\s*:\s*(?:auto|scroll|hidden))/,
-  'Calculator should not be clipped by its own container.'
-);
-assert.ok(calculatorKeysBlock, 'Calculator keys should have a CSS rule.');
 assert.match(
-  calculatorKeysBlock,
-  /grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\);/,
-  'Calculator keys should fit inside the calculator without forcing horizontal clipping.'
+  studentUi,
+  /function getTutorSessionKey\(turn\)[\s\S]*if \(!isStructuredFormulaTutor\(tutor, work\)\) return '';/,
+  'Normal chat and non-formula tutor turns should not be grouped as formula sessions.'
 );
-assert.ok(calculatorButtonBlock, 'Calculator buttons should have a CSS rule.');
 assert.match(
-  calculatorButtonBlock,
-  /min-width:\s*0;/,
-  'Calculator buttons should not force the calculator wider than its lane.'
+  studentUi,
+  /function normalizeTutorSessionPart\(value\)[\s\S]*toLowerCase\(\)[\s\S]*replace\(\/\\s\+\/g, ' '\);/,
+  'Formula session keys should normalize whitespace and casing.'
 );
 
 assert.match(
   studentUi,
-  /setTutorFinal\('', \{ showPending: true \}\);/,
-  'Active tutoring should keep the answer area visible as a subdued pending state.'
+  /function renderTutorSession\(session, copyableTurnId\)[\s\S]*class="student-chat-turn student-tutor-session[\s\S]*student-tutor-session-header[\s\S]*student-tutor-session-summary[\s\S]*student-tutor-session-meta[\s\S]*data-toggle-tutor-session-id[\s\S]*aria-expanded/,
+  'Formula sessions should render a compact header with summary, meta, progress, and an accessible toggle.'
 );
-
 assert.match(
-  studentHtml,
-  /@media \(max-width: 980px\)[\s\S]*\.student-tutor-body\s*\{[\s\S]*grid-template-columns: 1fr;[\s\S]*\}/,
-  'Narrow screens should stack the tutor cards and calculator before they become cramped.'
+  studentUi,
+  /function renderTutorSession\(session, copyableTurnId\)[\s\S]*student-tutor-session-scroll[\s\S]*student-tutor-session-steps/,
+  'Expanded formula sessions should render chronological steps inside the bounded scroll area.'
 );
-
-assert.match(
-  studentHtml,
-  /@media \(max-width: 900px\)[\s\S]*\.student-console-grid\s*\{[\s\S]*grid-template-columns: 1fr;[\s\S]*\}/,
-  'Tablet screens should stack the interaction console before the question input becomes cramped.'
+assert.doesNotMatch(
+  studentUi,
+  /student-tutor-session-question/,
+  'Expanded formula sessions should not render a duplicate pinned Original Question block.'
 );
-
 assert.match(
-  studentHtml,
-  /@media \(max-width: 900px\)[\s\S]*\.student-history\s*\{[\s\S]*max-height: 240px;[\s\S]*min-height: 170px;[\s\S]*\}/,
-  'Tablet screens should keep history visible but secondary after the console stacks.'
+  studentUi,
+  /function renderTutorSessionStep\(turn, options = \{\}\)[\s\S]*renderTutorDetail\('Original Question'[\s\S]*Current Step[\s\S]*Solving For[\s\S]*Formula[\s\S]*renderKnownValuesDetail[\s\S]*Calculator check[\s\S]*Final answer/,
+  'Each grouped tutor step should include original question context above the current step and formula work fields.'
 );
-
 assert.match(
-  studentHtml,
-  /\.student-response\s*\{[\s\S]*min-height: 154px;[\s\S]*max-height: none;[\s\S]*overflow: visible;[\s\S]*\}/,
-  'Latest Response should have readable height and should not be clipped.'
+  studentUi,
+  /function renderTutorSessionAnswer\(turn, stepIndex\)[\s\S]*if \(stepIndex === 0\) return '';/,
+  'The first step should not show a side Original Question panel.'
 );
-
-assert.match(
-  studentHtml,
-  /\.student-response-wrap\s*\{[\s\S]*overflow: visible;[\s\S]*\}/,
-  'Latest Response wrapper should not clip long answers.'
+assert.doesNotMatch(
+  studentUi,
+  /Original question/,
+  'Side answer panels should not label any row as Original question.'
 );
-
 assert.match(
-  studentHtml,
-  /\.student-history\s*\{[\s\S]*max-height: clamp\(210px, 34dvh, 340px\);[\s\S]*min-height: 210px;[\s\S]*overflow-y: auto;[\s\S]*overscroll-behavior: contain;[\s\S]*scrollbar-gutter: stable;[\s\S]*\}/,
-  'Chat History should remain compact and internally scrollable inside the interaction console.'
+  studentUi,
+  /const canUseCalculator = isCurrentStep[\s\S]*renderCalculatorArea\(turn\.id, showCalculator\)[\s\S]*renderTutorActions\(turn, tutor, \{ hideCompletedAction: true \}\)/,
+  'Only the latest active tutor step should own calculator and tutor controls.'
+);
+assert.match(
+  studentUi,
+  /function renderTutorActions\(turn, tutor, options = \{\}\)[\s\S]*options\.hideCompletedAction[\s\S]*data-tutor-action="hint"[\s\S]*data-tutor-action="restart"[\s\S]*data-tutor-action="stop"/,
+  'Hint, Restart, and Stop controls should remain available for the active step.'
+);
+assert.match(
+  studentUi,
+  /function shouldShowCalculator\(turnId, tutor, work, currentStepText\)[\s\S]*calculatorOpenTurnIds\.has\(turnId\)/,
+  'Calculator open state should remain tied to turn ids.'
+);
+assert.match(
+  studentUi,
+  /data-calculator-key="7"[\s\S]*data-calculator-key="sqrt"[\s\S]*data-calculator-key="equals"/,
+  'The tutor calculator should remain available inside active tutor work.'
 );
 
 assert.match(
   studentUi,
-  /historyBox\.scrollTop = historyBox\.scrollHeight;/,
-  'Chat History should keep the newest exchange visible by default.'
+  /function getTutorSessionExpandedState\(session\)[\s\S]*tutorSessionExpandedState\.has\(session\.key\)[\s\S]*return session\.isActive \|\| session\.isCurrent;/,
+  'Active/current formula sessions should default expanded.'
+);
+assert.match(
+  studentUi,
+  /function collapsePriorTutorCards\(currentTurnId\)[\s\S]*currentSessionKey[\s\S]*collapsePriorTutorSessions\(currentSessionKey\)[\s\S]*tutorSessionExpandedState\.set\(currentSessionKey, true\)/,
+  'Starting a new formula session should expand the current session and consider collapsing prior sessions.'
+);
+assert.match(
+  studentUi,
+  /function collapsePriorTutorSessions\(currentSessionKey\)[\s\S]*sessionKey !== currentSessionKey[\s\S]*tutorSessionExpandedState\.set\(sessionKey, false\)/,
+  'Previous formula sessions should collapse automatically when a different formula problem begins.'
+);
+assert.match(
+  studentUi,
+  /function toggleTutorSession\(sessionKey\)[\s\S]*tutorSessionExpandedState\.set\(sessionKey, !expanded\)[\s\S]*renderTimeline\(\)/,
+  'Collapsed formula sessions should be reopenable by students.'
+);
+assert.match(
+  studentUi,
+  /function handleTimelineClick\(event\)[\s\S]*data-toggle-tutor-session-id[\s\S]*toggleTutorSession/,
+  'Timeline click handling should support session-level toggles.'
 );
 
-const mobileMediaIndex = studentHtml.indexOf('@media (max-width: 760px)');
-const reducedMotionMediaIndex = studentHtml.indexOf('@media (prefers-reduced-motion: reduce)', mobileMediaIndex);
-const mobileCss = mobileMediaIndex === -1
+assert.match(
+  studentUi,
+  /data-copy-turn-id/,
+  'Copy Answer should remain near assistant/session messages in the timeline.'
+);
+assert.match(
+  studentUi,
+  /function findLatestCopyableTurnId\(\)[\s\S]*isCopyableAnswerTurn\(turn\)/,
+  'Only the newest final or direct answer should expose Copy Answer.'
+);
+assert.match(
+  studentUi,
+  /turn\.tutor\.completed === true[\s\S]*finalAnswer/,
+  'Tutor steps should only become copyable once a final answer exists.'
+);
+assert.match(
+  studentUi,
+  /function selectionTouchesStudentAnswerArea\(range\)[\s\S]*range\.intersectsNode\(timeline\)/,
+  'Ask highlighted text should read from the unified timeline, including formula sessions.'
+);
+assert.match(
+  studentUi,
+  /function scrollTimelineToBottom\(\)[\s\S]*student-tutor-session\.is-expanded\.is-active \.student-tutor-session-scroll[\s\S]*timeline\.scrollTop = timeline\.scrollHeight;/,
+  'Newest active tutor work should stay visible in both the session scroller and timeline.'
+);
+
+assert.match(tutorBodyBlock, /grid-template-columns:\s*minmax\(0,\s*1fr\);/, 'Non-formula tutor cards should stay in one timeline column without reserving a blank side panel.');
+assert.match(calculatorBlock, /min-width:\s*0;/, 'Calculator should shrink within its timeline card.');
+assert.match(calculatorBlock, /width:\s*min\(100%,\s*320px\);/, 'Calculator should remain compact inside active tutor work.');
+assert.match(calculatorKeysBlock, /grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\);/, 'Calculator keys should fit inside the tutor card.');
+
+const tabletMediaIndex = studentHtml.indexOf('@media (max-width: 820px)');
+const phoneMediaIndex = studentHtml.indexOf('@media (max-width: 520px)');
+const reducedMotionMediaIndex = studentHtml.indexOf('@media (prefers-reduced-motion: reduce)');
+const tabletCss = tabletMediaIndex === -1
   ? ''
-  : studentHtml.slice(mobileMediaIndex, reducedMotionMediaIndex === -1 ? undefined : reducedMotionMediaIndex);
-assert.match(
-  mobileCss,
-  /\.student-console-grid\s*\{[\s\S]*grid-template-columns: 1fr;[\s\S]*\}/,
-  'Mobile layout should collapse the interaction console to one column.'
-);
-assert.match(
-  mobileCss,
-  /\.student-main-stack:has\(\.student-tutor-card:not\(\[hidden\]\)\)\s*\{[\s\S]*grid-template-rows: none;[\s\S]*\}/,
-  'Mobile layout should keep the tutor/work area in natural page flow.'
-);
-assert.match(
-  mobileCss,
-  /\.student-tutor-body\s*\{[\s\S]*grid-template-columns: 1fr;[\s\S]*overflow-y: visible;[\s\S]*scrollbar-gutter: auto;[\s\S]*\}/,
-  'Mobile layout should avoid a cramped tutor body scroller.'
-);
+  : studentHtml.slice(tabletMediaIndex, phoneMediaIndex === -1 ? undefined : phoneMediaIndex);
+const phoneCss = phoneMediaIndex === -1
+  ? ''
+  : studentHtml.slice(phoneMediaIndex, reducedMotionMediaIndex === -1 ? undefined : reducedMotionMediaIndex);
+const reducedMotionCss = reducedMotionMediaIndex === -1
+  ? ''
+  : studentHtml.slice(reducedMotionMediaIndex);
 
-console.log('student tutor UI: interaction console combines input, latest response, and usable history above the tutor work area');
+assert.match(tabletCss, /\.student-composer\s*\{[\s\S]*grid-template-columns:\s*1fr;[\s\S]*\}/, 'Chromebook/iPad-sized screens should stack the composer.');
+assert.match(tabletCss, /\.student-tutor-session-header\s*\{[\s\S]*grid-template-columns:\s*1fr;[\s\S]*\}/, 'Chromebook/iPad-sized screens should stack session headers.');
+assert.match(tabletCss, /\.student-tutor-body,[\s\S]*\.student-tutor-grid,[\s\S]*\.student-tutor-session-step\s*\{[\s\S]*grid-template-columns:\s*1fr;[\s\S]*\}/, 'Narrow screens should keep tutor work in one column.');
+assert.match(phoneCss, /\.student-tutor-session-scroll\s*\{[\s\S]*max-height:\s*min\(620px,\s*calc\(100dvh - 14rem\)\);[\s\S]*\}/, 'Phone layout should keep formula session scroll usable while allowing more content to fit.');
+assert.match(reducedMotionCss, /\.student-tutor-session-panel,[\s\S]*\.student-tutor-session-toggle\s*\{[\s\S]*transition:\s*none;[\s\S]*\}/, 'Reduced motion should disable session expand/collapse animation.');
+
+console.log('student tutor UI: formula tutor turns group into collapsible problem sessions');
