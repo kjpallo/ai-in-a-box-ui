@@ -426,7 +426,7 @@
               <span id="reportSessionGroupCount">0 archived</span>
             </div>
             <div id="reportSessionGroups" class="report-session-groups">
-              <p class="profile-empty-state">Archived session groups will appear here after a session is ended.</p>
+              <p class="profile-empty-state">Ask questions from a student link first. Saved sessions will appear here after you archive them.</p>
             </div>
           </section>
 

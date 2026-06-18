@@ -10,6 +10,7 @@ const teacherDashboardCss = read(path.join(projectRoot, 'public', 'styles', 'tea
 const responsiveCss = read(path.join(projectRoot, 'public', 'styles', 'responsive.css'));
 const exportHandler = between(profileUi, 'async function exportReportCsv()', 'function printReport()');
 const purgeHandler = between(profileUi, 'async function purgeQuestionsStandardsExport()', 'function printReport()');
+const archiveHandler = between(profileUi, 'async function archiveStudentSession(button)', 'async function restartStudentSessionFromReport(button)');
 const restartHandler = between(profileUi, 'async function restartStudentSessionFromReport(button)', 'function formatLiveQuestionsLeft');
 
 assert.match(
@@ -114,8 +115,33 @@ assert.doesNotMatch(
 );
 assert.match(
   responsiveCss,
-  /\.report-session-group\s*\{[\s\S]*grid-template-columns:\s*1fr[\s\S]*\.report-session-restart-button\s*\{[\s\S]*width:\s*100%/,
-  'Archived session cards should stack cleanly with a full-width restart button on small screens.'
+  /\.report-session-group\s*\{[\s\S]*grid-template-columns:\s*1fr[\s\S]*\.report-session-restart-button,\s*\.report-session-archive-button\s*\{[\s\S]*width:\s*100%/,
+  'Archived and current session cards should stack cleanly with full-width action buttons on small screens.'
+);
+assert.match(
+  bladeUi,
+  /Ask questions from a student link first\. Saved sessions will appear here after you archive them\./,
+  'Archived Sessions empty state should explain how to save a restartable session.'
+);
+assert.match(
+  profileUi,
+  /function buildArchiveableReportSessionGroups[\s\S]*if \(isArchivedReportQuestion\(question\)\) return;[\s\S]*question\?\.sessionKey[\s\S]*question\?\.sessionId[\s\S]*question\?\.classSessionId/,
+  'Questions & Standards should build save actions from current unarchived session groups.'
+);
+assert.match(
+  profileUi,
+  /function renderArchiveableReportSessionGroup[\s\S]*data-report-current-session-group[\s\S]*data-archive-student-session="\$\{escapeAttr\(group\.sessionKey \|\| ''\)\}"[\s\S]*Save as Restartable Session/,
+  'Unarchived Questions & Standards session groups should render a clear archive/save action.'
+);
+assert.match(
+  profileUi,
+  /These current questions are missing a session key, so they cannot be saved as restartable sessions yet\.|Save is unavailable because this question set is missing a session key\./,
+  'Questions & Standards should explain when a current question set cannot be archived or restarted.'
+);
+assert.match(
+  profileUi,
+  /byId\('reportSessionGroups'\)\?\.addEventListener\('click'[\s\S]*data-archive-student-session[\s\S]*archiveStudentSession\(archiveButton\)/,
+  'Questions & Standards Archived Sessions area should wire save actions to the existing archive endpoint.'
 );
 assert.match(
   profileUi,
@@ -196,6 +222,21 @@ assert.match(
   restartHandler,
   /loadStudentSessions\(\)[\s\S]*loadStandardsSummaryReport\(\)/,
   'Restart Session should refresh Live Activity and keep Questions & Standards refreshed.'
+);
+assert.match(
+  archiveHandler,
+  /const statusId = button\?\.closest\('#reportSessionGroups'\) \? 'reportExportStatus' : 'profileStudentLinkStatus'/,
+  'Archive failures from Questions & Standards should be shown in the teacher report UI.'
+);
+assert.match(
+  archiveHandler,
+  /body: JSON\.stringify\(className \? \{ confirm: true, className \} : \{ confirm: true \}\)/,
+  'Questions & Standards archive actions should send the stored class label when available.'
+);
+assert.match(
+  archiveHandler,
+  /loadStudentSessions\(\)[\s\S]*loadStandardsSummaryReport\(\)/,
+  'Archive success should refresh Live Activity and Questions & Standards immediately.'
 );
 assert.doesNotMatch(
   restartHandler,

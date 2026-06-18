@@ -636,15 +636,135 @@
     const container = byId('reportSessionGroups');
     if (!container) return;
 
-    const groups = buildReportSessionGroups(questions);
-    setText('reportSessionGroupCount', `${groups.length} archived`);
+    const archiveableGroups = buildArchiveableReportSessionGroups(questions);
+    const archivedGroups = buildReportSessionGroups(questions);
+    setText('reportSessionGroupCount', `${archivedGroups.length} archived`);
 
-    if (!groups.length) {
-      container.innerHTML = '<p class="profile-empty-state">Archived session groups will appear here after a session is ended.</p>';
+    if (!archiveableGroups.length && !archivedGroups.length) {
+      container.innerHTML = `
+        <p class="profile-empty-state">Ask questions from a student link first. Saved sessions will appear here after you archive them.</p>
+      `;
       return;
     }
 
-    container.innerHTML = groups.map(renderReportSessionGroup).join('');
+    container.innerHTML = [
+      renderArchiveableReportSessionGroups(archiveableGroups, questions),
+      archivedGroups.map(renderReportSessionGroup).join('')
+    ].filter(Boolean).join('');
+  }
+
+  function buildArchiveableReportSessionGroups(questions) {
+    const groups = new Map();
+
+    (Array.isArray(questions) ? questions : []).forEach((question, index) => {
+      if (isArchivedReportQuestion(question)) return;
+      const questionText = firstText(question?.question, question?.studentQuestion, question?.message);
+      if (!questionText) return;
+
+      const sessionKey = firstText(question?.sessionKey, question?.sessionId, question?.classSessionId);
+      const fallbackKey = sessionKey || `missing-session-key-${index + 1}`;
+      const storedLabel = firstText(question?.className, question?.sessionLabel);
+      const existing = groups.get(fallbackKey) || {
+        sessionKey,
+        fallbackKey,
+        label: normalizeRestartedSessionTitle(storedLabel) || 'Current student question set',
+        className: cleanRestartSessionBaseName(storedLabel),
+        questionCount: 0,
+        needsReviewCount: 0,
+        missingStandardCount: 0,
+        latestQuestionAt: '',
+        standardIds: new Set(),
+        topics: new Map()
+      };
+
+      const review = reviewStatusForQuestion(question);
+      existing.questionCount += 1;
+      if (review.needsReview) existing.needsReviewCount += 1;
+      if (!hasQuestionStandard(question)) existing.missingStandardCount += 1;
+      existing.label = normalizeRestartedSessionTitle(firstText(storedLabel, existing.label));
+      existing.className = firstText(existing.className, cleanRestartSessionBaseName(storedLabel));
+      existing.latestQuestionAt = latestLabel(existing.latestQuestionAt, question?.timestamp);
+      addQuestionStandardsToGroup(existing, question);
+      incrementClientCount(existing.topics, question?.topic);
+      groups.set(fallbackKey, existing);
+    });
+
+    return Array.from(groups.values())
+      .map((group) => ({
+        ...group,
+        standardCount: group.standardIds.size,
+        topTopic: topClientCountLabel(group.topics)
+      }))
+      .sort((a, b) => String(b.latestQuestionAt || '').localeCompare(String(a.latestQuestionAt || '')));
+  }
+
+  function renderArchiveableReportSessionGroups(groups, questions) {
+    if (!groups.length) {
+      const hasCurrentQuestions = (Array.isArray(questions) ? questions : [])
+        .some((question) => !isArchivedReportQuestion(question) && firstText(question?.question, question?.studentQuestion, question?.message));
+      if (!hasCurrentQuestions) return '';
+      return `
+        <div class="report-session-save-panel" data-report-session-save-panel>
+          <p class="profile-empty-state">These current questions are missing a session key, so they cannot be saved as restartable sessions yet.</p>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="report-session-save-panel" data-report-session-save-panel>
+        <div class="report-session-save-head">
+          <strong>Current Sessions Ready to Save</strong>
+          <span>End a question set here to make it restartable later.</span>
+        </div>
+        ${groups.map(renderArchiveableReportSessionGroup).join('')}
+      </div>
+    `;
+  }
+
+  function renderArchiveableReportSessionGroup(group) {
+    const canArchive = Boolean(firstText(group.sessionKey));
+    const needsReviewLabel = group.needsReviewCount
+      ? `${group.needsReviewCount} question${group.needsReviewCount === 1 ? '' : 's'}`
+      : 'None';
+    const missingStandardLabel = group.missingStandardCount
+      ? `${group.missingStandardCount} question${group.missingStandardCount === 1 ? '' : 's'}`
+      : 'None';
+    const metaRows = [
+      ['Questions', `${group.questionCount}`],
+      ['Matched standards', `${group.standardCount || 0}`],
+      ['Needs review', needsReviewLabel],
+      ['Missing standards', missingStandardLabel],
+      ['Top topic', group.topTopic],
+      ['Latest question', group.latestQuestionAt ? formatDateTime(group.latestQuestionAt) : 'Not available']
+    ].filter(([, value]) => firstText(value));
+
+    return `
+      <article class="report-session-group report-session-save-group" data-report-current-session-group data-session-key="${escapeAttr(group.sessionKey || '')}">
+        <div class="report-session-group-copy">
+          <div class="report-session-group-title">
+            <strong>${escapeHtml(group.label || 'Current student question set')}</strong>
+            <span class="report-session-state-pill">Current</span>
+          </div>
+          <span class="report-session-group-key">${escapeHtml(group.sessionKey ? truncate(group.sessionKey, 96) : 'Missing session key')}</span>
+          <dl class="report-session-group-meta">
+            ${metaRows.map(([label, value]) => `
+              <div>
+                <dt>${escapeHtml(label)}</dt>
+                <dd>${escapeHtml(value)}</dd>
+              </div>
+            `).join('')}
+          </dl>
+          ${canArchive ? '' : '<p class="report-session-unavailable">Save is unavailable because this question set is missing a session key.</p>'}
+        </div>
+        <button
+          type="button"
+          class="small-button secondary-small report-session-archive-button"
+          data-archive-student-session="${escapeAttr(group.sessionKey || '')}"
+          data-archive-session-class-name="${escapeAttr(group.className || '')}"
+          ${canArchive ? '' : 'disabled aria-disabled="true" title="Save unavailable: no session key."'}
+        >${canArchive ? 'Save as Restartable Session' : 'Save unavailable'}</button>
+      </article>
+    `;
   }
 
   function buildReportSessionGroups(questions) {
@@ -932,6 +1052,12 @@
     });
 
     byId('reportSessionGroups')?.addEventListener('click', (event) => {
+      const archiveButton = event.target.closest('[data-archive-student-session]');
+      if (archiveButton) {
+        archiveStudentSession(archiveButton);
+        return;
+      }
+
       const copyButton = event.target.closest('[data-copy-restarted-student-url]');
       if (copyButton) {
         copyRestartedReportSessionLink(copyButton);
@@ -1832,6 +1958,8 @@
   async function archiveStudentSession(button) {
     const sessionId = button?.getAttribute('data-archive-student-session') || '';
     if (!sessionId) return;
+    const className = cleanRestartSessionBaseName(button?.getAttribute('data-archive-session-class-name') || '');
+    const statusId = button?.closest('#reportSessionGroups') ? 'reportExportStatus' : 'profileStudentLinkStatus';
 
     const confirmed = window.confirm([
       'End Session & Archive?',
@@ -1845,24 +1973,24 @@
 
     try {
       button.disabled = true;
-      setText('profileStudentLinkStatus', 'Archiving session...');
+      setText(statusId, 'Archiving session...');
       const result = await fetchJson(`/api/profile/student-sessions/${encodeURIComponent(sessionId)}/archive`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ confirm: true })
+        body: JSON.stringify(className ? { confirm: true, className } : { confirm: true })
       });
       const rowCount = Number(result?.rowCount || 0);
       const deletedCount = Number(result?.deletedRecordCount || 0);
       setText(
-        'profileStudentLinkStatus',
+        statusId,
         result?.message || `Session archived. Rows: ${rowCount}. Deleted raw records: ${deletedCount}.`
       );
       await loadStudentSessions();
       await loadStandardsSummaryReport();
     } catch (error) {
-      setText('profileStudentLinkStatus', error.message || 'Could not archive this session.');
+      setText(statusId, error.message || 'Could not archive this session.');
     } finally {
       button.disabled = false;
     }

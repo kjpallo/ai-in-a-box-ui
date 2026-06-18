@@ -499,7 +499,8 @@
     grid-template-columns: 1fr;
   }
 
-  .report-session-restart-button {
+  .report-session-restart-button,
+  .report-session-archive-button {
     width: 100%;
   }
 

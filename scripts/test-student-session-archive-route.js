@@ -245,6 +245,65 @@ async function main() {
   assert.equal(summary.questions.some((question) => question.id === 'session-a-1'), true);
   assert.equal(summary.standards.some((standard) => standard.standardId === 'ARCHIVE.ROUTE.1'), true);
 
+  const orphanRecord = {
+    id: 'orphan-session-1',
+    timestamp: '2026-05-05T14:20:00.000Z',
+    studentQuestion: 'Can a recorded session still be saved?',
+    answerGiven: 'Yes, recorded question history can be archived.',
+    routeType: 'knowledge',
+    confidence: 'strong',
+    category: 'archive workflow',
+    sessionId: 'orphan-session',
+    primaryStandards: [
+      { standardId: 'ORPHAN.SESSION.1', label: 'Persisted session standard', unit: 'Archive' }
+    ],
+    standards: [
+      { standardId: 'ORPHAN.SESSION.1', label: 'Persisted session standard', unit: 'Archive' }
+    ],
+    units: ['Archive'],
+    reportableForStandards: true
+  };
+  fs.writeFileSync(logFilePath, `${JSON.stringify([...remainingRecords, orphanRecord], null, 2)}\n`, 'utf8');
+  assert.equal(studentSessions['orphan-session'], undefined, 'orphan fixture should not be actively running');
+
+  const orphanArchiveResponse = await request(
+    handlers,
+    'POST',
+    '/api/profile/student-sessions/:sessionId/archive',
+    { confirm: true, className: 'Recorded Class' },
+    { sessionId: 'orphan-session' },
+    {},
+    authorizedExtras
+  );
+  assert.equal(orphanArchiveResponse.statusCode, 200, 'recorded session archive should succeed without a live runtime session');
+  assert.equal(orphanArchiveResponse.body.ok, true);
+  assert.equal(orphanArchiveResponse.body.archived, true);
+  assert.equal(orphanArchiveResponse.body.sessionId, 'orphan-session');
+  assert.equal(orphanArchiveResponse.body.rowCount, 1, 'recorded session archive should include persisted question records');
+  assert.equal(orphanArchiveResponse.body.deletedRecordCount, 1, 'recorded session archive should delete only archived raw records');
+  assert.equal(orphanArchiveResponse.body.rawRecordsDeleted, true);
+
+  const remainingAfterOrphanArchive = JSON.parse(fs.readFileSync(logFilePath, 'utf8'));
+  assert.deepEqual(
+    remainingAfterOrphanArchive.map((record) => record && record.id).filter(Boolean),
+    ['session-b-1'],
+    'recorded session archive should leave unrelated current records untouched'
+  );
+  const orphanSummary = buildStandardsSummaryReport(loadQuestionsStandardsRecords({
+    logFilePath,
+    archiveDir,
+    readCurrentRecords: loadStudentInteractionLogs
+  }), {
+    date: '2026-05-05',
+    now: new Date('2026-06-06T12:00:00.000Z')
+  });
+  assert.equal(orphanSummary.totalQuestions, 4, 'archived recorded sessions should still appear in Questions & Standards');
+  assert.equal(
+    orphanSummary.questions.some((question) => question.id === 'orphan-session-1' && question.archived === true),
+    true,
+    'Questions & Standards should mark the recorded session record as archived after save'
+  );
+
   const unauthorizedRestart = await request(
     handlers,
     'POST',
@@ -301,6 +360,22 @@ async function main() {
     'id parsed from restart studentUrl should be joinable through the real student join route'
   );
   assert.equal(joinRestarted.body.classSessionId, restartResponse.body.sessionId);
+  const restartedStudentMessage = await request(
+    handlers,
+    'POST',
+    '/api/student/message',
+    {
+      sessionId: restartedSessionIdFromUrl,
+      studentHubId: 'restart-route-student',
+      message: 'Can I ask from the restarted session?'
+    }
+  );
+  assert.equal(
+    restartedStudentMessage.statusCode,
+    200,
+    'restarted student link should accept a student question after join'
+  );
+  assert.equal(restartedStudentMessage.body.response, 'ok');
   assert.equal(restartResponse.body.className, 'Restarted Science A', 'restart should create a normalized restarted class label');
   assert.equal(
     restartResponse.body.message,

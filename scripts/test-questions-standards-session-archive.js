@@ -134,6 +134,51 @@ assert.equal(noRecordsResult.rawRecordsDeleted, false);
 assert.equal(fs.existsSync(noRecordsArchiveDir), false, 'empty session should not write archive files');
 assert.equal(fs.readFileSync(logFilePath, 'utf8'), originalLogContents, 'empty session should not delete raw records');
 
+const classSessionOnlyRecords = [
+  {
+    id: 'class-session-only-1',
+    timestamp: '2026-05-03T15:00:00.000Z',
+    studentQuestion: 'Can classSessionId records archive?',
+    answerGiven: 'Yes, classSessionId can identify a recorded session.',
+    routeType: 'knowledge',
+    confidence: 'strong',
+    category: 'archive workflow',
+    classSessionId: 'class-session-only'
+  },
+  {
+    id: 'class-session-other-1',
+    timestamp: '2026-05-03T15:05:00.000Z',
+    studentQuestion: 'Should this stay current?',
+    answerGiven: 'Yes.',
+    routeType: 'knowledge',
+    confidence: 'strong',
+    category: 'archive workflow',
+    classSessionId: 'class-session-other'
+  }
+];
+writeFixtureLog(`${JSON.stringify(classSessionOnlyRecords, null, 2)}\n`);
+const classSessionOnlyResult = archiveQuestionsStandardsSession({
+  sessionId: 'class-session-only',
+  logFilePath,
+  archiveDir: path.join(tmpDir, 'class-session-only-archives'),
+  archiveId: 'archive-class-session-only',
+  now: () => new Date('2026-06-06T12:15:00.000Z')
+});
+assert.equal(classSessionOnlyResult.archived, true, 'archive should match records stored with classSessionId only');
+assert.equal(classSessionOnlyResult.rowCount, 1, 'classSessionId-only archive should include the matching question');
+assert.deepEqual(classSessionOnlyResult.exportedRecordIds, ['class-session-only-1']);
+const classSessionOnlyCsvRows = parse(fs.readFileSync(classSessionOnlyResult.csvPath, 'utf8'), { columns: true });
+assert.equal(
+  classSessionOnlyCsvRows[0].sessionId,
+  'class-session-only',
+  'archive CSV should preserve classSessionId as the restartable session id'
+);
+assert.deepEqual(
+  JSON.parse(fs.readFileSync(logFilePath, 'utf8')).map((entry) => entry.id),
+  ['class-session-other-1'],
+  'classSessionId-only archive should leave other recorded sessions untouched'
+);
+
 assert.throws(
   () => archiveQuestionsStandardsSession({ logFilePath, archiveDir }),
   /sessionId or classSessionId is required/,
