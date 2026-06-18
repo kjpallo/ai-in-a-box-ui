@@ -3017,6 +3017,21 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'numeric final velocity problem beats velocity class fact',
+    question: 'Challenge: If a Ferrari with an initial velocity of 10 m/s accelerates at a rate of 5 m/s2 for 3 seconds, what will its final velocity be?',
+    matchedKnowledge: matchedKnowledgeFor('Challenge: If a Ferrari with an initial velocity of 10 m/s accelerates at a rate of 5 m/s2 for 3 seconds, what will its final velocity be?'),
+    type: 'science_formula',
+    confidence: 'strong',
+    includes: ['vf = vi + a × t', 'vf = 10 m/s + 5 m/s² × 3 s', 'vf = 25 m/s'],
+    excludes: ['Class Fact', 'Velocity is speed in a specific direction'],
+    formulaWork: {
+      formulaId: 'acceleration_velocity_time',
+      finalAnswerDisplay: '25 m/s',
+      minStepCount: 4
+    },
+    aiAllowed: false
+  },
+  {
     name: 'final velocity from initial velocity acceleration and time',
     question: 'During a phyics lab, a small cart starts moving at an initial velocity of 6 m/s. The cart accelerates at 3 m/s² for 5 seconds. Question: What is the cart’s final velocity?',
     type: 'science_formula',
@@ -3051,12 +3066,34 @@ const tests = [
   {
     name: 'plain velocity definition still uses definition lookup',
     question: 'What is velocity?',
-    matchedKnowledge: [
-      { title: 'Velocity', answer: 'Velocity is speed in a direction.', exactTermMatch: true, score: 30 }
-    ],
+    matchedKnowledge: matchedKnowledgeFor('What is velocity?'),
     type: 'definition',
-    includes: ['Velocity'],
+    includes: ['Velocity is speed in a specific direction'],
     excludes: ['vf =', 'final velocity'],
+    aiAllowed: false
+  },
+  {
+    name: 'speed velocity comparison stays conceptual',
+    question: 'What is the difference between speed and velocity?',
+    matchedKnowledge: matchedKnowledgeFor('What is the difference between speed and velocity?'),
+    type: 'science_concept',
+    includes: ['Speed tells how fast', 'Velocity tells speed plus direction'],
+    excludes: ['vf =', 'a = ('],
+    aiAllowed: false
+  },
+  {
+    name: 'cyclist acceleration from velocity change routes formula first',
+    question: 'A cyclist accelerates from 0 m/s to 8 m/s in 3 seconds. What is his acceleration?',
+    matchedKnowledge: matchedKnowledgeFor('A cyclist accelerates from 0 m/s to 8 m/s in 3 seconds. What is his acceleration?'),
+    type: 'science_formula',
+    confidence: 'strong',
+    includes: ['a = (8 m/s - 0 m/s) / 3 s', 'a = 2.6667 m/s²'],
+    excludes: ['Class Fact', 'Acceleration is the rate that velocity changes over time'],
+    formulaWork: {
+      formulaId: 'acceleration_velocity_time',
+      finalAnswerDisplay: '2.6667 m/s²',
+      minStepCount: 4
+    },
     aiAllowed: false
   },
   {
