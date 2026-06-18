@@ -1,6 +1,7 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const { createStudentRouteHarness } = require('./test-helpers/studentRouteHarness');
 
 const projectRoot = path.join(__dirname, '..');
 const studentHtml = fs.readFileSync(path.join(projectRoot, 'public', 'student.html'), 'utf8');
@@ -242,4 +243,133 @@ assert.match(tabletCss, /\.student-tutor-body,[\s\S]*\.student-tutor-grid,[\s\S]
 assert.match(phoneCss, /\.student-tutor-session-scroll\s*\{[\s\S]*max-height:\s*min\(620px,\s*calc\(100dvh - 14rem\)\);[\s\S]*\}/, 'Phone layout should keep formula session scroll usable while allowing more content to fit.');
 assert.match(reducedMotionCss, /\.student-tutor-session-panel,[\s\S]*\.student-tutor-session-toggle\s*\{[\s\S]*transition:\s*none;[\s\S]*\}/, 'Reduced motion should disable session expand/collapse animation.');
 
-console.log('student tutor UI: formula tutor turns group into collapsible problem sessions');
+async function testGuidedFormulaTutorStartup() {
+  const cases = [
+    {
+      name: 'roller-coaster-acceleration',
+      question: 'A roller coaster car rapidly picks up speed as it rolls down a slope. As it starts down the slope, its speed is 4 m/s. 3 seconds later, at the bottom of the slope, its speed is 22 m/s. Find its acceleration.',
+      formulaId: 'acceleration_velocity_time',
+      solveFor: 'acceleration',
+      finalAnswer: /acceleration = 6 m\/s²/i,
+      directAnswer: /a = 6 m\/s²/i,
+      steps: ['acceleration', '1', '4 m/s', '22 m/s', '3 s', '6']
+    },
+    {
+      name: 'skateboarder-final-speed',
+      question: 'A skateboarder has an acceleration of 1.5 m/s2. Starting from rest, if he accelerates for 2 s, what speed will he reach?',
+      formulaId: 'acceleration_velocity_time',
+      solveFor: 'final velocity',
+      finalAnswer: /final velocity = 3 m\/s/i,
+      directAnswer: /vf = 3 m\/s/i,
+      steps: ['final velocity', '1', '0 m/s', '1.5 m/s2', '2 s', '3']
+    },
+    {
+      name: 'cart-final-speed',
+      question: 'Challenge: A cart rolling down an incline for 5.0 seconds has an acceleration of 4.0 m/s2. If the cart has an initial speed of 2.0 m/s, what is its final speed?',
+      formulaId: 'acceleration_velocity_time',
+      solveFor: 'final velocity',
+      formula: 'vf = vi + a × t',
+      finalAnswer: /final velocity = 22 m\/s/i,
+      directAnswer: /vf = 22 m\/s/i,
+      steps: ['final velocity', '1', '2 m/s', '4 m/s2', '5 s', '22']
+    },
+    {
+      name: 'school-bus-distance-displacement',
+      question: 'A school bus leaves school and heads east for 2 miles before making its first stop. It then turns left and heads north 3 miles before making another stop. Find the distance and displacement of the school bus after completing its first two stops.',
+      formulaId: 'distance_displacement_2d',
+      solveFor: 'distance and displacement',
+      finalAnswer: /Distance = 5 mi[\s\S]*Displacement = about 3\.61 mi northeast/i,
+      directAnswer: /Answer: distance = 5 mi; displacement = about 3\.61 mi NE/i,
+      steps: ['1', '1', '2 miles east', '3 miles north', '5', '3.61']
+    },
+    {
+      name: 'grouped-net-force',
+      question: 'Two students push on a box in the same direction and a third student pushes in the opposite direction. What is the net force on the box if each push with a force of 50 N?',
+      formulaId: 'net_force',
+      solveFor: 'net force',
+      finalAnswer: /net force = 50 N in the direction of the two students/i,
+      directAnswer: /The net force is 50 N in the direction of the two students/i,
+      steps: ['2', '1', '50 N', '1', '100', '50']
+    }
+  ];
+
+  for (const testCase of cases) {
+    await assertGuidedTutorStartsAndCompletes(testCase);
+    await assertDirectAnswerWhenGuidedTutorDisabled(testCase);
+  }
+}
+
+async function assertGuidedTutorStartsAndCompletes(testCase) {
+  const harness = createStudentRouteHarness({ studentGuidedFormulaTutoringEnabled: true });
+  const create = await harness.request('POST', '/api/profile/create-student-session');
+  assert.equal(create.statusCode, 201, `${testCase.name} create enabled session`);
+
+  const start = await harness.request('POST', '/api/student/message', {
+    sessionId: create.body.sessionId,
+    studentHubId: testCase.name,
+    message: testCase.question
+  });
+
+  assert.equal(start.statusCode, 200, `${testCase.name} guided start status`);
+  assert.equal(start.body.routeType, 'formula_tutor', `${testCase.name} should start formula tutor`);
+  assert.equal(start.body.tutor.active, true, `${testCase.name} tutor should be active`);
+  assert.equal(start.body.tutor.formulaId, testCase.formulaId, `${testCase.name} formula id`);
+  assert.equal(start.body.tutor.solveFor, testCase.solveFor, `${testCase.name} solve target`);
+  assert.equal(start.body.tutor.originalQuestion, testCase.question, `${testCase.name} keeps original question`);
+  assert.ok(start.body.tutor.totalSteps > 0, `${testCase.name} should expose tutor steps`);
+  assert.equal(start.body.tutor.work.originalQuestion, testCase.question, `${testCase.name} work keeps original question`);
+  assert.doesNotMatch(start.body.response, testCase.directAnswer, `${testCase.name} should not give direct final answer at tutor start`);
+  if (testCase.formula) assert.equal(start.body.tutor.formula, testCase.formula, `${testCase.name} formula`);
+
+  let latest = start;
+  for (const message of testCase.steps) {
+    latest = await harness.request('POST', '/api/student/message', {
+      sessionId: create.body.sessionId,
+      studentHubId: testCase.name,
+      message
+    });
+    assert.equal(latest.statusCode, 200, `${testCase.name} step ${message} status`);
+    assert.equal(latest.body.routeType, 'formula_tutor', `${testCase.name} step ${message} route`);
+    assert.equal(latest.body.tutor.originalQuestion, testCase.question, `${testCase.name} step ${message} keeps original question`);
+  }
+
+  assert.equal(latest.body.tutor.completed, true, `${testCase.name} should complete tutor`);
+  assert.equal(latest.body.tutor.active, false, `${testCase.name} should stop active tutor after completion`);
+  assert.match(latest.body.response, testCase.finalAnswer, `${testCase.name} final guided answer`);
+  assert.equal(
+    harness.studentSessions[create.body.sessionId].anonymousHubs[testCase.name].currentTutorProblem,
+    null,
+    `${testCase.name} should clear tutor state after completion`
+  );
+}
+
+async function assertDirectAnswerWhenGuidedTutorDisabled(testCase) {
+  const harness = createStudentRouteHarness({ studentGuidedFormulaTutoringEnabled: false });
+  const create = await harness.request('POST', '/api/profile/create-student-session');
+  assert.equal(create.statusCode, 201, `${testCase.name} create disabled session`);
+
+  const direct = await harness.request('POST', '/api/student/message', {
+    sessionId: create.body.sessionId,
+    studentHubId: `${testCase.name}-direct`,
+    message: testCase.question
+  });
+
+  assert.equal(direct.statusCode, 200, `${testCase.name} direct status`);
+  assert.notEqual(direct.body.routeType, 'formula_tutor', `${testCase.name} should not start formula tutor when disabled`);
+  assert.match(direct.body.response, testCase.directAnswer, `${testCase.name} direct answer`);
+  assert.equal(
+    harness.studentSessions[create.body.sessionId].anonymousHubs[`${testCase.name}-direct`].currentTutorProblem,
+    null,
+    `${testCase.name} should not store tutor state when disabled`
+  );
+}
+
+testGuidedFormulaTutorStartup()
+  .then(() => {
+    console.log('student tutor UI: formula tutor turns group into collapsible problem sessions');
+    console.log('student tutor UI: guided formula startup preserves direct-answer mode when disabled');
+  })
+  .catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
