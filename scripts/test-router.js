@@ -634,6 +634,58 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'acceleration landing and parking implies final velocity zero',
+    question: 'A jet is traveling at 80 m/s when it starts to approach a runway. It is able to land and park in 10 s. What is its acceleration?',
+    type: 'science_formula',
+    includes: ['Use the acceleration formula: a = (vf - vi) / t.', 'a = (0 m/s - 80 m/s) / 10 s', 'a = -8 m/s²'],
+    formulaWork: {
+      formulaId: 'acceleration_velocity_time',
+      finalAnswerValue: -8,
+      finalAnswerDisplay: '-8 m/s²',
+      minStepCount: 4
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'acceleration stop sign comes to a stop implies final velocity zero',
+    question: 'A car approaches a stop sign going 5 m/s before it comes to a stop. If it does this in 4 seconds, what was its acceleration?',
+    type: 'science_formula',
+    includes: ['Use the acceleration formula: a = (vf - vi) / t.', 'a = (0 m/s - 5 m/s) / 4 s', 'a = -1.25 m/s²'],
+    formulaWork: {
+      formulaId: 'acceleration_velocity_time',
+      finalAnswerValue: -1.25,
+      finalAnswerDisplay: '-1.25 m/s²',
+      minStepCount: 4
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'acceleration final speed from rest uses vf formula',
+    question: 'A skateboarder has an acceleration of 1.5 m/s2. Starting from rest, if he accelerates for 2 s, what speed will he reach?',
+    type: 'science_formula',
+    includes: ['Use the formula: vf = vi + a × t.', 'vf = 0 m/s + 1.5 m/s² × 2 s', 'vf = 3 m/s'],
+    formulaWork: {
+      formulaId: 'acceleration_velocity_time',
+      finalAnswerValue: 3,
+      finalAnswerDisplay: '3 m/s',
+      minStepCount: 4
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'acceleration two explicit speeds remains correct',
+    question: 'A roller coaster car rapidly picks up speed as it rolls down a slope. As it starts down the slope, its speed is 4 m/s. 3 seconds later, at the bottom of the slope, its speed is 22 m/s. Find its acceleration.',
+    type: 'science_formula',
+    includes: ['Use the acceleration formula: a = (vf - vi) / t.', 'a = (22 m/s - 4 m/s) / 3 s', 'a = 6 m/s²'],
+    formulaWork: {
+      formulaId: 'acceleration_velocity_time',
+      finalAnswerValue: 6,
+      finalAnswerDisplay: '6 m/s²',
+      minStepCount: 4
+    },
+    aiAllowed: false
+  },
+  {
     name: 'displacement from initial and final position',
     question: 'An object starts at 2 m and ends at 10 m. What is its displacement?',
     type: 'science_formula',
