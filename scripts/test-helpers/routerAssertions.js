@@ -34,11 +34,29 @@ function assertRouterCase(route, test) {
   if (test.formulaWork) {
     assert.ok(route.formulaWork, 'Expected questionRoute.formulaWork to exist');
     assert.equal(route.formulaWork.formulaId, test.formulaWork.formulaId);
+    if (Object.prototype.hasOwnProperty.call(test.formulaWork, 'solveFor')) {
+      assert.equal(route.formulaWork.solveFor, test.formulaWork.solveFor);
+    }
+    if (Object.prototype.hasOwnProperty.call(test.formulaWork, 'formula')) {
+      assert.equal(route.formulaWork.formula, test.formulaWork.formula);
+    }
     if (Object.prototype.hasOwnProperty.call(test.formulaWork, 'massValue')) {
       assert.equal(route.formulaWork.variables.mass.value, test.formulaWork.massValue);
     }
     if (Object.prototype.hasOwnProperty.call(test.formulaWork, 'accelerationValue')) {
       assert.equal(route.formulaWork.variables.acceleration.value, test.formulaWork.accelerationValue);
+    }
+    for (const [key, expected] of Object.entries(test.formulaWork.variables || {})) {
+      assert.ok(route.formulaWork.variables[key], `Expected formulaWork.variables.${key} to exist`);
+      if (Object.prototype.hasOwnProperty.call(expected, 'value')) {
+        assert.equal(route.formulaWork.variables[key].value, expected.value);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'unit')) {
+        assert.equal(route.formulaWork.variables[key].unit, expected.unit);
+      }
+      if (Object.prototype.hasOwnProperty.call(expected, 'display')) {
+        assert.equal(route.formulaWork.variables[key].display, expected.display);
+      }
     }
     if (Object.prototype.hasOwnProperty.call(test.formulaWork, 'finalAnswerValue')) {
       assert.equal(route.formulaWork.finalAnswer.value, test.formulaWork.finalAnswerValue);

@@ -210,6 +210,7 @@ async function main() {
   await testAmbiguousVocabNumberedContinuation();
   await testExpandedFormulaTutorFlows();
   await testGuidedFormulaTutorUnitConversionAndCorrections();
+  await testFormulaTutorNewProblemDetectionFromConvertedTimeSteps();
   await testGuidedNetForceTutorFlows();
   await testPhase9CNetForceTutorRegression();
   await testExpandedFormulaTutorIsolation();
@@ -233,6 +234,16 @@ async function testPhase6FormulaTutorCoverage() {
       solveFor: 'final velocity',
       directAnswer: /vf = 24 m\/s/i,
       excludes: [/Velocity is/i, /speed = distance/i]
+    },
+    {
+      name: 'cart-final-speed-exact',
+      question: 'A cart rolling down an incline for 5.0 seconds has an acceleration of 4.0 m/s2. If the cart has an initial speed of 2.0 m/s, what is its final speed?',
+      formulaId: 'acceleration_velocity_time',
+      solveFor: 'final velocity',
+      formula: 'vf = vi + a × t',
+      directAnswer: /vf = 22 m\/s/i,
+      knownValues: ['2 m/s', '4 m/s²', '5 s'],
+      excludes: [/Definition/i, /Speed tells how fast/i, /speed = distance/i]
     },
     {
       name: 'weight',
@@ -372,9 +383,21 @@ async function testPhase6FormulaTutorCoverage() {
     assert.equal(start.body.routeType, 'formula_tutor', `${testCase.name} should start Guided Formula Tutor`);
     assert.equal(start.body.tutor.formulaId, testCase.formulaId, `${testCase.name} formulaId`);
     assert.equal(start.body.tutor.solveFor, testCase.solveFor, `${testCase.name} solveFor`);
+    if (testCase.formula) {
+      assert.equal(start.body.tutor.formula, testCase.formula, `${testCase.name} formula`);
+    }
+    for (const knownValue of testCase.knownValues || []) {
+      assert.ok(
+        (start.body.tutor.knownValues || []).some((value) => value.display === knownValue),
+        `${testCase.name} should extract known value ${knownValue}`
+      );
+    }
     assert.equal(start.body.tutor.active, true, `${testCase.name} active tutor`);
     assert.match(start.body.response, /What variable are we solving for\?/i);
     assert.doesNotMatch(start.body.response, testCase.directAnswer, `${testCase.name} should not reveal final answer in tutor start`);
+    for (const excluded of testCase.excludes || []) {
+      assert.doesNotMatch(start.body.response, excluded, `${testCase.name} tutor start bad route guard`);
+    }
 
     const disabled = createRouteHarness({ studentGuidedFormulaTutoringEnabled: false });
     const disabledCreate = await disabled.request('POST', '/api/profile/create-student-session');
@@ -818,6 +841,160 @@ async function testGuidedFormulaTutorUnitConversionAndCorrections() {
   assert.match(correction.body.response, /Correct\. The distance is 2 km\. Since speed is in m\/s, convert 2 km to 2000 m\./i);
   assert.match(correction.body.response, /What number should go in for speed\?/i);
   assert.equal(studentSessions[classSessionId].anonymousHubs[studentHubId].currentTutorProblem.originalQuestion, lightningQuestion);
+
+  await testOstrichOriginalTimeValueConversionTutor();
+  await testCarAdvertisementSecondsToHoursTutor();
+}
+
+async function testOstrichOriginalTimeValueConversionTutor() {
+  const { request, studentSessions } = createRouteHarness();
+  const create = await request('POST', '/api/profile/create-student-session');
+  assert.equal(create.statusCode, 201);
+  const classSessionId = create.body.sessionId;
+  const studentHubId = 'ostrich-original-time';
+  const question = 'An ostrich can run at a speed of 43 mi/hr. How much ground can an ostrich cover if it runs at this speed for 15 minutes?';
+
+  const start = await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: question });
+  assert.equal(start.statusCode, 200);
+  assert.equal(start.body.routeType, 'formula_tutor');
+  assert.equal(start.body.tutor.solveFor, 'distance');
+  assert.deepEqual(
+    start.body.tutor.knownValues.map((value) => value.display),
+    ['15 minutes = 0.25 hours', '43 miles per hour']
+  );
+
+  await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: 'distance' });
+  await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: '1' });
+
+  const wrongTime = await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: '43' });
+  assert.equal(wrongTime.statusCode, 200);
+  assert.match(wrongTime.body.response, /Not quite yet/i);
+  assert.match(wrongTime.body.response, /15 minutes/i);
+  assert.match(wrongTime.body.response, /0\.25 hours/i);
+  assert.equal(studentSessions[classSessionId].anonymousHubs[studentHubId].currentTutorProblem.steps[
+    studentSessions[classSessionId].anonymousHubs[studentHubId].currentTutorProblem.currentStepIndex
+  ].id, 'identify_time');
+
+  const hint = await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: 'hint' });
+  assert.equal(hint.statusCode, 200);
+  assert.match(hint.body.response, /problem gives 15 minutes/i);
+  assert.match(hint.body.response, /0\.25 hours/i);
+
+  const originalTime = await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: '15' });
+  assert.equal(originalTime.statusCode, 200);
+  assert.match(originalTime.body.response, /Correct\. The time is 15 minutes/i);
+  assert.match(originalTime.body.response, /convert 15 minutes to hours/i);
+  assert.match(originalTime.body.response, /What is 15 ÷ 60\?/i);
+
+  const conversion = await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: '0.25' });
+  assert.equal(conversion.statusCode, 200);
+  assert.match(conversion.body.response, /What number should go in for speed\?/i);
+
+  const speed = await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: '43 mi/hr' });
+  assert.equal(speed.statusCode, 200);
+  assert.match(speed.body.response, /What is 43 × 0\.25\?/i);
+
+  const final = await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: '10.75' });
+  assert.equal(final.statusCode, 200);
+  assert.equal(final.body.tutor.completed, true);
+  assert.match(final.body.response, /distance = 10\.75 miles/i);
+}
+
+async function testCarAdvertisementSecondsToHoursTutor() {
+  const { request } = createRouteHarness();
+  const create = await request('POST', '/api/profile/create-student-session');
+  assert.equal(create.statusCode, 201);
+  const classSessionId = create.body.sessionId;
+  const studentHubId = 'car-ad-seconds-to-hours';
+  const question = 'A car advertisement claims that a certain car can accelerate from rest to 70 km/hr in 7 seconds (hint: convert to hours first!!) Find the car’s acceleration.';
+
+  const start = await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: question });
+  assert.equal(start.statusCode, 200);
+  assert.equal(start.body.routeType, 'formula_tutor');
+  assert.equal(start.body.tutor.solveFor, 'acceleration');
+  assert.deepEqual(
+    start.body.tutor.knownValues.map((value) => value.display),
+    ['0 km/hr', '70 km/hr', '7 seconds = 0.0019 hr']
+  );
+
+  await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: 'acceleration' });
+  await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: '1' });
+  await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: '0 km/hr' });
+  await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: '70 km/hr' });
+
+  const originalTime = await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: '7' });
+  assert.equal(originalTime.statusCode, 200);
+  assert.match(originalTime.body.response, /Correct\. The time is 7 seconds/i);
+  assert.match(originalTime.body.response, /convert 7 seconds to hours/i);
+  assert.match(originalTime.body.response, /What is 7 ÷ 3600\?/i);
+
+  const conversion = await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: '0.00194 hr' });
+  assert.equal(conversion.statusCode, 200);
+  assert.match(conversion.body.response, /What is \(70 - 0\) \/ 0\.0019\?/i);
+
+  const final = await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: '36000' });
+  assert.equal(final.statusCode, 200);
+  assert.equal(final.body.tutor.completed, true);
+  assert.match(final.body.response, /acceleration = 36000 km\/hr²/i);
+}
+
+async function testFormulaTutorNewProblemDetectionFromConvertedTimeSteps() {
+  await testOstrichTimeStepStartsSupersonicTutor();
+  await testCarAdvertisementTimeStepStartsCyclistTutor();
+}
+
+async function testOstrichTimeStepStartsSupersonicTutor() {
+  const { request, studentSessions } = createRouteHarness();
+  const create = await request('POST', '/api/profile/create-student-session');
+  assert.equal(create.statusCode, 201);
+  const classSessionId = create.body.sessionId;
+  const studentHubId = 'ostrich-to-supersonic';
+  const ostrichQuestion = 'An ostrich can run at a speed of 43 mi/hr. How much ground can an ostrich cover if it runs at this speed for 15 minutes?';
+  const jetQuestion = 'A supersonic jet flies 10 miles in 0.008 hours. How fast is the jet moving?';
+
+  await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: ostrichQuestion });
+  await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: 'distance' });
+  await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: '1' });
+  assert.equal(studentSessions[classSessionId].anonymousHubs[studentHubId].currentTutorProblem.steps[
+    studentSessions[classSessionId].anonymousHubs[studentHubId].currentTutorProblem.currentStepIndex
+  ].id, 'identify_time');
+
+  const restart = await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: jetQuestion });
+  assert.equal(restart.statusCode, 200);
+  assert.equal(restart.body.routeType, 'formula_tutor');
+  assert.equal(restart.body.tutor.solveFor, 'speed');
+  assert.equal(restart.body.tutor.formulaId, 'speed_distance_time');
+  assert.match(restart.body.response, /It looks like you are starting a new problem\. I’ll start a new Guided Formula Tutor problem for this question\./i);
+  assert.doesNotMatch(restart.body.response, /^Not quite yet\./i);
+  assert.equal(studentSessions[classSessionId].anonymousHubs[studentHubId].currentTutorProblem.originalQuestion, jetQuestion);
+}
+
+async function testCarAdvertisementTimeStepStartsCyclistTutor() {
+  const { request, studentSessions } = createRouteHarness();
+  const create = await request('POST', '/api/profile/create-student-session');
+  assert.equal(create.statusCode, 201);
+  const classSessionId = create.body.sessionId;
+  const studentHubId = 'car-ad-to-cyclist';
+  const carQuestion = 'A car advertisement claims that a certain car can accelerate from rest to 70 km/hr in 7 seconds (hint: convert to hours first!!) Find the car’s acceleration.';
+  const cyclistQuestion = 'A cyclist accelerates from 0 m/s to 8 m/s in 3 seconds. What is his acceleration?';
+
+  await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: carQuestion });
+  await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: 'acceleration' });
+  await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: '1' });
+  await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: '0 km/hr' });
+  await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: '70 km/hr' });
+  assert.equal(studentSessions[classSessionId].anonymousHubs[studentHubId].currentTutorProblem.steps[
+    studentSessions[classSessionId].anonymousHubs[studentHubId].currentTutorProblem.currentStepIndex
+  ].id, 'identify_time');
+
+  const restart = await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: cyclistQuestion });
+  assert.equal(restart.statusCode, 200);
+  assert.equal(restart.body.routeType, 'formula_tutor');
+  assert.equal(restart.body.tutor.solveFor, 'acceleration');
+  assert.equal(restart.body.tutor.formulaId, 'acceleration_velocity_time');
+  assert.match(restart.body.response, /It looks like you are starting a new problem\. I’ll start a new Guided Formula Tutor problem for this question\./i);
+  assert.doesNotMatch(restart.body.response, /^Not quite yet\./i);
+  assert.equal(studentSessions[classSessionId].anonymousHubs[studentHubId].currentTutorProblem.originalQuestion, cyclistQuestion);
 }
 
 async function testGuidedNetForceTutorFlows() {

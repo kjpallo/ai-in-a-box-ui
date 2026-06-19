@@ -705,6 +705,14 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'motion force newtons first law law of inertia why explains relationship',
+    question: 'Why is Newton’s 1st Law also known as the Law of Inertia?',
+    matchedKnowledge: matchedKnowledgeFor('Why is Newton’s 1st Law also known as the Law of Inertia?'),
+    type: 'science_concept',
+    includes: ['inertia', 'resist changes in motion', 'unbalanced force'],
+    aiAllowed: false
+  },
+  {
     name: 'motion force preserves weight vs mass comparison',
     question: 'Weight vs. mass.',
     matchedKnowledge: matchedKnowledgeFor('Weight vs. mass.'),
@@ -757,9 +765,37 @@ const tests = [
     question: 'Challenge: A cart rolling down an incline for 5.0 seconds has an acceleration of 4.0 m/s2. If the cart has an initial speed of 2.0 m/s, what is its final speed?',
     type: 'science_formula',
     includes: ['Use the formula: vf = vi + a × t.', 'vf = 2 m/s + 4 m/s² × 5 s', 'vf = 2 m/s + 20 m/s', 'vf = 22 m/s'],
-    excludes: ['distance = speed × time', 'distance = 10 m'],
+    excludes: ['distance = speed × time', 'distance = 10 m', 'Speed tells how fast'],
     formulaWork: {
       formulaId: 'acceleration_velocity_time',
+      solveFor: 'final velocity',
+      formula: 'vf = vi + a × t',
+      variables: {
+        'initial velocity': { value: 2, unit: 'm/s', display: '2 m/s' },
+        acceleration: { value: 4, unit: 'm/s²', display: '4 m/s²' },
+        time: { value: 5, unit: 's', display: '5 s' }
+      },
+      finalAnswerValue: 22,
+      finalAnswerDisplay: '22 m/s',
+      minStepCount: 4
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'acceleration final speed exact cart prompt starts formula route',
+    question: 'A cart rolling down an incline for 5.0 seconds has an acceleration of 4.0 m/s2. If the cart has an initial speed of 2.0 m/s, what is its final speed?',
+    type: 'science_formula',
+    includes: ['Use the formula: vf = vi + a × t.', 'vf = 2 m/s + 4 m/s² × 5 s', 'vf = 2 m/s + 20 m/s', 'vf = 22 m/s'],
+    excludes: ['In 9th-grade science', 'Speed tells how fast', 'distance = speed × time', 'distance = 10 m'],
+    formulaWork: {
+      formulaId: 'acceleration_velocity_time',
+      solveFor: 'final velocity',
+      formula: 'vf = vi + a × t',
+      variables: {
+        'initial velocity': { value: 2, unit: 'm/s', display: '2 m/s' },
+        acceleration: { value: 4, unit: 'm/s²', display: '4 m/s²' },
+        time: { value: 5, unit: 's', display: '5 s' }
+      },
       finalAnswerValue: 22,
       finalAnswerDisplay: '22 m/s',
       minStepCount: 4
@@ -789,6 +825,19 @@ const tests = [
       formulaId: 'acceleration_velocity_time',
       finalAnswerValue: 6,
       finalAnswerDisplay: '6 m/s²',
+      minStepCount: 4
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'acceleration helicopter velocity change remains correct',
+    question: 'A helicopter accelerates from 25 m/s to 60 m/s in 5 seconds. What is its acceleration?',
+    type: 'science_formula',
+    includes: ['Use the acceleration formula: a = (vf - vi) / t.', 'a = (60 m/s - 25 m/s) / 5 s', 'a = 7 m/s²'],
+    formulaWork: {
+      formulaId: 'acceleration_velocity_time',
+      finalAnswerValue: 7,
+      finalAnswerDisplay: '7 m/s²',
       minStepCount: 4
     },
     aiAllowed: false

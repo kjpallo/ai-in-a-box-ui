@@ -4783,6 +4783,23 @@ const routerTestBank = [
 
 routerTestBank.push(
   {
+    category: 'acceleration',
+    name: 'final velocity cart exact prompt does not answer speed definition',
+    question: 'A cart rolling down an incline for 5.0 seconds has an acceleration of 4.0 m/s2. If the cart has an initial speed of 2.0 m/s, what is its final speed?',
+    type: 'science_formula',
+    includes: [
+      'Use the formula: vf = vi + a × t.',
+      'vf = 2 m/s + 4 m/s² × 5 s',
+      'vf = 22 m/s'
+    ],
+    excludes: [
+      'In 9th-grade science',
+      'Speed tells how fast',
+      'Definition'
+    ],
+    aiAllowed: false
+  },
+  {
     category: 'answer_intent',
     name: 'mass units only',
     question: 'What are the units for mass?',

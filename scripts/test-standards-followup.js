@@ -157,7 +157,7 @@ function runStandardsContextCarryoverTests() {
     },
     {
       message: "What's the point?",
-      response: "What's the point?\n\nThis matters because gravity affects real things like falling objects, weight, sports, ramps, cars, satellites, and why objects speed up as they fall.",
+      response: "This matters because gravity affects real things like falling objects, weight, sports, ramps, cars, satellites, and why objects speed up as they fall.",
       routeType: 'why_this_matters_followup',
       isStandardsFollowUp: false
     },
@@ -455,7 +455,8 @@ function runWhyThisMattersTests() {
   const forcePoint = answerWhyThisMattersFollowUp('What is the force if mass is 10 kg and acceleration is 2 m/s^2?');
   assert.equal(forcePoint.handled, true);
   assert.equal(forcePoint.matched, true);
-  assert.ok(forcePoint.response.startsWith("What's the point?\n\n"));
+  assert.ok(forcePoint.response.startsWith('This matters because'));
+  assert.ok(!forcePoint.response.includes("What's the point?"));
   assert.ok(forcePoint.response.includes('car crashes, seatbelts, sports, ramps'));
   assertWhyOnlyResponse(forcePoint.response, 'forces what-is-the-point response');
 
@@ -673,6 +674,7 @@ async function runStudentSessionPathTests() {
   assert.equal(point.routeType, 'why_this_matters_followup');
   assert.equal(point.pendingClarification, null);
   assert.ok(point.response.includes('car crashes, seatbelts, sports, ramps'));
+  assert.ok(!point.response.includes("What's the point?"));
   assertWhyOnlyResponse(point.response, 'student session what-is-the-point');
 
   const typedPoint = await service.answerStudentMessage("What's the point?", {
@@ -683,6 +685,7 @@ async function runStudentSessionPathTests() {
 
   assert.equal(typedPoint.routeType, 'why_this_matters_followup');
   assert.ok(typedPoint.response.includes('falling objects, weight, sports, ramps, cars, satellites'));
+  assert.ok(!typedPoint.response.includes("What's the point?"));
   assertWhyOnlyResponse(typedPoint.response, 'typed student session what-is-the-point');
 
   const noContextPoint = await service.answerStudentMessage("What's the point?", {
