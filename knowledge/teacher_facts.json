@@ -188,6 +188,19 @@
       "source": "Teacher-approved 9th-grade physical science reference"
     },
     {
+      "id": "air-resistance",
+      "category": "vocabulary",
+      "title": "Air Resistance",
+      "terms": [
+        "air resistance",
+        "drag",
+        "air drag",
+        "fluid resistance in air"
+      ],
+      "fact": "Air resistance is a force that opposes the motion of an object moving through air. It acts opposite the object's motion and gets larger when speed or surface area increases. As an object falls faster, air resistance increases until it can balance gravity at terminal velocity.",
+      "source": "Teacher-approved 9th-grade physical science reference"
+    },
+    {
       "id": "acceleration",
       "category": "formula",
       "title": "Acceleration",
@@ -265,6 +278,21 @@
       "source": "Teacher-approved 9th-grade physical science reference"
     },
     {
+      "id": "law-of-universal-gravitation",
+      "category": "vocabulary",
+      "title": "Law of Universal Gravitation",
+      "terms": [
+        "law of universal gravitation",
+        "newton's law of universal gravitation",
+        "newtons law of universal gravitation",
+        "universal gravitation",
+        "universal gravity law"
+      ],
+      "fact": "Newton's Law of Universal Gravitation says every object with mass attracts every other object with mass. The force of gravity gets stronger when masses are larger and weaker when objects are farther apart.",
+      "formula": "F = G(m1 × m2) / r²",
+      "source": "Teacher-approved 9th-grade physical science reference"
+    },
+    {
       "id": "momentum",
       "category": "formula",
       "title": "Momentum",
@@ -281,6 +309,19 @@
       "examples": [
         "If mass = 4 kg and velocity = 3 m/s, momentum = 12 kg·m/s."
       ],
+      "source": "Teacher-approved 9th-grade physical science reference"
+    },
+    {
+      "id": "law-of-conservation-of-momentum",
+      "category": "vocabulary",
+      "title": "Law of Conservation of Momentum",
+      "terms": [
+        "law of conservation of momentum",
+        "conservation of momentum",
+        "momentum conservation",
+        "momentum is conserved"
+      ],
+      "fact": "The law of conservation of momentum says the total momentum of a system stays the same unless an outside force acts on it. In a collision, momentum before = momentum after, if outside forces are ignored.",
       "source": "Teacher-approved 9th-grade physical science reference"
     },
     {

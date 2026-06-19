@@ -4171,6 +4171,50 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'phase 10b motion force air resistance bare term beats electrical resistance',
+    question: 'Air resistance',
+    matchedKnowledge: matchedKnowledgeFor('Air resistance'),
+    type: 'definition',
+    includes: ['Air resistance is a force', 'opposes the motion', 'speed or surface area', 'terminal velocity'],
+    excludes: ['electrons', 'ohms', 'wire diameter', 'wire length'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 10b motion force universal gravitation bare law',
+    question: 'Law of Universal Gravitation',
+    matchedKnowledge: matchedKnowledgeFor('Law of Universal Gravitation'),
+    type: 'definition',
+    includes: ['every object with mass attracts every other object with mass', 'farther apart', 'F = G(m1 × m2) / r²'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 10b motion force conservation momentum bare law',
+    question: 'Law of Conservation of Momentum',
+    matchedKnowledge: matchedKnowledgeFor('Law of Conservation of Momentum'),
+    type: 'definition',
+    includes: ['total momentum of a system stays the same', 'outside force acts', 'momentum before = momentum after'],
+    excludes: ['p = m × v'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 10b motion force generic momentum remains generic',
+    question: 'Momentum',
+    matchedKnowledge: matchedKnowledgeFor('Momentum'),
+    type: 'class_fact',
+    includes: ['Momentum describes how hard it is to stop', 'p = m × v'],
+    excludes: ['momentum before = momentum after'],
+    aiAllowed: false
+  },
+  {
+    name: 'phase 10b electricity resistance remains electrical',
+    question: 'What is electrical resistance?',
+    matchedKnowledge: matchedKnowledgeFor('What is electrical resistance?'),
+    type: 'definition',
+    includes: ['opposition to the flow of electric current', 'ohms'],
+    excludes: ['moving through air', 'terminal velocity'],
+    aiAllowed: false
+  },
+  {
     name: 'phase 10b motion force terminal velocity',
     question: 'what is terminal velocity',
     type: 'science_concept',

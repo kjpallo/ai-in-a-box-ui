@@ -12,6 +12,13 @@ const teacherFactsPath = path.join(__dirname, '..', 'knowledge', 'teacher_facts.
 const teacherKnowledge = loadTeacherKnowledge(teacherFactsPath);
 
 const tests = [
+  testFinalSpeedCartUsesAccelerationFormulaTutor,
+  testAirResistanceUsesDragFact,
+  testLawOfUniversalGravitationUsesLocalFact,
+  testLawOfConservationOfMomentumBeatsGenericMomentum,
+  testGenericMomentumStillWorks,
+  testKaiPoolAcceptsBareOpposite,
+  testKaiPoolDisplacementSideAnswerGetsHelpfulHint,
   testNicoleParserIncludesReturnLeg,
   testNicoleTutorAcceptsTotalDistance,
   ...buildMaliNaturalLanguageAcceptanceTests(),
@@ -47,6 +54,98 @@ if (failed.length > 0) {
   console.log('Failing checks:');
   failed.forEach((result) => console.log(`- ${result.name}: ${result.error.message}`));
   process.exitCode = 1;
+}
+
+function testFinalSpeedCartUsesAccelerationFormulaTutor() {
+  const route = routeWithTeacherKnowledge(cartFinalSpeedQuestion());
+  assert.equal(route.type, 'science_formula');
+  assert.equal(route.formulaWork?.formulaId, 'acceleration_velocity_time');
+  assert.equal(route.formulaWork?.solveFor, 'final velocity');
+  assert.equal(route.formulaWork?.formula, 'vf = vi + a × t');
+  assert.match(route.directAnswer, /vf = 22 m\/s/i);
+  assert.doesNotMatch(route.directAnswer, /speed = distance \/ time/i);
+
+  const tutor = startTutorAtStep(cartFinalSpeedQuestion(), 'calculate', {
+    identify_solve_target: 'final velocity',
+    choose_formula: 'vf = vi + a × t',
+    identify_initial_velocity: '2.0 m/s',
+    identify_acceleration: '4.0 m/s²',
+    identify_time: '5.0 s'
+  });
+  const step = currentStep(tutor);
+  assert.match(step.prompt, /vf = 2 \+ 4 × 5/i);
+
+  const result = answerFormulaTutorStep(tutor, '22 m/s');
+  assertAccepted(result, 'Cart final-speed tutor should accept 22 m/s');
+  assert.match(result.response, /final velocity = 22 m\/s/i);
+}
+
+function testAirResistanceUsesDragFact() {
+  const route = routeWithTeacherKnowledge('Air resistance');
+  assert.notEqual(route.type, 'no_match');
+  assert.match(route.directAnswer, /Air resistance is a force/i);
+  assert.match(route.directAnswer, /opposes the motion|opposite the object/i);
+  assert.match(route.directAnswer, /speed or surface area/i);
+  assert.match(route.directAnswer, /terminal velocity/i);
+  assert.doesNotMatch(route.directAnswer, /electrons|ohms|wire diameter|wire length/i);
+}
+
+function testLawOfUniversalGravitationUsesLocalFact() {
+  const route = routeWithTeacherKnowledge('Law of Universal Gravitation');
+  assert.notEqual(route.type, 'no_match');
+  assert.match(route.directAnswer, /every object with mass attracts every other object with mass/i);
+  assert.match(route.directAnswer, /farther apart/i);
+  assert.match(route.directAnswer, /F = G\(m1 × m2\) \/ r²/i);
+}
+
+function testLawOfConservationOfMomentumBeatsGenericMomentum() {
+  const route = routeWithTeacherKnowledge('Law of Conservation of Momentum');
+  assert.notEqual(route.type, 'no_match');
+  assert.match(route.directAnswer, /total momentum of a system stays the same/i);
+  assert.match(route.directAnswer, /outside force acts/i);
+  assert.match(route.directAnswer, /momentum before = momentum after/i);
+  assert.doesNotMatch(route.directAnswer, /p = m × v/i);
+}
+
+function testGenericMomentumStillWorks() {
+  const route = routeWithTeacherKnowledge('Momentum');
+  assert.notEqual(route.type, 'no_match');
+  assert.match(route.directAnswer, /Momentum describes how hard it is to stop/i);
+  assert.match(route.directAnswer, /p = m × v/i);
+}
+
+function testKaiPoolAcceptsBareOpposite() {
+  const tutor = startTutorAtStep(kaiQuestion(), 'identify_finish_side', {
+    identify_solve_target: 'distance and displacement',
+    choose_formula: 'distance = total path; displacement = start-to-finish change',
+    identify_pool_length: '50 m',
+    identify_length_count: '3',
+    calculate_distance: '150 m'
+  });
+
+  const result = answerFormulaTutorStep(tutor, 'opposite');
+  assertAccepted(result, 'Kai finish-side step should accept bare "opposite"');
+  assert.match(result.response, /What is his displacement/i);
+}
+
+function testKaiPoolDisplacementSideAnswerGetsHelpfulHint() {
+  const tutor = startTutorAtStep(kaiQuestion(), 'calculate_displacement', {
+    identify_solve_target: 'distance and displacement',
+    choose_formula: 'distance = total path; displacement = start-to-finish change',
+    identify_pool_length: '50 m',
+    identify_length_count: '3',
+    calculate_distance: '150 m',
+    identify_finish_side: 'opposite'
+  });
+
+  const hint = answerFormulaTutorStep(tutor, 'other side');
+  assert.ok(hint.currentTutorProblem, 'Conceptual side answer should keep tutor on displacement step');
+  assert.match(hint.response, /Yes, he is on the opposite side/i);
+  assert.match(hint.response, /What distance is that from where he started/i);
+  assert.equal(currentStep(hint.currentTutorProblem).id, 'calculate_displacement');
+
+  const solved = answerFormulaTutorStep(hint.currentTutorProblem, '50 m');
+  assertAccepted(solved, 'Kai displacement step should still require and accept 50 m');
 }
 
 function testNicoleParserIncludesReturnLeg() {
@@ -224,8 +323,16 @@ function nicoleQuestion() {
   return 'Nicole parks her car at Target and walks 150 ft north to get to the store. On her way back to her car, she walks 50 ft before pausing when she sees a sign for discounted iced coffee at Starbucks. Find her distance and displacement.';
 }
 
+function cartFinalSpeedQuestion() {
+  return 'A cart rolling down an incline for 5.0 seconds has an acceleration of 4.0 m/s2. If the cart has an initial speed of 2.0 m/s, what is its final speed?';
+}
+
 function maliQuestion() {
   return 'Mali loves to make herself dizzy. She spins around in place 7 times before falling down right where she was standing. Find her distance and displacement.';
+}
+
+function kaiQuestion() {
+  return 'Kai swims for the school swim team. He specializes in a backstroke event where he has to swim the 50-m length of the pool three times. Find his distance and displacement.';
 }
 
 function slug(value) {
