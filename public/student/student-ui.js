@@ -21,6 +21,19 @@
   const energyHelper = document.getElementById('studentQuestionEnergyHelper');
   const energyFill = document.getElementById('studentQuestionEnergyFill');
   const chatTurns = [];
+  const FIREWORKS_MAX_PARTICLES = 170;
+  const FIREWORKS_DURATION_MS = 3600;
+  const FIREWORK_COLORS = [
+    '#fff76a',
+    '#ff4fd8',
+    '#36d6ff',
+    '#68ff8f',
+    '#ff7a2f',
+    '#b56cff',
+    '#ffffff',
+    '#66f7d1',
+    '#ff3f6e'
+  ];
   const controls = {
     studentCopyInspectLockEnabled: true,
     studentQuestionRateLimitEnabled: true,
@@ -1413,12 +1426,16 @@
   }
 
   function maybeCelebrateTutorCompletion(tutor, work, context = {}) {
-    if (!fireworks || !context.submittedMessage || !tutor?.completed) return;
+    if (!fireworks || !context.submittedMessage || !tutor?.completed || tutor?.stopped) return;
+    if (!isStructuredFormulaTutor(tutor, work)) return;
+
+    const finalAnswer = String(work.finalAnswer || work.answer || tutor.finalAnswerDisplay || '').trim();
+    if (!finalAnswer) return;
 
     const completionKey = [
       work.originalQuestion || tutor.originalQuestion,
       work.formula || tutor.formula,
-      work.finalAnswer || work.answer || tutor.finalAnswerDisplay
+      finalAnswer
     ].map((part) => String(part || '').trim()).join('|');
 
     if (!completionKey || completionKey === completedCelebrationKey) return;
@@ -1430,12 +1447,205 @@
     if (!fireworks) return;
 
     window.clearTimeout(fireworksTimer);
+    fireworks.classList.remove('is-active');
     fireworks.hidden = true;
-    void fireworks.offsetWidth;
+    fireworks.replaceChildren();
+
+    if (prefersReducedMotion()) return;
+
+    fireworks.appendChild(createTutorFireworkFinale());
     fireworks.hidden = false;
+    void fireworks.offsetWidth;
+    fireworks.classList.add('is-active');
     fireworksTimer = window.setTimeout(() => {
+      fireworks.classList.remove('is-active');
       fireworks.hidden = true;
-    }, 3000);
+      fireworks.replaceChildren();
+    }, FIREWORKS_DURATION_MS);
+  }
+
+  function createTutorFireworkFinale() {
+    const fragment = document.createDocumentFragment();
+    let particleCount = 0;
+    const append = (node) => {
+      if (particleCount >= FIREWORKS_MAX_PARTICLES) return;
+      fragment.appendChild(node);
+      particleCount += 1;
+    };
+
+    addBurst(append, {
+      name: 'megaBurst',
+      originX: 50,
+      originY: 34,
+      count: 52,
+      minDistance: 100,
+      maxDistance: 250,
+      minSize: 8,
+      maxSize: 17,
+      delay: 0,
+      delaySpread: 180,
+      minDuration: 1300,
+      maxDuration: 1900,
+      trailEvery: 3
+    });
+    addBurst(append, {
+      name: 'sideBurstLeft',
+      originX: 18,
+      originY: 38,
+      count: 24,
+      minDistance: 74,
+      maxDistance: 180,
+      minSize: 7,
+      maxSize: 14,
+      delay: 260,
+      delaySpread: 170,
+      minDuration: 1150,
+      maxDuration: 1700,
+      trailEvery: 4
+    });
+    addBurst(append, {
+      name: 'sideBurstRight',
+      originX: 82,
+      originY: 36,
+      count: 24,
+      minDistance: 74,
+      maxDistance: 180,
+      minSize: 7,
+      maxSize: 14,
+      delay: 380,
+      delaySpread: 160,
+      minDuration: 1150,
+      maxDuration: 1700,
+      trailEvery: 4
+    });
+    addSparkleRain(append, {
+      name: 'sparkleRain',
+      count: 34,
+      delay: 720,
+      delaySpread: 1100
+    });
+    addRingShockwave(append, {
+      name: 'ringShockwave',
+      originX: 50,
+      originY: 34,
+      count: 3,
+      delay: 70,
+      delaySpread: 210,
+      size: 58
+    });
+    addRingShockwave(append, {
+      name: 'ringShockwave',
+      originX: 18,
+      originY: 38,
+      count: 1,
+      delay: 320,
+      size: 44
+    });
+    addRingShockwave(append, {
+      name: 'ringShockwave',
+      originX: 82,
+      originY: 36,
+      count: 1,
+      delay: 440,
+      size: 44
+    });
+    addBurst(append, {
+      name: 'finalePop',
+      originX: 50,
+      originY: 28,
+      count: 32,
+      minDistance: 80,
+      maxDistance: 210,
+      minSize: 9,
+      maxSize: 18,
+      delay: 2350,
+      delaySpread: 220,
+      minDuration: 900,
+      maxDuration: 1350,
+      trailEvery: 2
+    });
+
+    return fragment;
+  }
+
+  function addBurst(append, preset) {
+    for (let index = 0; index < preset.count; index += 1) {
+      const angle = (Math.PI * 2 * index) / preset.count + randomBetween(-0.09, 0.09);
+      const distance = randomBetween(preset.minDistance, preset.maxDistance);
+      const particle = document.createElement('span');
+      const isTrail = preset.trailEvery && index % preset.trailEvery === 0;
+      particle.className = `student-firework-particle ${isTrail ? 'is-trail' : 'is-spark'}`;
+      particle.dataset.burst = preset.name;
+      setFireworkVars(particle, {
+        '--origin-x': `${preset.originX}%`,
+        '--origin-y': `${preset.originY}%`,
+        '--spark-x': `${Math.cos(angle) * distance}px`,
+        '--spark-y': `${Math.sin(angle) * distance}px`,
+        '--spark-size': `${randomBetween(preset.minSize, preset.maxSize).toFixed(1)}px`,
+        '--spark-color': pickFireworkColor(index),
+        '--spark-delay': `${Math.round(preset.delay + randomBetween(0, preset.delaySpread || 0))}ms`,
+        '--spark-duration': `${Math.round(randomBetween(preset.minDuration, preset.maxDuration))}ms`,
+        '--spark-rotate': `${Math.round((angle * 180) / Math.PI + 90)}deg`,
+        '--spark-scale': randomBetween(0.9, 1.65).toFixed(2)
+      });
+      append(particle);
+    }
+  }
+
+  function addSparkleRain(append, preset) {
+    for (let index = 0; index < preset.count; index += 1) {
+      const particle = document.createElement('span');
+      particle.className = 'student-firework-particle is-glitter';
+      particle.dataset.burst = preset.name;
+      setFireworkVars(particle, {
+        '--origin-x': `${randomBetween(8, 92).toFixed(1)}%`,
+        '--origin-y': `${randomBetween(4, 22).toFixed(1)}%`,
+        '--spark-x': `${randomBetween(-46, 46).toFixed(1)}px`,
+        '--spark-y': `${randomBetween(170, 330).toFixed(1)}px`,
+        '--spark-size': `${randomBetween(4, 9).toFixed(1)}px`,
+        '--spark-color': pickFireworkColor(index + 3),
+        '--spark-delay': `${Math.round(preset.delay + randomBetween(0, preset.delaySpread || 0))}ms`,
+        '--spark-duration': `${Math.round(randomBetween(1350, 2200))}ms`,
+        '--spark-rotate': `${Math.round(randomBetween(150, 520))}deg`
+      });
+      append(particle);
+    }
+  }
+
+  function addRingShockwave(append, preset) {
+    for (let index = 0; index < preset.count; index += 1) {
+      const ring = document.createElement('span');
+      ring.className = 'student-firework-ring';
+      ring.dataset.burst = preset.name;
+      setFireworkVars(ring, {
+        '--origin-x': `${preset.originX}%`,
+        '--origin-y': `${preset.originY}%`,
+        '--ring-size': `${preset.size + index * 22}px`,
+        '--ring-scale': randomBetween(2.6, 4.4).toFixed(2),
+        '--spark-color': pickFireworkColor(index + 1),
+        '--spark-delay': `${Math.round((preset.delay || 0) + randomBetween(0, preset.delaySpread || 0))}ms`,
+        '--spark-duration': `${Math.round(randomBetween(900, 1450))}ms`
+      });
+      append(ring);
+    }
+  }
+
+  function setFireworkVars(element, vars) {
+    Object.entries(vars).forEach(([name, value]) => {
+      element.style.setProperty(name, value);
+    });
+  }
+
+  function pickFireworkColor(offset = 0) {
+    return FIREWORK_COLORS[(offset + Math.floor(Math.random() * FIREWORK_COLORS.length)) % FIREWORK_COLORS.length];
+  }
+
+  function randomBetween(min, max) {
+    return min + Math.random() * (max - min);
+  }
+
+  function prefersReducedMotion() {
+    return Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
   }
 
   function handleAskHighlightClick() {

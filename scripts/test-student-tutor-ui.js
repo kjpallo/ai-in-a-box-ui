@@ -68,6 +68,7 @@ const sessionSideAnswerStepBlock = getCssBlock('.student-tutor-session-step.has-
 const tutorBodyBlock = getCssBlock('.student-tutor-body');
 const calculatorBlock = getCssBlock('.student-calculator');
 const calculatorKeysBlock = getCssBlock('.student-calculator-keys');
+const fireworksBlock = getCssBlock('.student-fireworks');
 
 assert.match(shellBlock, /grid-template-rows:\s*auto minmax\(0,\s*1fr\) auto;/, 'Student shell should reserve one central scroll lane plus bottom composer.');
 assert.match(timelineBlock, /overflow-y:\s*auto;/, 'Conversation timeline should remain the main page scroll area.');
@@ -224,6 +225,28 @@ assert.match(calculatorBlock, /min-width:\s*0;/, 'Calculator should shrink withi
 assert.match(calculatorBlock, /width:\s*min\(100%,\s*320px\);/, 'Calculator should remain compact inside active tutor work.');
 assert.match(calculatorKeysBlock, /grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\);/, 'Calculator keys should fit inside the tutor card.');
 
+assert.ok(studentHtml.includes('id="studentTutorFireworks" class="student-fireworks" aria-hidden="true" hidden'), 'Tutor completion fireworks overlay should stay hidden until completion.');
+assert.match(fireworksBlock, /pointer-events:\s*none;/, 'Tutor completion fireworks should not block student input.');
+assert.match(fireworksBlock, /contain:\s*layout paint;/, 'Tutor completion fireworks should isolate layout and paint work.');
+assert.match(studentHtml, /student-firework-particle[\s\S]*student-firework-ring[\s\S]*student-firework-rain/, 'Tutor completion fireworks should include burst particles, rings, and sparkle rain styles.');
+assert.match(studentUi, /const FIREWORKS_MAX_PARTICLES = 170;/, 'Tutor completion fireworks should cap active particles.');
+assert.match(studentUi, /const FIREWORKS_DURATION_MS = 3600;/, 'Tutor completion fireworks should clean up after a short finale.');
+assert.match(
+  studentUi,
+  /function maybeCelebrateTutorCompletion\(tutor, work, context = \{\}\)[\s\S]*tutor\?\.completed[\s\S]*tutor\?\.stopped[\s\S]*isStructuredFormulaTutor\(tutor, work\)[\s\S]*finalAnswer[\s\S]*showTutorFireworks\(\)/,
+  'Tutor completion fireworks should trigger only for completed structured formula tutor work with a final answer.'
+);
+assert.match(
+  studentUi,
+  /function showTutorFireworks\(\)[\s\S]*fireworks\.replaceChildren\(\);[\s\S]*prefersReducedMotion\(\)[\s\S]*createTutorFireworkFinale\(\)[\s\S]*fireworks\.replaceChildren\(\);/,
+  'Tutor completion fireworks should respect reduced motion and clean up generated DOM.'
+);
+assert.match(
+  studentUi,
+  /megaBurst[\s\S]*sideBurstLeft[\s\S]*sideBurstRight[\s\S]*sparkleRain[\s\S]*ringShockwave[\s\S]*finalePop/,
+  'Tutor completion fireworks should include the expected finale burst presets.'
+);
+
 const tabletMediaIndex = studentHtml.indexOf('@media (max-width: 820px)');
 const phoneMediaIndex = studentHtml.indexOf('@media (max-width: 520px)');
 const reducedMotionMediaIndex = studentHtml.indexOf('@media (prefers-reduced-motion: reduce)');
@@ -242,6 +265,7 @@ assert.match(tabletCss, /\.student-tutor-session-header\s*\{[\s\S]*grid-template
 assert.match(tabletCss, /\.student-tutor-body,[\s\S]*\.student-tutor-grid,[\s\S]*\.student-tutor-session-step\s*\{[\s\S]*grid-template-columns:\s*1fr;[\s\S]*\}/, 'Narrow screens should keep tutor work in one column.');
 assert.match(phoneCss, /\.student-tutor-session-scroll\s*\{[\s\S]*max-height:\s*min\(620px,\s*calc\(100dvh - 14rem\)\);[\s\S]*\}/, 'Phone layout should keep formula session scroll usable while allowing more content to fit.');
 assert.match(reducedMotionCss, /\.student-tutor-session-panel,[\s\S]*\.student-tutor-session-toggle\s*\{[\s\S]*transition:\s*none;[\s\S]*\}/, 'Reduced motion should disable session expand/collapse animation.');
+assert.match(reducedMotionCss, /\.student-fireworks\s*\{[\s\S]*display:\s*none;/, 'Reduced motion should skip tutor completion fireworks.');
 
 async function testGuidedFormulaTutorStartup() {
   const cases = [
