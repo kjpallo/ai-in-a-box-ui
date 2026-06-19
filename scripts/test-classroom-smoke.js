@@ -170,6 +170,26 @@ async function testCartFinalSpeedRegression() {
   });
 }
 
+async function testHowFastDistanceTimeRegression() {
+  await runGuidedFormulaSmoke({
+    name: 'how-fast-distance-time',
+    question: 'A supersonic jet flies 10 miles in 0.008 hours. How fast is the jet moving?',
+    formulaId: 'speed_distance_time',
+    solveFor: 'speed',
+    formula: 'speed = distance / time',
+    startExcludes: [/final velocity/i, /vf = vi/i, /Speed tells how fast/i],
+    steps: [
+      { message: 'speed', match: /Which formula should we use\?/i },
+      { message: '1', match: /distance/i },
+      { message: '10 miles', match: /time/i },
+      { message: '0.008 hours', match: /10 \/ 0\.008/i },
+      { message: '1250', match: /1250 miles per hour/i }
+    ],
+    finalAnswer: '1250 miles per hour',
+    finalMatch: /speed = 1250 miles per hour/i
+  });
+}
+
 async function testHelicopterAcceleration() {
   await runGuidedFormulaSmoke({
     name: 'helicopter-acceleration',
@@ -409,6 +429,7 @@ async function main() {
   await testNetForceTutor();
   await testMomentumTutor();
   await testCartFinalSpeedRegression();
+  await testHowFastDistanceTimeRegression();
   await testHelicopterAcceleration();
   await testOstrichDistanceWithUnitConversion();
   await testOstrichToJetInterruption();
