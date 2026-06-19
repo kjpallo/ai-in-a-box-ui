@@ -127,13 +127,13 @@ function testCarAdAccelerationDisplayedRoundedAnswer() {
 
   const step = currentStep(tutor);
   assert.equal(step.id, 'calculate');
-  assert.match(step.prompt, /0\.0019/);
+  assert.match(step.prompt, /7\s*\/\s*3600/);
+  assert.doesNotMatch(step.prompt, /0\.0019/);
 
-  const displayedEquivalent = 70 / 0.0019;
-  const result = answerFormulaTutorStep(tutor, `${displayedEquivalent} km/hr^2`);
+  const result = answerFormulaTutorStep(tutor, '36000 km/hr^2');
   assertAccepted(
     result,
-    `Tutor should accept ${displayedEquivalent} km/hr^2 because the substitution displays 0.0019 hr`
+    'Tutor should accept 36000 km/hr^2 because the substitution uses the exact 7 / 3600 hr conversion'
   );
 }
 

@@ -896,7 +896,7 @@ const tests = [
     name: 'acceleration converts seconds to hours when km per hour prompt hints it',
     question: 'A car advertisement claims that a certain car can accelerate from rest to 70 km/hr in 7 seconds (hint: convert to hours first!!) Find the car’s acceleration.',
     type: 'science_formula',
-    includes: ['Use the acceleration formula: a = (vf - vi) / t.', 'Convert: 7 s = 0.00194 hr', 'a = (70 km/hr - 0 km/hr) / 0.00194 hr', 'a = about 36000 km/hr²'],
+    includes: ['Use the acceleration formula: a = (vf - vi) / t.', 'Convert: 7 s = 7 / 3600 hr ≈ 0.001944 hr', 'a = (70 km/hr - 0 km/hr) / (7 / 3600) hr', 'a = 36000 km/hr²'],
     excludes: ['a = 2.7778 m/s²'],
     formulaWork: {
       formulaId: 'acceleration_velocity_time',
