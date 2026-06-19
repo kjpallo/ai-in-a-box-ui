@@ -914,7 +914,7 @@ async function testCarAdvertisementSecondsToHoursTutor() {
   assert.equal(start.body.tutor.solveFor, 'acceleration');
   assert.deepEqual(
     start.body.tutor.knownValues.map((value) => value.display),
-    ['0 km/hr', '70 km/hr', '7 seconds = 0.0019 hr']
+    ['0 km/hr', '70 km/hr', '7 seconds = 7 / 3600 hr ≈ 0.001944 hr']
   );
 
   await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: 'acceleration' });
@@ -930,7 +930,7 @@ async function testCarAdvertisementSecondsToHoursTutor() {
 
   const conversion = await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: '0.00194 hr' });
   assert.equal(conversion.statusCode, 200);
-  assert.match(conversion.body.response, /What is \(70 - 0\) \/ 0\.0019\?/i);
+  assert.match(conversion.body.response, /What is \(70 - 0\) \/ \(7 \/ 3600\)\?/i);
 
   const final = await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: '36000' });
   assert.equal(final.statusCode, 200);
@@ -1193,6 +1193,15 @@ async function testGuidedFormulaTutorRequiredFormulaPaths() {
       stepOneClue: /The question says “What is its speed,” so we are solving for speed\./
     },
     {
+      name: 'velocity-required',
+      question: 'A car travels 240 miles south in 3 hours. Find the velocity of the car in mi/hr and m/s.',
+      formulaId: 'speed_distance_time',
+      solveFor: 'velocity',
+      directAnswer: /velocity = 80 mi\/hr south/i,
+      notDirectAnswer: /speed = 80/i,
+      stepOneClue: /The question says “Find the velocity,” so we are solving for velocity\./
+    },
+    {
       name: 'time-required',
       question: 'A student bikes 12 kilometers at a speed of 4 km/h. How long did the trip take?',
       formulaId: 'speed_distance_time',
@@ -1268,9 +1277,16 @@ async function testGuidedFormulaTutorRequiredFormulaPaths() {
     assert.equal(start.body.tutor.active, true);
     assert.match(start.body.response, /What variable are we solving for\?/i);
     if (testCase.formulaId === 'speed_distance_time') {
-      assert.match(start.body.response, /1\. speed — how fast something moves/);
-      assert.match(start.body.response, /2\. distance — how far something travels/);
-      assert.match(start.body.response, /3\. time — how long it takes/);
+      if (testCase.solveFor === 'velocity') {
+        assert.match(start.body.response, /1\. velocity — speed with direction/);
+        assert.match(start.body.response, /2\. distance — how far something travels/);
+        assert.match(start.body.response, /3\. time — how long it takes/);
+        assert.doesNotMatch(start.body.response, /We are solving for speed\./);
+      } else {
+        assert.match(start.body.response, /1\. speed — how fast something moves/);
+        assert.match(start.body.response, /2\. distance — how far something travels/);
+        assert.match(start.body.response, /3\. time — how long it takes/);
+      }
       assert.match(start.body.response, testCase.stepOneClue);
     }
     assert.doesNotMatch(start.body.response, testCase.directAnswer);
