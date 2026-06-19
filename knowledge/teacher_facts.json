@@ -120,6 +120,45 @@
       "source": "Teacher-approved 9th-grade physical science reference"
     },
     {
+      "id": "instantaneous-speed",
+      "category": "vocabulary",
+      "title": "Instantaneous Speed",
+      "terms": [
+        "instantaneous speed",
+        "instantaneous spreed",
+        "what is instantaneous speed",
+        "what is instantaneous spreed",
+        "speed at one moment",
+        "speed at one instant",
+        "speed at a specific moment"
+      ],
+      "fact": "Instantaneous speed is how fast an object is moving at one specific moment in time.",
+      "source": "Teacher-approved 9th-grade physical science reference"
+    },
+    {
+      "id": "motion-graphs",
+      "category": "graphing",
+      "title": "Motion Graphs",
+      "terms": [
+        "graph motion",
+        "graphing motion",
+        "how do you graph motion",
+        "motion graph",
+        "motion graphs",
+        "position-time graph",
+        "position time graph",
+        "distance-time graph",
+        "distance time graph",
+        "speed-time graph",
+        "speed time graph",
+        "velocity-time graph",
+        "velocity time graph",
+        "slope of a graph"
+      ],
+      "fact": "Motion can be graphed with a position-time, distance-time, speed-time, or velocity-time graph. On a position-time or distance-time graph, the slope shows speed or velocity. On a speed-time or velocity-time graph, the slope shows acceleration.",
+      "source": "Teacher-approved 9th-grade physical science reference"
+    },
+    {
       "id": "time-unit",
       "category": "vocabulary",
       "title": "Time Unit",
