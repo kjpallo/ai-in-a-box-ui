@@ -372,6 +372,50 @@ async function testClozeCompletion() {
   assert.match(response.body.response, /position/i);
 }
 
+async function testFillInBlankRouting() {
+  const classroom = await createClassroom();
+
+  const direction = await send(
+    classroom,
+    'blank-direction',
+    'An object can be moving at a constant speed and still accelerating if it is changing ____'
+  );
+  assert.equal(direction.body.routeType, 'cloze_completion');
+  assert.match(direction.body.response, /direction|changing direction/i);
+  assert.doesNotMatch(direction.body.response, /Speed tells how fast an object moves|Formula: speed = distance \/ time/i);
+
+  const referencePoint = await send(
+    classroom,
+    'blank-reference-point',
+    'This is entirely dependent on the ____ point.'
+  );
+  assert.equal(referencePoint.body.routeType, 'cloze_completion');
+  assert.match(referencePoint.body.response, /reference point/i);
+  assert.doesNotMatch(referencePoint.body.response, /Acceleration means velocity is changing/i);
+
+  const alternateMarker = await send(
+    classroom,
+    'blank-alternate-marker',
+    'An object can be moving at a constant speed and still accelerating if it is changing ___'
+  );
+  assert.equal(alternateMarker.body.routeType, 'cloze_completion');
+  assert.match(alternateMarker.body.response, /direction|changing direction/i);
+  assert.doesNotMatch(alternateMarker.body.response, /Speed tells how fast an object moves|Formula: speed = distance \/ time/i);
+}
+
+async function testFillInBlankContextRegression() {
+  const classroom = await createClassroom();
+  const studentHubId = 'blank-context-regression';
+
+  const acceleration = await send(classroom, studentHubId, 'What is acceleration?');
+  assert.match(acceleration.body.response, /Acceleration/i);
+
+  const referencePoint = await send(classroom, studentHubId, 'This is entirely dependent on the ____ point.');
+  assert.equal(referencePoint.body.routeType, 'cloze_completion');
+  assert.match(referencePoint.body.response, /reference point/i);
+  assert.doesNotMatch(referencePoint.body.response, /You were asking about acceleration|Acceleration means velocity is changing/i);
+}
+
 async function parkCarAdvertisementAtTimeStep(classroom, studentHubId) {
   const question =
     'A car advertisement claims that a certain car can accelerate from rest to 70 km/hr in 7 seconds (hint: convert to hours first!!) Find the car’s acceleration.';
@@ -510,6 +554,8 @@ async function main() {
   await testOstrichDistanceWithUnitConversion();
   await testOstrichToJetInterruption();
   await testClozeCompletion();
+  await testFillInBlankRouting();
+  await testFillInBlankContextRegression();
   await testCarAdvertisementConversion();
   await testCarAdToCyclistInterruption();
   await testCyclistRounding();

@@ -652,6 +652,42 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'motion force blank constant speed accelerating changes direction',
+    question: 'An object can be moving at a constant speed and still accelerating if it is changing ____',
+    matchedKnowledge: matchedKnowledgeFor('An object can be moving at a constant speed and still accelerating if it is changing ____'),
+    type: 'cloze_completion',
+    includes: ['direction', 'changing direction'],
+    excludes: ['Speed tells how fast an object moves', 'does not include direction', 'Formula: speed = distance / time'],
+    aiAllowed: false
+  },
+  {
+    name: 'motion force blank reference point',
+    question: 'This is entirely dependent on the ____ point.',
+    matchedKnowledge: matchedKnowledgeFor('This is entirely dependent on the ____ point.'),
+    type: 'cloze_completion',
+    includes: ['reference point'],
+    excludes: ['Acceleration means velocity is changing', 'speeding up, slowing down, or changing direction'],
+    aiAllowed: false
+  },
+  {
+    name: 'motion force blank alternate marker constant speed direction',
+    question: 'An object can be moving at a constant speed and still accelerating if it is changing ___',
+    matchedKnowledge: matchedKnowledgeFor('An object can be moving at a constant speed and still accelerating if it is changing ___'),
+    type: 'cloze_completion',
+    includes: ['direction', 'changing direction'],
+    excludes: ['Speed tells how fast an object moves', 'Formula: speed = distance / time'],
+    aiAllowed: false
+  },
+  {
+    name: 'motion force fill in the blank velocity direction',
+    question: 'Fill in the blank: velocity is speed in a specific ____',
+    matchedKnowledge: matchedKnowledgeFor('Fill in the blank: velocity is speed in a specific ____'),
+    type: 'cloze_completion',
+    includes: ['direction', 'Velocity is speed in a specific direction'],
+    excludes: ['I do not have', 'No trusted'],
+    aiAllowed: false
+  },
+  {
     name: 'motion force incomplete fragment does not guess',
     question: 'This is entirely dependent on the',
     matchedKnowledge: matchedKnowledgeFor('This is entirely dependent on the'),
@@ -4353,7 +4389,25 @@ async function runContextCarryoverTests() {
     assert.ok(!bareEachExample.response.includes('electron energy level'));
     assert.ok(!bareEachExample.response.includes('first energy level'));
 
-    console.log('✅ context carryover: friction fragments and comparison examples preserve topic');
+    const accelerationContext = await questionAnswer.answerStudentMessage('What is acceleration?');
+    assert.equal(accelerationContext.routeType, 'definition');
+    assert.ok(accelerationContext.response.includes('Acceleration'));
+    const referencePointBlank = await questionAnswer.answerStudentMessage('This is entirely dependent on the ____ point.', {
+      lastAnsweredPrompt: 'What is acceleration?',
+      lastAnsweredAnswer: accelerationContext.response,
+      recentMessages: [
+        {
+          message: 'What is acceleration?',
+          response: accelerationContext.response
+        }
+      ]
+    });
+    assert.equal(referencePointBlank.routeType, 'cloze_completion');
+    assert.ok(referencePointBlank.response.includes('reference point'));
+    assert.ok(!referencePointBlank.response.includes('You were asking about acceleration.'));
+    assert.ok(!referencePointBlank.response.includes('Acceleration means velocity is changing'));
+
+    console.log('✅ context carryover: friction fragments, comparison examples, and blank prompts preserve topic');
   } catch (error) {
     console.error('❌ context carryover: friction fragments and comparison examples preserve topic');
     console.error(error.message);
