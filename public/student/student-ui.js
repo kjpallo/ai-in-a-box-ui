@@ -937,6 +937,7 @@
     if (normalized === 'formula_tutor') return 'Formula Tutor';
     if (normalized === 'motion_force_knowledge_tutor') return 'General Tutor';
     if (normalized === 'tutor_control') return 'Tutor Control';
+    if (normalized === 'app_feedback') return 'App Feedback';
     if (normalized === 'science_formula') return 'Formula Answer';
     if (normalized === 'student_context_clarification') return 'Clarifying Question';
     if (normalized === 'why_this_matters_followup') return 'Why This Matters';
@@ -1427,20 +1428,24 @@
 
   function maybeCelebrateTutorCompletion(tutor, work, context = {}) {
     if (!fireworks || !context.submittedMessage || !tutor?.completed || tutor?.stopped) return;
-    if (!isStructuredFormulaTutor(tutor, work)) return;
 
-    const finalAnswer = String(work.finalAnswer || work.answer || tutor.finalAnswerDisplay || '').trim();
+    const finalAnswer = getTutorFinalAnswer(tutor, work);
     if (!finalAnswer) return;
 
     const completionKey = [
+      tutor.tutorCategory || tutor.tutorType || '',
       work.originalQuestion || tutor.originalQuestion,
-      work.formula || tutor.formula,
+      work.formula || tutor.formula || work.topic || tutor.topic || work.id || tutor.id,
       finalAnswer
     ].map((part) => String(part || '').trim()).join('|');
 
     if (!completionKey || completionKey === completedCelebrationKey) return;
     completedCelebrationKey = completionKey;
     showTutorFireworks();
+  }
+
+  function getTutorFinalAnswer(tutor, work = {}) {
+    return String(work.finalAnswer || work.answer || tutor?.finalAnswerDisplay || '').trim();
   }
 
   function showTutorFireworks() {

@@ -233,8 +233,13 @@ assert.match(studentUi, /const FIREWORKS_MAX_PARTICLES = 170;/, 'Tutor completio
 assert.match(studentUi, /const FIREWORKS_DURATION_MS = 3600;/, 'Tutor completion fireworks should clean up after a short finale.');
 assert.match(
   studentUi,
-  /function maybeCelebrateTutorCompletion\(tutor, work, context = \{\}\)[\s\S]*tutor\?\.completed[\s\S]*tutor\?\.stopped[\s\S]*isStructuredFormulaTutor\(tutor, work\)[\s\S]*finalAnswer[\s\S]*showTutorFireworks\(\)/,
-  'Tutor completion fireworks should trigger only for completed structured formula tutor work with a final answer.'
+  /function maybeCelebrateTutorCompletion\(tutor, work, context = \{\}\)[\s\S]*tutor\?\.completed[\s\S]*tutor\?\.stopped[\s\S]*getTutorFinalAnswer\(tutor, work\)[\s\S]*completedCelebrationKey[\s\S]*showTutorFireworks\(\)/,
+  'Tutor completion fireworks should trigger only for completed tutor work with a final answer and a fresh completion key.'
+);
+assert.match(
+  studentUi,
+  /function getTutorFinalAnswer\(tutor, work = \{\}\)[\s\S]*work\.finalAnswer[\s\S]*work\.answer[\s\S]*tutor\?\.finalAnswerDisplay/,
+  'Tutor completion fireworks should use the shared final-answer shape used by Formula and General Tutor metadata.'
 );
 assert.match(
   studentUi,

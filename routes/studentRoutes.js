@@ -121,6 +121,44 @@ function registerStudentRoutes(app, {
       const contextMessages = hub.messages;
       const lastAnsweredContext = findLastAnsweredContext(contextMessages);
 
+      const tutorCelebrationFeedback = answerTutorCelebrationFeedback(message, contextMessages);
+      if (!hub.currentTutorProblem && tutorCelebrationFeedback) {
+        const entry = appendStudentHubEntry({
+          session,
+          hub,
+          message,
+          response: tutorCelebrationFeedback.response,
+          routeType: 'app_feedback',
+          confidence: 'strong',
+          reportableForStandards: false
+        });
+
+        logCompletedInteraction({
+          message,
+          questionRoute: makeAppFeedbackRoute(tutorCelebrationFeedback.response, entry),
+          answerGiven: tutorCelebrationFeedback.response,
+          source: 'student',
+          sessionId,
+          reportableForStandards: false,
+          debug: {
+            className: session.className || '',
+            studentHubId,
+            appFeedback: {
+              topic: 'tutor_celebration',
+              recentTutorRouteType: tutorCelebrationFeedback.context.routeType || ''
+            }
+          }
+        });
+
+        return res.json({
+          response: tutorCelebrationFeedback.response,
+          routeType: 'app_feedback',
+          confidence: 'strong',
+          rateLimit: rateLimitInfo,
+          tutor: null
+        });
+      }
+
       if (hub.currentTutorProblem && !controls.studentGuidedFormulaTutoringEnabled) {
         const stoppedTutorType = isMotionForceKnowledgeTutorProblem(hub.currentTutorProblem)
           ? 'motion_force_knowledge_tutor'
@@ -373,8 +411,9 @@ function registerStudentRoutes(app, {
         if (previousTutorIsMotionForceKnowledge) {
           const tutorResult = continueMotionForceKnowledgeTutor(previousTutorProblem, message);
           hub.currentTutorProblem = tutorResult.currentTutorProblem;
+          const tutorProblemForResponse = hub.currentTutorProblem || tutorResult.completedTutorProblem || previousTutorProblem;
           const tutorMetadata = buildMotionForceKnowledgeTutorMetadata(
-            hub.currentTutorProblem || previousTutorProblem,
+            tutorProblemForResponse,
             { completed: tutorResult.completed, stopped: tutorResult.stopped }
           );
 
@@ -393,7 +432,7 @@ function registerStudentRoutes(app, {
 
           logCompletedInteraction({
             message,
-            questionRoute: makeMotionForceKnowledgeTutorRoute(hub.currentTutorProblem || previousTutorProblem, entry),
+            questionRoute: makeMotionForceKnowledgeTutorRoute(tutorProblemForResponse, entry),
             answerGiven: tutorResult.response,
             source: 'student',
             sessionId,
@@ -726,6 +765,41 @@ function isTutorStopCommand(message) {
     .replace(/\s+/g, ' ')
     .trim();
   return /^(?:stop|cancel|exit|quit|nevermind|never mind)$/.test(text);
+}
+
+function answerTutorCelebrationFeedback(message, recentMessages = []) {
+  const text = String(message || '')
+    .toLowerCase()
+    .replace(/[’']/g, '')
+    .replace(/[?.!,;:]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!/\b(?:fireworks?|celebration|celebrate|confetti)\b/.test(text)) return null;
+  if (!/\b(?:no|where|why|missing|didnt|did\s+not|dont|do\s+not)\b/.test(text)) return null;
+
+  const context = findRecentCompletedTutorEntry(recentMessages);
+  if (!context) return null;
+
+  return {
+    response: 'Thanks for the heads-up. A completed tutor should trigger the celebration once; your answer still counted as complete.',
+    context
+  };
+}
+
+function findRecentCompletedTutorEntry(recentMessages = []) {
+  if (!Array.isArray(recentMessages)) return null;
+
+  for (let index = recentMessages.length - 1; index >= 0; index -= 1) {
+    const entry = recentMessages[index] || {};
+    const routeType = String(entry.routeType || '');
+    if (routeType !== 'formula_tutor' && routeType !== 'motion_force_knowledge_tutor') continue;
+
+    const response = String(entry.response || '').trim();
+    if (/^(?:correct|yes)\b/i.test(response)) return entry;
+  }
+
+  return null;
 }
 
 function createStudentQuestionRateLimiter({ now = () => Date.now() } = {}) {
@@ -1124,6 +1198,24 @@ function makeTutorControlRoute() {
   };
 }
 
+function makeAppFeedbackRoute(response) {
+  return {
+    type: 'app_feedback',
+    confidence: 'strong',
+    toolsUsed: ['app_feedback'],
+    notes: 'Handled student app feedback after a completed tutor.',
+    directAnswer: response,
+    aiAllowed: false,
+    public: {
+      type: 'app_feedback',
+      confidence: 'strong',
+      toolsUsed: ['app_feedback'],
+      notes: 'Handled student app feedback after a completed tutor.',
+      aiAllowed: false
+    }
+  };
+}
+
 function findLastAnsweredContext(messages) {
   if (!Array.isArray(messages)) return { prompt: '', answer: '' };
 
@@ -1132,6 +1224,7 @@ function findLastAnsweredContext(messages) {
     if (!entry?.message || entry.isStandardsFollowUp) continue;
     if (entry.routeType === 'no_match') continue;
     if (entry.routeType === 'tutor_control') continue;
+    if (entry.routeType === 'app_feedback') continue;
     if (isInstructionalFollowUpPrompt(entry.message) && !isResolvedNumberChoice(entry)) continue;
     if (!entry.response) continue;
     return {
@@ -1152,6 +1245,7 @@ function findLastStandardIdForCurrentContext(messages) {
     if (!entry?.message || entry.isStandardsFollowUp) continue;
     if (entry.routeType === 'no_match') continue;
     if (entry.routeType === 'tutor_control') continue;
+    if (entry.routeType === 'app_feedback') continue;
     if (isInstructionalFollowUpPrompt(entry.message) && !isResolvedNumberChoice(entry)) continue;
     if (!entry.response) continue;
     contextIndex = index;
