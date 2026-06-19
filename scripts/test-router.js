@@ -913,7 +913,7 @@ const tests = [
     includes: ['Use the acceleration formula: a = (vf - vi) / t.', 'a = (8 m/s - 0 m/s) / 3 s', 'a = about 2.67 m/s²'],
     formulaWork: {
       formulaId: 'acceleration_velocity_time',
-      finalAnswerDisplay: '2.6667 m/s²',
+      finalAnswerDisplay: 'about 2.67 m/s²',
       minStepCount: 4
     },
     aiAllowed: false
@@ -926,7 +926,7 @@ const tests = [
     excludes: ['a = 40 km/hr²'],
     formulaWork: {
       formulaId: 'acceleration_velocity_time',
-      finalAnswerDisplay: '0.0031 m/s²',
+      finalAnswerDisplay: 'about 0.0031 m/s²',
       minStepCount: 4
     },
     aiAllowed: false
@@ -1091,7 +1091,7 @@ const tests = [
     name: 'unit 1 delivery truck 2d distance and displacement',
     question: 'A delivery truck drives 4 mi west then 6 mi north. Find the distance and displacement.',
     type: 'science_formula',
-    includes: ['distance = 4 mi + 6 mi = 10 mi', 'x = 4 mi west', 'y = 6 mi north', 'd = √(4² + 6²)', 'displacement = about 7.21 mi NW', 'Answer: distance = 10 mi; displacement = about 7.21 mi NW'],
+    includes: ['distance = 4 miles + 6 miles = 10 miles', 'x = 4 miles west', 'y = 6 miles north', 'd = √(4² + 6²)', 'displacement = about 7.21 miles NW', 'Answer: distance = 10 miles; displacement = about 7.21 miles NW'],
     excludes: ['Phase 6A', 'only handles one-dimensional displacement'],
     aiAllowed: false
   },
@@ -1099,7 +1099,7 @@ const tests = [
     name: 'unit 1 delivery truck right turn 2d distance and displacement',
     question: 'A delivery truck drives 4 miles west before turning right and driving 6 miles north. What are the distance and displacement?',
     type: 'science_formula',
-    includes: ['distance = 4 mi + 6 mi = 10 mi', 'x = 4 mi west', 'y = 6 mi north', 'd = √(4² + 6²)', 'displacement = about 7.21 mi NW', 'Answer: distance = 10 mi; displacement = about 7.21 mi NW'],
+    includes: ['distance = 4 miles + 6 miles = 10 miles', 'x = 4 miles west', 'y = 6 miles north', 'd = √(4² + 6²)', 'displacement = about 7.21 miles NW', 'Answer: distance = 10 miles; displacement = about 7.21 miles NW'],
     excludes: ['Phase 6A', 'only handles one-dimensional displacement'],
     aiAllowed: false
   },
@@ -1107,7 +1107,7 @@ const tests = [
     name: 'unit 1 around block closed loop distance and displacement',
     question: 'PJ walks 0.35 mi around the block and returns back to the starting doorstep. What are distance and displacement?',
     type: 'science_formula',
-    includes: ['Distance adds the path.', 'distance = 0.35 mi', 'Displacement is start-to-finish.', 'displacement = 0 mi', 'Answer: distance = 0.35 mi; displacement = 0 mi'],
+    includes: ['Distance adds the path.', 'distance = 0.35 miles', 'Displacement is start-to-finish.', 'displacement = 0 miles', 'Answer: distance = 0.35 miles; displacement = 0 miles'],
     excludes: ['Phase 6A', 'only handles one-dimensional displacement'],
     aiAllowed: false
   },
@@ -1115,7 +1115,7 @@ const tests = [
     name: 'unit 1 around block rides later closed loop distance and displacement',
     question: 'PJ rides around the block and returns to his doorstep 0.35 miles later. What are his distance and displacement?',
     type: 'science_formula',
-    includes: ['Distance adds the path.', 'distance = 0.35 mi', 'Displacement is start-to-finish.', 'displacement = 0 mi', 'Answer: distance = 0.35 mi; displacement = 0 mi'],
+    includes: ['Distance adds the path.', 'distance = 0.35 miles', 'Displacement is start-to-finish.', 'displacement = 0 miles', 'Answer: distance = 0.35 miles; displacement = 0 miles'],
     excludes: ['Phase 6A', 'only handles one-dimensional displacement'],
     aiAllowed: false
   },
@@ -1147,7 +1147,7 @@ const tests = [
     name: 'unit 1 Stefan south east distance and displacement',
     question: 'Stefan walks 8 mi south and 3 mi east. What are distance and displacement?',
     type: 'science_formula',
-    includes: ['distance = 8 mi + 3 mi = 11 mi', 'x = 3 mi east', 'y = 8 mi south', 'displacement = about 8.54 mi SE', 'Answer: distance = 11 mi; displacement = about 8.54 mi SE'],
+    includes: ['distance = 8 miles + 3 miles = 11 miles', 'x = 3 miles east', 'y = 8 miles south', 'displacement = about 8.54 miles SE', 'Answer: distance = 11 miles; displacement = about 8.54 miles SE'],
     excludes: ['Phase 6A', 'only handles one-dimensional displacement'],
     aiAllowed: false
   },
@@ -1179,7 +1179,7 @@ const tests = [
     name: 'unit 1 school bus east north distance and displacement',
     question: 'A school bus drives 2 miles east then 3 miles north. What are distance and displacement?',
     type: 'science_formula',
-    includes: ['distance = 2 mi + 3 mi = 5 mi', 'x = 2 mi east', 'y = 3 mi north', 'displacement = about 3.61 mi NE', 'Answer: distance = 5 mi; displacement = about 3.61 mi NE'],
+    includes: ['distance = 2 miles + 3 miles = 5 miles', 'x = 2 miles east', 'y = 3 miles north', 'displacement = about 3.61 miles NE', 'Answer: distance = 5 miles; displacement = about 3.61 miles NE'],
     excludes: ['Phase 6A', 'only handles one-dimensional displacement'],
     aiAllowed: false
   },
@@ -1187,7 +1187,7 @@ const tests = [
     name: 'unit 1 school bus direction first stops distance and displacement',
     question: 'A school bus leaves school and heads east for 2 miles before making its first stop. It then turns left and heads north 3 miles before making another stop. Find the distance and displacement of the school bus after completing its first two stops.',
     type: 'science_formula',
-    includes: ['distance = 2 mi + 3 mi = 5 mi', 'x = 2 mi east', 'y = 3 mi north', 'd = √(2² + 3²)', 'displacement = √13 mi', 'd = about 3.61 mi', 'direction = northeast, about 56.3° north of east', 'Answer: distance = 5 mi; displacement = about 3.61 mi NE'],
+    includes: ['distance = 2 miles + 3 miles = 5 miles', 'x = 2 miles east', 'y = 3 miles north', 'd = √(2² + 3²)', 'displacement = √13 miles', 'd = about 3.61 miles', 'direction = northeast, about 56.3° north of east', 'Answer: distance = 5 miles; displacement = about 3.61 miles NE'],
     excludes: ['I need', 'missing needed values', 'Phase 6A', 'only handles one-dimensional displacement'],
     aiAllowed: false
   },
@@ -1250,7 +1250,7 @@ const tests = [
     name: 'unit 1 velocity preserves explicit north direction',
     question: 'A car traveled 75 km north in 1.5 hours. What is its velocity?',
     type: 'science_formula',
-    includes: ['velocity = distance / time', 'velocity = 75 km / 1.5 hr', 'velocity = 50 km/hr north'],
+    includes: ['velocity = distance / time', 'velocity = 75 km / 1.5 hours', 'velocity = 50 km/hr north'],
     excludes: ['speed = 50 km/h'],
     formulaWork: {
       formulaId: 'speed_distance_time',
@@ -1264,7 +1264,7 @@ const tests = [
     name: 'unit 1 distance space shuttle speed time',
     question: 'A space shuttle travels at 21,000 km/hr for 5 hours. How far?',
     type: 'science_formula',
-    includes: ['distance = speed × time', 'distance = 21000 km/hr × 5 hr', 'distance = 105000 km'],
+    includes: ['distance = speed × time', 'distance = 21000 km/h × 5 hours', 'distance = 105000 km'],
     formulaWork: {
       formulaId: 'speed_distance_time',
       finalAnswerValue: 105000,
@@ -1277,7 +1277,7 @@ const tests = [
     name: 'unit 1 velocity new york to california implies west',
     question: 'A plane traveled 3,000 miles from New York to California in 4.5 hours. What is its velocity?',
     type: 'science_formula',
-    includes: ['velocity = distance / time', 'velocity = 3000 miles / 4.5 hr', 'velocity = about 666.67 mi/hr west'],
+    includes: ['velocity = distance / time', 'velocity = 3000 miles / 4.5 hours', 'velocity = about 666.67 mi/hr west'],
     formulaWork: {
       formulaId: 'speed_distance_time',
       finalAnswerValue: 3000 / 4.5,
@@ -1290,7 +1290,7 @@ const tests = [
     name: 'unit 1 time school bus rounded direct answer',
     question: 'A school bus moves 35 mi/hr for 20 miles. How long?',
     type: 'science_formula',
-    includes: ['time = distance / speed', 'time = 20 miles / 35 mile/hr', 'time = about 0.57 hr'],
+    includes: ['time = distance / speed', 'time = 20 miles / 35 miles per hour', 'time = about 0.57 hours (about 34 minutes)'],
     formulaWork: {
       formulaId: 'speed_distance_time',
       finalAnswerValue: 20 / 35,
@@ -1302,7 +1302,7 @@ const tests = [
     name: 'unit 1 hogwarts how far apart routes distance not acceleration',
     question: 'Hogwarts Express moving at 120 mi/hr for 3.5 hours. How far apart are they?',
     type: 'science_formula',
-    includes: ['distance = speed × time', 'distance = 120 mile/hr × 3.5 hr', 'distance = 420 miles'],
+    includes: ['distance = speed × time', 'distance = 120 miles per hour × 3.5 hours', 'distance = 420 miles'],
     excludes: ['acceleration', 'a ='],
     formulaWork: {
       formulaId: 'speed_distance_time',
@@ -1316,7 +1316,7 @@ const tests = [
     name: 'unit 1 velocity mi per hr to m per s challenge',
     question: 'A car travels 240 miles south in 3 hours. Find velocity in mi/hr and m/s.',
     type: 'science_formula',
-    includes: ['velocity = 240 miles / 3 hr', 'Convert: 80 mi/hr × 0.44704 = 35.76 m/s.', 'velocity = 80 mi/hr south and about 35.76 m/s south'],
+    includes: ['velocity = 240 miles / 3 hours', 'Convert: 80 mi/hr × 0.44704 = 35.76 m/s.', 'velocity = 80 mi/hr south and about 35.76 m/s south'],
     formulaWork: {
       formulaId: 'speed_distance_time',
       finalAnswerValue: 80,
@@ -1329,28 +1329,28 @@ const tests = [
     name: 'unit 1 time 200 km at 55 km per hr',
     question: 'A car travels 200 km at 55 km/hr. How long?',
     type: 'science_formula',
-    includes: ['time = 200 km / 55 km/hr', 'time = about 3.64 hr'],
+    includes: ['time = 200 km / 55 km/h', 'time = about 3.64 hours'],
     aiAllowed: false
   },
   {
     name: 'unit 1 supersonic jet speed',
     question: 'A supersonic jet flies 10 miles in 0.008 hours. How fast?',
     type: 'science_formula',
-    includes: ['speed = 10 miles / 0.008 hr', 'speed = 1250 miles per hour'],
+    includes: ['speed = 10 miles / 0.008 hours', 'speed = 1250 miles per hour'],
     aiAllowed: false
   },
   {
     name: 'unit 1 ostrich how much ground converts minutes',
     question: 'An ostrich runs 43 mi/hr for 15 minutes. How much ground?',
     type: 'science_formula',
-    includes: ['Convert: 15 min = 0.25 hr.', 'distance = 43 mile/hr × 0.25 hr', 'distance = 10.75 miles'],
+    includes: ['Convert: 15 min = 0.25 hr.', 'distance = 43 miles per hour × 0.25 hours', 'distance = 10.75 miles'],
     aiAllowed: false
   },
   {
     name: 'unit 1 ostrich how much ground can cover converts minutes',
     question: 'An ostrich can run at 43 mi/hr for 15 minutes. How much ground can it cover?',
     type: 'science_formula',
-    includes: ['Use the motion formula: distance = speed × time.', 'Convert: 15 min = 0.25 hr.', 'distance = 43 mile/hr × 0.25 hr', 'distance = 10.75 miles'],
+    includes: ['Use the motion formula: distance = speed × time.', 'Convert: 15 min = 0.25 hr.', 'distance = 43 miles per hour × 0.25 hours', 'distance = 10.75 miles'],
     excludes: ['vf = vi + a × t'],
     formulaWork: {
       formulaId: 'speed_distance_time',
@@ -2088,7 +2088,7 @@ const tests = [
     name: 'plain English speed from moved feet after an hour',
     question: 'what is the speed of an object that move 3 feet after an hour',
     type: 'science_formula',
-    includes: ['Use the motion formula: speed = distance / time.', 'speed = 3 ft / 1 hr', 'speed = 3 ft/hour'],
+    includes: ['Use the motion formula: speed = distance / time.', 'speed = 3 ft / 1 hour', 'speed = 3 ft/hour'],
     excludes: ['Speed tells how fast an object moves'],
     formulaWork: {
       formulaId: 'speed_distance_time',
@@ -3367,7 +3367,7 @@ const tests = [
     excludes: ['Class Fact', 'Acceleration is the rate that velocity changes over time'],
     formulaWork: {
       formulaId: 'acceleration_velocity_time',
-      finalAnswerDisplay: '2.6667 m/s²',
+      finalAnswerDisplay: 'about 2.67 m/s²',
       minStepCount: 4
     },
     aiAllowed: false
@@ -3575,7 +3575,7 @@ const tests = [
     name: 'phase 1b distance from mph and hours',
     question: 'If I travel 20 mph for 5 hours how far did I go?',
     type: 'science_formula',
-    includes: ['distance = speed × time', 'distance = 20 mile/hr × 5 hr', 'distance = 100 miles'],
+    includes: ['distance = speed × time', 'distance = 20 miles per hour × 5 hours', 'distance = 100 miles'],
     excludes: ['speed ='],
     aiAllowed: false
   },

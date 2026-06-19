@@ -807,7 +807,7 @@ async function testGuidedFormulaTutorUnitConversionAndCorrections() {
     });
     assert.equal(calculation.statusCode, 200);
     assert.equal(calculation.body.tutor.completed, true);
-    assert.match(calculation.body.response, /time = 5\.83 s/i);
+    assert.match(calculation.body.response, /time = about 5\.83 seconds/i);
     assert.equal(calculation.body.tutor.work.originalQuestion, lightningQuestion);
     assert.equal(calculation.body.tutor.work.solveFor, 'time');
     assert.equal(calculation.body.tutor.work.formula, 'time = distance / speed');
@@ -817,7 +817,7 @@ async function testGuidedFormulaTutorUnitConversionAndCorrections() {
     );
     assert.equal(calculation.body.tutor.work.substitution, 'time = 2000 / 343');
     assert.equal(calculation.body.tutor.work.calculatorCheck.display, '2000 ÷ 343 = 5.83');
-    assert.equal(calculation.body.tutor.work.finalAnswer, 'time = 5.83 s');
+    assert.equal(calculation.body.tutor.work.finalAnswer, 'time = about 5.83 seconds');
   }
 
   const { request, studentSessions } = createRouteHarness();
@@ -1197,7 +1197,7 @@ async function testGuidedFormulaTutorRequiredFormulaPaths() {
       question: 'A student bikes 12 kilometers at a speed of 4 km/h. How long did the trip take?',
       formulaId: 'speed_distance_time',
       solveFor: 'time',
-      directAnswer: /time = 3 hr/i,
+      directAnswer: /time = 3 hours/i,
       stepOneClue: /The question says “How long,” so we are solving for time\./
     },
     {
@@ -3358,9 +3358,9 @@ async function testDistanceDisplacementDirectNoTutorAndFollowUp() {
   assert.equal(studentSessions[classSessionId].anonymousHubs['distance-displacement-2d'].currentTutorProblem.steps.length, 6);
   assert.equal(
     studentSessions[classSessionId].anonymousHubs['distance-displacement-2d'].currentTutorProblem.finalAnswer.display,
-    'distance = 10 mi; displacement = about 7.21 mi NW'
+    'distance = 10 miles; displacement = about 7.21 miles NW'
   );
-  assert.doesNotMatch(truckBoth.body.response, /distance = 10 mi; displacement = about 7\.21 mi NW/i);
+  assert.doesNotMatch(truckBoth.body.response, /distance = 10 miles; displacement = about 7\.21 miles NW/i);
 
   await request('POST', '/api/student/message', {
     sessionId: classSessionId,
@@ -3385,7 +3385,7 @@ async function testDistanceDisplacementDirectNoTutorAndFollowUp() {
   assert.equal(truckSubstitution.statusCode, 200);
   assert.deepEqual(
     truckSubstitution.body.tutor.work.knownValues.map((value) => value.display),
-    ['4 mi west', '6 mi north']
+    ['4 miles west', '6 miles north']
   );
   assert.equal(truckSubstitution.body.tutor.currentStep.prompt, 'What is the total distance? Use distance = 4 + 6.');
   assert.equal(truckSubstitution.body.tutor.work.substitution, 'distance = 4 + 6');
@@ -3411,7 +3411,7 @@ async function testDistanceDisplacementDirectNoTutorAndFollowUp() {
   assert.equal(truckSolved.body.tutor.work.isComplete, true);
   assert.equal(truckSolved.body.tutor.work.substitution, 'distance = 4 + 6; displacement = sqrt(4^2 + 6^2)');
   assert.match(truckSolved.body.tutor.work.calculatorCheck.display, /sqrt\(4² \+ 6²\) = 7\.21/);
-  assert.equal(truckSolved.body.tutor.work.finalAnswer, 'distance = 10 mi; displacement = about 7.21 mi northwest');
+  assert.equal(truckSolved.body.tutor.work.finalAnswer, 'distance = 10 miles; displacement = about 7.21 miles northwest');
   assert.equal(studentSessions[classSessionId].anonymousHubs['distance-displacement-2d'].currentTutorProblem, null);
 
   const pjQuestion = 'PJ likes to ride his bike around the block. If he rides out of his house west, the sidewalk circles his block, and brings him back to his doorstep 0.35 miles later. Find his distance and displacement.';
@@ -3427,7 +3427,7 @@ async function testDistanceDisplacementDirectNoTutorAndFollowUp() {
   assert.equal(pjStart.body.tutor.currentStep.prompt, 'What quantities are we solving for?');
   assert.equal(
     studentSessions[classSessionId].anonymousHubs['distance-displacement-pj-loop'].currentTutorProblem.finalAnswer.display,
-    'distance = 0.35 mi; displacement = 0 mi'
+    'distance = 0.35 miles; displacement = 0 miles'
   );
 
   for (const message of ['1', '1']) {
@@ -3462,9 +3462,9 @@ async function testDistanceDisplacementDirectNoTutorAndFollowUp() {
   });
   assert.equal(pjSolved.statusCode, 200);
   assert.equal(pjSolved.body.tutor.completed, true);
-  assert.match(pjSolved.body.response, /Distance = 0\.35 mi/i);
-  assert.match(pjSolved.body.response, /Displacement = 0 mi/i);
-  assert.equal(pjSolved.body.tutor.work.finalAnswer, 'distance = 0.35 mi; displacement = 0 mi');
+  assert.match(pjSolved.body.response, /Distance = 0\.35 miles/i);
+  assert.match(pjSolved.body.response, /Displacement = 0 miles/i);
+  assert.equal(pjSolved.body.tutor.work.finalAnswer, 'distance = 0.35 miles; displacement = 0 miles');
   assert.equal(studentSessions[classSessionId].anonymousHubs['distance-displacement-pj-loop'].currentTutorProblem, null);
 
   const maliQuestion = 'Mali loves to make herself dizzy. She spins around in place 7 times before falling down right where she was standing. Find her distance and displacement.';
@@ -3627,9 +3627,9 @@ async function testDistanceDisplacementDirectNoTutorAndFollowUp() {
   });
   assert.equal(truckDirect.statusCode, 200);
   assert.equal(truckDirect.body.routeType, 'science_formula');
-  assert.match(truckDirect.body.response, /distance = 4 mi \+ 6 mi = 10 mi/i);
-  assert.match(truckDirect.body.response, /displacement = about 7\.21 mi NW/i);
-  assert.match(truckDirect.body.response, /Answer: distance = 10 mi; displacement = about 7\.21 mi NW/i);
+  assert.match(truckDirect.body.response, /distance = 4 miles \+ 6 miles = 10 miles/i);
+  assert.match(truckDirect.body.response, /displacement = about 7\.21 miles NW/i);
+  assert.match(truckDirect.body.response, /Answer: distance = 10 miles; displacement = about 7\.21 miles NW/i);
   assert.doesNotMatch(truckDirect.body.response, /Phase 6A only handles one-dimensional displacement/i);
   assert.equal(disabled.studentSessions[disabledSessionId].anonymousHubs['distance-displacement-2d-direct'].currentTutorProblem, null);
 }

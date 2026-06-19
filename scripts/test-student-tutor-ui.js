@@ -307,8 +307,8 @@ async function testGuidedFormulaTutorStartup() {
       question: 'A school bus leaves school and heads east for 2 miles before making its first stop. It then turns left and heads north 3 miles before making another stop. Find the distance and displacement of the school bus after completing its first two stops.',
       formulaId: 'distance_displacement_2d',
       solveFor: 'distance and displacement',
-      finalAnswer: /Distance = 5 mi[\s\S]*Displacement = about 3\.61 mi northeast/i,
-      directAnswer: /Answer: distance = 5 mi; displacement = about 3\.61 mi NE/i,
+      finalAnswer: /Distance = 5 miles[\s\S]*Displacement = about 3\.61 miles northeast/i,
+      directAnswer: /Answer: distance = 5 miles; displacement = about 3\.61 miles NE/i,
       steps: ['1', '1', '2 miles east', '3 miles north', '5', '3.61']
     },
     {

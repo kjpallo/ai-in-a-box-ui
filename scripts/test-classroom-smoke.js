@@ -62,6 +62,7 @@ async function runGuidedFormulaSmoke({
   formula,
   steps,
   finalAnswer,
+  finalWorkMatch,
   finalMatch,
   startExcludes = []
 }) {
@@ -88,7 +89,7 @@ async function runGuidedFormulaSmoke({
   assert.equal(latest.body.tutor.finalAnswerDisplay, finalAnswer, `${name} final answer display`);
   assert.match(
     latest.body.tutor.work.finalAnswer,
-    new RegExp(escapeRegExp(finalAnswer), 'i'),
+    finalWorkMatch || new RegExp(escapeRegExp(finalAnswer), 'i'),
     `${name} should expose the Formula Tutor fireworks final-answer signal`
   );
   if (finalMatch) assert.match(latest.body.response, finalMatch, `${name} final response`);
@@ -244,7 +245,7 @@ async function testCartFinalSpeedRegression() {
 }
 
 async function testHowFastDistanceTimeRegression() {
-  await runGuidedFormulaSmoke({
+  const final = await runGuidedFormulaSmoke({
     name: 'how-fast-distance-time',
     question: 'A supersonic jet flies 10 miles in 0.008 hours. How fast is the jet moving?',
     formulaId: 'speed_distance_time',
@@ -261,6 +262,29 @@ async function testHowFastDistanceTimeRegression() {
     finalAnswer: '1250 miles per hour',
     finalMatch: /speed = 1250 miles per hour/i
   });
+  assert.doesNotMatch(final.body.tutor.work.finalAnswer, /\b10 mile\b/i);
+  assert.equal(final.body.tutor.work.calculatorCheck.value, 1250);
+}
+
+async function testTimeFromMilesPerHourRounding() {
+  const final = await runGuidedFormulaSmoke({
+    name: 'time-miles-per-hour-rounding',
+    question: 'A runner travels 20 miles at 35 mi/hr. How long does it take?',
+    formulaId: 'speed_distance_time',
+    solveFor: 'time',
+    formula: 'time = distance / speed',
+    steps: [
+      { message: 'time', match: /Which formula should we use\?/i },
+      { message: '1', match: /distance/i },
+      { message: '20 miles', match: /speed/i },
+      { message: '35 mi/hr', match: /20 \/ 35/i },
+      { message: '0.57', match: /about 0\.57 hours.*about 34 minutes/i }
+    ],
+    finalAnswer: 'about 0.57 hours (about 34 minutes)',
+    finalMatch: /time = about 0\.57 hours \(about 34 minutes\)/i
+  });
+  assert.doesNotMatch(final.body.tutor.work.finalAnswer, /\b20 mile\b/i);
+  assert.equal(final.body.tutor.work.calculatorCheck.value, 20 / 35);
 }
 
 async function testHelicopterAcceleration() {
@@ -471,7 +495,7 @@ async function testCarAdToCyclistInterruption() {
 }
 
 async function testCyclistRounding() {
-  await runGuidedFormulaSmoke({
+  const final = await runGuidedFormulaSmoke({
     name: 'cyclist-rounding',
     question: 'A cyclist accelerates from 0 m/s to 8 m/s in 3 seconds. What is his acceleration?',
     formulaId: 'acceleration_velocity_time',
@@ -485,9 +509,38 @@ async function testCyclistRounding() {
       { message: '3 seconds', match: /\(8 - 0\) \/ 3/i },
       { message: '2.67', match: /Correct\./i }
     ],
-    finalAnswer: '2.6667 m/s²',
-    finalMatch: /acceleration = 2\.6667 m\/s²/i
+    finalAnswer: 'about 2.67 m/s²',
+    finalMatch: /acceleration = about 2\.67 m\/s²/i
   });
+  assert.doesNotMatch(final.body.tutor.work.finalAnswer, /2\.6667 m\/s²/i);
+  assert.equal(final.body.tutor.work.calculatorCheck.value, 8 / 3);
+}
+
+async function testDisplacementMilesPluralWording() {
+  const final = await runGuidedFormulaSmoke({
+    name: 'displacement-miles-plural',
+    question: 'A student walks 2 miles east and 3 miles north. Find the distance and displacement.',
+    formulaId: 'distance_displacement_2d',
+    solveFor: 'distance and displacement',
+    formula: 'distance = total path; displacement = √(x² + y²)',
+    steps: [
+      { message: 'distance and displacement', match: /Which idea should we use\?/i },
+      { message: '1', match: /movement 1/i },
+      { message: '2 miles east', match: /movement 2/i },
+      { message: '3 miles north', match: /total distance/i },
+      { message: '5', match: /displacement/i },
+      { message: '3.61', match: /distance = 5 miles/i }
+    ],
+    finalAnswer: 'distance = 5 miles; displacement = about 3.61 miles NE',
+    finalWorkMatch: /distance = 5 miles; displacement = about 3\.61 miles northeast/i,
+    finalMatch: /Distance = 5 miles\. Displacement = about 3\.61 miles northeast/i
+  });
+  const workText = JSON.stringify(final.body.tutor.work);
+  assert.match(workText, /\b2 miles\b/i);
+  assert.match(workText, /\b3 miles\b/i);
+  assert.match(final.body.tutor.work.finalAnswer, /\b5 miles\b/i);
+  assert.doesNotMatch(workText, /\b2 mile\b/i);
+  assert.doesNotMatch(final.body.tutor.work.finalAnswer, /\b10 mile\b/i);
 }
 
 async function testRollerCoasterAcceleration() {
@@ -550,6 +603,7 @@ async function main() {
   await testMomentumTutor();
   await testCartFinalSpeedRegression();
   await testHowFastDistanceTimeRegression();
+  await testTimeFromMilesPerHourRounding();
   await testHelicopterAcceleration();
   await testOstrichDistanceWithUnitConversion();
   await testOstrichToJetInterruption();
@@ -559,6 +613,7 @@ async function main() {
   await testCarAdvertisementConversion();
   await testCarAdToCyclistInterruption();
   await testCyclistRounding();
+  await testDisplacementMilesPluralWording();
   await testRollerCoasterAcceleration();
   await testSkateboarderFinalSpeed();
 
