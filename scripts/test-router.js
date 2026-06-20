@@ -169,11 +169,11 @@ const tests = [
     aiAllowed: false
   },
   {
-    name: 'student transcript bare force does not return gravity acceleration',
+    name: 'student transcript bare force answers Motion/Force definition',
     question: 'what is a force',
     matchedKnowledge: matchedKnowledgeFor('what is a force'),
-    type: 'no_match',
-    includes: ['do not have a trusted local science fact'],
+    type: 'definition',
+    includes: ['A force is a push or pull one object exerts on another', 'can change motion'],
     excludes: ['acceleration due to gravity', '9.8 m/s'],
     aiAllowed: false
   },
@@ -640,6 +640,114 @@ const tests = [
     type: 'cloze_completion',
     includes: ['Motion occurs when an object changes its position.'],
     excludes: ['I do not have', 'No trusted', 'Kinetic Energy'],
+    aiAllowed: false
+  },
+  {
+    name: 'motion force exact prompt reference point definition',
+    question: 'what is Reference point',
+    matchedKnowledge: matchedKnowledgeFor('what is Reference point'),
+    type: 'definition',
+    includes: ['reference point', 'place or object', 'changed position'],
+    excludes: ['element', 'chemistry', 'Periodic table'],
+    aiAllowed: false
+  },
+  {
+    name: 'motion force exact prompt velocity time slope means acceleration',
+    question: 'velocity vs. time graph, the slope of the line equals the object’s',
+    matchedKnowledge: matchedKnowledgeFor('velocity vs. time graph, the slope of the line equals the object’s'),
+    type: 'graph_concept',
+    includes: ['velocity-time graph', 'slope means acceleration'],
+    excludes: ['Knowledge Graph Support', 'Time Unit'],
+    aiAllowed: false
+  },
+  {
+    name: 'motion force exact prompt distance time slope means speed',
+    question: 'On a distance vs. time graph, the slope of the line equals the object’s',
+    matchedKnowledge: matchedKnowledgeFor('On a distance vs. time graph, the slope of the line equals the object’s'),
+    type: 'graph_concept',
+    includes: ['distance-time graph', 'slope means speed'],
+    excludes: ['Knowledge Graph Support', 'Time Unit'],
+    aiAllowed: false
+  },
+  {
+    name: 'motion force exact prompt positive acceleration speed time graph',
+    question: 'Positive acceleration look like on a speed vs time graph',
+    matchedKnowledge: matchedKnowledgeFor('Positive acceleration look like on a speed vs time graph'),
+    type: 'graph_concept',
+    includes: ['positive acceleration', 'upward or increasing line'],
+    excludes: ['Knowledge Graph Support', 'Time Unit'],
+    aiAllowed: false
+  },
+  {
+    name: 'motion force exact prompt negative acceleration speed time graph',
+    question: 'Negative acceleration looks like what on a speed vs time graph',
+    matchedKnowledge: matchedKnowledgeFor('Negative acceleration looks like what on a speed vs time graph'),
+    type: 'graph_concept',
+    includes: ['negative acceleration', 'downward or decreasing line'],
+    excludes: ['Knowledge Graph Support', 'Time Unit'],
+    aiAllowed: false
+  },
+  {
+    name: 'motion force exact prompt motion description summary',
+    question: 'Summarize the different ways that motion can be described and measured.',
+    matchedKnowledge: matchedKnowledgeFor('Summarize the different ways that motion can be described and measured.'),
+    type: 'science_concept',
+    includes: ['reference point', 'Distance', 'displacement', 'average speed', 'instantaneous speed', 'Velocity', 'Acceleration', 'Motion graphs'],
+    excludes: ['I do not have a trusted local science fact'],
+    aiAllowed: false
+  },
+  {
+    name: 'motion force exact prompt acceleration no-space typo',
+    question: 'what isAcceleration',
+    matchedKnowledge: matchedKnowledgeFor('what isAcceleration'),
+    type: 'definition',
+    includes: ['Acceleration', 'velocity changes over time'],
+    excludes: ['I do not have a trusted local science fact'],
+    aiAllowed: false
+  },
+  {
+    name: 'motion force exact prompt friction no-space typo',
+    question: 'what isFriction',
+    matchedKnowledge: matchedKnowledgeFor('what isFriction'),
+    type: 'ambiguous_vocab',
+    includes: ['Friction can mean more than one thing', 'force that opposes motion', 'transfer electric charge'],
+    excludes: ['I do not have a trusted local science fact'],
+    aiAllowed: false
+  },
+  {
+    name: 'motion force exact prompt unbalanced typo tolerance',
+    question: 'what is an undlanced force',
+    matchedKnowledge: matchedKnowledgeFor('what is an undlanced force'),
+    type: 'definition',
+    includes: ['Unbalanced forces do not cancel out', 'change an object\'s speed or direction'],
+    excludes: ['I do not have a trusted local science fact'],
+    aiAllowed: false
+  },
+  {
+    name: 'motion force exact prompt balanced vs unbalanced force',
+    question: 'balanced vs unbalanced force',
+    matchedKnowledge: matchedKnowledgeFor('balanced vs unbalanced force'),
+    type: 'science_concept',
+    includes: ['Balanced forces have a net force of 0 N', 'do not change an object’s motion', 'Unbalanced forces have a nonzero net force', 'change an object’s speed, direction, or both'],
+    excludes: ['I do not have a trusted local science fact'],
+    aiAllowed: false
+  },
+  {
+    name: 'motion force exact prompt friction types with plural typo',
+    question: 'what are the types of frictions when referring to motion',
+    matchedKnowledge: matchedKnowledgeFor('what are the types of frictions when referring to motion'),
+    type: 'science_concept',
+    includes: ['Static friction', 'sliding friction', 'rolling friction'],
+    excludes: ['I do not have a trusted local science fact'],
+    aiAllowed: false
+  },
+  {
+    name: 'motion force exact prompt force definition with article',
+    question: 'what is a force?',
+    matchedKnowledge: matchedKnowledgeFor('what is a force?'),
+    type: 'definition',
+    includes: ['A force is a push or pull one object exerts on another', 'can change motion'],
+    excludes: ['acceleration due to gravity', '9.8 m/s'],
     aiAllowed: false
   },
   {

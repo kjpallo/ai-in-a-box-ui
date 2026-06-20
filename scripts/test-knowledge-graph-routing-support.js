@@ -108,6 +108,30 @@ const questionAnswer = createQuestionAnswerService({
   assert.equal(formulaAnswer.routeType, 'science_formula');
   assert.equal(formulaAnswer.response, plainFormulaRoute.directAnswer);
 
+  const velocityTimeSlope = await questionAnswer.answerStudentMessage('velocity vs. time graph, the slope of the line equals the object’s');
+  assert.equal(velocityTimeSlope.routeType, 'graph_concept');
+  assert.notEqual(velocityTimeSlope.routeType, 'knowledge_graph_support');
+  assert.match(velocityTimeSlope.response, /slope means acceleration/i);
+  assert.equal(velocityTimeSlope.questionRoute.graphRoutingSupportAnswer, undefined);
+
+  const distanceTimeSlope = await questionAnswer.answerStudentMessage('On a distance vs. time graph, the slope of the line equals the object’s');
+  assert.equal(distanceTimeSlope.routeType, 'graph_concept');
+  assert.notEqual(distanceTimeSlope.routeType, 'knowledge_graph_support');
+  assert.match(distanceTimeSlope.response, /slope means speed/i);
+  assert.equal(distanceTimeSlope.questionRoute.graphRoutingSupportAnswer, undefined);
+
+  const positiveAccelerationGraph = await questionAnswer.answerStudentMessage('Positive acceleration look like on a speed vs time graph');
+  assert.equal(positiveAccelerationGraph.routeType, 'graph_concept');
+  assert.notEqual(positiveAccelerationGraph.routeType, 'knowledge_graph_support');
+  assert.match(positiveAccelerationGraph.response, /upward or increasing line/i);
+  assert.equal(positiveAccelerationGraph.questionRoute.graphRoutingSupportAnswer, undefined);
+
+  const negativeAccelerationGraph = await questionAnswer.answerStudentMessage('Negative acceleration looks like what on a speed vs time graph');
+  assert.equal(negativeAccelerationGraph.routeType, 'graph_concept');
+  assert.notEqual(negativeAccelerationGraph.routeType, 'knowledge_graph_support');
+  assert.match(negativeAccelerationGraph.response, /downward or decreasing line/i);
+  assert.equal(negativeAccelerationGraph.questionRoute.graphRoutingSupportAnswer, undefined);
+
   assert.equal(canStartFormulaTutor(graphFormulaRoute), true);
   const plainTutorProblem = startFormulaTutor({
     questionRoute: plainFormulaRoute,
