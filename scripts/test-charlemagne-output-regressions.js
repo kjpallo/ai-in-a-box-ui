@@ -15,6 +15,9 @@ const tests = [
   testFinalSpeedCartUsesAccelerationFormulaTutor,
   testAirResistanceUsesDragFact,
   testLawOfUniversalGravitationUsesLocalFact,
+  testConcept3ForceExactPrompts,
+  testConcept3FrictionExactPrompts,
+  testConcept3NewtonExamplesAndMomentumRelationship,
   testLawOfConservationOfMomentumBeatsGenericMomentum,
   testGenericMomentumStillWorks,
   testKaiPoolAcceptsBareOpposite,
@@ -83,19 +86,83 @@ function testFinalSpeedCartUsesAccelerationFormulaTutor() {
 function testAirResistanceUsesDragFact() {
   const route = routeWithTeacherKnowledge('Air resistance');
   assert.notEqual(route.type, 'no_match');
-  assert.match(route.directAnswer, /Air resistance is a force/i);
-  assert.match(route.directAnswer, /opposes the motion|opposite the object/i);
-  assert.match(route.directAnswer, /speed or surface area/i);
-  assert.match(route.directAnswer, /terminal velocity/i);
+  assert.match(route.directAnswer, /Air resistance is drag/i);
+  assert.match(route.directAnswer, /resists motion through air/i);
+  assert.match(route.directAnswer, /opposite the object/i);
   assert.doesNotMatch(route.directAnswer, /electrons|ohms|wire diameter|wire length/i);
 }
 
 function testLawOfUniversalGravitationUsesLocalFact() {
   const route = routeWithTeacherKnowledge('Law of Universal Gravitation');
   assert.notEqual(route.type, 'no_match');
-  assert.match(route.directAnswer, /every object with mass attracts every other object with mass/i);
-  assert.match(route.directAnswer, /farther apart/i);
-  assert.match(route.directAnswer, /F = G\(m1 × m2\) \/ r²/i);
+  assert.match(route.directAnswer, /any two masses attract each other/i);
+  assert.match(route.directAnswer, /More mass means more gravity/i);
+  assert.match(route.directAnswer, /less distance means stronger gravitational attraction/i);
+}
+
+function testConcept3ForceExactPrompts() {
+  const force = routeWithTeacherKnowledge('what is a force?');
+  assert.equal(force.type, 'definition');
+  assert.match(force.directAnswer, /push or pull one object exerts on another/i);
+  assert.match(force.directAnswer, /measured in newtons/i);
+  assert.match(force.directAnswer, /change an object’s motion/i);
+
+  const netForce = routeWithTeacherKnowledge('what is net force');
+  assert.equal(netForce.type, 'definition');
+  assert.match(netForce.directAnswer, /combined\/overall force/i);
+
+  const balanced = routeWithTeacherKnowledge('what is a balanced force?');
+  assert.equal(balanced.type, 'definition');
+  assert.match(balanced.directAnswer, /equal in size and opposite in direction/i);
+  assert.match(balanced.directAnswer, /net force is 0/i);
+
+  const unbalancedTypo = routeWithTeacherKnowledge('what is an undlanced force');
+  assert.equal(unbalancedTypo.type, 'definition');
+  assert.match(unbalancedTypo.directAnswer, /Unbalanced forces do not cancel/i);
+  assert.match(unbalancedTypo.directAnswer, /Net force is not 0/i);
+
+  const changesMotion = routeWithTeacherKnowledge('What kinds of forces change an object’s motion?');
+  assert.equal(changesMotion.type, 'science_concept');
+  assert.match(changesMotion.directAnswer, /Unbalanced or net forces change motion/i);
+  assert.doesNotMatch(changesMotion.directAnswer, /Air resistance is/i);
+}
+
+function testConcept3FrictionExactPrompts() {
+  const friction = routeWithTeacherKnowledge('what is Friction');
+  assert.equal(friction.type, 'definition');
+  assert.match(friction.directAnswer, /resists motion/i);
+  assert.match(friction.directAnswer, /rub, slide, or roll/i);
+
+  const frictionNoSpace = routeWithTeacherKnowledge('what isFriction');
+  assert.equal(frictionNoSpace.type, 'definition');
+  assert.doesNotMatch(frictionNoSpace.directAnswer, /electric charge|electrons/i);
+
+  const factors = routeWithTeacherKnowledge('what are the 3 factors friction depend on?');
+  assert.equal(factors.type, 'science_concept');
+  assert.match(factors.directAnswer, /roughness of the surfaces/i);
+  assert.match(factors.directAnswer, /force pressing the surfaces together/i);
+  assert.match(factors.directAnswer, /surface area or contact area/i);
+
+  const electricity = routeWithTeacherKnowledge('What is friction in electricity?');
+  assert.equal(electricity.type, 'definition');
+  assert.match(electricity.directAnswer, /Friction transfers electric charge/i);
+}
+
+function testConcept3NewtonExamplesAndMomentumRelationship() {
+  const firstLaw = routeWithTeacherKnowledge('Newton’s 1st Law of Motion can you give some examples please');
+  assert.equal(firstLaw.type, 'science_concept');
+  assert.match(firstLaw.directAnswer, /seatbelt/i);
+  assert.match(firstLaw.directAnswer, /book stays still/i);
+
+  const thirdLaw = routeWithTeacherKnowledge('give an example of newtons 3rd law');
+  assert.equal(thirdLaw.type, 'science_concept');
+  assert.match(thirdLaw.directAnswer, /trampoline/i);
+  assert.match(thirdLaw.directAnswer, /paddle pushes water backward/i);
+
+  const relationship = routeWithTeacherKnowledge('how is momentum related to newton 3rd law');
+  assert.equal(relationship.type, 'science_concept');
+  assert.match(relationship.directAnswer, /momentum is transferred/i);
+  assert.match(relationship.directAnswer, /Momentum is conserved/i);
 }
 
 function testLawOfConservationOfMomentumBeatsGenericMomentum() {

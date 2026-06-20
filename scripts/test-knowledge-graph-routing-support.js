@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const path = require('node:path');
 
-const { buildKnowledgeGraph } = require('../lib/knowledge/knowledgeGraph');
+const { buildKnowledgeGraph, normalizeGraphTerm } = require('../lib/knowledge/knowledgeGraph');
 const {
   findRelevantKnowledge,
   loadTeacherKnowledge
@@ -33,6 +33,23 @@ const graph = buildKnowledgeGraph([
     title: 'Motion and Force Local Knowledge'
   }
 ], teacherKnowledge);
+
+assertGraphEdge('force', 'motion', 'can change');
+assertGraphEdge('unbalanced force', 'acceleration', 'causes');
+assertGraphEdge('unbalanced force', 'change in motion', 'causes');
+assertGraphEdge('balanced forces', '0 net force', 'net force');
+assertGraphEdge("Newton's First Law", 'inertia', 'related to');
+assertGraphEdge('inertia', 'mass', 'increases with');
+assertGraphEdge('friction', 'motion', 'opposes');
+assertGraphEdge('air resistance', 'motion through air', 'opposes');
+assertGraphEdge('gravity', 'Earth', 'pulls objects toward');
+assertGraphEdge('terminal velocity', 'gravity and air resistance are balanced', 'occurs when');
+assertGraphEdge("Newton's Second Law", 'F = m × a', 'formula');
+assertGraphEdge("Newton's Third Law", 'action-reaction forces', 'equal and opposite');
+assertGraphEdge('momentum', 'mass in motion', 'is');
+assertGraphEdge('conservation of momentum', 'momentum transferred in collision', 'means');
+assertGraphEdge('mass', 'weight', 'different from');
+assertGraphEdge('weight', 'force of gravity', 'is');
 
 const questionAnswer = createQuestionAnswerService({
   teacherFactsFile: teacherFactsPath,
@@ -162,6 +179,12 @@ const questionAnswer = createQuestionAnswerService({
   assert.match(relationshipGraphAnswer.response, /Speed and velocity are related/i);
   assert.match(relationshipGraphAnswer.response, /Connection:/);
 
+  const localConcept3Relationship = await questionAnswer.answerStudentMessage('how is momentum related to newton 3rd law');
+  assert.equal(localConcept3Relationship.routeType, 'science_concept');
+  assert.notEqual(localConcept3Relationship.routeType, 'knowledge_graph_answer');
+  assert.match(localConcept3Relationship.response, /momentum is transferred/i);
+  assert.match(localConcept3Relationship.response, /Momentum is conserved/i);
+
   console.log('Knowledge graph routing support tests passed.');
   console.log('\nExample prerequisite answer:');
   console.log(beforeAcceleration.response);
@@ -178,6 +201,28 @@ function assertGraphSupport(result, supportIntent) {
   assert.equal(result.questionRoute.graphRoutingSupportAnswer.aiAllowed, false);
   assert.equal(result.questionRoute.graphRoutingSupportAnswer.source, 'approved_knowledge_graph');
   assert.equal(result.questionRoute.graphRoutingSupportAnswer.supportIntent, supportIntent);
+}
+
+function assertGraphEdge(fromLabel, toLabel, relationshipLabel) {
+  const fromNodes = findGraphNodes(fromLabel);
+  const toNodes = findGraphNodes(toLabel);
+  assert.ok(fromNodes.length > 0, `Missing graph node: ${fromLabel}`);
+  assert.ok(toNodes.length > 0, `Missing graph node: ${toLabel}`);
+
+  const fromIds = new Set(fromNodes.map((node) => node.id));
+  const toIds = new Set(toNodes.map((node) => node.id));
+  const edge = graph.edges.find((candidate) =>
+    fromIds.has(candidate.from) &&
+    toIds.has(candidate.to) &&
+    normalizeGraphTerm(candidate.label) === normalizeGraphTerm(relationshipLabel)
+  );
+
+  assert.ok(edge, `Missing graph edge: ${fromLabel} -> ${relationshipLabel} -> ${toLabel}`);
+}
+
+function findGraphNodes(label) {
+  const normalized = normalizeGraphTerm(label);
+  return Object.values(graph.nodes).filter((node) => normalizeGraphTerm(node.label) === normalized);
 }
 
 function stripTutorTimestamps(problem) {

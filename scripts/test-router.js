@@ -62,7 +62,7 @@ const tests = [
     name: 'phase 7a vocab net force',
     question: 'what is net force',
     type: 'definition',
-    includes: ['Net force is the overall force', 'combined'],
+    includes: ['Net force is the combined/overall force', 'all forces are added together'],
     excludes: ['I need', 'Recognized net force problem'],
     aiAllowed: false
   },
@@ -70,15 +70,15 @@ const tests = [
     name: 'phase 7a vocab balanced force',
     question: 'define balanced force',
     type: 'definition',
-    includes: ['Balanced forces are equal forces in opposite directions', 'net force is 0 N'],
+    includes: ['Balanced forces are equal in size and opposite in direction', 'net force is 0', 'motion does not change'],
     aiAllowed: false
   },
   {
     name: 'phase 7a vocab friction',
     question: 'what is friction',
-    type: 'ambiguous_vocab',
-    includes: ['Friction can mean', '1.', '2.', 'force', 'electric charge'],
-    excludes: ['I need', 'Use the friction formula'],
+    type: 'definition',
+    includes: ['Friction is a force that resists motion', 'surfaces rub, slide, or roll'],
+    excludes: ['Friction can mean', 'electric charge', 'I need', 'Use the friction formula'],
     aiAllowed: false
   },
   {
@@ -173,7 +173,7 @@ const tests = [
     question: 'what is a force',
     matchedKnowledge: matchedKnowledgeFor('what is a force'),
     type: 'definition',
-    includes: ['A force is a push or pull one object exerts on another', 'can change motion'],
+    includes: ['A force is a push or pull one object exerts on another', 'measured in newtons', 'can change an object’s motion'],
     excludes: ['acceleration due to gravity', '9.8 m/s'],
     aiAllowed: false
   },
@@ -241,7 +241,7 @@ const tests = [
     name: 'phase 8a vocab guard unbalanced force',
     question: 'What is an unbalanced force?',
     type: 'definition',
-    includes: ['Unbalanced forces do not cancel out', 'change an object\'s speed or direction'],
+    includes: ['Unbalanced forces do not cancel', 'Net force is not 0', 'change speed, direction, or motion'],
     excludes: ['Use Newton’s second law', 'Recognized net force problem'],
     aiAllowed: false
   },
@@ -709,9 +709,9 @@ const tests = [
     name: 'motion force exact prompt friction no-space typo',
     question: 'what isFriction',
     matchedKnowledge: matchedKnowledgeFor('what isFriction'),
-    type: 'ambiguous_vocab',
-    includes: ['Friction can mean more than one thing', 'force that opposes motion', 'transfer electric charge'],
-    excludes: ['I do not have a trusted local science fact'],
+    type: 'definition',
+    includes: ['Friction is a force that resists motion', 'surfaces rub, slide, or roll'],
+    excludes: ['Friction can mean more than one thing', 'transfer electric charge', 'I do not have a trusted local science fact'],
     aiAllowed: false
   },
   {
@@ -719,7 +719,16 @@ const tests = [
     question: 'what is an undlanced force',
     matchedKnowledge: matchedKnowledgeFor('what is an undlanced force'),
     type: 'definition',
-    includes: ['Unbalanced forces do not cancel out', 'change an object\'s speed or direction'],
+    includes: ['Unbalanced forces do not cancel', 'Net force is not 0', 'change speed, direction, or motion'],
+    excludes: ['I do not have a trusted local science fact'],
+    aiAllowed: false
+  },
+  {
+    name: 'motion force exact prompt unbalanced typo and article',
+    question: 'what is and unbalanced force',
+    matchedKnowledge: matchedKnowledgeFor('what is and unbalanced force'),
+    type: 'definition',
+    includes: ['Unbalanced forces do not cancel', 'Net force is not 0', 'change speed, direction, or motion'],
     excludes: ['I do not have a trusted local science fact'],
     aiAllowed: false
   },
@@ -728,7 +737,7 @@ const tests = [
     question: 'balanced vs unbalanced force',
     matchedKnowledge: matchedKnowledgeFor('balanced vs unbalanced force'),
     type: 'science_concept',
-    includes: ['Balanced forces have a net force of 0 N', 'do not change an object’s motion', 'Unbalanced forces have a nonzero net force', 'change an object’s speed, direction, or both'],
+    includes: ['Balanced forces cancel to net force 0', 'do not change motion', 'unbalanced forces create a nonzero net force', 'can change motion'],
     excludes: ['I do not have a trusted local science fact'],
     aiAllowed: false
   },
@@ -746,8 +755,59 @@ const tests = [
     question: 'what is a force?',
     matchedKnowledge: matchedKnowledgeFor('what is a force?'),
     type: 'definition',
-    includes: ['A force is a push or pull one object exerts on another', 'can change motion'],
+    includes: ['A force is a push or pull one object exerts on another', 'measured in newtons', 'can change an object’s motion'],
     excludes: ['acceleration due to gravity', '9.8 m/s'],
+    aiAllowed: false
+  },
+  {
+    name: 'motion force exact prompt friction factors',
+    question: 'what are the 3 factors friction depend on?',
+    matchedKnowledge: matchedKnowledgeFor('what are the 3 factors friction depend on?'),
+    type: 'science_concept',
+    includes: ['roughness of the surfaces', 'force pressing the surfaces together', 'surface area or contact area'],
+    excludes: ['electrons', 'charge', 'static electricity'],
+    aiAllowed: false
+  },
+  {
+    name: 'motion force exact prompt force kinds change motion',
+    question: 'What kinds of forces change an object’s motion?',
+    matchedKnowledge: matchedKnowledgeFor('What kinds of forces change an object’s motion?'),
+    type: 'science_concept',
+    includes: ['Unbalanced or net forces change motion', 'start moving', 'stop', 'speed up', 'slow down', 'change direction'],
+    excludes: ['Air resistance is'],
+    aiAllowed: false
+  },
+  {
+    name: 'motion force exact prompt terminal velocity concept 3',
+    question: 'terminal velocity',
+    matchedKnowledge: matchedKnowledgeFor('terminal velocity'),
+    type: 'science_concept',
+    includes: ['maximum velocity', 'gravity and air resistance balance', 'net force is 0', 'acceleration is 0'],
+    aiAllowed: false
+  },
+  {
+    name: 'motion force exact prompt newtons first law examples',
+    question: 'Newton’s 1st Law of Motion can you give some examples please',
+    matchedKnowledge: matchedKnowledgeFor('Newton’s 1st Law of Motion can you give some examples please'),
+    type: 'science_concept',
+    includes: ['law of inertia', 'seatbelt', 'book stays still', 'friction or another force slows it'],
+    aiAllowed: false
+  },
+  {
+    name: 'motion force exact prompt newtons third law examples',
+    question: 'give an example of newtons 3rd law',
+    matchedKnowledge: matchedKnowledgeFor('give an example of newtons 3rd law'),
+    type: 'science_concept',
+    includes: ['equal and opposite reaction', 'trampoline', 'paddle pushes water backward', 'hose can push backward'],
+    aiAllowed: false
+  },
+  {
+    name: 'motion force exact prompt momentum newtons third relationship',
+    question: 'how is momentum related to newton 3rd law',
+    matchedKnowledge: matchedKnowledgeFor('how is momentum related to newton 3rd law'),
+    type: 'science_concept',
+    includes: ['forces between objects are equal and opposite', 'momentum is transferred', 'Momentum is conserved', 'not created or destroyed'],
+    excludes: ['do not have a trusted local fact'],
     aiAllowed: false
   },
   {
@@ -809,7 +869,7 @@ const tests = [
     question: 'Explain how balanced and unbalanced forces affect an object’s motion differently.',
     matchedKnowledge: matchedKnowledgeFor('Explain how balanced and unbalanced forces affect an object’s motion differently.'),
     type: 'science_concept',
-    includes: ['Balanced forces have a net force of 0 N', 'do not change an object’s motion', 'Unbalanced forces have a nonzero net force', 'change an object’s speed, direction, or both'],
+    includes: ['Balanced forces cancel to net force 0', 'do not change motion', 'unbalanced forces create a nonzero net force', 'can change motion'],
     excludes: ['Newton\'s Second Law says', 'Fnet = m × a'],
     aiAllowed: false
   },
@@ -4283,7 +4343,7 @@ const tests = [
     question: 'Air resistance',
     matchedKnowledge: matchedKnowledgeFor('Air resistance'),
     type: 'definition',
-    includes: ['Air resistance is a force', 'opposes the motion', 'speed or surface area', 'terminal velocity'],
+    includes: ['Air resistance is drag', 'resists motion through air', 'opposite the object’s motion'],
     excludes: ['electrons', 'ohms', 'wire diameter', 'wire length'],
     aiAllowed: false
   },
@@ -4292,7 +4352,7 @@ const tests = [
     question: 'Law of Universal Gravitation',
     matchedKnowledge: matchedKnowledgeFor('Law of Universal Gravitation'),
     type: 'definition',
-    includes: ['every object with mass attracts every other object with mass', 'farther apart', 'F = G(m1 × m2) / r²'],
+    includes: ['any two masses attract each other', 'More mass means more gravity', 'less distance means stronger gravitational attraction'],
     aiAllowed: false
   },
   {
@@ -4326,7 +4386,7 @@ const tests = [
     name: 'phase 10b motion force terminal velocity',
     question: 'what is terminal velocity',
     type: 'science_concept',
-    includes: ['constant falling speed', 'air resistance balances gravity'],
+    includes: ['maximum velocity', 'gravity and air resistance balance', 'net force is 0', 'acceleration is 0'],
     aiAllowed: false
   },
   {

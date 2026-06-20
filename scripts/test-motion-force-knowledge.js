@@ -99,5 +99,20 @@ assertNoDuplicates(vocabulary, (entry) => entry.id, 'vocab id');
 assertNoDuplicates(vocabulary, (entry) => entry.term, 'vocab term');
 assertNoDuplicates(formulas, (entry) => entry.name, 'formula name');
 
+assertVocabDefinition('force', /push or pull one object exerts on another/i);
+assertVocabDefinition('balanced_forces', /equal in size and opposite in direction/i);
+assertVocabDefinition('unbalanced_forces', /net force is not 0/i);
+assertVocabDefinition('friction', /resists motion/i);
+assertVocabDefinition('air_resistance', /Drag/i);
+assertVocabDefinition('terminal_velocity', /net force and acceleration are 0/i);
+assertVocabDefinition('momentum', /Mass in motion/i);
+assertVocabDefinition('weight', /force of gravity/i);
+
 console.log('Motion and Force knowledge validation passed.');
 console.log(`Validated ${vocabulary.length} vocab entries, ${formulas.length} formulas, ${concepts.length} concepts, ${graphPatterns.length} graph patterns, ${problemBank.length} problems, and ${smokeTests.length} smoke tests.`);
+
+function assertVocabDefinition(id, pattern) {
+  const entry = vocabulary.find((item) => item.id === id);
+  assert.ok(entry, `Missing vocab entry ${id}`);
+  assert.match(entry.definition, pattern, `Vocab entry ${id} should include Concept 3 source-of-truth wording`);
+}
