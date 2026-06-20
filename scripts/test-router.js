@@ -4430,6 +4430,133 @@ const tests = [
     type: 'science_formula',
     includes: ['Fg = m × g', 'Fg = 25 kg × 9.8 m/s²', 'Fg = 245 N'],
     aiAllowed: false
+  },
+  {
+    name: 'prompt 3c lunch table box acceleration',
+    question: 'A 5.5 kg box is pushed across the lunch table. The net force applied to the box is 9.7 N. What is the acceleration of the box?',
+    type: 'science_formula',
+    includes: ['Use Newton’s second law: acceleration = force / mass.', 'a = 9.7 N / 5.5 kg', 'The acceleration is about 1.76 m/s².'],
+    formulaWork: {
+      formulaId: 'force_mass_acceleration',
+      solveFor: 'acceleration',
+      formula: 'a = F / m',
+      finalAnswerValue: 9.7 / 5.5,
+      finalAnswerDisplay: '1.7636 m/s²',
+      minStepCount: 5
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'prompt 3c mass from unbalanced force and acceleration',
+    question: 'What is the mass of an object that has an acceleration of 2.63 m/s² when an unbalanced force of 112 N is applied to it?',
+    type: 'science_formula',
+    includes: ['Use Newton’s second law: F = m × a.', 'Solve for mass: m = F / a.', 'm = 112 N / 2.63 m/s²', 'The mass is about 42.59 kg.'],
+    formulaWork: {
+      formulaId: 'force_mass_acceleration',
+      solveFor: 'mass',
+      formula: 'm = F / a',
+      finalAnswerValue: 112 / 2.63,
+      finalAnswerDisplay: '42.5856 kg',
+      minStepCount: 5
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'prompt 3c bicyclist momentum',
+    question: 'If a bicyclist has a mass of 70 kg and a velocity of 25 m/s, what is the momentum of the bicyclist?',
+    type: 'science_formula',
+    includes: ['Use the momentum formula: p = m × v.', 'p = 70 kg × 25 m/s', 'p = 1750 kg·m/s'],
+    formulaWork: {
+      formulaId: 'momentum_mass_velocity',
+      solveFor: 'momentum',
+      formula: 'p = m × v',
+      finalAnswerValue: 1750,
+      finalAnswerDisplay: '1750 kg·m/s',
+      minStepCount: 5
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'prompt 3c truck mass from momentum',
+    question: 'If a truck has 40,500 kg*m/s of momentum and is moving with a velocity of 90 m/s, what is the truck’s mass?',
+    type: 'science_formula',
+    includes: ['Use the momentum formula: mass = momentum / velocity.', 'm = 40500 kg·m/s / 90 m/s', 'm = 450 kg'],
+    excludes: ['Sulfur is an element'],
+    formulaWork: {
+      formulaId: 'momentum_mass_velocity',
+      solveFor: 'mass',
+      formula: 'm = p / v',
+      finalAnswerValue: 450,
+      finalAnswerDisplay: '450 kg',
+      minStepCount: 5
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'prompt 3c suitcase weight',
+    question: 'Find the weight of a suitcase that has a mass of 42 kg.',
+    type: 'science_formula',
+    includes: ['Use the weight formula: Fg = m × g.', 'For Earth, use g = 9.8 m/s².', 'Fg = 42 kg × 9.8 m/s²', 'Fg = 411.6 N'],
+    formulaWork: {
+      formulaId: 'weight_mass_gravity',
+      solveFor: 'weight',
+      formula: 'Fg = m × g',
+      finalAnswerValue: 411.6,
+      finalAnswerDisplay: '411.6 N',
+      minStepCount: 5
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'prompt 3c rock thrown force',
+    question: 'A rock is skipped into a lake at 24 m/s², with what force was the rock thrown if it was 1.75 kg?',
+    type: 'science_formula',
+    includes: ['Use Newton’s second law: F = m × a.', 'F = 1.75 kg × 24 m/s²', 'F = 42 N'],
+    formulaWork: {
+      formulaId: 'force_mass_acceleration',
+      solveFor: 'force',
+      formula: 'F = m × a',
+      finalAnswerValue: 42,
+      finalAnswerDisplay: '42 N',
+      minStepCount: 5
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'prompt 3c mass from force and acceleration',
+    question: 'Calculate the mass of an object accelerating at 14 m/s² with a force of 280 N.',
+    type: 'science_formula',
+    includes: ['Use Newton’s second law: F = m × a.', 'Solve for mass: m = F / a.', 'm = 280 N / 14 m/s²', 'm = 20 kg'],
+    formulaWork: {
+      formulaId: 'force_mass_acceleration',
+      solveFor: 'mass',
+      formula: 'm = F / a',
+      finalAnswerValue: 20,
+      finalAnswerDisplay: '20 kg',
+      minStepCount: 5
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'prompt 3c cart final speed formula route',
+    question: 'A cart rolling down an incline for 5.0 seconds has an acceleration of 4.0 m/s2. If the cart has an initial speed of 2.0 m/s, what is its final speed?',
+    type: 'science_formula',
+    includes: ['Use the formula: vf = vi + a × t.', 'vf = 2 m/s + 4 m/s² × 5 s', 'vf = 2 m/s + 20 m/s', 'vf = 22 m/s'],
+    excludes: ['Speed tells how fast', 'distance = speed × time'],
+    formulaWork: {
+      formulaId: 'acceleration_velocity_time',
+      solveFor: 'final velocity',
+      formula: 'vf = vi + a × t',
+      variables: {
+        'initial velocity': { value: 2, unit: 'm/s', display: '2 m/s' },
+        acceleration: { value: 4, unit: 'm/s²', display: '4 m/s²' },
+        time: { value: 5, unit: 's', display: '5 s' }
+      },
+      finalAnswerValue: 22,
+      finalAnswerDisplay: '22 m/s',
+      minStepCount: 5
+    },
+    aiAllowed: false
   }
 
   // TODO Later phase: multi-step friction/normal/applied force chains.

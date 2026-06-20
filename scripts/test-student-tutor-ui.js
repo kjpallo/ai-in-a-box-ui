@@ -325,6 +325,86 @@ async function testGuidedFormulaTutorStartup() {
       finalAnswer: /net force = 50 N in the direction of the two students/i,
       directAnswer: /The net force is 50 N in the direction of the two students/i,
       steps: ['2', '1', '50 N', '1', '100', '50']
+    },
+    {
+      name: 'prompt-3c-lunch-table-box-acceleration',
+      question: 'A 5.5 kg box is pushed across the lunch table. The net force applied to the box is 9.7 N. What is the acceleration of the box?',
+      formulaId: 'force_mass_acceleration',
+      solveFor: 'acceleration',
+      formula: 'a = F / m',
+      finalAnswer: /acceleration = 1\.7636 m\/s²/i,
+      directAnswer: /The acceleration is about 1\.76 m\/s²/i,
+      steps: ['2', '1', '9.7 N', '5.5 kg', '1.76']
+    },
+    {
+      name: 'prompt-3c-mass-from-unbalanced-force',
+      question: 'What is the mass of an object that has an acceleration of 2.63 m/s² when an unbalanced force of 112 N is applied to it?',
+      formulaId: 'force_mass_acceleration',
+      solveFor: 'mass',
+      formula: 'm = F / a',
+      finalAnswer: /mass = 42\.5856 kg/i,
+      directAnswer: /The mass is about 42\.59 kg/i,
+      steps: ['3', '1', '112 N', '2.63 m/s²', '42.6']
+    },
+    {
+      name: 'prompt-3c-bicyclist-momentum',
+      question: 'If a bicyclist has a mass of 70 kg and a velocity of 25 m/s, what is the momentum of the bicyclist?',
+      formulaId: 'momentum_mass_velocity',
+      solveFor: 'momentum',
+      formula: 'p = m × v',
+      finalAnswer: /momentum = 1750 kg·m\/s/i,
+      directAnswer: /p = 1750 kg·m\/s/i,
+      steps: ['1', '1', '70 kg', '25 m/s', '1750']
+    },
+    {
+      name: 'prompt-3c-truck-mass-from-momentum',
+      question: 'If a truck has 40,500 kg*m/s of momentum and is moving with a velocity of 90 m/s, what is the truck’s mass?',
+      formulaId: 'momentum_mass_velocity',
+      solveFor: 'mass',
+      formula: 'm = p / v',
+      finalAnswer: /mass = 450 kg/i,
+      directAnswer: /m = 450 kg/i,
+      steps: ['2', '1', '40500 kg*m/s', '90 m/s', '450']
+    },
+    {
+      name: 'prompt-3c-suitcase-weight',
+      question: 'Find the weight of a suitcase that has a mass of 42 kg.',
+      formulaId: 'weight_mass_gravity',
+      solveFor: 'weight',
+      formula: 'Fg = m × g',
+      finalAnswer: /weight = 411\.6 N/i,
+      directAnswer: /Fg = 411\.6 N/i,
+      steps: ['1', '1', '42 kg', '9.8 m/s²', '411.6']
+    },
+    {
+      name: 'prompt-3c-rock-thrown-force',
+      question: 'A rock is skipped into a lake at 24 m/s², with what force was the rock thrown if it was 1.75 kg?',
+      formulaId: 'force_mass_acceleration',
+      solveFor: 'force',
+      formula: 'F = m × a',
+      finalAnswer: /force = 42 N/i,
+      directAnswer: /F = 42 N/i,
+      steps: ['1', '1', '1.75 kg', '24 m/s²', '42']
+    },
+    {
+      name: 'prompt-3c-mass-from-force-and-acceleration',
+      question: 'Calculate the mass of an object accelerating at 14 m/s² with a force of 280 N.',
+      formulaId: 'force_mass_acceleration',
+      solveFor: 'mass',
+      formula: 'm = F / a',
+      finalAnswer: /mass = 20 kg/i,
+      directAnswer: /m = 20 kg/i,
+      steps: ['3', '1', '280 N', '14 m/s²', '20']
+    },
+    {
+      name: 'prompt-3c-exact-cart-final-speed',
+      question: 'A cart rolling down an incline for 5.0 seconds has an acceleration of 4.0 m/s2. If the cart has an initial speed of 2.0 m/s, what is its final speed?',
+      formulaId: 'acceleration_velocity_time',
+      solveFor: 'final velocity',
+      formula: 'vf = vi + a × t',
+      finalAnswer: /final velocity = 22 m\/s/i,
+      directAnswer: /vf = 22 m\/s/i,
+      steps: ['final velocity', '1', '2 m/s', '4 m/s2', '5 s', '22']
     }
   ];
 
