@@ -2,6 +2,12 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { createStudentRouteHarness } = require('./test-helpers/studentRouteHarness');
+const {
+  buildMotionForceKnowledgeTutorMetadata,
+  buildMotionForceKnowledgeTutorPrompt,
+  continueMotionForceKnowledgeTutor,
+  startMotionForceKnowledgeTutor
+} = require('../lib/tutor/motionForceKnowledgeTutor');
 
 const projectRoot = path.join(__dirname, '..');
 const studentHtml = fs.readFileSync(path.join(projectRoot, 'public', 'student.html'), 'utf8');
@@ -434,6 +440,152 @@ async function testConceptualFormulaTutorChoices() {
   });
 }
 
+async function testConcept3GeneralTutorVocabularyChoices() {
+  await assertDirectDefinitionOrGeneralTutorChoices({
+    name: 'concept3-inertia-vocab-choice',
+    question: 'what is Inertia',
+    expectedDefinition: /Inertia is an object’s resistance to a change in motion/i,
+    expectedPrompt: /Is inertia about changing motion easily or resisting a change in motion\?/i,
+    expectedChoices: [
+      /1\. Resisting a change in motion/i,
+      /2\. Changing motion easily/i,
+      /3\. Measuring speed/i
+    ],
+    correctAnswer: '1',
+    expectComplete: false
+  });
+
+  await assertDirectDefinitionOrGeneralTutorChoices({
+    name: 'concept3-air-resistance-vocab-choice',
+    question: 'what is air resistance',
+    expectedDefinition: /Air resistance is .*opposite/i,
+    expectedPrompt: /Air resistance acts in what direction compared with motion\?/i,
+    expectedChoices: [
+      /1\. Opposite the motion/i,
+      /2\. Same direction as the motion/i,
+      /3\. Straight down because of gravity/i
+    ],
+    correctAnswer: '1',
+    expectComplete: true
+  });
+
+  [
+    {
+      id: 'balanced_force_concept_3_vocab',
+      topic: 'balanced force',
+      finalAnswer: 'Balanced forces are equal in size and opposite in direction, so net force is 0 and motion does not change.',
+      guidingQuestions: ['What is the net force when forces are balanced?'],
+      expectedChoices: [/1\. 0/i, /2\. Greater than 0/i, /3\. Always negative/i]
+    },
+    {
+      id: 'unbalanced_force_concept_3_vocab',
+      topic: 'unbalanced force',
+      finalAnswer: 'Unbalanced forces do not cancel. Net force is not 0, so they can change speed, direction, or motion.',
+      guidingQuestions: ['What can unbalanced forces do?'],
+      expectedChoices: [/1\. Change an object’s motion/i, /2\. Make net force equal 0/i, /3\. Stop all forces from acting/i]
+    },
+    {
+      id: 'friction_concept_3_vocab',
+      topic: 'friction',
+      finalAnswer: 'Friction is a force that resists motion when surfaces rub, slide, or roll against each other.',
+      guidingQuestions: ['What does friction do?'],
+      expectedChoices: [/1\. Resists motion when surfaces touch/i, /2\. Measures how fast an object moves/i, /3\. Makes net force always equal 0/i]
+    },
+    {
+      id: 'inertia_vocab',
+      topic: 'inertia',
+      finalAnswer: 'Inertia is an object’s resistance to a change in motion. More mass means more inertia.',
+      guidingQuestions: ['What does inertia mean?'],
+      expectedChoices: [/1\. Resisting a change in motion/i, /2\. Changing motion easily/i, /3\. Measuring speed/i]
+    },
+    {
+      id: 'air_resistance_vocab',
+      topic: 'air resistance',
+      finalAnswer: 'Air resistance is drag, a force that resists motion through air and acts opposite the object’s motion.',
+      guidingQuestions: ['Air resistance acts in what direction compared with motion?'],
+      expectedChoices: [/1\. Opposite the motion/i, /2\. Same direction as the motion/i, /3\. Straight down because of gravity/i]
+    },
+    {
+      id: 'newton_first_law_scenario',
+      topic: 'Newton’s 1st Law / inertia',
+      finalAnswer: 'Newton’s first law says objects resist changes in motion unless an unbalanced force acts.',
+      guidingQuestions: ['What does inertia mean?'],
+      expectedChoices: [/1\. An object resists changes in motion/i, /2\. An object always speeds up/i, /3\. An object has no mass/i]
+    }
+  ].forEach(assertSyntheticGeneralTutorStartsWithChoices);
+}
+
+async function assertDirectDefinitionOrGeneralTutorChoices({
+  name,
+  question,
+  expectedDefinition,
+  expectedPrompt,
+  expectedChoices,
+  correctAnswer,
+  expectComplete
+}) {
+  const harness = await createHarnessSession();
+  const start = await sendHarnessMessage(harness, name, question);
+
+  if (start.body.routeType !== 'motion_force_knowledge_tutor') {
+    assert.notEqual(start.body.routeType, 'formula_tutor', `${name} should not route to formula tutor`);
+    assert.match(start.body.response, expectedDefinition, `${name} should answer directly from trusted facts`);
+    return;
+  }
+
+  assertGeneralTutorChoices(start.body, { name, expectedPrompt, expectedChoices });
+  const answered = await sendHarnessMessage(harness, name, correctAnswer);
+  assert.equal(answered.body.routeType, 'motion_force_knowledge_tutor', `${name} correct number should stay in General Tutor`);
+  if (expectComplete) {
+    assert.equal(answered.body.tutor.completed, true, `${name} correct number should complete one-step tutor`);
+  } else {
+    assert.equal(answered.body.tutor.currentStepIndex, 1, `${name} correct number should advance to the next tutor step`);
+  }
+}
+
+function assertSyntheticGeneralTutorStartsWithChoices(testCase) {
+  const tutor = startMotionForceKnowledgeTutor({
+    questionRoute: {
+      type: 'definition',
+      directAnswer: testCase.finalAnswer,
+      motionForceTutor: {
+        id: testCase.id,
+        topic: testCase.topic,
+        category: 'vocab',
+        expectedAnswer: testCase.finalAnswer,
+        guidingQuestions: testCase.guidingQuestions,
+        finalAnswer: testCase.finalAnswer
+      }
+    },
+    originalQuestion: `what is ${testCase.topic}`
+  });
+
+  assert.ok(tutor, `${testCase.id} synthetic General Tutor should start`);
+  const response = buildMotionForceKnowledgeTutorPrompt(tutor);
+  const metadata = buildMotionForceKnowledgeTutorMetadata(tutor);
+  assertGeneralTutorChoices({ response, tutor: metadata }, {
+    name: testCase.id,
+    expectedPrompt: new RegExp(testCase.guidingQuestions[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'),
+    expectedChoices: testCase.expectedChoices
+  });
+
+  const answered = continueMotionForceKnowledgeTutor(tutor, '1');
+  assert.equal(answered.completed, true, `${testCase.id} correct number should complete one-step tutor`);
+  assert.match(answered.response, /Yes\./i, `${testCase.id} completion should give the final answer`);
+}
+
+function assertGeneralTutorChoices(body, { name, expectedPrompt, expectedChoices }) {
+  assert.match(body.response, expectedPrompt, `${name} should show the vocab tutor question`);
+  for (const expectedChoice of expectedChoices) {
+    assert.match(body.response, expectedChoice, `${name} should display numbered choices immediately`);
+  }
+  assert.equal(body.tutor?.tutorLabel, 'General Tutor', `${name} should be General Tutor`);
+  assert.match(body.tutor?.currentStepPrompt || '', expectedPrompt, `${name} metadata should include current prompt`);
+  for (const expectedChoice of expectedChoices) {
+    assert.match(body.tutor?.work?.currentStep?.prompt || '', expectedChoice, `${name} work prompt should include numbered choices`);
+  }
+}
+
 async function assertConceptualStepShowsChoices({ name, question, stepId, setupAnswers, expectedChoices, correctAnswer }) {
   const harness = await createHarnessSession();
   let latest = await sendHarnessMessage(harness, name, question);
@@ -532,12 +684,14 @@ async function sendHarnessMessage(harness, studentHubId, message) {
 Promise.resolve()
   .then(testGuidedFormulaTutorStartup)
   .then(testConceptualFormulaTutorChoices)
+  .then(testConcept3GeneralTutorVocabularyChoices)
   .then(testTwoUnitVelocityTutor)
   .then(testAccelerationClassroomRoundedFinalAcceptance)
   .then(() => {
     console.log('student tutor UI: formula tutor turns group into collapsible problem sessions');
     console.log('student tutor UI: guided formula startup preserves direct-answer mode when disabled');
     console.log('student tutor UI: conceptual formula tutor steps show numbered choices immediately');
+    console.log('student tutor UI: Concept 3 General Tutor vocab steps show numbered choices immediately');
     console.log('student tutor UI: velocity and acceleration tutor regressions passed');
   })
   .catch((error) => {

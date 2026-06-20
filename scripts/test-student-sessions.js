@@ -2487,19 +2487,19 @@ async function testGuidedMotionForceKnowledgeTutor() {
     studentHubId: 'inertia-hints',
     message: 'changing motion easily'
   });
-  assert.match(inertiaWrongTwo.body.response, /harder to start, stop, or turn/i);
+  assert.match(inertiaWrongTwo.body.response, /Choose one:\n1\. Resisting a change in motion\n2\. Changing motion easily\n3\. Measuring speed/i);
 
   const inertiaWrongThree = await enabled.request('POST', '/api/student/message', {
     sessionId: classSessionId,
     studentHubId: 'inertia-hints',
     message: 'speed and madd'
   });
-  assert.match(inertiaWrongThree.body.response, /Choose one:\n1\. changing motion easily\n2\. resisting a change in motion\n3\. making speed disappear/i);
+  assert.match(inertiaWrongThree.body.response, /Choose one:\n1\. Resisting a change in motion\n2\. Changing motion easily\n3\. Measuring speed/i);
 
   const inertiaChoiceCorrect = await enabled.request('POST', '/api/student/message', {
     sessionId: classSessionId,
     studentHubId: 'inertia-hints',
-    message: '2'
+    message: '1'
   });
   assert.equal(inertiaChoiceCorrect.statusCode, 200);
   assert.equal(inertiaChoiceCorrect.body.tutor.currentStepIndex, 1);
