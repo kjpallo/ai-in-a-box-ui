@@ -1009,7 +1009,7 @@ const tests = [
     formulaWork: {
       formulaId: 'acceleration_velocity_time',
       finalAnswerValue: 36000,
-      finalAnswerDisplay: '36000 km/hr²',
+      finalAnswerDisplay: '36000 km/hr² (36,842 km/hr² using 0.0019 hr)',
       minStepCount: 4
     },
     aiAllowed: false
@@ -1428,7 +1428,7 @@ const tests = [
     formulaWork: {
       formulaId: 'speed_distance_time',
       finalAnswerValue: 80,
-      finalAnswerDisplay: '80 mi/hr south',
+      finalAnswerDisplay: '80 mi/hr south and about 35.76 m/s south',
       minStepCount: 4
     },
     aiAllowed: false

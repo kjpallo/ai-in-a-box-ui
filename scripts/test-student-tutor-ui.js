@@ -393,10 +393,152 @@ async function assertDirectAnswerWhenGuidedTutorDisabled(testCase) {
   );
 }
 
-testGuidedFormulaTutorStartup()
+async function testConceptualFormulaTutorChoices() {
+  await assertConceptualStepShowsChoices({
+    name: 'mali-spin-choice',
+    question: 'Mali spins in place and falls down where she started. What are her distance and displacement?',
+    stepId: 'identify_spin_in_place',
+    setupAnswers: ['1', '1'],
+    expectedChoices: [
+      /1\. She spun\/stayed in place/i,
+      /2\. She moved to a different location/i,
+      /3\. She traveled 7 meters/i
+    ],
+    correctAnswer: '1'
+  });
+
+  await assertConceptualStepShowsChoices({
+    name: 'kai-pool-choice',
+    question: 'Kai swims the length of a 50 m pool three times. What are his distance and displacement?',
+    stepId: 'identify_finish_side',
+    setupAnswers: ['1', '1', '50 m', '3', '150'],
+    expectedChoices: [
+      /1\. Back where he started/i,
+      /2\. Opposite side of the pool/i,
+      /3\. 150 m away from the start/i
+    ],
+    correctAnswer: '2'
+  });
+
+  await assertConceptualStepShowsChoices({
+    name: 'pj-closed-loop-choice',
+    question: 'PJ walks 0.35 miles around the block and returns to his doorstep. What are his distance and displacement?',
+    stepId: 'identify_finish_location',
+    setupAnswers: ['1', '1', '0.35'],
+    expectedChoices: [
+      /1\. Same place \/ back where he started/i,
+      /2\. Opposite side \/ away from where he started/i,
+      /3\. 0\.35 miles north/i
+    ],
+    correctAnswer: '1'
+  });
+}
+
+async function assertConceptualStepShowsChoices({ name, question, stepId, setupAnswers, expectedChoices, correctAnswer }) {
+  const harness = await createHarnessSession();
+  let latest = await sendHarnessMessage(harness, name, question);
+  assert.equal(latest.body.routeType, 'formula_tutor', `${name} should start formula tutor`);
+
+  for (const answer of setupAnswers) {
+    latest = await sendHarnessMessage(harness, name, answer);
+  }
+
+  assert.equal(latest.body.tutor.stepId, stepId, `${name} should prompt the conceptual step`);
+  for (const expectedChoice of expectedChoices) {
+    assert.match(latest.body.response, expectedChoice, `${name} should display numbered choices immediately`);
+  }
+
+  const accepted = await sendHarnessMessage(harness, name, correctAnswer);
+  assert.equal(accepted.body.routeType, 'formula_tutor', `${name} correct number should stay in tutor`);
+  assert.notEqual(accepted.body.tutor.stepId, stepId, `${name} correct number should advance`);
+}
+
+async function testTwoUnitVelocityTutor() {
+  const name = 'velocity-mihr-ms';
+  const harness = await createHarnessSession();
+  const question = 'A car travels 240 miles south in 3 hours. Find its velocity in mi/hr and m/s.';
+
+  const start = await sendHarnessMessage(harness, name, question);
+  assert.equal(start.body.routeType, 'formula_tutor', `${name} should start formula tutor`);
+  assert.equal(start.body.tutor.formulaId, 'speed_distance_time', `${name} formula id`);
+  assert.equal(start.body.tutor.solveFor, 'velocity', `${name} solve target`);
+
+  await sendHarnessMessage(harness, name, '1');
+  await sendHarnessMessage(harness, name, '1');
+  await sendHarnessMessage(harness, name, '240 miles');
+  await sendHarnessMessage(harness, name, '3 hours');
+  const conversionPrompt = await sendHarnessMessage(harness, name, '80');
+  assert.equal(conversionPrompt.body.tutor.stepId, 'convert_velocity_to_mps', `${name} should ask for m/s conversion`);
+  assert.match(conversionPrompt.body.response, /Convert 80 mi\/hr south to m\/s/i);
+
+  const final = await sendHarnessMessage(harness, name, '80 and 35.76');
+  assert.equal(final.body.tutor.completed, true, `${name} should complete from combined answer`);
+  assert.match(final.body.tutor.finalAnswerDisplay, /80 mi\/hr south and about 35\.76 m\/s south/i);
+  assert.match(final.body.response, /80 mi\/hr south and about 35\.76 m\/s south/i);
+}
+
+async function testAccelerationClassroomRoundedFinalAcceptance() {
+  for (const answer of ['36842', '36,842', '36000']) {
+    const final = await completeCarAdAccelerationWithFinalAnswer(`car-ad-${answer.replace(/\W/g, '')}`, answer);
+    assert.equal(final.body.tutor.completed, true, `car ad should accept ${answer}`);
+    assert.match(final.body.response, /36000 km\/hr²/i, `car ad final should show exact conversion answer for ${answer}`);
+    assert.match(final.body.response, /36,842 km\/hr² using 0\.0019 hr/i, `car ad final should explain rounded path for ${answer}`);
+  }
+
+  const rejected = await completeCarAdAccelerationWithFinalAnswer('car-ad-reject-small-time', '0.00277778', { expectComplete: false });
+  assert.equal(rejected.body.tutor.completed, false, 'car ad should not accept a time conversion value as final acceleration');
+  assert.equal(rejected.body.tutor.stepId, 'calculate', 'car ad should stay on final acceleration calculation after bad final answer');
+  assert.match(rejected.body.response, /Not quite yet/i);
+}
+
+async function completeCarAdAccelerationWithFinalAnswer(name, finalAnswer, options = {}) {
+  const harness = await createHarnessSession();
+  const question =
+    'A car advertisement claims that a certain car can accelerate from rest to 70 km/hr in 7 seconds (hint: convert to hours first!!) Find the car’s acceleration.';
+
+  await sendHarnessMessage(harness, name, question);
+  await sendHarnessMessage(harness, name, '1');
+  await sendHarnessMessage(harness, name, '1');
+  await sendHarnessMessage(harness, name, '0 km/hr');
+  await sendHarnessMessage(harness, name, '70 km/hr');
+  await sendHarnessMessage(harness, name, '7');
+  const calculationPrompt = await sendHarnessMessage(harness, name, '0.0019 hr');
+  assert.equal(calculationPrompt.body.tutor.stepId, 'calculate', `${name} should reach final acceleration calculation`);
+
+  const final = await sendHarnessMessage(harness, name, finalAnswer);
+  if (options.expectComplete !== false) {
+    assert.equal(final.body.tutor.completed, true, `${name} should complete`);
+  }
+  return final;
+}
+
+async function createHarnessSession() {
+  const harness = createStudentRouteHarness({ studentGuidedFormulaTutoringEnabled: true });
+  const create = await harness.request('POST', '/api/profile/create-student-session');
+  assert.equal(create.statusCode, 201, 'focused tutor test should create student session');
+  return { ...harness, sessionId: create.body.sessionId };
+}
+
+async function sendHarnessMessage(harness, studentHubId, message) {
+  const response = await harness.request('POST', '/api/student/message', {
+    sessionId: harness.sessionId,
+    studentHubId,
+    message
+  });
+  assert.equal(response.statusCode, 200, `${studentHubId}: ${message}`);
+  return response;
+}
+
+Promise.resolve()
+  .then(testGuidedFormulaTutorStartup)
+  .then(testConceptualFormulaTutorChoices)
+  .then(testTwoUnitVelocityTutor)
+  .then(testAccelerationClassroomRoundedFinalAcceptance)
   .then(() => {
     console.log('student tutor UI: formula tutor turns group into collapsible problem sessions');
     console.log('student tutor UI: guided formula startup preserves direct-answer mode when disabled');
+    console.log('student tutor UI: conceptual formula tutor steps show numbered choices immediately');
+    console.log('student tutor UI: velocity and acceleration tutor regressions passed');
   })
   .catch((error) => {
     console.error(error);
