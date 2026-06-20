@@ -1531,19 +1531,10 @@ async function testAmbiguousVocabNumberedContinuation() {
     message: 'What is friction?'
   });
   assert.equal(friction.statusCode, 200);
-  assert.equal(friction.body.routeType, 'ambiguous_vocab');
-  assert.match(friction.body.response, /1\. Friction as a force/i);
-  assert.match(friction.body.response, /2\. Friction as a way to transfer electric charge/i);
-
-  const frictionChoice = await request('POST', '/api/student/message', {
-    sessionId: classSessionId,
-    studentHubId: 'friction-choice',
-    message: '2'
-  });
-  assert.equal(frictionChoice.statusCode, 200);
-  assert.equal(frictionChoice.body.routeType, 'definition');
-  assert.match(frictionChoice.body.response, /Friction transfers electric charge/i);
-  assert.doesNotMatch(frictionChoice.body.response, /trusted local fact/i);
+  assert.equal(friction.body.routeType, 'definition');
+  assert.match(friction.body.response, /Friction is a force that resists motion/i);
+  assert.match(friction.body.response, /surfaces rub, slide, or roll/i);
+  assert.doesNotMatch(friction.body.response, /electric charge|electrons/i);
 
   const cell = await request('POST', '/api/student/message', {
     sessionId: classSessionId,
@@ -2047,7 +2038,7 @@ async function testGuidedMotionForceKnowledgeTutor() {
       name: 'terminal-velocity',
       question: 'what is terminal velocity',
       guide: /which force pulls down/i,
-      direct: /constant falling speed/i
+      direct: /maximum velocity[\s\S]*gravity and air resistance balance[\s\S]*net force is 0[\s\S]*acceleration is 0/i
     },
     {
       name: 'air-resistance-paper',
