@@ -165,6 +165,16 @@ assert.match(
 );
 assert.match(
   studentUi,
+  /function renderTutorChoiceButtons\(tutor, work = \{\}\)[\s\S]*data-tutor-choice="\$\{escapeAttr\(choice\.number\)\}"[\s\S]*\$\{escapeHtml\(`\$\{choice\.number\}\. \$\{choice\.label\}`\)\}/,
+  'Formula tutor choices should render as clickable numbered buttons.'
+);
+assert.match(
+  studentUi,
+  /const tutorChoiceButton = event\.target\.closest\('\[data-tutor-choice\]'\);[\s\S]*sendTutorCommand\(tutorChoiceButton\.getAttribute\('data-tutor-choice'\) \|\| ''\)/,
+  'Choice buttons should submit the numeric choice value.'
+);
+assert.match(
+  studentUi,
   /function shouldShowCalculator\(turnId, tutor, work, currentStepText\)[\s\S]*calculatorOpenTurnIds\.has\(turnId\)/,
   'Calculator open state should remain tied to turn ids.'
 );
@@ -172,6 +182,21 @@ assert.match(
   studentUi,
   /data-calculator-key="7"[\s\S]*data-calculator-key="sqrt"[\s\S]*data-calculator-key="equals"/,
   'The tutor calculator should remain available inside active tutor work.'
+);
+assert.match(
+  studentUi,
+  /function resetCalculatorForTutorStepChange\(tutor\)[\s\S]*getActiveTutorStepKey\(tutor\)[\s\S]*resetCalculator\(\{ silent: true \}\)/,
+  'Calculator display state should reset when the active tutor problem or step changes.'
+);
+assert.match(
+  studentUi,
+  /data-calculator-use-result[\s\S]*function useCalculatorResult\(\)[\s\S]*input\.value = value[\s\S]*input\.focus\(\)/,
+  'Calculator should expose a Use result path that fills the answer input without submitting.'
+);
+assert.match(
+  studentUi,
+  /if \(key === 'equals'\)[\s\S]*calculateExpression\(\)[\s\S]*function calculateExpression\(\)[\s\S]*useCalculatorResult\(\)[\s\S]*updateCalculatorDisplay\(\)/,
+  'Calculator equals should place the result in the answer input without auto-submitting.'
 );
 
 assert.match(
@@ -520,6 +545,138 @@ async function testConceptualFormulaTutorChoices() {
   });
 }
 
+async function testMultipleChoiceNormalizationRegressions() {
+  await assertConceptualChoiceAnswerAccepted({
+    name: 'mc-normalization-one-backslash',
+    question: 'Mali loves to make herself dizzy. She spins around in place 7 times before falling down right where she was standing. Find her distance and displacement.',
+    setupAnswers: ['1', '1'],
+    stepId: 'identify_spin_in_place',
+    answer: '1\\'
+  });
+
+  await assertConceptualChoiceAnswerAccepted({
+    name: 'mc-normalization-one-period',
+    question: 'PJ likes to ride his bike around the block. If he rides out of his house west, the sidewalk circles his block, and brings him back to his doorstep 0.35 miles later. Find his distance and displacement.',
+    setupAnswers: ['1', '1', '0.35'],
+    stepId: 'identify_finish_location',
+    answer: '1.'
+  });
+
+  await assertConceptualChoiceAnswerAccepted({
+    name: 'mc-normalization-two-paren',
+    question: 'Kai swims for the school swim team. He specializes in a backstroke event where he has to swim the 50-m length of the pool three times. Find his distance and displacement.',
+    setupAnswers: ['1', '1', '50 m', '3', '150'],
+    stepId: 'identify_finish_side',
+    answer: '2)'
+  });
+}
+
+async function testSpecialDistanceDisplacementTutorRegressions() {
+  await testPjLoopTutorRegression();
+  await testMaliSpinTutorRegression();
+  await testKaiPoolTutorRegression();
+}
+
+async function testPjLoopTutorRegression() {
+  const question = 'PJ likes to ride his bike around the block. If he rides out of his house west, the sidewalk circles his block, and brings him back to his doorstep 0.35 miles later. Find his distance and displacement.';
+
+  for (const answer of ['1', 'same place']) {
+    const harness = await createHarnessSession();
+    let latest = await sendHarnessMessage(harness, `pj-loop-${answer.replace(/\W/g, '') || 'one'}`, question);
+    assert.equal(latest.body.routeType, 'formula_tutor', 'PJ loop should start Formula Tutor');
+    for (const setupAnswer of ['1', '1', '0.35']) {
+      latest = await sendHarnessMessage(harness, `pj-loop-${answer.replace(/\W/g, '') || 'one'}`, setupAnswer);
+    }
+    assert.equal(latest.body.tutor.stepId, 'identify_finish_location', 'PJ should ask finish location');
+    assertFormulaTutorChoices(latest.body, {
+      name: `PJ ${answer}`,
+      expectedChoices: [
+        /1\. Same place \/ back where he started/i,
+        /2\. Opposite side \/ away from where he started/i,
+        /3\. 0\.35 miles north/i
+      ]
+    });
+
+    latest = await sendHarnessMessage(harness, `pj-loop-${answer.replace(/\W/g, '') || 'one'}`, answer);
+    assert.equal(latest.body.tutor.stepId, 'calculate_displacement', `PJ should accept ${answer}`);
+    latest = await sendHarnessMessage(harness, `pj-loop-${answer.replace(/\W/g, '') || 'one'}`, '0');
+    assert.equal(latest.body.tutor.completed, true, `PJ should complete after ${answer}`);
+    assert.match(latest.body.response, /Distance = 0\.35 miles/i);
+    assert.match(latest.body.response, /Displacement = 0 miles/i);
+    assert.equal(latest.body.tutor.work.finalAnswer, 'distance = 0.35 miles; displacement = 0 miles');
+  }
+
+  const rejectHarness = await createHarnessSession();
+  let rejected = await sendHarnessMessage(rejectHarness, 'pj-loop-reject-zero', question);
+  for (const setupAnswer of ['1', '1', '0.35']) {
+    rejected = await sendHarnessMessage(rejectHarness, 'pj-loop-reject-zero', setupAnswer);
+  }
+  rejected = await sendHarnessMessage(rejectHarness, 'pj-loop-reject-zero', '0');
+  assert.equal(rejected.body.tutor.completed, false, 'PJ finish-location step should reject 0');
+  assert.equal(rejected.body.tutor.stepId, 'identify_finish_location', 'PJ should remain on finish-location step after 0');
+  assert.match(rejected.body.response, /Try 1, or click “1\. Same place \/ back where he started\.”/i);
+}
+
+async function testMaliSpinTutorRegression() {
+  const name = 'mali-spin-full-regression';
+  const question = 'Mali loves to make herself dizzy. She spins around in place 7 times before falling down right where she was standing. Find her distance and displacement.';
+  const harness = await createHarnessSession();
+  let latest = await sendHarnessMessage(harness, name, question);
+  assert.equal(latest.body.routeType, 'formula_tutor', `${name} should start Formula Tutor`);
+  for (const setupAnswer of ['1', '1']) {
+    latest = await sendHarnessMessage(harness, name, setupAnswer);
+  }
+  assert.equal(latest.body.tutor.stepId, 'identify_spin_in_place', `${name} should ask spin-in-place step`);
+  assertFormulaTutorChoices(latest.body, {
+    name,
+    expectedChoices: [
+      /1\. She spun\/stayed in place/i,
+      /2\. She moved to a different location/i,
+      /3\. She traveled 7 meters/i
+    ]
+  });
+
+  latest = await sendHarnessMessage(harness, name, '1\\');
+  assert.equal(latest.body.tutor.stepId, 'calculate_distance', `${name} should accept 1\\`);
+  latest = await sendHarnessMessage(harness, name, '0');
+  latest = await sendHarnessMessage(harness, name, '0');
+  assert.equal(latest.body.tutor.completed, true, `${name} should complete`);
+  assert.match(latest.body.response, /Distance = 0/i);
+  assert.match(latest.body.response, /Displacement = 0/i);
+  assert.equal(latest.body.tutor.work.finalAnswer, 'distance = 0; displacement = 0');
+}
+
+async function testKaiPoolTutorRegression() {
+  const question = 'Kai swims for the school swim team. He specializes in a backstroke event where he has to swim the 50-m length of the pool three times. Find his distance and displacement.';
+
+  for (const answer of ['2', 'opposite side', 'opposition side']) {
+    const name = `kai-pool-${answer.replace(/\W/g, '-')}`;
+    const harness = await createHarnessSession();
+    let latest = await sendHarnessMessage(harness, name, question);
+    assert.equal(latest.body.routeType, 'formula_tutor', `${name} should start Formula Tutor`);
+    for (const setupAnswer of ['1', '1', '50 m', '3', '150']) {
+      latest = await sendHarnessMessage(harness, name, setupAnswer);
+    }
+    assert.equal(latest.body.tutor.stepId, 'identify_finish_side', `${name} should ask finish-side step`);
+    assertFormulaTutorChoices(latest.body, {
+      name,
+      expectedChoices: [
+        /1\. Back where he started/i,
+        /2\. Opposite side of the pool/i,
+        /3\. 150 m away from the start/i
+      ]
+    });
+
+    latest = await sendHarnessMessage(harness, name, answer);
+    assert.equal(latest.body.tutor.stepId, 'calculate_displacement', `${name} should accept ${answer}`);
+    latest = await sendHarnessMessage(harness, name, '50');
+    assert.equal(latest.body.tutor.completed, true, `${name} should complete`);
+    assert.match(latest.body.response, /Distance = 150 m/i);
+    assert.match(latest.body.response, /Displacement = 50 m/i);
+    assert.equal(latest.body.tutor.work.finalAnswer, 'distance = 150 m; displacement = 50 m');
+  }
+}
+
 async function testConcept3GeneralTutorVocabularyChoices() {
   await assertDirectDefinitionOrGeneralTutorChoices({
     name: 'concept3-inertia-vocab-choice',
@@ -685,28 +842,63 @@ async function assertConceptualStepShowsChoices({ name, question, stepId, setupA
   assert.notEqual(accepted.body.tutor.stepId, stepId, `${name} correct number should advance`);
 }
 
+async function assertConceptualChoiceAnswerAccepted({ name, question, setupAnswers, stepId, answer }) {
+  const harness = await createHarnessSession();
+  let latest = await sendHarnessMessage(harness, name, question);
+  assert.equal(latest.body.routeType, 'formula_tutor', `${name} should start formula tutor`);
+
+  for (const setupAnswer of setupAnswers) {
+    latest = await sendHarnessMessage(harness, name, setupAnswer);
+  }
+
+  assert.equal(latest.body.tutor.stepId, stepId, `${name} should reach conceptual choice step`);
+  latest = await sendHarnessMessage(harness, name, answer);
+  assert.equal(latest.body.routeType, 'formula_tutor', `${name} should remain in formula tutor after ${answer}`);
+  assert.notEqual(latest.body.tutor.stepId, stepId, `${name} should accept ${answer} and advance`);
+}
+
+function assertFormulaTutorChoices(body, { name, expectedChoices }) {
+  assert.match(body.response, /Type the number or click a choice\./, `${name} response should invite number or click`);
+  const choices = body.tutor?.currentStep?.choices || body.tutor?.work?.currentStep?.choices || [];
+  assert.ok(Array.isArray(choices) && choices.length >= expectedChoices.length, `${name} metadata should expose current-step choices`);
+  for (const expectedChoice of expectedChoices) {
+    assert.match(body.response, expectedChoice, `${name} response should display choice`);
+    assert.match(
+      choices.map((choice) => `${choice.number}. ${choice.label}`).join('\n'),
+      expectedChoice,
+      `${name} metadata should include choice`
+    );
+  }
+}
+
 async function testTwoUnitVelocityTutor() {
   const name = 'velocity-mihr-ms';
-  const harness = await createHarnessSession();
   const question = 'A car travels 240 miles south in 3 hours. Find its velocity in mi/hr and m/s.';
 
-  const start = await sendHarnessMessage(harness, name, question);
-  assert.equal(start.body.routeType, 'formula_tutor', `${name} should start formula tutor`);
-  assert.equal(start.body.tutor.formulaId, 'speed_distance_time', `${name} formula id`);
-  assert.equal(start.body.tutor.solveFor, 'velocity', `${name} solve target`);
+  for (const conversionAnswer of ['35.7', '35.76', '35.8', '35.7632']) {
+    const caseName = `${name}-${conversionAnswer.replace(/\W/g, '')}`;
+    const harness = await createHarnessSession();
+    const start = await sendHarnessMessage(harness, caseName, question);
+    assert.equal(start.body.routeType, 'formula_tutor', `${caseName} should start formula tutor`);
+    assert.equal(start.body.tutor.formulaId, 'speed_distance_time', `${caseName} formula id`);
+    assert.equal(start.body.tutor.solveFor, 'velocity', `${caseName} solve target`);
 
-  await sendHarnessMessage(harness, name, '1');
-  await sendHarnessMessage(harness, name, '1');
-  await sendHarnessMessage(harness, name, '240 miles');
-  await sendHarnessMessage(harness, name, '3 hours');
-  const conversionPrompt = await sendHarnessMessage(harness, name, '80');
-  assert.equal(conversionPrompt.body.tutor.stepId, 'convert_velocity_to_mps', `${name} should ask for m/s conversion`);
-  assert.match(conversionPrompt.body.response, /Convert 80 mi\/hr south to m\/s/i);
+    await sendHarnessMessage(harness, caseName, '1');
+    await sendHarnessMessage(harness, caseName, '1');
+    await sendHarnessMessage(harness, caseName, '240 miles');
+    await sendHarnessMessage(harness, caseName, '3 hours');
+    const conversionPrompt = await sendHarnessMessage(harness, caseName, '80');
+    assert.equal(conversionPrompt.body.tutor.stepId, 'convert_velocity_to_mps', `${caseName} should ask for m/s conversion`);
+    assert.match(conversionPrompt.body.response, /Convert 80 mi\/hr south to m\/s/i);
 
-  const final = await sendHarnessMessage(harness, name, '80 and 35.76');
-  assert.equal(final.body.tutor.completed, true, `${name} should complete from combined answer`);
-  assert.match(final.body.tutor.finalAnswerDisplay, /80 mi\/hr south and about 35\.76 m\/s south/i);
-  assert.match(final.body.response, /80 mi\/hr south and about 35\.76 m\/s south/i);
+    const final = await sendHarnessMessage(harness, caseName, conversionAnswer);
+    assert.equal(final.body.tutor.completed, true, `${caseName} should auto-complete from m/s answer`);
+    assert.match(final.body.tutor.finalAnswerDisplay, /80 mi\/hr south and about 35\.76 m\/s south/i);
+    assert.match(final.body.response, /80 mi\/hr south/i);
+    assert.match(final.body.response, /35\.76 m\/s south/i);
+    assert.doesNotMatch(final.body.tutor.work.calculatorCheck?.display || '', /80 × 0\.447 = 80/i);
+    assert.match(final.body.tutor.work.calculatorCheck?.display || '', /80 × 0\.44704 = 35\.76/i);
+  }
 }
 
 async function testAccelerationClassroomRoundedFinalAcceptance() {
@@ -764,6 +956,8 @@ async function sendHarnessMessage(harness, studentHubId, message) {
 Promise.resolve()
   .then(testGuidedFormulaTutorStartup)
   .then(testConceptualFormulaTutorChoices)
+  .then(testMultipleChoiceNormalizationRegressions)
+  .then(testSpecialDistanceDisplacementTutorRegressions)
   .then(testConcept3GeneralTutorVocabularyChoices)
   .then(testTwoUnitVelocityTutor)
   .then(testAccelerationClassroomRoundedFinalAcceptance)

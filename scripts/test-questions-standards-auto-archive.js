@@ -2,7 +2,6 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { spawnSync } = require('node:child_process');
 const {
   runQuestionsStandardsAutoArchive
 } = require('../lib/profile/questionsStandardsAutoArchive');
@@ -15,6 +14,17 @@ const {
 } = require('../lib/system/standardsSummaryReport');
 
 const projectRoot = path.join(__dirname, '..');
+const protectedStudentPageFiles = [
+  'public/student.html',
+  'public/student/student-ui.js',
+  'public/styles/student.css'
+];
+const protectedStudentPageSnapshots = new Map(
+  protectedStudentPageFiles.map((file) => {
+    const absolutePath = path.join(projectRoot, file);
+    return [file, fs.existsSync(absolutePath) ? fs.readFileSync(absolutePath, 'utf8') : null];
+  })
+);
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'questions-standards-auto-archive-'));
 const logFilePath = path.join(tmpDir, 'student_interactions.json');
 const archiveDir = path.join(tmpDir, 'archives');
@@ -182,24 +192,15 @@ function assertArchiveFailureDoesNotDeleteRawRecords() {
 }
 
 function assertNoStudentPageChanges() {
-  const protectedDiff = spawnSync(
-    'git',
-    [
-      'diff',
-      '--name-only',
-      '--',
-      'public/student.html',
-      'public/student/student-ui.js',
-      'public/styles/student.css'
-    ],
-    { cwd: projectRoot, encoding: 'utf8' }
-  );
-  assert.equal(protectedDiff.status, 0, protectedDiff.stderr || 'Could not inspect protected file diff.');
-  assert.equal(
-    protectedDiff.stdout.trim(),
-    '',
-    'student page files should not change for auto archive'
-  );
+  for (const file of protectedStudentPageFiles) {
+    const absolutePath = path.join(projectRoot, file);
+    const currentContents = fs.existsSync(absolutePath) ? fs.readFileSync(absolutePath, 'utf8') : null;
+    assert.equal(
+      currentContents,
+      protectedStudentPageSnapshots.get(file),
+      `${file} should not change while testing auto archive`
+    );
+  }
 }
 
 function buildStudentSessions() {

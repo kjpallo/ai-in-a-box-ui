@@ -284,7 +284,9 @@
 
       .student-inline-button,
       .student-tutor-session-toggle,
-      .panel-action-button {
+      .panel-action-button,
+      .student-tutor-choice-button,
+      .student-calculator-use-result {
         min-height: 32px;
         padding: 0.42rem 0.64rem;
         border: 1px solid rgba(126,233,255,0.52);
@@ -309,7 +311,11 @@
       .student-tutor-session-toggle:hover,
       .student-tutor-session-toggle:focus-visible,
       .panel-action-button:hover,
-      .panel-action-button:focus-visible {
+      .panel-action-button:focus-visible,
+      .student-tutor-choice-button:hover,
+      .student-tutor-choice-button:focus-visible,
+      .student-calculator-use-result:hover,
+      .student-calculator-use-result:focus-visible {
         border-color: rgba(102,247,209,0.78);
         box-shadow:
           0 3px 0 rgba(3,20,24,0.92),
@@ -320,7 +326,9 @@
 
       .student-inline-button:active,
       .student-tutor-session-toggle:active,
-      .panel-action-button:active {
+      .panel-action-button:active,
+      .student-tutor-choice-button:active,
+      .student-calculator-use-result:active {
         transform: translateY(2px);
         box-shadow:
           0 1px 0 rgba(3,20,24,0.92),
@@ -329,7 +337,9 @@
 
       .student-inline-button:disabled,
       .student-tutor-session-toggle:disabled,
-      .panel-action-button:disabled {
+      .panel-action-button:disabled,
+      .student-tutor-choice-button:disabled,
+      .student-calculator-use-result:disabled {
         border-color: rgba(126,233,255,0.18);
         background: rgba(6,20,23,0.62);
         color: rgba(223,253,246,0.5);
@@ -737,6 +747,22 @@
         justify-content: flex-start;
       }
 
+      .student-tutor-choices {
+        display: flex;
+        gap: 0.34rem;
+        flex-wrap: wrap;
+        align-items: center;
+        min-width: 0;
+      }
+
+      .student-tutor-choice-button {
+        max-width: 100%;
+        border-radius: 8px;
+        text-align: left;
+        line-height: 1.18;
+        white-space: normal;
+      }
+
       .student-calculator {
         display: grid;
         gap: 0.34rem;
@@ -851,6 +877,11 @@
         background:
           radial-gradient(circle at 50% 0%, rgba(102,247,209,0.18), transparent 58%),
           linear-gradient(180deg, rgba(16,74,65,0.98), rgba(4,25,28,0.98));
+      }
+
+      .student-calculator-use-result {
+        justify-self: stretch;
+        border-radius: 8px;
       }
 
       .student-warning {

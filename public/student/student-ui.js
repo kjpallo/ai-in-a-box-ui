@@ -60,6 +60,7 @@
   let devtoolsTimer = null;
   let calculatorExpression = '';
   let calculatorJustEvaluated = false;
+  let activeCalculatorStepKey = '';
   const calculatorOpenTurnIds = new Set();
   const tutorSessionExpandedState = new Map();
   let completedCelebrationKey = '';
@@ -368,6 +369,7 @@
     turn.tutorCollapsed = false;
     turn.pending = false;
     turn.error = false;
+    resetCalculatorForTutorStepChange(turn.tutor);
     if (turn.tutor) {
       collapsePriorTutorCards(turn.id);
     }
@@ -725,6 +727,7 @@
             ${answer ? renderTutorDetail('Final answer', answer, 'student-tutor-answer') : ''}
             ${tutor.currentHint ? renderTutorDetail('Hint', tutor.currentHint, 'is-wide') : ''}
           </div>
+          ${isCurrentStep ? renderTutorChoiceButtons(tutor, work) : ''}
           ${canUseCalculator ? renderCalculatorArea(turn.id, showCalculator) : ''}
           ${isCurrentStep ? renderTutorActions(turn, tutor, { hideCompletedAction: true }) : ''}
         </div>
@@ -875,6 +878,7 @@
             ${answer ? renderTutorDetail('Final answer', answer, 'student-tutor-answer') : ''}
             ${tutor.currentHint ? renderTutorDetail('Hint', tutor.currentHint, 'is-wide') : ''}
           </div>
+          ${renderTutorChoiceButtons(tutor, work)}
           ${canUseCalculator ? renderCalculatorArea(turn.id, showCalculator) : ''}
         </div>
         ${renderTutorActions(turn, tutor)}
@@ -968,6 +972,36 @@
     `;
   }
 
+  function renderTutorChoiceButtons(tutor, work = {}) {
+    if (!tutor || tutor.active !== true || tutor.completed || tutor.stopped) return '';
+
+    const choices = getCurrentTutorChoices(tutor, work);
+    if (choices.length === 0) return '';
+
+    return `
+      <div class="student-tutor-choices" aria-label="Answer choices">
+        ${choices.map((choice) => `
+          <button
+            type="button"
+            class="student-tutor-choice-button"
+            data-tutor-choice="${escapeAttr(choice.number)}"
+          >${escapeHtml(`${choice.number}. ${choice.label}`)}</button>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  function getCurrentTutorChoices(tutor, work = {}) {
+    const step = work.currentStep || tutor.currentStep || {};
+    if (!Array.isArray(step.choices)) return [];
+    return step.choices
+      .map((choice) => ({
+        number: String(choice?.number || '').trim(),
+        label: String(choice?.label || '').trim()
+      }))
+      .filter((choice) => choice.number && choice.label);
+  }
+
   function renderCalculatorArea(turnId, showCalculator) {
     if (!showCalculator) {
       return `
@@ -1008,6 +1042,7 @@
           <button type="button" class="student-calculator-button is-sqrt" data-calculator-key="sqrt">√</button>
           <button type="button" class="student-calculator-button is-equals" data-calculator-key="equals">=</button>
         </div>
+        <button type="button" class="student-calculator-use-result" data-calculator-use-result>Use result</button>
       </div>
     `;
   }
@@ -1128,9 +1163,21 @@
       return;
     }
 
+    const tutorChoiceButton = event.target.closest('[data-tutor-choice]');
+    if (tutorChoiceButton && timeline.contains(tutorChoiceButton)) {
+      sendTutorCommand(tutorChoiceButton.getAttribute('data-tutor-choice') || '');
+      return;
+    }
+
     const calculatorButton = event.target.closest('[data-calculator-key]');
     if (calculatorButton && timeline.contains(calculatorButton)) {
       handleCalculatorKey(calculatorButton.getAttribute('data-calculator-key') || '');
+      return;
+    }
+
+    const calculatorUseButton = event.target.closest('[data-calculator-use-result]');
+    if (calculatorUseButton && timeline.contains(calculatorUseButton)) {
+      useCalculatorResult();
     }
   }
 
@@ -1188,6 +1235,8 @@
   function handleClearClick() {
     chatTurns.splice(0, chatTurns.length);
     lastAnswerText = '';
+    activeCalculatorStepKey = '';
+    resetCalculator({ silent: true });
     routeInfo.textContent = 'No route yet';
     renderTimeline();
   }
@@ -1265,6 +1314,7 @@
       const result = evaluateCalculatorExpression(calculatorExpression);
       calculatorExpression = formatCalculatorResult(result);
       calculatorJustEvaluated = true;
+      useCalculatorResult();
     } catch {
       calculatorExpression = 'Error';
       calculatorJustEvaluated = true;
@@ -1280,6 +1330,7 @@
       if (value < 0) throw new Error('Cannot take square root of negative value');
       calculatorExpression = formatCalculatorResult(Math.sqrt(value));
       calculatorJustEvaluated = true;
+      useCalculatorResult();
     } catch {
       calculatorExpression = 'Error';
       calculatorJustEvaluated = true;
@@ -1287,10 +1338,46 @@
     updateCalculatorDisplay();
   }
 
-  function resetCalculator() {
+  function resetCalculator(options = {}) {
     calculatorExpression = '';
     calculatorJustEvaluated = false;
-    updateCalculatorDisplay();
+    if (!options.silent) updateCalculatorDisplay();
+  }
+
+  function resetCalculatorForTutorStepChange(tutor) {
+    const nextKey = getActiveTutorStepKey(tutor);
+    if (!nextKey) {
+      if (activeCalculatorStepKey) resetCalculator({ silent: true });
+      activeCalculatorStepKey = '';
+      return;
+    }
+
+    if (nextKey !== activeCalculatorStepKey) {
+      activeCalculatorStepKey = nextKey;
+      resetCalculator({ silent: true });
+    }
+  }
+
+  function getActiveTutorStepKey(tutor) {
+    if (!tutor || tutor.active !== true || tutor.completed || tutor.stopped) return '';
+    const work = getTutorWork(tutor);
+    const step = work.currentStep || tutor.currentStep || {};
+    return [
+      tutor.tutorCategory || '',
+      work.originalQuestion || tutor.originalQuestion || '',
+      work.formula || tutor.formula || '',
+      tutor.formulaId || work.formulaId || '',
+      tutor.solveFor || work.solveFor || '',
+      step.id || tutor.stepId || '',
+      step.stepNumber || tutor.stepNumber || tutor.currentStepIndex || ''
+    ].map((part) => String(part || '').trim()).join('|');
+  }
+
+  function useCalculatorResult() {
+    const value = String(calculatorExpression || '').trim();
+    if (!value || value === 'Error' || !sessionIsValid || !input) return;
+    input.value = value;
+    input.focus();
   }
 
   function updateCalculatorDisplay() {

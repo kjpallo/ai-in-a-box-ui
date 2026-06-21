@@ -657,9 +657,9 @@ const tests = [
     matchedKnowledge: matchedKnowledgeFor('Summarize the different ways that motion can be described and measured.'),
     type: 'science_concept',
     includes: [
-      'Motion can be described by comparing position to a reference point',
-      'Distance tells the total path traveled',
-      'slope on a velocity-time graph shows acceleration'
+      'Motion is described by comparing an object’s position to a reference point',
+      'Distance is the total path traveled',
+      'slope on a speed-time or velocity-time graph shows acceleration'
     ],
     excludes: ['Let’s figure it out', 'Type hint for help'],
     aiAllowed: false,
@@ -718,7 +718,7 @@ const tests = [
     question: 'Summarize the different ways that motion can be described and measured.',
     matchedKnowledge: matchedKnowledgeFor('Summarize the different ways that motion can be described and measured.'),
     type: 'science_concept',
-    includes: ['reference point', 'Distance tells the total path traveled', 'Displacement tells the change from start to finish', 'Speed measures distance per time', 'Velocity is speed with direction', 'Acceleration is a change in velocity', 'Graphs can show motion too'],
+    includes: ['reference point', 'Distance is the total path traveled', 'displacement is the straight-line change from start to finish', 'Speed tells how fast something moves', 'Velocity is speed in a specific direction', 'Acceleration means velocity changes', 'Motion graphs help measure motion'],
     excludes: ['I do not have a trusted local science fact'],
     aiAllowed: false
   },
@@ -1349,7 +1349,7 @@ const tests = [
     name: 'unit 1 Kai pool lengths distance and displacement',
     question: 'Kai swims a 50 m pool length three times. What are distance and displacement?',
     type: 'science_formula',
-    includes: ['distance = 50 m × 3 = 150 m', 'displacement = 50 m away from the side started on', 'Answer: distance = 150 m; displacement = 50 m away from the side started on'],
+    includes: ['distance = 50 m × 3 = 150 m', 'displacement = 50 m', 'Answer: distance = 150 m; displacement = 50 m'],
     excludes: ['Phase 6A', 'only handles one-dimensional displacement'],
     aiAllowed: false
   },

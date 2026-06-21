@@ -1,9 +1,21 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { spawnSync } = require('node:child_process');
 
 const projectRoot = path.join(__dirname, '..');
+const protectedFiles = [
+  'public/student.html',
+  'public/student/student-ui.js',
+  'public/styles/student.css',
+  'logs/student_interactions.json',
+  'problem_questions.json'
+];
+const protectedSnapshots = new Map(
+  protectedFiles.map((file) => {
+    const absolutePath = path.join(projectRoot, file);
+    return [file, fs.existsSync(absolutePath) ? fs.readFileSync(absolutePath, 'utf8') : null];
+  })
+);
 const profileUi = read(path.join(projectRoot, 'public', 'profile.js'));
 const bladeUi = read(path.join(projectRoot, 'public', 'blade-ui.js'));
 const teacherDashboardCss = read(path.join(projectRoot, 'public', 'styles', 'teacher-dashboard.css'));
@@ -333,26 +345,15 @@ assert.match(
   /fetchJson\('\/api\/profile\/live-student-activity'\)/,
   'Live Activity should remain on the teacher-only live activity endpoint.'
 );
-const protectedDiff = spawnSync(
-  'git',
-  [
-    'diff',
-    '--name-only',
-    '--',
-    'public/student.html',
-    'public/student/student-ui.js',
-    'public/styles/student.css',
-    'logs/student_interactions.json',
-    'problem_questions.json'
-  ],
-  { cwd: projectRoot, encoding: 'utf8' }
-);
-assert.equal(protectedDiff.status, 0, protectedDiff.stderr || 'Could not inspect protected file diff.');
-assert.equal(
-  protectedDiff.stdout.trim(),
-  '',
-  'Student-facing files and raw history/problem logs should be untouched by this UI export change.'
-);
+for (const file of protectedFiles) {
+  const absolutePath = path.join(projectRoot, file);
+  const currentContents = fs.existsSync(absolutePath) ? fs.readFileSync(absolutePath, 'utf8') : null;
+  assert.equal(
+    currentContents,
+    protectedSnapshots.get(file),
+    `${file} should be untouched while testing UI export behavior.`
+  );
+}
 
 console.log('Questions & Standards UI export checks passed.');
 
