@@ -17,6 +17,7 @@
     "reset:teacher-auth": "node scripts/reset-teacher-auth.js",
     "test:bank": "node scripts/test-router-bank.js",
     "test:charlemagne-output-regressions": "node scripts/test-charlemagne-output-regressions.js",
+    "test:motion-force-student-regressions": "node scripts/test-motion-force-student-regressions.js",
     "test:motion-force-knowledge": "node scripts/test-motion-force-knowledge.js",
     "test:standards": "node scripts/test-standards-matcher.js",
     "test:standards-bank": "node scripts/test-standards-bank-validation.js && node scripts/validate-standards-bank.js && node scripts/test-missouri-standards-bank.js",
