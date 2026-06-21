@@ -9,11 +9,8 @@ const {
 } = require('../lib/tutor/formulaTutor');
 const {
   buildMotionForceKnowledgeTutorMetadata,
-  buildMotionForceKnowledgeTutorPrompt,
-  canStartMotionForceKnowledgeTutor,
   continueMotionForceKnowledgeTutor,
-  isMotionForceKnowledgeTutorProblem,
-  startMotionForceKnowledgeTutor
+  isMotionForceKnowledgeTutorProblem
 } = require('../lib/tutor/motionForceKnowledgeTutor');
 
 function registerStudentRoutes(app, {
@@ -242,7 +239,7 @@ function registerStudentRoutes(app, {
         });
       }
 
-      // Guided tutor messages are already inside a teacher-safe scaffold, so they do not spend question energy.
+      // Guided math/formula tutor messages are already inside a teacher-safe scaffold, so they do not spend question energy.
       if (hub.currentTutorProblem) {
         const previousTutorProblem = hub.currentTutorProblem;
         const previousTutorIsMotionForceKnowledge = isMotionForceKnowledgeTutorProblem(previousTutorProblem);
@@ -310,56 +307,6 @@ function registerStudentRoutes(app, {
             return res.json({
               response,
               routeType: 'formula_tutor',
-              confidence: result.confidence,
-              rateLimit: rateLimitInfo,
-              tutor: tutorMetadata
-            });
-          }
-
-          if (controls.studentGuidedFormulaTutoringEnabled && canStartMotionForceKnowledgeTutor(result.questionRoute)) {
-            hub.currentTutorProblem = startMotionForceKnowledgeTutor({
-              questionRoute: result.questionRoute,
-              originalQuestion: message
-            });
-            const response = [
-              'It looks like you are starting a new problem. I’ll start a new Guided General Tutor question.',
-              '',
-              buildMotionForceKnowledgeTutorPrompt(hub.currentTutorProblem)
-            ].join('\n');
-            const tutorMetadata = buildMotionForceKnowledgeTutorMetadata(hub.currentTutorProblem);
-            const entry = appendStudentHubEntry({
-              session,
-              hub,
-              message,
-              response,
-              routeType: 'motion_force_knowledge_tutor',
-              confidence: result.confidence,
-              standardId: result.standardId || result.questionRoute?.standardId || result.questionRoute?.public?.standardId || '',
-              isStandardsFollowUp: Boolean(result.isStandardsFollowUp)
-            });
-
-            hub.pendingClarification = null;
-
-            logCompletedInteraction({
-              message,
-              questionRoute: makeMotionForceKnowledgeTutorRoute(hub.currentTutorProblem, entry),
-              answerGiven: response,
-              source: 'student',
-              sessionId,
-              debug: {
-                className: session.className || '',
-                studentHubId,
-                motionForceKnowledgeTutor: {
-                  active: true,
-                  restartedWithNewQuestion: true,
-                  previousQuestion: previousTutorProblem.originalQuestion || ''
-                }
-              }
-            });
-
-            return res.json({
-              response,
-              routeType: 'motion_force_knowledge_tutor',
               confidence: result.confidence,
               rateLimit: rateLimitInfo,
               tutor: tutorMetadata
@@ -522,7 +469,7 @@ function registerStudentRoutes(app, {
         recentMessages: contextMessages
       });
       const formulaTutorDecision = getFormulaTutorDecisionDebug(result, { controls });
-      // Starting a guided tutor also bypasses energy; normal student questions still spend energy below.
+      // Starting a guided math/formula tutor also bypasses energy; normal student questions still spend energy below.
       if (formulaTutorDecision.guidedFormulaTutoringEnabled && formulaTutorDecision.canStartFormulaTutor) {
         hub.currentTutorProblem = startFormulaTutor({
           questionRoute: result.questionRoute,
@@ -567,48 +514,6 @@ function registerStudentRoutes(app, {
         return res.json({
           response,
           routeType: 'formula_tutor',
-          confidence: result.confidence,
-          rateLimit: rateLimitInfo,
-          tutor: tutorMetadata
-        });
-      }
-
-      if (controls.studentGuidedFormulaTutoringEnabled && canStartMotionForceKnowledgeTutor(result.questionRoute)) {
-        hub.currentTutorProblem = startMotionForceKnowledgeTutor({
-          questionRoute: result.questionRoute,
-          originalQuestion: message
-        });
-        const response = buildMotionForceKnowledgeTutorPrompt(hub.currentTutorProblem);
-        const tutorMetadata = buildMotionForceKnowledgeTutorMetadata(hub.currentTutorProblem);
-        const entry = appendStudentHubEntry({
-          session,
-          hub,
-          message,
-          response,
-          routeType: 'motion_force_knowledge_tutor',
-          confidence: result.confidence,
-          standardId: result.standardId || result.questionRoute?.standardId || result.questionRoute?.public?.standardId || '',
-          isStandardsFollowUp: Boolean(result.isStandardsFollowUp)
-        });
-
-        hub.pendingClarification = null;
-
-        logCompletedInteraction({
-          message,
-          questionRoute: makeMotionForceKnowledgeTutorRoute(hub.currentTutorProblem, entry),
-          answerGiven: response,
-          source: 'student',
-          sessionId,
-          debug: {
-            className: session.className || '',
-            studentHubId,
-            originalRouteType: result.routeType
-          }
-        });
-
-        return res.json({
-          response,
-          routeType: 'motion_force_knowledge_tutor',
           confidence: result.confidence,
           rateLimit: rateLimitInfo,
           tutor: tutorMetadata
@@ -726,6 +631,12 @@ function isLikelyNewQuestionDuringTutor(message) {
   if (/^(speed|mass|resisting|increasing|decreasing|faster|slower|stopped|friction|inertia)$/.test(text)) return false;
 
   const asksQuestion = /\?/.test(raw) || /^(what|why|which|how|when|where|does|do|is|are|can)\b/.test(text);
+  const hasConceptTerm = /\b(?:reference point|inertia|friction|motion|force|speed|velocity|acceleration|distance|displacement|graph|slope|balanced force|unbalanced force|air resistance|terminal velocity)\b/.test(text);
+  const asksForDefinitionOrExplanation =
+    /^(?:what\s+is|what\s+are|whats|define|explain|summarize|describe)\b/.test(text) ||
+    /^what\s+does\b.*\bmean\b/.test(text) ||
+    /^what\s+do\b.*\bmean\b/.test(text);
+  if (hasConceptTerm && asksForDefinitionOrExplanation) return true;
   if (!asksQuestion) return false;
 
   if (/^(?:what|which)\s+law\s+is\s+this$/.test(text)) return true;
@@ -1074,6 +985,11 @@ function appendStudentHubEntry({
 
 function makeFormulaTutorRoute(currentTutorProblem) {
   const problem = currentTutorProblem || {};
+  const isComplete = Array.isArray(problem.steps) &&
+    problem.steps.length > 0 &&
+    Number(problem.currentStepIndex) >= problem.steps.length;
+  const finalAnswer = isComplete ? (problem.finalAnswer || null) : null;
+  const finalExplanation = isComplete ? (problem.finalExplanation || '') : '';
   const route = {
     type: 'formula_tutor',
     confidence: 'strong',
@@ -1083,8 +999,8 @@ function makeFormulaTutorRoute(currentTutorProblem) {
     tutorCategory: 'formula',
     tutorLabel: 'Formula Tutor',
     originalQuestion: problem.originalQuestion || '',
-    finalAnswer: problem.finalAnswer || null,
-    finalExplanation: problem.finalExplanation || '',
+    finalAnswer,
+    finalExplanation,
     formulaWork: {
       formulaId: problem.formulaId || '',
       family: problem.family || '',
@@ -1101,8 +1017,8 @@ function makeFormulaTutorRoute(currentTutorProblem) {
       tutorCategory: 'formula',
       tutorLabel: 'Formula Tutor',
       originalQuestion: problem.originalQuestion || '',
-      finalAnswer: problem.finalAnswer || null,
-      finalExplanation: problem.finalExplanation || '',
+      finalAnswer,
+      finalExplanation,
       formulaWork: {
         formulaId: problem.formulaId || '',
         family: problem.family || '',
