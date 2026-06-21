@@ -58,6 +58,12 @@ Run the smaller default classroom smoke suite:
 npm test
 ```
 
+Run focused Charlemagne motion/force student regression checks:
+
+```bash
+npm run test:motion-force-student-regressions
+```
+
 Run the 400-question teacher router bank:
 
 ```bash
