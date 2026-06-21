@@ -17,6 +17,8 @@ const tests = [
   testLawOfUniversalGravitationUsesLocalFact,
   testConcept3ForceExactPrompts,
   testConcept3FrictionExactPrompts,
+  testMotionForceSummaryAndExplainDirectAnswers,
+  testKnowledgeConceptPromptsAnswerDirectly,
   testConcept3NewtonExamplesAndMomentumRelationship,
   testLawOfConservationOfMomentumBeatsGenericMomentum,
   testGenericMomentumStillWorks,
@@ -146,6 +148,48 @@ function testConcept3FrictionExactPrompts() {
   const electricity = routeWithTeacherKnowledge('What is friction in electricity?');
   assert.equal(electricity.type, 'definition');
   assert.match(electricity.directAnswer, /Friction transfers electric charge/i);
+}
+
+function testMotionForceSummaryAndExplainDirectAnswers() {
+  const summary = routeWithTeacherKnowledge('Summarize the different ways that motion can be described and measured.');
+  assert.equal(summary.type, 'science_concept');
+  assert.match(summary.directAnswer, /Motion can be described by comparing position to a reference point/i);
+  assert.match(summary.directAnswer, /Distance tells the total path traveled/i);
+  assert.match(summary.directAnswer, /slope on a velocity-time graph shows acceleration/i);
+  assert.equal(summary.motionForceTutor, null, 'plain summary prompt should not start General Tutor by default');
+
+  const acceleration = routeWithTeacherKnowledge('Explain the different changes in motion that could cause an object to accelerate.');
+  assert.equal(acceleration.type, 'science_concept');
+  assert.equal(
+    acceleration.directAnswer,
+    'An object accelerates when its velocity changes. That can happen when it speeds up, slows down, or changes direction.'
+  );
+  assert.equal(acceleration.motionForceTutor, null, 'plain explain prompt should not start General Tutor by default');
+}
+
+function testKnowledgeConceptPromptsAnswerDirectly() {
+  const cases = [
+    ['what is Reference point', /reference point is the place or object/i],
+    ['Summarize the different ways that motion can be described and measured.', /Motion can be described by comparing position to a reference point/i],
+    ['velocity vs. time graph, the slope of the line equals the object’s', /slope means acceleration/i],
+    ['On a distance vs. time graph, the slope of the line equals the object’s', /slope means speed/i],
+    ['Positive acceleration look like on a speed vs time graph', /upward or increasing line/i],
+    ['Negative acceleration looks like what on a speed vs time graph', /downward or decreasing line/i],
+    ['what isFriction', /Friction is a force that resists motion/i],
+    ['what are the 3 factors friction depend on?', /roughness of the surfaces[\s\S]*force pressing[\s\S]*surface area or contact area/i],
+    ['balanced vs unbalanced force', /Balanced forces cancel to net force 0[\s\S]*unbalanced forces.*change motion/i],
+    ['how is momentum related to newton 3rd law', /equal and opposite[\s\S]*Momentum is conserved/i],
+    ['what is Inertia', /Inertia is an object’s resistance to a change in motion/i],
+    ['what is air resistance', /Air resistance is drag[\s\S]*resists motion through air/i],
+    ['what is the thing that slow electricity or curent', /Electrical resistance[\s\S]*slows or resists electric current/i]
+  ];
+
+  for (const [question, expected] of cases) {
+    const route = routeWithTeacherKnowledge(question);
+    assert.notEqual(route.type, 'motion_force_knowledge_tutor', `${question} should answer directly`);
+    assert.match(route.directAnswer, expected, `${question} should return the expected direct answer`);
+    assert.doesNotMatch(route.directAnswer, /Let.?s figure it out|Type hint for help/i);
+  }
 }
 
 function testConcept3NewtonExamplesAndMomentumRelationship() {

@@ -652,6 +652,32 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'motion force summary prompt direct answer',
+    question: 'Summarize the different ways that motion can be described and measured.',
+    matchedKnowledge: matchedKnowledgeFor('Summarize the different ways that motion can be described and measured.'),
+    type: 'science_concept',
+    includes: [
+      'Motion can be described by comparing position to a reference point',
+      'Distance tells the total path traveled',
+      'slope on a velocity-time graph shows acceleration'
+    ],
+    excludes: ['Let’s figure it out', 'Type hint for help'],
+    aiAllowed: false,
+    noMotionForceTutor: true
+  },
+  {
+    name: 'motion force acceleration changes explain direct answer',
+    question: 'Explain the different changes in motion that could cause an object to accelerate.',
+    matchedKnowledge: matchedKnowledgeFor('Explain the different changes in motion that could cause an object to accelerate.'),
+    type: 'science_concept',
+    includes: [
+      'An object accelerates when its velocity changes. That can happen when it speeds up, slows down, or changes direction.'
+    ],
+    excludes: ['Let’s figure it out', 'Type hint for help'],
+    aiAllowed: false,
+    noMotionForceTutor: true
+  },
+  {
     name: 'motion force exact prompt velocity time slope means acceleration',
     question: 'velocity vs. time graph, the slope of the line equals the object’s',
     matchedKnowledge: matchedKnowledgeFor('velocity vs. time graph, the slope of the line equals the object’s'),
@@ -692,7 +718,7 @@ const tests = [
     question: 'Summarize the different ways that motion can be described and measured.',
     matchedKnowledge: matchedKnowledgeFor('Summarize the different ways that motion can be described and measured.'),
     type: 'science_concept',
-    includes: ['reference point', 'Distance', 'displacement', 'average speed', 'instantaneous speed', 'Velocity', 'Acceleration', 'Motion graphs'],
+    includes: ['reference point', 'Distance tells the total path traveled', 'Displacement tells the change from start to finish', 'Speed measures distance per time', 'Velocity is speed with direction', 'Acceleration is a change in velocity', 'Graphs can show motion too'],
     excludes: ['I do not have a trusted local science fact'],
     aiAllowed: false
   },
@@ -3864,6 +3890,14 @@ const tests = [
     question: 'How are voltage current and resistance related?',
     type: 'science_concept',
     includes: ['Ohm’s Law', 'voltage pushes current', 'resistance opposes current', 'V = I × R'],
+    aiAllowed: false
+  },
+  {
+    name: 'student wording resistance slows current',
+    question: 'what is the thing that slow electricity or curent',
+    type: 'definition',
+    includes: ['Electrical resistance', 'slows or resists electric current', 'ohms'],
+    excludes: ['Electricity is the movement', 'Electric current is the net movement'],
     aiAllowed: false
   },
   {

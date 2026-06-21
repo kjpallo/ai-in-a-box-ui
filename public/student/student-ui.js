@@ -487,7 +487,7 @@
     if (!timeline) return;
 
     if (chatTurns.length === 0) {
-      timeline.innerHTML = '<p class="student-empty-timeline">Ask a question to start a conversation. Guided tutor work, calculator checks, and final answers will appear here.</p>';
+      timeline.innerHTML = '<p class="student-empty-timeline">Ask a question to start a conversation. Guided math/formula tutor work, calculator checks, and final answers will appear here.</p>';
       return;
     }
 
@@ -1053,7 +1053,7 @@
 
   function getTutorTitle(tutor, work = {}) {
     const isFormulaTutor = (tutor?.tutorCategory && tutor.tutorCategory !== 'general') || tutor?.formulaId || work.formula;
-    const baseTitle = isFormulaTutor ? 'Formula Tutor' : (tutor?.tutorLabel || 'Guided Tutor');
+    const baseTitle = isFormulaTutor ? 'Formula Tutor' : (tutor?.tutorLabel || 'Guided math/formula tutor');
     if (tutor?.completed) return `${baseTitle} Complete`;
     if (tutor?.stopped) return `${baseTitle} Stopped`;
     return baseTitle;
@@ -1061,7 +1061,7 @@
 
   function getCurrentTutorPrompt(tutor, work = {}) {
     if (tutor?.completed) return 'Final answer ready.';
-    if (tutor?.stopped) return 'Guided tutor stopped.';
+    if (tutor?.stopped) return 'Guided math/formula tutor stopped.';
     return work.currentStep?.prompt || work.currentStep?.label || tutor?.currentStepPrompt || tutor?.currentStep?.prompt || '';
   }
 
@@ -1077,7 +1077,7 @@
     const solveFor = String(work.solveFor || tutor?.solveFor || '').trim();
     if (solveFor === 'time' && /\bsound\b|\blightning\b/.test(originalQuestion)) return 'Sound travel time';
     if (solveFor) return `${toTitleCase(solveFor)} work`;
-    return tutor?.tutorLabel || 'Guided tutor work';
+    return tutor?.tutorLabel || 'Guided math/formula tutor work';
   }
 
   function conciseTutorAnswer(tutor, work) {

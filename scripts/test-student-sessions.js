@@ -2001,6 +2001,167 @@ async function testGuidedFormulaTutorDisabled() {
 }
 
 async function testGuidedMotionForceKnowledgeTutor() {
+  const enabled = createRouteHarness({ studentGuidedFormulaTutoringEnabled: true });
+  let create = await enabled.request('POST', '/api/profile/create-student-session');
+  assert.equal(create.statusCode, 201);
+  let classSessionId = create.body.sessionId;
+
+  const formulaQuestion = 'what is speed if I go 36 meters in 6 seconds';
+  const formulaStart = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'formula-still-guided',
+    message: formulaQuestion
+  });
+  assert.equal(formulaStart.statusCode, 200);
+  assert.equal(formulaStart.body.routeType, 'formula_tutor');
+  assert.equal(formulaStart.body.tutor.formulaId, 'speed_distance_time');
+  assert.equal(formulaStart.body.tutor.tutorCategory, 'formula');
+  assert.equal(formulaStart.body.tutor.tutorLabel, 'Formula Tutor');
+  assert.equal(formulaStart.body.tutor.originalQuestion, formulaQuestion);
+  assert.doesNotMatch(formulaStart.body.response, /speed = 6 m\/s/i);
+  assert.equal(
+    enabled.studentSessions[classSessionId].anonymousHubs['formula-still-guided'].currentTutorProblem.tutorType,
+    undefined
+  );
+
+  const directCases = [
+    {
+      name: 'inertia-direct',
+      question: 'what is Inertia',
+      expected: /resistance to a change in motion/i,
+      routeTypes: ['definition', 'science_concept']
+    },
+    {
+      name: 'reference-point-direct',
+      question: 'what is Reference point',
+      expected: /place or object used to tell whether something has changed position/i,
+      routeTypes: ['definition', 'science_concept']
+    },
+    {
+      name: 'motion-summary-direct',
+      question: 'Summarize the different ways that motion can be described and measured.',
+      expected: /Motion can be described by comparing position to a reference point/i
+    },
+    {
+      name: 'velocity-time-slope-direct',
+      question: 'velocity vs. time graph, the slope of the line equals the object’s',
+      expected: /slope means acceleration/i,
+      routeTypes: ['graph_concept', 'science_concept']
+    },
+    {
+      name: 'distance-time-slope-direct',
+      question: 'On a distance vs. time graph, the slope of the line equals the object’s',
+      expected: /slope means speed/i,
+      routeTypes: ['graph_concept', 'science_concept']
+    },
+    {
+      name: 'positive-acceleration-speed-time-direct',
+      question: 'Positive acceleration look like on a speed vs time graph',
+      expected: /upward or increasing line/i,
+      routeTypes: ['graph_concept', 'science_concept']
+    },
+    {
+      name: 'negative-acceleration-speed-time-direct',
+      question: 'Negative acceleration looks like what on a speed vs time graph',
+      expected: /downward or decreasing line/i,
+      routeTypes: ['graph_concept', 'science_concept']
+    },
+    {
+      name: 'friction-nospace-direct',
+      question: 'what isFriction',
+      expected: /force that resists motion/i,
+      routeTypes: ['definition']
+    },
+    {
+      name: 'friction-factors-direct',
+      question: 'what are the 3 factors friction depend on?',
+      expected: /roughness of the surfaces[\s\S]*force pressing[\s\S]*surface area or contact area/i,
+      routeTypes: ['science_concept']
+    },
+    {
+      name: 'balanced-unbalanced-direct',
+      question: 'balanced vs unbalanced force',
+      expected: /Balanced forces cancel to net force 0[\s\S]*unbalanced forces.*change motion/i,
+      routeTypes: ['science_concept']
+    },
+    {
+      name: 'momentum-third-law-direct',
+      question: 'how is momentum related to newton 3rd law',
+      expected: /equal and opposite[\s\S]*Momentum is conserved/i,
+      routeTypes: ['science_concept']
+    },
+    {
+      name: 'air-resistance-direct',
+      question: 'what is air resistance',
+      expected: /drag[\s\S]*resists motion through air/i,
+      routeTypes: ['definition']
+    },
+    {
+      name: 'resistance-slows-current-direct',
+      question: 'what is the thing that slow electricity or curent',
+      expected: /Electrical resistance[\s\S]*slows or resists electric current/i,
+      routeTypes: ['definition']
+    }
+  ];
+
+  for (const testCase of directCases) {
+    const direct = await enabled.request('POST', '/api/student/message', {
+      sessionId: classSessionId,
+      studentHubId: testCase.name,
+      message: testCase.question
+    });
+    assert.equal(direct.statusCode, 200);
+    assert.notEqual(direct.body.routeType, 'formula_tutor', `${testCase.name} should not start Formula Tutor`);
+    assert.notEqual(direct.body.routeType, 'motion_force_knowledge_tutor', `${testCase.name} should not start General Tutor`);
+    if (testCase.routeTypes) {
+      assert.ok(
+        testCase.routeTypes.includes(direct.body.routeType),
+        `${testCase.name} should return a direct definition or science concept route`
+      );
+    }
+    assert.match(direct.body.response, testCase.expected);
+    assert.doesNotMatch(direct.body.response, /Let.?s figure it out|Type hint for help/i);
+    assert.equal(enabled.studentSessions[classSessionId].anonymousHubs[testCase.name].currentTutorProblem, null);
+  }
+
+  const activeStart = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'formula-interrupted-by-reference-point',
+    message: 'A runner goes 36 meters in 6 seconds. What is the speed?'
+  });
+  assert.equal(activeStart.statusCode, 200);
+  assert.equal(activeStart.body.routeType, 'formula_tutor');
+  assert.ok(enabled.studentSessions[classSessionId].anonymousHubs['formula-interrupted-by-reference-point'].currentTutorProblem);
+
+  const interrupted = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'formula-interrupted-by-reference-point',
+    message: 'what is reference point'
+  });
+  assert.equal(interrupted.statusCode, 200);
+  assert.notEqual(interrupted.body.routeType, 'formula_tutor');
+  assert.notEqual(interrupted.body.routeType, 'motion_force_knowledge_tutor');
+  assert.match(interrupted.body.response, /place or object used to tell whether something has changed position/i);
+  assert.equal(interrupted.body.tutor, null);
+  assert.equal(enabled.studentSessions[classSessionId].anonymousHubs['formula-interrupted-by-reference-point'].currentTutorProblem, null);
+
+  const disabledFormula = createRouteHarness({ studentGuidedFormulaTutoringEnabled: false });
+  create = await disabledFormula.request('POST', '/api/profile/create-student-session');
+  assert.equal(create.statusCode, 201);
+  classSessionId = create.body.sessionId;
+
+  const directFormula = await disabledFormula.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'formula-direct',
+    message: formulaQuestion
+  });
+  assert.equal(directFormula.statusCode, 200);
+  assert.notEqual(directFormula.body.routeType, 'formula_tutor');
+  assert.match(directFormula.body.response, /speed = 6 m\/s/i);
+  assert.equal(disabledFormula.studentSessions[classSessionId].anonymousHubs['formula-direct'].currentTutorProblem, null);
+}
+
+async function testMotionForceKnowledgeTutorLegacyAutoRouteCoverage() {
   const guidedCases = [
     {
       name: 'graph-distance-flat',
@@ -2064,6 +2225,13 @@ async function testGuidedMotionForceKnowledgeTutor() {
       question: 'what is inertia',
       guide: /changing motion easily or resisting a change/i,
       direct: /resistance to a change in motion/i
+    },
+    {
+      name: 'reference-point-vocab',
+      question: 'what is reference point',
+      guide: /What do you compare an object’s position to\?/i,
+      direct: /place or object used to tell whether something has changed position/i,
+      choices: [/1\. A reference point/i, /2\. The object’s color/i, /3\. The object’s mass/i]
     }
   ];
 
@@ -2083,6 +2251,9 @@ async function testGuidedMotionForceKnowledgeTutor() {
     assert.equal(start.body.tutor.tutorType, 'motion_force_knowledge');
     assert.equal(start.body.tutor.active, true);
     assert.match(start.body.response, testCase.guide);
+    for (const choice of testCase.choices || []) {
+      assert.match(start.body.response, choice, `${testCase.name} should show numbered General Tutor choices immediately`);
+    }
     assert.doesNotMatch(start.body.response, testCase.direct, `${testCase.name} should not reveal only the final answer`);
     assert.doesNotMatch(start.body.response, /^(That is|On a|Terminal velocity is|A flat paper falls|Speed tells|Rank inertia)/i);
     assert.equal(
@@ -2090,6 +2261,36 @@ async function testGuidedMotionForceKnowledgeTutor() {
       'motion_force_knowledge'
     );
   }
+
+  const referencePointAccepted = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'motion-reference-point-vocab',
+    message: '1'
+  });
+  assert.equal(referencePointAccepted.statusCode, 200);
+  assert.equal(referencePointAccepted.body.routeType, 'motion_force_knowledge_tutor');
+  assert.equal(referencePointAccepted.body.tutor.currentStepIndex, 1);
+  assert.match(referencePointAccepted.body.response, /How can you tell whether the object changed position/i);
+
+  const summaryDirect = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'motion-summary-direct',
+    message: 'Summarize the different ways that motion can be described and measured.'
+  });
+  assert.equal(summaryDirect.statusCode, 200);
+  assert.notEqual(summaryDirect.body.routeType, 'motion_force_knowledge_tutor');
+  assert.match(summaryDirect.body.response, /Motion can be described by comparing position to a reference point/i);
+  assert.doesNotMatch(summaryDirect.body.response, /Let’s figure it out|Type hint for help/i);
+
+  const accelerationDirect = await enabled.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'acceleration-changes-direct',
+    message: 'Explain the different changes in motion that could cause an object to accelerate.'
+  });
+  assert.equal(accelerationDirect.statusCode, 200);
+  assert.notEqual(accelerationDirect.body.routeType, 'motion_force_knowledge_tutor');
+  assert.match(accelerationDirect.body.response, /An object accelerates when its velocity changes/i);
+  assert.doesNotMatch(accelerationDirect.body.response, /Let’s figure it out|Type hint for help/i);
 
   const guidedStep = await enabled.request('POST', '/api/student/message', {
     sessionId: classSessionId,
