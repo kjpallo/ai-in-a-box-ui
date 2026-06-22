@@ -19,6 +19,7 @@ const tests = [
   testConcept3ForceExactPrompts,
   testConcept3FrictionExactPrompts,
   testBasicAnswerRepresentationIntent,
+  testLearningShapeIntentAndRoutes,
   testFrictionSubtypeAndListFormatting,
   testRollingFrictionFormulaFallback,
   testNewtonAndConservationLawLists,
@@ -158,28 +159,101 @@ function testConcept3FrictionExactPrompts() {
 function testBasicAnswerRepresentationIntent() {
   assert.deepEqual(
     detectAnswerRepresentationIntent('list the types of friction'),
-    { requestedRepresentation: 'numbered_list', shouldAskRepresentationFollowup: false }
+    { requestedRepresentation: 'numbered_list', requestedLearningShape: null, shouldAskRepresentationFollowup: false }
   );
   assert.deepEqual(
     detectAnswerRepresentationIntent('what is rolling friction'),
-    { requestedRepresentation: 'paragraph', shouldAskRepresentationFollowup: false }
+    { requestedRepresentation: 'paragraph', requestedLearningShape: null, shouldAskRepresentationFollowup: false }
   );
   assert.deepEqual(
     detectAnswerRepresentationIntent('how do I solve for rolling friction'),
-    { requestedRepresentation: 'formula_steps', shouldAskRepresentationFollowup: false }
+    { requestedRepresentation: 'formula_steps', requestedLearningShape: null, shouldAskRepresentationFollowup: false }
   );
   assert.deepEqual(
     detectAnswerRepresentationIntent('balanced vs unbalanced force'),
-    { requestedRepresentation: 'comparison', shouldAskRepresentationFollowup: false }
+    { requestedRepresentation: 'comparison', requestedLearningShape: 'compare_contrast', shouldAskRepresentationFollowup: false }
   );
   assert.deepEqual(
     detectAnswerRepresentationIntent('show me a diagram of rolling friction'),
-    { requestedRepresentation: 'image_request', shouldAskRepresentationFollowup: false }
+    { requestedRepresentation: 'image_request', requestedLearningShape: null, shouldAskRepresentationFollowup: false }
   );
   assert.deepEqual(
     detectAnswerRepresentationIntent('Tell me about force'),
-    { requestedRepresentation: 'default', shouldAskRepresentationFollowup: true }
+    { requestedRepresentation: 'default', requestedLearningShape: null, shouldAskRepresentationFollowup: true }
   );
+}
+
+function testLearningShapeIntentAndRoutes() {
+  assert.deepEqual(
+    detectAnswerRepresentationIntent('make flashcards for types of friction'),
+    { requestedRepresentation: 'numbered_list', requestedLearningShape: 'flashcards', shouldAskRepresentationFollowup: false }
+  );
+  assert.deepEqual(
+    detectAnswerRepresentationIntent('give me examples and non-examples of friction'),
+    { requestedRepresentation: 'default', requestedLearningShape: 'examples_non_examples', shouldAskRepresentationFollowup: false }
+  );
+  assert.deepEqual(
+    detectAnswerRepresentationIntent('common mistakes with distance and displacement'),
+    { requestedRepresentation: 'default', requestedLearningShape: 'common_mistakes', shouldAskRepresentationFollowup: false }
+  );
+
+  const frictionCards = routeWithTeacherKnowledge('make flashcards for types of friction');
+  assert.equal(frictionCards.type, 'science_concept');
+  assert.equal(frictionCards.representationIntent.requestedLearningShape, 'flashcards');
+  assert.match(frictionCards.directAnswer, /1\. Static Friction\n\s+Answer: Friction that keeps an object from starting to move\./i);
+  assert.match(frictionCards.directAnswer, /2\. Sliding Friction/i);
+  assert.match(frictionCards.directAnswer, /3\. Rolling Friction/i);
+
+  const frictionExamples = routeWithTeacherKnowledge('give me examples and non-examples of friction');
+  assert.equal(frictionExamples.representationIntent.requestedLearningShape, 'examples_non_examples');
+  assert.match(frictionExamples.directAnswer, /Examples:/i);
+  assert.match(frictionExamples.directAnswer, /Static friction: a book staying still on a desk/i);
+  assert.match(frictionExamples.directAnswer, /Non-examples:/i);
+  assert.match(frictionExamples.directAnswer, /Gravity pulling downward is not friction/i);
+
+  const distanceMistakes = routeWithTeacherKnowledge('common mistakes with distance and displacement');
+  assert.equal(distanceMistakes.representationIntent.requestedLearningShape, 'common_mistakes');
+  assert.match(distanceMistakes.directAnswer, /Do not use total path as displacement/i);
+  assert.match(distanceMistakes.directAnswer, /Do not forget direction for displacement/i);
+
+  const speedVelocity = routeWithTeacherKnowledge('compare speed and velocity');
+  assert.equal(speedVelocity.representationIntent.requestedRepresentation, 'comparison');
+  assert.equal(speedVelocity.representationIntent.requestedLearningShape, 'compare_contrast');
+  assert.match(speedVelocity.directAnswer, /Speed: Speed tells how fast something moves\./i);
+  assert.match(speedVelocity.directAnswer, /Velocity: Velocity is speed with direction\./i);
+
+  const speedVelocityDifference = routeWithTeacherKnowledge('What is the difference between speed and velocity?');
+  assert.match(speedVelocityDifference.directAnswer, /Speed: Speed tells how fast something moves\./i);
+  assert.match(speedVelocityDifference.directAnswer, /Velocity[\s\S]*direction/i);
+
+  const contactFieldForces = routeWithTeacherKnowledge('Compare and contrast contact vs field forces.');
+  assert.equal(contactFieldForces.type, 'definition');
+  assert.match(contactFieldForces.directAnswer, /Contact forces require touching/i);
+  assert.match(contactFieldForces.directAnswer, /Field forces act at a distance without direct contact/i);
+  assert.match(contactFieldForces.directAnswer, /friction, normal force, applied force, tension/i);
+  assert.match(contactFieldForces.directAnswer, /gravity, magnetic force, electric force/i);
+
+  const motionGraphs = routeWithTeacherKnowledge('flashcards for motion graphs');
+  assert.equal(motionGraphs.representationIntent.requestedLearningShape, 'flashcards');
+  assert.match(motionGraphs.directAnswer, /Distance-time graph slope/i);
+  assert.match(motionGraphs.directAnswer, /Velocity-time or speed-time graph slope/i);
+
+  const distanceDisplacementExamples = routeWithTeacherKnowledge('examples and non examples of distance and displacement');
+  assert.equal(distanceDisplacementExamples.representationIntent.requestedLearningShape, 'examples_non_examples');
+  assert.match(distanceDisplacementExamples.directAnswer, /Examples:/i);
+  assert.match(distanceDisplacementExamples.directAnswer, /Non-examples:/i);
+  assert.doesNotMatch(distanceDisplacementExamples.directAnswer, /not enough local/i);
+
+  const unsupportedExamplePrompts = [
+    ['give me an example of speed', 'class_fact'],
+    ['example of kinetic energy', 'class_fact'],
+    ['can you give an example of each', 'no_match']
+  ];
+  for (const [prompt, expectedType] of unsupportedExamplePrompts) {
+    const route = routeWithTeacherKnowledge(prompt);
+    assert.equal(route.type, expectedType, `${prompt} should fall through to existing trusted routing`);
+    assert.doesNotMatch(route.directAnswer, /not enough local/i);
+  }
 }
 
 function testFrictionSubtypeAndListFormatting() {
