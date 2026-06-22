@@ -191,6 +191,7 @@ async function main() {
   assert.equal(studentSessions[classSessionId].anonymousHubs['student-b'].messages.length, 1);
 
   await testFormulaTutorBypassesQuestionEnergy();
+  await testInteractiveFlashcardSessions();
   await testGuidedFormulaTutorDisabled();
   await testGuidedMotionForceKnowledgeTutor();
   await testAccelerationFormulaTutorEnabledAndDisabled();
@@ -1818,6 +1819,129 @@ async function testExpandedFormulaTutorIsolation() {
     studentSessions[classSessionId].anonymousHubs['student-b'].currentTutorProblem.formulaId,
     'speed_distance_time'
   );
+}
+
+async function testInteractiveFlashcardSessions() {
+  const { request, studentSessions } = createRouteHarness();
+  const create = await request('POST', '/api/profile/create-student-session');
+  assert.equal(create.statusCode, 201);
+  const classSessionId = create.body.sessionId;
+
+  const start = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'flashcards-friction',
+    message: 'start flashcards for types of friction'
+  });
+  assert.equal(start.statusCode, 200);
+  assert.equal(start.body.routeType, 'flashcard_session');
+  assert.match(start.body.response, /^Flashcards: Types of friction\n\nCard 1 of 3/im);
+  assert.match(start.body.response, /Front: What type of friction keeps objects from starting to slide\?/i);
+  assert.doesNotMatch(start.body.response, /Back: Static friction/i);
+  assert.equal(start.body.flashcards.active, true);
+  assert.equal(start.body.flashcards.cardCount, 3);
+
+  const hub = studentSessions[classSessionId].anonymousHubs['flashcards-friction'];
+  assert.equal(hub.currentFlashcardSession.type, 'flashcards');
+  assert.equal(hub.currentFlashcardSession.topicId, 'friction_types');
+  assert.equal(hub.currentFlashcardSession.currentCardIndex, 0);
+  assert.equal(hub.currentFlashcardSession.showingBack, false);
+  assert.deepEqual(hub.currentFlashcardSession.cards[0], {
+    front: 'What type of friction keeps objects from starting to slide?',
+    back: 'Static Friction.'
+  });
+
+  const show = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'flashcards-friction',
+    message: 'show'
+  });
+  assert.equal(show.statusCode, 200);
+  assert.equal(show.body.routeType, 'flashcard_session');
+  assert.match(show.body.response, /^Back: Static Friction\./i);
+  assert.match(show.body.response, /Type next for the next card, again to review this card, or stop to end\./i);
+
+  const next = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'flashcards-friction',
+    message: 'next'
+  });
+  assert.equal(next.statusCode, 200);
+  assert.match(next.body.response, /^Card 2 of 3/im);
+  assert.match(next.body.response, /Front: What type of friction resists surfaces sliding past each other\?/i);
+  assert.doesNotMatch(next.body.response, /Back:/i);
+
+  const again = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'flashcards-friction',
+    message: 'again'
+  });
+  assert.equal(again.statusCode, 200);
+  assert.match(again.body.response, /^Card 2 of 3/im);
+  assert.match(again.body.response, /Type show to see the answer/i);
+
+  await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'flashcards-friction',
+    message: 'next'
+  });
+  const complete = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'flashcards-friction',
+    message: 'next'
+  });
+  assert.equal(complete.statusCode, 200);
+  assert.match(complete.body.response, /^Flashcard deck complete: Types of friction/im);
+  assert.match(complete.body.response, /You reviewed 3 cards\./i);
+  assert.equal(hub.currentFlashcardSession.active, false);
+  assert.equal(hub.currentFlashcardSession.completed, true);
+
+  const restart = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'flashcards-friction',
+    message: 'restart'
+  });
+  assert.equal(restart.statusCode, 200);
+  assert.equal(restart.body.routeType, 'flashcard_session');
+  assert.match(restart.body.response, /^Flashcards: Types of friction\n\nCard 1 of 3/im);
+  assert.equal(hub.currentFlashcardSession.active, true);
+  assert.equal(hub.currentFlashcardSession.currentCardIndex, 0);
+
+  const newQuestion = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'flashcards-friction',
+    message: 'what is inertia'
+  });
+  assert.equal(newQuestion.statusCode, 200);
+  assert.notEqual(newQuestion.body.routeType, 'flashcard_session');
+  assert.match(newQuestion.body.response, /resistance to a change in motion/i);
+  assert.equal(hub.currentFlashcardSession, null);
+
+  const staticCards = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'flashcards-static',
+    message: 'make flashcards for types of friction'
+  });
+  assert.equal(staticCards.statusCode, 200);
+  assert.notEqual(staticCards.body.routeType, 'flashcard_session');
+  assert.match(staticCards.body.response, /1\. Static Friction\n\s+Answer: Friction that keeps an object from starting to move\./i);
+  assert.doesNotMatch(staticCards.body.response, /Type show to see the answer/i);
+
+  const forceTutorStart = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'flashcards-formula-priority',
+    message: 'What is the force if mass is 10 kg and acceleration is 3 m/s²?'
+  });
+  assert.equal(forceTutorStart.statusCode, 200);
+  assert.equal(forceTutorStart.body.routeType, 'formula_tutor');
+
+  const flashcardsDuringFormula = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: 'flashcards-formula-priority',
+    message: 'start flashcards for types of friction'
+  });
+  assert.equal(flashcardsDuringFormula.statusCode, 200);
+  assert.equal(flashcardsDuringFormula.body.routeType, 'formula_tutor');
+  assert.equal(studentSessions[classSessionId].anonymousHubs['flashcards-formula-priority'].currentFlashcardSession, null);
 }
 
 async function testFormulaTutorBypassesQuestionEnergy() {

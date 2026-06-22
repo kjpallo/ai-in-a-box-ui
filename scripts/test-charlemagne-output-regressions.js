@@ -189,6 +189,14 @@ function testLearningShapeIntentAndRoutes() {
     { requestedRepresentation: 'numbered_list', requestedLearningShape: 'flashcards', shouldAskRepresentationFollowup: false }
   );
   assert.deepEqual(
+    detectAnswerRepresentationIntent('start flashcards for types of friction'),
+    { requestedRepresentation: 'numbered_list', requestedLearningShape: 'flashcards', shouldAskRepresentationFollowup: false, requestedInteractionMode: 'interactive' }
+  );
+  assert.equal(
+    detectAnswerRepresentationIntent('one flashcard at a time for Newton\'s laws').requestedInteractionMode,
+    'interactive'
+  );
+  assert.deepEqual(
     detectAnswerRepresentationIntent('give me examples and non-examples of friction'),
     { requestedRepresentation: 'default', requestedLearningShape: 'examples_non_examples', shouldAskRepresentationFollowup: false }
   );
@@ -203,6 +211,18 @@ function testLearningShapeIntentAndRoutes() {
   assert.match(frictionCards.directAnswer, /1\. Static Friction\n\s+Answer: Friction that keeps an object from starting to move\./i);
   assert.match(frictionCards.directAnswer, /2\. Sliding Friction/i);
   assert.match(frictionCards.directAnswer, /3\. Rolling Friction/i);
+
+  const newtonCards = routeWithTeacherKnowledge('flashcards for Newton\'s laws');
+  assert.equal(newtonCards.representationIntent.requestedLearningShape, 'flashcards');
+  assert.match(newtonCards.directAnswer, /1\. First law \/ inertia/i);
+  assert.match(newtonCards.directAnswer, /2\. Second law[\s\S]*F = m × a/i);
+  assert.match(newtonCards.directAnswer, /3\. Third law[\s\S]*equal and opposite reaction force/i);
+  assert.doesNotMatch(newtonCards.directAnswer, /Type show to see the answer/i);
+
+  const frictionCardsStudy = routeWithTeacherKnowledge('study cards for motion graphs');
+  assert.equal(frictionCardsStudy.representationIntent.requestedLearningShape, 'flashcards');
+  assert.match(frictionCardsStudy.directAnswer, /Distance-time graph slope/i);
+  assert.doesNotMatch(frictionCardsStudy.directAnswer, /Type show to see the answer/i);
 
   const frictionExamples = routeWithTeacherKnowledge('give me examples and non-examples of friction');
   assert.equal(frictionExamples.representationIntent.requestedLearningShape, 'examples_non_examples');

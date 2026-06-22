@@ -12,6 +12,8 @@ const {
   continueMotionForceKnowledgeTutor,
   isMotionForceKnowledgeTutorProblem
 } = require('../lib/tutor/motionForceKnowledgeTutor');
+const { buildMotionForceFlashcardDeck } = require('../lib/knowledge/physics/motion-force/motionForceKnowledge');
+const { detectAnswerRepresentationIntent } = require('../lib/router/answerIntent');
 
 function registerStudentRoutes(app, {
   answerStudentMessage,
@@ -197,6 +199,44 @@ function registerStudentRoutes(app, {
           routeType: stoppedTutorType,
           confidence: 'strong',
           rateLimit: rateLimitInfo,
+          tutor: null
+        });
+      }
+
+      const flashcardSessionResult = !hub.currentTutorProblem
+        ? handleExistingFlashcardSessionMessage(hub, message)
+        : { handled: false };
+      if (flashcardSessionResult.handled) {
+        const entry = appendStudentHubEntry({
+          session,
+          hub,
+          message,
+          response: flashcardSessionResult.response,
+          routeType: 'flashcard_session',
+          confidence: 'strong',
+          reportableForStandards: false
+        });
+
+        logCompletedInteraction({
+          message,
+          questionRoute: makeFlashcardSessionRoute(flashcardSessionResult.session, entry),
+          answerGiven: flashcardSessionResult.response,
+          source: 'student',
+          sessionId,
+          reportableForStandards: false,
+          debug: {
+            className: session.className || '',
+            studentHubId,
+            flashcards: flashcardSessionDebug(flashcardSessionResult.session)
+          }
+        });
+
+        return res.json({
+          response: flashcardSessionResult.response,
+          routeType: 'flashcard_session',
+          confidence: 'strong',
+          rateLimit: rateLimitInfo,
+          flashcards: buildFlashcardSessionMetadata(flashcardSessionResult.session),
           tutor: null
         });
       }
@@ -522,6 +562,70 @@ function registerStudentRoutes(app, {
 
       logFormulaTutorDecisionDebug('student_message_bypassed', formulaTutorDecision);
 
+      const requestedInteraction = detectAnswerRepresentationIntent(message);
+      const shouldStartFlashcards = requestedInteraction.requestedLearningShape === 'flashcards' &&
+        requestedInteraction.requestedInteractionMode === 'interactive';
+      if (shouldStartFlashcards) {
+        const deck = buildMotionForceFlashcardDeck(message);
+        if (deck) {
+          const consumed = consumeStudentQuestionEnergy({
+            controls,
+            questionRateLimiter,
+            classSessionId: sessionId,
+            studentHubId
+          });
+          rateLimitInfo = consumed.rateLimitInfo;
+
+          if (!consumed.allowed) {
+            return res.status(429).json({
+              error: 'Slow down a little. Try reading the last answer before asking another question.',
+              code: 'student_rate_limited',
+              retryAfterMs: consumed.retryAfterMs,
+              rateLimit: rateLimitInfo
+            });
+          }
+
+          hub.currentFlashcardSession = startFlashcardSession(deck);
+          hub.pendingClarification = null;
+          const response = formatFlashcardSessionStart(hub.currentFlashcardSession);
+          const entry = appendStudentHubEntry({
+            session,
+            hub,
+            message,
+            response,
+            routeType: 'flashcard_session',
+            confidence: 'strong',
+            standardId: result.standardId || result.questionRoute?.standardId || result.questionRoute?.public?.standardId || '',
+            isStandardsFollowUp: Boolean(result.isStandardsFollowUp),
+            reportableForStandards: false
+          });
+
+          logCompletedInteraction({
+            message,
+            questionRoute: makeFlashcardSessionRoute(hub.currentFlashcardSession, entry),
+            answerGiven: response,
+            source: 'student',
+            sessionId,
+            reportableForStandards: false,
+            debug: {
+              className: session.className || '',
+              studentHubId,
+              flashcards: flashcardSessionDebug(hub.currentFlashcardSession),
+              formulaTutorDecision: maybeFormulaTutorDecisionDebug(formulaTutorDecision)
+            }
+          });
+
+          return res.json({
+            response,
+            routeType: 'flashcard_session',
+            confidence: 'strong',
+            rateLimit: rateLimitInfo,
+            flashcards: buildFlashcardSessionMetadata(hub.currentFlashcardSession),
+            tutor: null
+          });
+        }
+      }
+
       const consumed = consumeStudentQuestionEnergy({
         controls,
         questionRateLimiter,
@@ -676,6 +780,187 @@ function isTutorStopCommand(message) {
     .replace(/\s+/g, ' ')
     .trim();
   return /^(?:stop|cancel|exit|quit|nevermind|never mind)$/.test(text);
+}
+
+function handleExistingFlashcardSessionMessage(hub, message) {
+  const session = hub.currentFlashcardSession || null;
+  if (!session || session.type !== 'flashcards') return { handled: false };
+
+  const command = parseFlashcardCommand(message);
+  if (session.active) {
+    if (!command) {
+      hub.currentFlashcardSession = null;
+      return { handled: false };
+    }
+
+    if (command === 'show') {
+      session.showingBack = true;
+      return {
+        handled: true,
+        session,
+        response: formatFlashcardBack(session)
+      };
+    }
+
+    if (command === 'next') {
+      const nextIndex = Number(session.currentCardIndex || 0) + 1;
+      if (nextIndex >= session.cards.length) {
+        session.active = false;
+        session.completed = true;
+        session.showingBack = false;
+        session.reviewedCards = session.cards.length;
+        return {
+          handled: true,
+          session,
+          response: formatFlashcardComplete(session)
+        };
+      }
+
+      session.currentCardIndex = nextIndex;
+      session.showingBack = false;
+      session.reviewedCards = Math.max(Number(session.reviewedCards || 1), nextIndex + 1);
+      return {
+        handled: true,
+        session,
+        response: formatFlashcardFront(session)
+      };
+    }
+
+    if (command === 'again') {
+      session.showingBack = false;
+      return {
+        handled: true,
+        session,
+        response: formatFlashcardFront(session)
+      };
+    }
+
+    if (command === 'stop') {
+      session.active = false;
+      session.stopped = true;
+      hub.currentFlashcardSession = null;
+      return {
+        handled: true,
+        session,
+        response: 'Flashcard practice stopped.'
+      };
+    }
+  }
+
+  if (session.completed && command === 'restart') {
+    hub.currentFlashcardSession = startFlashcardSession(session);
+    return {
+      handled: true,
+      session: hub.currentFlashcardSession,
+      response: formatFlashcardSessionStart(hub.currentFlashcardSession)
+    };
+  }
+
+  hub.currentFlashcardSession = null;
+  return { handled: false };
+}
+
+function parseFlashcardCommand(message) {
+  const text = String(message || '')
+    .toLowerCase()
+    .replace(/[’']/g, '')
+    .replace(/[?.!,;:]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (/^(?:show|answer|flip)$/.test(text)) return 'show';
+  if (/^next$/.test(text)) return 'next';
+  if (/^(?:again|repeat)$/.test(text)) return 'again';
+  if (/^(?:stop|end|quit)$/.test(text)) return 'stop';
+  if (/^restart$/.test(text)) return 'restart';
+  return '';
+}
+
+function startFlashcardSession(deck = {}) {
+  const cards = Array.isArray(deck.cards)
+    ? deck.cards.map((card) => ({
+      front: String(card.front || '').trim(),
+      back: String(card.back || '').trim()
+    })).filter((card) => card.front && card.back)
+    : [];
+
+  return {
+    type: 'flashcards',
+    topicId: String(deck.topicId || '').trim(),
+    title: titleCaseFlashcardTitle(deck.title || 'Flashcards'),
+    cards,
+    currentCardIndex: 0,
+    showingBack: false,
+    active: true,
+    completed: false,
+    stopped: false,
+    reviewedCards: cards.length > 0 ? 1 : 0
+  };
+}
+
+function formatFlashcardSessionStart(session) {
+  return [
+    `Flashcards: ${session.title}`,
+    '',
+    formatFlashcardFront(session)
+  ].join('\n');
+}
+
+function formatFlashcardFront(session) {
+  const card = getCurrentFlashcard(session);
+  return [
+    `Card ${Number(session.currentCardIndex || 0) + 1} of ${session.cards.length}`,
+    `Front: ${card.front}`,
+    '',
+    'Type show to see the answer, next to skip, or stop to end.'
+  ].join('\n');
+}
+
+function formatFlashcardBack(session) {
+  const card = getCurrentFlashcard(session);
+  return [
+    `Back: ${card.back}`,
+    '',
+    'Type next for the next card, again to review this card, or stop to end.'
+  ].join('\n');
+}
+
+function formatFlashcardComplete(session) {
+  return [
+    `Flashcard deck complete: ${session.title}`,
+    '',
+    `You reviewed ${session.reviewedCards || session.cards.length} cards.`,
+    'Type restart to review them again, or ask a new question.'
+  ].join('\n');
+}
+
+function getCurrentFlashcard(session) {
+  return session.cards[Number(session.currentCardIndex || 0)] || { front: '', back: '' };
+}
+
+function titleCaseFlashcardTitle(value) {
+  const text = String(value || '').trim();
+  return text || 'Flashcards';
+}
+
+function buildFlashcardSessionMetadata(session) {
+  if (!session || session.type !== 'flashcards') return null;
+  return {
+    type: 'flashcards',
+    topicId: session.topicId || '',
+    title: session.title || '',
+    currentCardIndex: Number(session.currentCardIndex || 0),
+    showingBack: Boolean(session.showingBack),
+    active: Boolean(session.active),
+    completed: Boolean(session.completed),
+    cardCount: Array.isArray(session.cards) ? session.cards.length : 0
+  };
+}
+
+function flashcardSessionDebug(session) {
+  const metadata = buildFlashcardSessionMetadata(session);
+  if (!metadata) return { active: false };
+  return metadata;
 }
 
 function answerTutorCelebrationFeedback(message, recentMessages = []) {
@@ -937,12 +1222,14 @@ function touchAnonymousHub(session, studentHubId) {
     messageCount: 0,
     messages: [],
     pendingClarification: null,
-    currentTutorProblem: null
+    currentTutorProblem: null,
+    currentFlashcardSession: null
   };
 
   hub.lastSeenAt = now;
   if (!Array.isArray(hub.messages)) hub.messages = [];
   if (!Object.prototype.hasOwnProperty.call(hub, 'currentTutorProblem')) hub.currentTutorProblem = null;
+  if (!Object.prototype.hasOwnProperty.call(hub, 'currentFlashcardSession')) hub.currentFlashcardSession = null;
   session.anonymousHubs[studentHubId] = hub;
   return hub;
 }
@@ -1092,6 +1379,27 @@ function makeMotionForceKnowledgeTutorRoute(currentTutorProblem) {
         category: problem.category || '',
         hasGuidedSteps: Array.isArray(problem.guidingQuestions) && problem.guidingQuestions.length > 0
       }
+    }
+  };
+}
+
+function makeFlashcardSessionRoute(session) {
+  const metadata = buildFlashcardSessionMetadata(session) || {};
+  return {
+    type: 'flashcard_session',
+    confidence: 'strong',
+    toolsUsed: ['motion_force_knowledge', 'learning_shape_flashcards'],
+    notes: 'Handled interactive text flashcard session.',
+    directAnswer: '',
+    aiAllowed: false,
+    flashcards: metadata,
+    public: {
+      type: 'flashcard_session',
+      confidence: 'strong',
+      toolsUsed: ['motion_force_knowledge', 'learning_shape_flashcards'],
+      notes: 'Handled interactive text flashcard session.',
+      aiAllowed: false,
+      flashcards: metadata
     }
   };
 }
