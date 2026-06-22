@@ -123,6 +123,57 @@ async function testKnowledgePromptsAnswerDirectly() {
       ]
     },
     {
+      name: 'rolling-friction-definition-direct',
+      prompt: 'what is rolling friction',
+      routeTypes: ['definition'],
+      includes: [/Rolling friction is friction that resists motion/i, /rolls over a surface/i]
+    },
+    {
+      name: 'sliding-friction-definition-direct',
+      prompt: 'what is sliding friction',
+      routeTypes: ['definition'],
+      includes: [/Sliding friction is friction that resists motion/i, /surfaces slide past each other/i]
+    },
+    {
+      name: 'static-friction-definition-direct',
+      prompt: 'what is static friction',
+      routeTypes: ['definition'],
+      includes: [/Static friction is friction/i, /prevents surfaces from starting to slide/i]
+    },
+    {
+      name: 'friction-types-numbered-list-direct',
+      prompt: 'what are the types of friction',
+      routeTypes: ['science_concept'],
+      includes: [
+        /1\. Static friction/i,
+        /2\. Sliding friction/i,
+        /3\. Rolling friction/i
+      ],
+      excludes: [/Static friction, sliding friction, and rolling friction/i]
+    },
+    {
+      name: 'newtons-laws-numbered-list-direct',
+      prompt: 'what are newtons 3 laws',
+      routeTypes: ['science_concept'],
+      includes: [
+        /1\. First law \/ inertia/i,
+        /2\. Second law/i,
+        /F = m × a/i,
+        /3\. Third law/i
+      ]
+    },
+    {
+      name: 'conservation-laws-numbered-list-direct',
+      prompt: 'can you list all the laws of conservation?',
+      routeTypes: ['science_concept'],
+      includes: [
+        /strongest local fact/i,
+        /1\. Conservation of momentum/i,
+        /2\. Conservation of energy/i,
+        /3\. Conservation of mass\/matter/i
+      ]
+    },
+    {
       name: 'balanced-unbalanced-force-direct',
       prompt: 'balanced vs unbalanced force',
       includes: [

@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 
 const { findRelevantKnowledge, loadTeacherKnowledge } = require('../lib/knowledge/teacherKnowledge');
+const { detectAnswerRepresentationIntent } = require('../lib/router/answerIntent');
 const { routeStudentQuestion } = require('../lib/router/questionRouter');
 const {
   answerFormulaTutorStep,
@@ -17,6 +18,10 @@ const tests = [
   testLawOfUniversalGravitationUsesLocalFact,
   testConcept3ForceExactPrompts,
   testConcept3FrictionExactPrompts,
+  testBasicAnswerRepresentationIntent,
+  testFrictionSubtypeAndListFormatting,
+  testRollingFrictionFormulaFallback,
+  testNewtonAndConservationLawLists,
   testMotionForceSummaryAndExplainDirectAnswers,
   testKnowledgeConceptPromptsAnswerDirectly,
   testConcept3NewtonExamplesAndMomentumRelationship,
@@ -148,6 +153,94 @@ function testConcept3FrictionExactPrompts() {
   const electricity = routeWithTeacherKnowledge('What is friction in electricity?');
   assert.equal(electricity.type, 'definition');
   assert.match(electricity.directAnswer, /Friction transfers electric charge/i);
+}
+
+function testBasicAnswerRepresentationIntent() {
+  assert.deepEqual(
+    detectAnswerRepresentationIntent('list the types of friction'),
+    { requestedRepresentation: 'numbered_list', shouldAskRepresentationFollowup: false }
+  );
+  assert.deepEqual(
+    detectAnswerRepresentationIntent('what is rolling friction'),
+    { requestedRepresentation: 'paragraph', shouldAskRepresentationFollowup: false }
+  );
+  assert.deepEqual(
+    detectAnswerRepresentationIntent('how do I solve for rolling friction'),
+    { requestedRepresentation: 'formula_steps', shouldAskRepresentationFollowup: false }
+  );
+  assert.deepEqual(
+    detectAnswerRepresentationIntent('balanced vs unbalanced force'),
+    { requestedRepresentation: 'comparison', shouldAskRepresentationFollowup: false }
+  );
+  assert.deepEqual(
+    detectAnswerRepresentationIntent('show me a diagram of rolling friction'),
+    { requestedRepresentation: 'image_request', shouldAskRepresentationFollowup: false }
+  );
+  assert.deepEqual(
+    detectAnswerRepresentationIntent('Tell me about force'),
+    { requestedRepresentation: 'default', shouldAskRepresentationFollowup: true }
+  );
+}
+
+function testFrictionSubtypeAndListFormatting() {
+  const rolling = routeWithTeacherKnowledge('what is rolling friction');
+  assert.equal(rolling.type, 'definition');
+  assert.match(rolling.directAnswer, /Rolling friction is friction that resists motion when an object rolls over a surface/i);
+  assert.match(rolling.directAnswer, /wheel or ball rolling/i);
+  assert.equal(rolling.representationIntent.requestedRepresentation, 'paragraph');
+
+  const sliding = routeWithTeacherKnowledge('what is sliding friction');
+  assert.equal(sliding.type, 'definition');
+  assert.match(sliding.directAnswer, /Sliding friction is friction that resists motion when two surfaces slide past each other/i);
+
+  const staticFriction = routeWithTeacherKnowledge('what is static friction');
+  assert.equal(staticFriction.type, 'definition');
+  assert.match(staticFriction.directAnswer, /Static friction is friction that prevents surfaces from starting to slide/i);
+
+  for (const prompt of ['what are the types of friction', 'list the types of frictions', 'types of friction']) {
+    const route = routeWithTeacherKnowledge(prompt);
+    assert.equal(route.type, 'science_concept', `${prompt} should route to local friction type list`);
+    assert.match(route.directAnswer, /^1\. Static friction — keeps objects from starting to slide\./);
+    assert.match(route.directAnswer, /\n2\. Sliding friction — resists surfaces sliding past each other\./);
+    assert.match(route.directAnswer, /\n3\. Rolling friction — resists rolling motion\./);
+    assert.doesNotMatch(route.directAnswer, /Static friction, sliding friction, and rolling friction/);
+    assert.equal(route.representationIntent.requestedRepresentation, 'numbered_list');
+  }
+
+  const diagramRequest = routeWithTeacherKnowledge('what is rolling friction diagram');
+  assert.equal(diagramRequest.type, 'definition');
+  assert.equal(diagramRequest.representationIntent.requestedRepresentation, 'image_request');
+  assert.equal(diagramRequest.imageRequest.needsImageAsset, true);
+  assert.equal(diagramRequest.imageRequest.imageQuery.source, 'local_classroom_assets');
+}
+
+function testRollingFrictionFormulaFallback() {
+  const route = routeWithTeacherKnowledge('how do I solve for rolling friction');
+  assert.equal(route.type, 'science_formula');
+  assert.match(route.directAnswer, /Use the rolling-friction formula/i);
+  assert.match(route.directAnswer, /F_rolling = μ_r × F_N/i);
+  assert.match(route.directAnswer, /coefficient of rolling friction, μ_r/i);
+  assert.match(route.directAnswer, /normal force, F_N/i);
+  assert.doesNotMatch(route.directAnswer, /electric|electricity|charge|static electricity/i);
+}
+
+function testNewtonAndConservationLawLists() {
+  for (const prompt of ['what are newtons 3 laws', 'can you list newtons laws?', 'list Newton\'s three laws', 'what are Newton\'s laws']) {
+    const route = routeWithTeacherKnowledge(prompt);
+    assert.equal(route.type, 'science_concept', `${prompt} should route to local Newton laws list`);
+    assert.match(route.directAnswer, /^1\. First law \/ inertia — An object at rest stays at rest/i);
+    assert.match(route.directAnswer, /\n2\. Second law — Force equals mass times acceleration, F = m × a\./);
+    assert.match(route.directAnswer, /\n3\. Third law — For every action force, there is an equal and opposite reaction force\./);
+    assert.equal(route.representationIntent.requestedRepresentation, 'numbered_list');
+  }
+
+  const conservation = routeWithTeacherKnowledge('can you list all the laws of conservation?');
+  assert.equal(conservation.type, 'science_concept');
+  assert.match(conservation.directAnswer, /strongest local fact for is conservation of momentum/i);
+  assert.match(conservation.directAnswer, /1\. Conservation of momentum — total momentum stays the same in a closed system\./);
+  assert.match(conservation.directAnswer, /2\. Conservation of energy — energy is not created or destroyed/i);
+  assert.match(conservation.directAnswer, /3\. Conservation of mass\/matter — matter is not created or destroyed/i);
+  assert.equal(conservation.representationIntent.requestedRepresentation, 'numbered_list');
 }
 
 function testMotionForceSummaryAndExplainDirectAnswers() {

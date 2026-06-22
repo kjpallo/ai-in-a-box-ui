@@ -772,7 +772,7 @@ const tests = [
     question: 'what are the types of frictions when referring to motion',
     matchedKnowledge: matchedKnowledgeFor('what are the types of frictions when referring to motion'),
     type: 'science_concept',
-    includes: ['Static friction', 'sliding friction', 'rolling friction'],
+    includes: ['1. Static friction', '2. Sliding friction', '3. Rolling friction'],
     excludes: ['I do not have a trusted local science fact'],
     aiAllowed: false
   },
