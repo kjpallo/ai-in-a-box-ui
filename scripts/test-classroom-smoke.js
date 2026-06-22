@@ -46,12 +46,15 @@ function assertFormulaTutorStart(response, { name, formulaId, solveFor, formula,
   }
 }
 
-function assertGeneralTutorStart(response, { name, tutorId }) {
-  assert.equal(response.body.routeType, 'motion_force_knowledge_tutor', `${name} should start Guided General Tutor`);
-  assert.equal(response.body.tutor.active, true, `${name} tutor should be active`);
-  assert.equal(response.body.tutor.completed, false, `${name} tutor should not be complete on start`);
-  assert.equal(response.body.tutor.tutorCategory, 'general', `${name} tutor category`);
-  assert.equal(response.body.tutor.id, tutorId, `${name} tutor id`);
+function assertGraphConceptDirectAnswer(response, { name, answerMatch }) {
+  assert.equal(response.body.routeType, 'graph_concept', `${name} should answer directly as a graph concept`);
+  assert.notEqual(
+    response.body.routeType,
+    'motion_force_knowledge_tutor',
+    `${name} should not start Guided General Tutor`
+  );
+  assert.ok(!response.body.tutor, `${name} should not include tutor metadata`);
+  assert.match(response.body.response, answerMatch, `${name} direct answer`);
 }
 
 async function runGuidedFormulaSmoke({
@@ -98,64 +101,30 @@ async function runGuidedFormulaSmoke({
   return latest;
 }
 
-async function testDistanceTimeSlopeGeneralTutorCompletion() {
+async function testDistanceTimeSlopeDirectAnswer() {
   const classroom = await createClassroom({ studentGuidedFormulaTutoringEnabled: true });
-  const studentHubId = 'distance-time-slope-general';
+  const studentHubId = 'distance-time-slope-direct';
   const question = 'On a distance vs. time graph, the slope of the line equals the object’s';
 
-  const start = await send(classroom, studentHubId, question);
-  assertGeneralTutorStart(start, { name: 'distance-time-slope', tutorId: 'distance_time_slope' });
-
-  const final = await send(classroom, studentHubId, 'speed');
-  assert.equal(final.body.routeType, 'motion_force_knowledge_tutor');
-  assert.equal(final.body.tutor.completed, true, 'distance-time slope tutor should complete on speed');
-  assert.equal(final.body.tutor.active, false);
-  assert.equal(final.body.tutor.work.finalAnswer, final.body.tutor.finalAnswerDisplay);
-  assert.match(final.body.tutor.work.finalAnswer, /speed/i);
-  assert.equal(currentTutorProblem(classroom, studentHubId), null);
-
-  const feedback = await send(classroom, studentHubId, 'no fireworks?');
-  assert.equal(feedback.body.routeType, 'app_feedback');
-  assert.notEqual(feedback.body.routeType, 'no_match');
-  assert.match(feedback.body.response, /celebration once|answer still counted/i);
+  const answer = await send(classroom, studentHubId, question);
+  assertGraphConceptDirectAnswer(answer, {
+    name: 'distance-time-slope',
+    answerMatch: /speed/i
+  });
+  assert.equal(currentTutorProblem(classroom, studentHubId), null, 'distance-time slope should not create tutor state');
 }
 
-async function testVelocityTimeSlopeGeneralTutorCompletion() {
+async function testVelocityTimeSlopeDirectAnswer() {
   const classroom = await createClassroom({ studentGuidedFormulaTutoringEnabled: true });
-  const studentHubId = 'velocity-time-slope-general';
+  const studentHubId = 'velocity-time-slope-direct';
   const question = 'On a velocity vs. time graph, the slope of the line equals the object’s';
 
-  const start = await send(classroom, studentHubId, question);
-  assertGeneralTutorStart(start, { name: 'velocity-time-slope', tutorId: 'velocity_time_slope' });
-
-  const final = await send(classroom, studentHubId, 'acceleration');
-  assert.equal(final.body.routeType, 'motion_force_knowledge_tutor');
-  assert.equal(final.body.tutor.completed, true, 'velocity-time slope tutor should complete on acceleration');
-  assert.equal(final.body.tutor.active, false);
-  assert.equal(final.body.tutor.work.finalAnswer, final.body.tutor.finalAnswerDisplay);
-  assert.match(final.body.tutor.work.finalAnswer, /acceleration/i);
-  assert.equal(currentTutorProblem(classroom, studentHubId), null);
-}
-
-async function testVelocityTimeSlopeWrongThenCorrect() {
-  const classroom = await createClassroom({ studentGuidedFormulaTutoringEnabled: true });
-  const studentHubId = 'velocity-time-slope-recovery';
-  const question = 'On a velocity vs. time graph, the slope of the line equals the object’s';
-
-  const start = await send(classroom, studentHubId, question);
-  assertGeneralTutorStart(start, { name: 'velocity-time-slope-recovery', tutorId: 'velocity_time_slope' });
-
-  const wrong = await send(classroom, studentHubId, 'speed');
-  assert.equal(wrong.body.routeType, 'motion_force_knowledge_tutor');
-  assert.equal(wrong.body.tutor.completed, false);
-  assert.equal(wrong.body.tutor.active, true);
-  assert.match(wrong.body.response, /Not quite/i);
-  assert.equal(currentTutorProblem(classroom, studentHubId).id, 'velocity_time_slope');
-
-  const final = await send(classroom, studentHubId, 'acceleration');
-  assert.equal(final.body.tutor.completed, true);
-  assert.match(final.body.response, /velocity-time graph, slope means acceleration/i);
-  assert.equal(currentTutorProblem(classroom, studentHubId), null);
+  const answer = await send(classroom, studentHubId, question);
+  assertGraphConceptDirectAnswer(answer, {
+    name: 'velocity-time-slope',
+    answerMatch: /acceleration/i
+  });
+  assert.equal(currentTutorProblem(classroom, studentHubId), null, 'velocity-time slope should not create tutor state');
 }
 
 async function testNewtonAndFollowUp() {
@@ -596,9 +565,8 @@ async function testSkateboarderFinalSpeed() {
 
 async function main() {
   await testNewtonAndFollowUp();
-  await testDistanceTimeSlopeGeneralTutorCompletion();
-  await testVelocityTimeSlopeGeneralTutorCompletion();
-  await testVelocityTimeSlopeWrongThenCorrect();
+  await testDistanceTimeSlopeDirectAnswer();
+  await testVelocityTimeSlopeDirectAnswer();
   await testNetForceTutor();
   await testMomentumTutor();
   await testCartFinalSpeedRegression();
