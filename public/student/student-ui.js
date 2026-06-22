@@ -5,6 +5,7 @@
   const studentHubId = getOrCreateStudentHubId();
   const form = document.getElementById('studentMessageForm');
   const input = document.getElementById('studentMessageInput');
+  const composerTutorChoices = document.getElementById('studentComposerTutorChoices');
   const sendButton = document.getElementById('studentSendButton');
   const pointButton = document.getElementById('studentPointButton');
   const askHighlightButton = document.getElementById('studentAskHighlightButton');
@@ -67,6 +68,7 @@
   let fireworksTimer = null;
   let turnCounter = 0;
   let lastAnswerText = '';
+  const defaultInputPlaceholder = input?.getAttribute('placeholder') || 'Ask a science question...';
 
   async function init() {
     if (!form || !input || !sendButton || !timeline) return;
@@ -83,6 +85,7 @@
     pointButton?.addEventListener('click', handlePointClick);
     askHighlightButton?.addEventListener('click', handleAskHighlightClick);
     clearButton?.addEventListener('click', handleClearClick);
+    composerTutorChoices?.addEventListener('click', handleComposerTutorChoiceClick);
     timeline.addEventListener('click', handleTimelineClick);
     installClassroomFrictionHandlers();
   }
@@ -331,6 +334,11 @@
         button.disabled = !enabled;
       }
     }
+    if (composerTutorChoices) {
+      for (const button of composerTutorChoices.querySelectorAll('button')) {
+        button.disabled = !enabled;
+      }
+    }
   }
 
   async function sendStudentMessage(message) {
@@ -490,6 +498,7 @@
 
     if (chatTurns.length === 0) {
       timeline.innerHTML = '<p class="student-empty-timeline">Ask a question to start a conversation. Guided math/formula tutor work, calculator checks, and final answers will appear here.</p>';
+      updateComposerTutorChoices();
       return;
     }
 
@@ -500,6 +509,45 @@
         ? renderSystemTurn(item.turn)
         : renderChatTurn(item.turn, copyableTurnId);
     }).join('');
+    updateComposerTutorChoices();
+  }
+
+  function updateComposerTutorChoices() {
+    const activeChoiceState = getActiveTutorChoiceState();
+    const choices = activeChoiceState?.choices || [];
+    updateInputPlaceholder(choices.length > 0);
+
+    if (!composerTutorChoices) return;
+    if (choices.length === 0) {
+      composerTutorChoices.hidden = true;
+      composerTutorChoices.innerHTML = '';
+      return;
+    }
+
+    composerTutorChoices.hidden = false;
+    composerTutorChoices.innerHTML = choices.map((choice) => `
+      <button
+        type="button"
+        class="student-composer-choice-button"
+        data-tutor-choice="${escapeAttr(choice.number)}"
+      >${escapeHtml(`${choice.number}. ${choice.label}`)}</button>
+    `).join('');
+  }
+
+  function updateInputPlaceholder(hasChoiceStep) {
+    if (!input) return;
+    input.placeholder = hasChoiceStep ? 'Type choice number only' : defaultInputPlaceholder;
+  }
+
+  function getActiveTutorChoiceState() {
+    for (let index = chatTurns.length - 1; index >= 0; index -= 1) {
+      const tutor = chatTurns[index]?.tutor;
+      if (!tutor || tutor.active !== true || tutor.completed || tutor.stopped) continue;
+      const work = getTutorWork(tutor);
+      const choices = getCurrentTutorChoices(tutor, work);
+      return choices.length > 0 ? { tutor, work, choices } : null;
+    }
+    return null;
   }
 
   function buildTimelineItems() {
@@ -1179,6 +1227,12 @@
     if (calculatorUseButton && timeline.contains(calculatorUseButton)) {
       useCalculatorResult();
     }
+  }
+
+  function handleComposerTutorChoiceClick(event) {
+    const tutorChoiceButton = event.target.closest('[data-tutor-choice]');
+    if (!tutorChoiceButton || !composerTutorChoices?.contains(tutorChoiceButton)) return;
+    sendTutorCommand(tutorChoiceButton.getAttribute('data-tutor-choice') || '');
   }
 
   function toggleTutorWork(turnId) {

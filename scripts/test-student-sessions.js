@@ -925,10 +925,10 @@ async function testCarAdvertisementSecondsToHoursTutor() {
   const originalTime = await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: '7' });
   assert.equal(originalTime.statusCode, 200);
   assert.match(originalTime.body.response, /Correct\. The time is 7 seconds/i);
-  assert.match(originalTime.body.response, /convert 7 seconds to hours/i);
-  assert.match(originalTime.body.response, /What is 7 ÷ 3600\?/i);
+  assert.match(originalTime.body.response, /Which time value should we use before dividing\?/i);
+  assert.match(originalTime.body.response, /2\. 7 \/ 3600 hr ≈ 0\.001944 hr/i);
 
-  const conversion = await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: '0.00194 hr' });
+  const conversion = await request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: '2' });
   assert.equal(conversion.statusCode, 200);
   assert.match(conversion.body.response, /What is \(70 - 0\) \/ \(7 \/ 3600\)\?/i);
 

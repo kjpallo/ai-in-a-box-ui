@@ -286,6 +286,7 @@
       .student-tutor-session-toggle,
       .panel-action-button,
       .student-tutor-choice-button,
+      .student-composer-choice-button,
       .student-calculator-use-result {
         min-height: 32px;
         padding: 0.42rem 0.64rem;
@@ -314,6 +315,8 @@
       .panel-action-button:focus-visible,
       .student-tutor-choice-button:hover,
       .student-tutor-choice-button:focus-visible,
+      .student-composer-choice-button:hover,
+      .student-composer-choice-button:focus-visible,
       .student-calculator-use-result:hover,
       .student-calculator-use-result:focus-visible {
         border-color: rgba(102,247,209,0.78);
@@ -328,6 +331,7 @@
       .student-tutor-session-toggle:active,
       .panel-action-button:active,
       .student-tutor-choice-button:active,
+      .student-composer-choice-button:active,
       .student-calculator-use-result:active {
         transform: translateY(2px);
         box-shadow:
@@ -339,6 +343,7 @@
       .student-tutor-session-toggle:disabled,
       .panel-action-button:disabled,
       .student-tutor-choice-button:disabled,
+      .student-composer-choice-button:disabled,
       .student-calculator-use-result:disabled {
         border-color: rgba(126,233,255,0.18);
         background: rgba(6,20,23,0.62);
@@ -359,6 +364,32 @@
         min-height: 52px;
         max-height: 120px;
         resize: vertical;
+      }
+
+      .student-composer-tutor-choices {
+        grid-column: 1 / -1;
+        display: flex;
+        gap: 0.4rem;
+        flex-wrap: wrap;
+        align-items: stretch;
+        padding: 0.46rem;
+        border: 1px solid rgba(102,247,209,0.34);
+        border-radius: 10px;
+        background: rgba(3,22,25,0.82);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.07);
+      }
+
+      .student-composer-tutor-choices[hidden] {
+        display: none;
+      }
+
+      .student-composer-choice-button {
+        flex: 1 1 150px;
+        min-height: 42px;
+        border-radius: 8px;
+        text-align: left;
+        line-height: 1.18;
+        white-space: normal;
       }
 
       .student-composer-actions {
@@ -749,13 +780,19 @@
 
       .student-tutor-choices {
         display: flex;
-        gap: 0.34rem;
+        gap: 0.4rem;
         flex-wrap: wrap;
-        align-items: center;
+        align-items: stretch;
         min-width: 0;
+        padding: 0.42rem;
+        border: 1px solid rgba(102,247,209,0.28);
+        border-radius: 10px;
+        background: rgba(3,22,25,0.68);
       }
 
       .student-tutor-choice-button {
+        flex: 1 1 150px;
+        min-height: 40px;
         max-width: 100%;
         border-radius: 8px;
         text-align: left;
@@ -1205,6 +1242,7 @@
 
       <form id="studentMessageForm" class="student-composer" aria-label="Ask Charlemagne">
         <label class="sr-only" for="studentMessageInput">Message</label>
+        <div id="studentComposerTutorChoices" class="student-composer-tutor-choices" aria-label="Current answer choices" hidden></div>
         <textarea
           id="studentMessageInput"
           name="message"

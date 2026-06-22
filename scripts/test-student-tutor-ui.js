@@ -74,12 +74,24 @@ const sessionSideAnswerStepBlock = getCssBlock('.student-tutor-session-step.has-
 const tutorBodyBlock = getCssBlock('.student-tutor-body');
 const calculatorBlock = getCssBlock('.student-calculator');
 const calculatorKeysBlock = getCssBlock('.student-calculator-keys');
+const tutorChoicesBlock = getCssBlock('.student-tutor-choices');
+const tutorChoiceButtonBlock = getCssBlock('.student-tutor-choice-button');
+const composerTutorChoicesBlock = getCssBlock('.student-composer-tutor-choices');
+const composerTutorChoicesHiddenBlock = getCssBlock('.student-composer-tutor-choices[hidden]');
+const composerChoiceButtonBlock = getCssBlock('.student-composer-choice-button');
 const fireworksBlock = getCssBlock('.student-fireworks');
 
 assert.match(shellBlock, /grid-template-rows:\s*auto minmax\(0,\s*1fr\) auto;/, 'Student shell should reserve one central scroll lane plus bottom composer.');
 assert.match(timelineBlock, /overflow-y:\s*auto;/, 'Conversation timeline should remain the main page scroll area.');
 assert.match(timelineBlock, /overscroll-behavior:\s*contain;/, 'Timeline should contain scroll gestures.');
 assert.match(composerBlock, /grid-template-columns:\s*minmax\(0,\s*1fr\) auto;/, 'Desktop composer should keep input beside actions.');
+assert.ok(studentHtml.includes('id="studentComposerTutorChoices"'), 'Composer should include a near-input Formula Tutor choice strip.');
+assert.ok(studentHtml.indexOf('id="studentComposerTutorChoices"') > formIndex && studentHtml.indexOf('id="studentComposerTutorChoices"') < inputIndex, 'Composer tutor choices should sit immediately above the answer input.');
+assert.match(composerTutorChoicesBlock, /grid-column:\s*1 \/ -1;/, 'Composer tutor choices should span the input row.');
+assert.match(composerTutorChoicesHiddenBlock, /display:\s*none;/, 'Composer tutor choices should hide when no choice step is active.');
+assert.match(composerChoiceButtonBlock, /min-height:\s*42px;/, 'Composer tutor choice buttons should be prominent tap targets.');
+assert.match(tutorChoicesBlock, /align-items:\s*stretch;/, 'Formula Tutor choices inside work should render as primary controls.');
+assert.match(tutorChoiceButtonBlock, /min-height:\s*40px;/, 'Formula Tutor choice buttons should be prominent.');
 
 const overflowMatches = [...studentHtml.matchAll(/overflow-y:\s*auto;/g)];
 assert.equal(overflowMatches.length, 2, 'Student page should expose the timeline scroll plus one scoped formula-session scroll.');
@@ -172,6 +184,21 @@ assert.match(
   studentUi,
   /const tutorChoiceButton = event\.target\.closest\('\[data-tutor-choice\]'\);[\s\S]*sendTutorCommand\(tutorChoiceButton\.getAttribute\('data-tutor-choice'\) \|\| ''\)/,
   'Choice buttons should submit the numeric choice value.'
+);
+assert.match(
+  studentUi,
+  /function updateComposerTutorChoices\(\)[\s\S]*getActiveTutorChoiceState\(\)[\s\S]*class="student-composer-choice-button"[\s\S]*data-tutor-choice="\$\{escapeAttr\(choice\.number\)\}"/,
+  'Active Formula Tutor choices should render above the input.'
+);
+assert.match(
+  studentUi,
+  /function updateInputPlaceholder\(hasChoiceStep\)[\s\S]*input\.placeholder = hasChoiceStep \? 'Type choice number only' : defaultInputPlaceholder;/,
+  'Input placeholder should switch on multiple-choice tutor steps.'
+);
+assert.match(
+  studentUi,
+  /function handleComposerTutorChoiceClick\(event\)[\s\S]*sendTutorCommand\(tutorChoiceButton\.getAttribute\('data-tutor-choice'\) \|\| ''\)/,
+  'Composer choice buttons should submit the numeric choice value.'
 );
 assert.match(
   studentUi,
@@ -580,7 +607,7 @@ async function testSpecialDistanceDisplacementTutorRegressions() {
 async function testPjLoopTutorRegression() {
   const question = 'PJ likes to ride his bike around the block. If he rides out of his house west, the sidewalk circles his block, and brings him back to his doorstep 0.35 miles later. Find his distance and displacement.';
 
-  for (const answer of ['1', 'same place']) {
+  for (const answer of ['1', 'same', 'same place', 'the same place', 'same place (he returns home)', 'back where he started', 'back home', 'doorstep']) {
     const harness = await createHarnessSession();
     let latest = await sendHarnessMessage(harness, `pj-loop-${answer.replace(/\W/g, '') || 'one'}`, question);
     assert.equal(latest.body.routeType, 'formula_tutor', 'PJ loop should start Formula Tutor');
@@ -599,7 +626,7 @@ async function testPjLoopTutorRegression() {
 
     latest = await sendHarnessMessage(harness, `pj-loop-${answer.replace(/\W/g, '') || 'one'}`, answer);
     assert.equal(latest.body.tutor.stepId, 'calculate_displacement', `PJ should accept ${answer}`);
-    latest = await sendHarnessMessage(harness, `pj-loop-${answer.replace(/\W/g, '') || 'one'}`, '0');
+    latest = await sendHarnessMessage(harness, `pj-loop-${answer.replace(/\W/g, '') || 'one'}`, '1');
     assert.equal(latest.body.tutor.completed, true, `PJ should complete after ${answer}`);
     assert.match(latest.body.response, /Distance = 0\.35 miles/i);
     assert.match(latest.body.response, /Displacement = 0 miles/i);
@@ -649,7 +676,7 @@ async function testMaliSpinTutorRegression() {
 async function testKaiPoolTutorRegression() {
   const question = 'Kai swims for the school swim team. He specializes in a backstroke event where he has to swim the 50-m length of the pool three times. Find his distance and displacement.';
 
-  for (const answer of ['2', 'opposite side', 'opposition side']) {
+  for (const answer of ['2', 'opposite side', 'opposition side', 'different side']) {
     const name = `kai-pool-${answer.replace(/\W/g, '-')}`;
     const harness = await createHarnessSession();
     let latest = await sendHarnessMessage(harness, name, question);
@@ -669,7 +696,7 @@ async function testKaiPoolTutorRegression() {
 
     latest = await sendHarnessMessage(harness, name, answer);
     assert.equal(latest.body.tutor.stepId, 'calculate_displacement', `${name} should accept ${answer}`);
-    latest = await sendHarnessMessage(harness, name, '50');
+    latest = await sendHarnessMessage(harness, name, '1');
     assert.equal(latest.body.tutor.completed, true, `${name} should complete`);
     assert.match(latest.body.response, /Distance = 150 m/i);
     assert.match(latest.body.response, /Displacement = 50 m/i);
@@ -858,7 +885,8 @@ async function assertConceptualChoiceAnswerAccepted({ name, question, setupAnswe
 }
 
 function assertFormulaTutorChoices(body, { name, expectedChoices }) {
-  assert.match(body.response, /Type the number or click a choice\./, `${name} response should invite number or click`);
+  assert.match(body.response, /Choose one:/, `${name} response should label choices`);
+  assert.match(body.response, /Click a choice or type only the number\./, `${name} response should invite number or click`);
   const choices = body.tutor?.currentStep?.choices || body.tutor?.work?.currentStep?.choices || [];
   assert.ok(Array.isArray(choices) && choices.length >= expectedChoices.length, `${name} metadata should expose current-step choices`);
   for (const expectedChoice of expectedChoices) {
@@ -902,20 +930,26 @@ async function testTwoUnitVelocityTutor() {
 }
 
 async function testAccelerationClassroomRoundedFinalAcceptance() {
+  const choiceRun = await completeCarAdAccelerationAfterConversion('car-ad-choice-2', '2', '36000');
+  assert.equal(choiceRun.body.tutor.completed, true, 'car ad should solve after choosing conversion choice 2');
+
+  const decimalRun = await completeCarAdAccelerationAfterConversion('car-ad-decimal-conversion', '.001944', '36000');
+  assert.equal(decimalRun.body.tutor.completed, true, 'car ad should solve after decimal conversion input');
+
   for (const answer of ['36842', '36,842', '36000']) {
-    const final = await completeCarAdAccelerationWithFinalAnswer(`car-ad-${answer.replace(/\W/g, '')}`, answer);
+    const final = await completeCarAdAccelerationWithEarlyFinalAnswer(`car-ad-early-${answer.replace(/\W/g, '')}`, answer);
     assert.equal(final.body.tutor.completed, true, `car ad should accept ${answer}`);
     assert.match(final.body.response, /36000 km\/hr²/i, `car ad final should show exact conversion answer for ${answer}`);
     assert.match(final.body.response, /36,842 km\/hr² using 0\.0019 hr/i, `car ad final should explain rounded path for ${answer}`);
   }
 
-  const rejected = await completeCarAdAccelerationWithFinalAnswer('car-ad-reject-small-time', '0.00277778', { expectComplete: false });
+  const rejected = await rejectCarAdAccelerationAtConversion('car-ad-reject-small-time', '0.00277778');
   assert.equal(rejected.body.tutor.completed, false, 'car ad should not accept a time conversion value as final acceleration');
-  assert.equal(rejected.body.tutor.stepId, 'calculate', 'car ad should stay on final acceleration calculation after bad final answer');
+  assert.equal(rejected.body.tutor.stepId, 'convert_time', 'car ad should stay on conversion after bad early final answer');
   assert.match(rejected.body.response, /Not quite yet/i);
 }
 
-async function completeCarAdAccelerationWithFinalAnswer(name, finalAnswer, options = {}) {
+async function parkCarAdAccelerationAtConversion(name) {
   const harness = await createHarnessSession();
   const question =
     'A car advertisement claims that a certain car can accelerate from rest to 70 km/hr in 7 seconds (hint: convert to hours first!!) Find the car’s acceleration.';
@@ -925,15 +959,28 @@ async function completeCarAdAccelerationWithFinalAnswer(name, finalAnswer, optio
   await sendHarnessMessage(harness, name, '1');
   await sendHarnessMessage(harness, name, '0 km/hr');
   await sendHarnessMessage(harness, name, '70 km/hr');
-  await sendHarnessMessage(harness, name, '7');
-  const calculationPrompt = await sendHarnessMessage(harness, name, '0.0019 hr');
-  assert.equal(calculationPrompt.body.tutor.stepId, 'calculate', `${name} should reach final acceleration calculation`);
+  const conversionPrompt = await sendHarnessMessage(harness, name, '7');
+  assert.equal(conversionPrompt.body.tutor.stepId, 'convert_time', `${name} should reach conversion step`);
+  assert.match(conversionPrompt.body.response, /Which time value should we use before dividing\?/i);
+  assert.match(conversionPrompt.body.response, /2\. 7 \/ 3600 hr ≈ 0\.001944 hr/i);
+  return { harness, name };
+}
 
-  const final = await sendHarnessMessage(harness, name, finalAnswer);
-  if (options.expectComplete !== false) {
-    assert.equal(final.body.tutor.completed, true, `${name} should complete`);
-  }
-  return final;
+async function completeCarAdAccelerationAfterConversion(name, conversionAnswer, finalAnswer) {
+  const parked = await parkCarAdAccelerationAtConversion(name);
+  const calculationPrompt = await sendHarnessMessage(parked.harness, parked.name, conversionAnswer);
+  assert.equal(calculationPrompt.body.tutor.stepId, 'calculate', `${name} should reach final acceleration calculation`);
+  return sendHarnessMessage(parked.harness, parked.name, finalAnswer);
+}
+
+async function completeCarAdAccelerationWithEarlyFinalAnswer(name, finalAnswer) {
+  const parked = await parkCarAdAccelerationAtConversion(name);
+  return sendHarnessMessage(parked.harness, parked.name, finalAnswer);
+}
+
+async function rejectCarAdAccelerationAtConversion(name, answer) {
+  const parked = await parkCarAdAccelerationAtConversion(name);
+  return sendHarnessMessage(parked.harness, parked.name, answer);
 }
 
 async function createHarnessSession() {

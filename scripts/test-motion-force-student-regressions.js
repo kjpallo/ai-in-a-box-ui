@@ -186,7 +186,7 @@ async function testKnowledgePromptsAnswerDirectly() {
 async function testPjBlockDistanceDisplacement() {
   await assertPjRejectsZeroAtFinishStep();
 
-  for (const answer of ['1', 'same place']) {
+  for (const answer of ['1', 'same', 'same place', 'the same place', 'same place (he returns home)', 'back where he started', 'back home', 'doorstep']) {
     const latest = await completePjRun(answer);
     assert.equal(latest.body.tutor.completed, true, `PJ should complete after ${answer}`);
     assert.match(latest.body.response, /0\.35 miles/i);
@@ -206,7 +206,9 @@ async function testMaliSpinDistanceDisplacement() {
 }
 
 async function testKaiPoolDistanceDisplacement() {
-  for (const answer of ['2', 'opposite side', 'opposition side']) {
+  await assertKaiRetryPointsToChoice();
+
+  for (const answer of ['2', 'opposite side', 'opposition side', 'different side']) {
     const latest = await completeKaiRun(answer);
     assert.equal(latest.body.tutor.completed, true, `Kai should complete after ${answer}`);
     assert.match(latest.body.response, /150 m/i);
@@ -244,15 +246,21 @@ async function testVelocityInMilesPerHourAndMetersPerSecond() {
 }
 
 async function testAccelerationWithSecondsConvertedToHours() {
+  for (const [index, conversionAnswer] of ['2', '.001944', '0.001944', '0.0019', '7/3600'].entries()) {
+    const final = await completeCarAdAccelerationAfterConversion(`car-ad-conversion-${index}`, conversionAnswer, '36000');
+    assert.equal(final.body.tutor.completed, true, `car ad should solve after conversion answer ${conversionAnswer}`);
+    assert.match(final.body.response, /km\/hr(?:\u00b2|\^2|2)/i);
+  }
+
   for (const answer of ['36842', '36,842', '36000']) {
-    const final = await completeCarAdAcceleration(answer);
+    const final = await completeCarAdAccelerationEarly(answer);
     assert.equal(final.body.tutor.completed, true, `car ad should accept ${answer}`);
     assert.match(final.body.response, /km\/hr(?:\u00b2|\^2|2)/i, `car ad final should use km/hr squared units for ${answer}`);
   }
 
-  const rejected = await completeCarAdAcceleration('0.00277778');
+  const rejected = await rejectCarAdAccelerationAtConversion('0.00277778');
   assert.equal(rejected.body.tutor.completed, false, 'car ad should not accept the time conversion as final acceleration');
-  assert.equal(rejected.body.tutor.stepId, 'calculate');
+  assert.equal(rejected.body.tutor.stepId, 'convert_time');
 }
 
 async function testFinalSpeedFormulaTutor() {
@@ -355,7 +363,7 @@ async function completePjRun(answer) {
 
   latest = await sendHarnessMessage(harness, name, answer);
   assert.equal(latest.body.tutor.stepId, 'calculate_displacement', `PJ should accept ${answer}`);
-  return sendHarnessMessage(harness, name, '0');
+  return sendHarnessMessage(harness, name, '1');
 }
 
 async function completeMaliRun(answer) {
@@ -404,21 +412,55 @@ async function completeKaiRun(answer) {
 
   latest = await sendHarnessMessage(harness, name, answer);
   assert.equal(latest.body.tutor.stepId, 'calculate_displacement', `Kai should accept ${answer}`);
-  return sendHarnessMessage(harness, name, '50');
+  return sendHarnessMessage(harness, name, '1');
 }
 
-async function completeCarAdAcceleration(finalAnswer) {
-  const name = `car-ad-${slug(finalAnswer)}`;
+async function assertKaiRetryPointsToChoice() {
+  const name = 'kai-retry-points-to-choice';
+  const harness = await createHarnessSession({ studentGuidedFormulaTutoringEnabled: true });
+  let latest = await startFormulaTutor(harness, name, KAI_QUESTION);
+
+  for (const setupAnswer of ['1', '1', '50 m', '3', '150']) {
+    latest = await sendHarnessMessage(harness, name, setupAnswer);
+  }
+
+  assert.equal(latest.body.tutor.stepId, 'identify_finish_side');
+  const retry = await sendHarnessMessage(harness, name, 'he is at the ending side after swimming');
+  assert.equal(retry.body.tutor.stepId, 'identify_finish_side');
+  assert.match(retry.body.response, /Choose 2, or click “2\. Opposite side of the pool\.”/i);
+}
+
+async function parkCarAdAccelerationAtConversion(name) {
   const harness = await createHarnessSession({ studentGuidedFormulaTutoringEnabled: true });
   await startFormulaTutor(harness, name, CAR_AD_ACCELERATION_QUESTION);
   await sendHarnessMessage(harness, name, '1');
   await sendHarnessMessage(harness, name, '1');
   await sendHarnessMessage(harness, name, '0 km/hr');
   await sendHarnessMessage(harness, name, '70 km/hr');
-  await sendHarnessMessage(harness, name, '7');
-  const calculationPrompt = await sendHarnessMessage(harness, name, '0.0019 hr');
+  const conversionPrompt = await sendHarnessMessage(harness, name, '7');
+  assert.equal(conversionPrompt.body.tutor.stepId, 'convert_time', `${name} should reach time conversion`);
+  assert.match(conversionPrompt.body.response, /Which time value should we use before dividing\?/i);
+  assert.match(conversionPrompt.body.response, /2\. 7 \/ 3600 hr ≈ 0\.001944 hr/i);
+  return { harness, name };
+}
+
+async function completeCarAdAccelerationAfterConversion(name, conversionAnswer, finalAnswer) {
+  const parked = await parkCarAdAccelerationAtConversion(name);
+  const calculationPrompt = await sendHarnessMessage(parked.harness, parked.name, conversionAnswer);
   assert.equal(calculationPrompt.body.tutor.stepId, 'calculate', `${name} should reach final acceleration calculation`);
-  return sendHarnessMessage(harness, name, finalAnswer);
+  return sendHarnessMessage(parked.harness, parked.name, finalAnswer);
+}
+
+async function completeCarAdAccelerationEarly(finalAnswer) {
+  const name = `car-ad-early-${slug(finalAnswer)}`;
+  const parked = await parkCarAdAccelerationAtConversion(name);
+  return sendHarnessMessage(parked.harness, parked.name, finalAnswer);
+}
+
+async function rejectCarAdAccelerationAtConversion(answer) {
+  const name = `car-ad-reject-${slug(answer)}`;
+  const parked = await parkCarAdAccelerationAtConversion(name);
+  return sendHarnessMessage(parked.harness, parked.name, answer);
 }
 
 async function completeFormulaRun({ name, question, steps }) {
@@ -447,7 +489,8 @@ function assertStartsFormulaTutor(response, name) {
 }
 
 function assertFormulaTutorChoices(body, { name, expectedChoices }) {
-  assert.match(body.response, /Type the number or click a choice\./, `${name} should invite numbered/clickable choices`);
+  assert.match(body.response, /Choose one:/, `${name} should label the numbered choices`);
+  assert.match(body.response, /Click a choice or type only the number\./, `${name} should invite numbered/clickable choices`);
   const choices = body.tutor?.currentStep?.choices || body.tutor?.work?.currentStep?.choices || [];
   assert.ok(Array.isArray(choices) && choices.length >= expectedChoices.length, `${name} metadata should expose choices`);
   const renderedChoices = choices.map((choice) => `${choice.number}. ${choice.label}`).join('\n');

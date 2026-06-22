@@ -468,10 +468,10 @@ async function testCarAdvertisementConversion() {
   await parkCarAdvertisementAtTimeStep(classroom, studentHubId);
   const originalTime = await send(classroom, studentHubId, '7');
   assert.match(originalTime.body.response, /Correct\. The time is 7 seconds/i);
-  assert.match(originalTime.body.response, /convert 7 seconds to hours/i);
-  assert.match(originalTime.body.response, /7 ÷ 3600/i);
+  assert.match(originalTime.body.response, /Which time value should we use before dividing\?/i);
+  assert.match(originalTime.body.response, /2\. 7 \/ 3600 hr ≈ 0\.001944 hr/i);
 
-  await send(classroom, studentHubId, '0.00194 hr');
+  await send(classroom, studentHubId, '2');
   const final = await send(classroom, studentHubId, '36000');
   assert.equal(final.body.tutor.completed, true);
   assert.match(final.body.response, /acceleration = 36000 km\/hr²/i);
