@@ -354,6 +354,7 @@
       routeType: '',
       confidence: '',
       tutor: null,
+      flashcardSession: null,
       tutorCollapsed: false,
       pending: true,
       error: false,
@@ -373,6 +374,11 @@
     turn.routeType = data.routeType || '';
     turn.confidence = data.confidence || '';
     turn.tutor = data.tutor && typeof data.tutor === 'object' ? clonePlain(data.tutor) : null;
+    turn.flashcardSession = data.flashcardSession && typeof data.flashcardSession === 'object'
+      ? clonePlain(data.flashcardSession)
+      : data.flashcards && typeof data.flashcards === 'object'
+        ? clonePlain(data.flashcards)
+        : null;
     turn.tutorSubmittedMessage = message;
     turn.tutorCollapsed = false;
     turn.pending = false;
@@ -418,6 +424,7 @@
       routeType: '',
       confidence: '',
       tutor: null,
+      flashcardSession: null,
       tutorCollapsed: false,
       pending: false,
       error: false,
@@ -625,6 +632,7 @@
 
   function isCopyableAnswerTurn(turn) {
     if (!turn || turn.system || turn.pending || turn.error || !String(turn.response || '').trim()) return false;
+    if (isRenderableFlashcardSession(turn.flashcardSession)) return false;
 
     if (!turn.tutor) return true;
 
@@ -655,6 +663,7 @@
       'student-chat-message',
       'is-assistant',
       turn.tutor ? 'has-tutor' : '',
+      isRenderableFlashcardSession(turn.flashcardSession) ? 'has-flashcard-session' : '',
       turn.pending ? 'is-pending' : '',
       turn.error ? 'is-system' : ''
     ].filter(Boolean).join(' ');
@@ -674,6 +683,7 @@
           </div>
           <div class="student-message-bubble">
             ${assistantResponseHtml}
+            ${renderFlashcardSessionCard(turn.flashcardSession)}
             ${renderTutorCardHtml(turn)}
           </div>
         </div>
@@ -684,12 +694,77 @@
   function renderAssistantResponseHtml(turn) {
     const responseText = String(turn?.response || '').trim();
     if (!responseText) return '';
+    if (isRenderableFlashcardSession(turn?.flashcardSession)) return '';
     if (!turn?.tutor || turn.pending || turn.error) return escapeHtml(responseText);
 
     const work = getTutorWork(turn.tutor);
     if (!isStructuredFormulaTutor(turn.tutor, work)) return escapeHtml(responseText);
 
     return escapeHtml(responseText);
+  }
+
+  function renderFlashcardSessionCard(session) {
+    if (!isRenderableFlashcardSession(session)) return '';
+
+    if (session.isComplete || session.completed) {
+      const title = session.title || 'Flashcards';
+      const reviewedCount = Number(session.reviewedCount) || Number(session.totalCards) || Number(session.cardCount) || 0;
+      return `
+        <section class="flashcard-session-card is-complete" aria-label="Flashcard practice complete">
+          <div class="flashcard-session-title">Flashcard deck complete: ${escapeHtml(title)}</div>
+          <p class="flashcard-session-progress">You reviewed ${escapeHtml(String(reviewedCount))} cards.</p>
+          <div class="flashcard-session-actions">
+            ${renderFlashcardActionButton('restart', 'Restart deck')}
+          </div>
+        </section>
+      `;
+    }
+
+    const totalCards = Number(session.totalCards) || Number(session.cardCount) || 0;
+    const cardNumber = Number(session.currentCardIndex) + 1;
+    const progress = totalCards > 0 && cardNumber > 0 ? `Card ${cardNumber} of ${totalCards}` : '';
+    const controls = Array.isArray(session.controls) && session.controls.length > 0
+      ? session.controls
+      : session.showingBack ? ['again', 'next', 'stop'] : ['show', 'next', 'stop'];
+
+    return `
+      <section class="flashcard-session-card" aria-label="Interactive flashcard session">
+        <div class="flashcard-session-title">Flashcards: ${escapeHtml(session.title || 'Flashcards')}</div>
+        ${progress ? `<div class="flashcard-session-progress">${escapeHtml(progress)}</div>` : ''}
+        <p class="flashcard-session-front">${escapeHtml(session.front || '')}</p>
+        ${session.back ? `<p class="flashcard-session-back">${escapeHtml(session.back)}</p>` : ''}
+        <div class="flashcard-session-actions">
+          ${controls.map((command) => renderFlashcardActionButton(command)).join('')}
+        </div>
+      </section>
+    `;
+  }
+
+  function isRenderableFlashcardSession(session) {
+    if (!session || typeof session !== 'object') return false;
+    if (session.isComplete || session.completed) return true;
+    return session.active === true;
+  }
+
+  function renderFlashcardActionButton(command, overrideLabel = '') {
+    const action = String(command || '').trim();
+    if (!action) return '';
+    return `
+      <button
+        type="button"
+        class="flashcard-session-action"
+        data-flashcard-action="${escapeAttr(action)}"
+      >${escapeHtml(overrideLabel || getFlashcardActionLabel(action))}</button>
+    `;
+  }
+
+  function getFlashcardActionLabel(command) {
+    if (command === 'show') return 'Show answer';
+    if (command === 'again') return 'Again';
+    if (command === 'next') return 'Next';
+    if (command === 'stop') return 'Stop';
+    if (command === 'restart') return 'Restart deck';
+    return toTitleCase(command);
   }
 
   function renderTutorSession(session, copyableTurnId) {
@@ -1217,6 +1292,12 @@
       return;
     }
 
+    const flashcardButton = event.target.closest('[data-flashcard-action]');
+    if (flashcardButton && timeline.contains(flashcardButton)) {
+      sendFlashcardCommand(flashcardButton.getAttribute('data-flashcard-action') || '');
+      return;
+    }
+
     const calculatorButton = event.target.closest('[data-calculator-key]');
     if (calculatorButton && timeline.contains(calculatorButton)) {
       handleCalculatorKey(calculatorButton.getAttribute('data-calculator-key') || '');
@@ -1270,6 +1351,23 @@
   }
 
   async function sendTutorCommand(command) {
+    if (!command || !sessionIsValid) return;
+
+    const turnId = addPendingTurn(command);
+    setSendingState();
+
+    try {
+      const data = await sendStudentMessage(command);
+      renderStudentMessageResult(data, command, { turnId });
+    } catch (error) {
+      renderStudentError(turnId, error);
+    } finally {
+      setFormEnabled(sessionIsValid);
+      if (sessionIsValid) input.focus();
+    }
+  }
+
+  async function sendFlashcardCommand(command) {
     if (!command || !sessionIsValid) return;
 
     const turnId = addPendingTurn(command);

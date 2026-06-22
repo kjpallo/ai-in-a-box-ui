@@ -237,6 +237,7 @@ function registerStudentRoutes(app, {
           confidence: 'strong',
           rateLimit: rateLimitInfo,
           flashcards: buildFlashcardSessionMetadata(flashcardSessionResult.session),
+          flashcardSession: buildFlashcardSessionMetadata(flashcardSessionResult.session),
           tutor: null
         });
       }
@@ -621,6 +622,7 @@ function registerStudentRoutes(app, {
             confidence: 'strong',
             rateLimit: rateLimitInfo,
             flashcards: buildFlashcardSessionMetadata(hub.currentFlashcardSession),
+            flashcardSession: buildFlashcardSessionMetadata(hub.currentFlashcardSession),
             tutor: null
           });
         }
@@ -945,15 +947,28 @@ function titleCaseFlashcardTitle(value) {
 
 function buildFlashcardSessionMetadata(session) {
   if (!session || session.type !== 'flashcards') return null;
+  const cards = Array.isArray(session.cards) ? session.cards : [];
+  const currentCardIndex = Math.max(0, Number(session.currentCardIndex || 0));
+  const card = cards[currentCardIndex] || { front: '', back: '' };
+  const active = Boolean(session.active);
+  const isComplete = Boolean(session.completed);
+  const showingBack = Boolean(session.showingBack);
+
   return {
     type: 'flashcards',
     topicId: session.topicId || '',
     title: session.title || '',
-    currentCardIndex: Number(session.currentCardIndex || 0),
-    showingBack: Boolean(session.showingBack),
-    active: Boolean(session.active),
-    completed: Boolean(session.completed),
-    cardCount: Array.isArray(session.cards) ? session.cards.length : 0
+    currentCardIndex,
+    totalCards: cards.length,
+    cardCount: cards.length,
+    showingBack,
+    active,
+    completed: isComplete,
+    isComplete,
+    reviewedCount: Number(session.reviewedCards || 0),
+    front: active ? String(card.front || '').trim() : '',
+    back: active && showingBack ? String(card.back || '').trim() : null,
+    controls: getFlashcardControls(session)
   };
 }
 
@@ -961,6 +976,13 @@ function flashcardSessionDebug(session) {
   const metadata = buildFlashcardSessionMetadata(session);
   if (!metadata) return { active: false };
   return metadata;
+}
+
+function getFlashcardControls(session) {
+  if (!session || session.type !== 'flashcards') return [];
+  if (session.completed) return ['restart'];
+  if (!session.active) return [];
+  return session.showingBack ? ['again', 'next', 'stop'] : ['show', 'next', 'stop'];
 }
 
 function answerTutorCelebrationFeedback(message, recentMessages = []) {

@@ -79,6 +79,13 @@ const tutorChoiceButtonBlock = getCssBlock('.student-tutor-choice-button');
 const composerTutorChoicesBlock = getCssBlock('.student-composer-tutor-choices');
 const composerTutorChoicesHiddenBlock = getCssBlock('.student-composer-tutor-choices[hidden]');
 const composerChoiceButtonBlock = getCssBlock('.student-composer-choice-button');
+const flashcardCardBlock = getCssBlock('.flashcard-session-card');
+const flashcardTitleBlock = getCssBlock('.flashcard-session-title');
+const flashcardProgressBlock = getCssBlock('.flashcard-session-progress');
+const flashcardFrontBlock = getCssBlock('.flashcard-session-front');
+const flashcardBackBlock = getCssBlock('.flashcard-session-back');
+const flashcardActionsBlock = getCssBlock('.flashcard-session-actions');
+const flashcardActionBlock = getCssBlock('.flashcard-session-action');
 const fireworksBlock = getCssBlock('.student-fireworks');
 
 assert.match(shellBlock, /grid-template-rows:\s*auto minmax\(0,\s*1fr\) auto;/, 'Student shell should reserve one central scroll lane plus bottom composer.');
@@ -92,6 +99,14 @@ assert.match(composerTutorChoicesHiddenBlock, /display:\s*none;/, 'Composer tuto
 assert.match(composerChoiceButtonBlock, /min-height:\s*42px;/, 'Composer tutor choice buttons should be prominent tap targets.');
 assert.match(tutorChoicesBlock, /align-items:\s*stretch;/, 'Formula Tutor choices inside work should render as primary controls.');
 assert.match(tutorChoiceButtonBlock, /min-height:\s*40px;/, 'Formula Tutor choice buttons should be prominent.');
+assert.ok(flashcardCardBlock, 'Interactive flashcards should have a compact card style.');
+assert.match(flashcardCardBlock, /border-radius:\s*8px;/, 'Flashcard cards should stay compact in the chat timeline.');
+assert.match(flashcardTitleBlock, /font-weight:\s*850;/, 'Flashcard card titles should be visually prominent.');
+assert.match(flashcardProgressBlock, /text-transform:\s*uppercase;/, 'Flashcard card progress should scan like session metadata.');
+assert.match(flashcardFrontBlock, /overflow-wrap:\s*anywhere;/, 'Flashcard fronts should wrap safely on small screens.');
+assert.match(flashcardBackBlock, /font-weight:\s*760;/, 'Flashcard backs should read as the revealed answer.');
+assert.match(flashcardActionsBlock, /flex-wrap:\s*wrap;/, 'Flashcard controls should wrap inside one-column chat.');
+assert.match(flashcardActionBlock, /min-height:\s*38px;/, 'Flashcard action buttons should be easy tap targets.');
 
 const overflowMatches = [...studentHtml.matchAll(/overflow-y:\s*auto;/g)];
 assert.equal(overflowMatches.length, 2, 'Student page should expose the timeline scroll plus one scoped formula-session scroll.');
@@ -113,6 +128,51 @@ assert.match(
   studentUi,
   /function renderTimeline\(\)[\s\S]*buildTimelineItems\(\)\.map[\s\S]*renderTutorSession\(item, copyableTurnId\)/,
   'Timeline rendering should pass through grouped tutor session items.'
+);
+assert.match(
+  studentUi,
+  /turn\.flashcardSession = data\.flashcardSession[\s\S]*data\.flashcards[\s\S]*clonePlain/,
+  'Student messages should store flashcard session metadata from the backend.'
+);
+assert.match(
+  studentUi,
+  /function renderChatTurn\(turn, copyableTurnId\)[\s\S]*has-flashcard-session[\s\S]*renderFlashcardSessionCard\(turn\.flashcardSession\)[\s\S]*renderTutorCardHtml\(turn\)/,
+  'Flashcard session cards should render in normal chat turns separately from Formula Tutor cards.'
+);
+assert.match(
+  studentUi,
+  /function renderAssistantResponseHtml\(turn\)[\s\S]*if \(isRenderableFlashcardSession\(turn\?\.flashcardSession\)\) return '';/,
+  'Interactive flashcard cards should not duplicate the plain text response in the browser UI.'
+);
+assert.match(
+  studentUi,
+  /function renderFlashcardSessionCard\(session\)[\s\S]*const progress = totalCards > 0 && cardNumber > 0 \? `Card \$\{cardNumber\} of \$\{totalCards\}` : '';[\s\S]*Flashcards: \$\{escapeHtml\(session\.title \|\| 'Flashcards'\)\}[\s\S]*flashcard-session-progress[\s\S]*flashcard-session-front[\s\S]*flashcard-session-back[\s\S]*flashcard-session-actions/,
+  'Flashcard cards should render title, progress, front, optional back, and local controls.'
+);
+assert.match(
+  studentUi,
+  /function renderFlashcardSessionCard\(session\)[\s\S]*Flashcard deck complete: \$\{escapeHtml\(title\)\}[\s\S]*You reviewed \$\{escapeHtml\(String\(reviewedCount\)\)\} cards\.[\s\S]*renderFlashcardActionButton\('restart', 'Restart deck'\)/,
+  'Completed flashcard decks should render reviewed count and Restart deck control.'
+);
+assert.match(
+  studentUi,
+  /function renderFlashcardActionButton\(command, overrideLabel = ''\)[\s\S]*data-flashcard-action="\$\{escapeAttr\(action\)\}"[\s\S]*getFlashcardActionLabel\(action\)/,
+  'Flashcard buttons should expose the backend text command as data-flashcard-action.'
+);
+assert.match(
+  studentUi,
+  /function getFlashcardActionLabel\(command\)[\s\S]*command === 'show'[\s\S]*Show answer[\s\S]*command === 'again'[\s\S]*Again[\s\S]*command === 'next'[\s\S]*Next[\s\S]*command === 'stop'[\s\S]*Stop[\s\S]*command === 'restart'[\s\S]*Restart deck/,
+  'Flashcard action labels should map to existing text commands.'
+);
+assert.match(
+  studentUi,
+  /const flashcardButton = event\.target\.closest\('\[data-flashcard-action\]'\);[\s\S]*sendFlashcardCommand\(flashcardButton\.getAttribute\('data-flashcard-action'\) \|\| ''\)/,
+  'Flashcard action buttons should submit their command payloads.'
+);
+assert.match(
+  studentUi,
+  /async function sendFlashcardCommand\(command\)[\s\S]*const turnId = addPendingTurn\(command\)[\s\S]*const data = await sendStudentMessage\(command\)[\s\S]*renderStudentMessageResult\(data, command, \{ turnId \}\)/,
+  'Flashcard buttons should use the normal student-message pipeline.'
 );
 assert.match(
   studentUi,
@@ -983,6 +1043,41 @@ async function rejectCarAdAccelerationAtConversion(name, answer) {
   return sendHarnessMessage(parked.harness, parked.name, answer);
 }
 
+async function testInteractiveFlashcardUiMetadata() {
+  const harness = await createHarnessSession();
+
+  const start = await sendHarnessMessage(harness, 'flashcard-ui', 'start flashcards for types of friction');
+  assert.equal(start.body.routeType, 'flashcard_session');
+  assert.equal(start.body.flashcardSession.title, 'Types of friction');
+  assert.equal(start.body.flashcardSession.front, 'What type of friction keeps objects from starting to slide?');
+  assert.equal(start.body.flashcardSession.back, null);
+  assert.deepEqual(start.body.flashcardSession.controls, ['show', 'next', 'stop']);
+
+  const show = await sendHarnessMessage(harness, 'flashcard-ui', 'show');
+  assert.equal(show.body.flashcardSession.showingBack, true);
+  assert.equal(show.body.flashcardSession.back, 'Static Friction.');
+  assert.deepEqual(show.body.flashcardSession.controls, ['again', 'next', 'stop']);
+
+  await sendHarnessMessage(harness, 'flashcard-ui', 'next');
+  await sendHarnessMessage(harness, 'flashcard-ui', 'next');
+  const complete = await sendHarnessMessage(harness, 'flashcard-ui', 'next');
+  assert.equal(complete.body.flashcardSession.active, false);
+  assert.equal(complete.body.flashcardSession.isComplete, true);
+  assert.equal(complete.body.flashcardSession.reviewedCount, 3);
+  assert.deepEqual(complete.body.flashcardSession.controls, ['restart']);
+
+  const staticCards = await sendHarnessMessage(harness, 'flashcard-static-ui', 'make flashcards for types of friction');
+  assert.notEqual(staticCards.body.routeType, 'flashcard_session');
+  assert.equal(staticCards.body.flashcardSession, undefined);
+  assert.match(staticCards.body.response, /1\. Static Friction/i);
+  assert.match(staticCards.body.response, /Answer: Friction that keeps an object from starting to move\./i);
+
+  const motionGraphInteractive = await sendHarnessMessage(harness, 'flashcard-motion-graphs-ui', 'go through flashcards for motion graphs one at a time');
+  assert.equal(motionGraphInteractive.body.routeType, 'flashcard_session');
+  assert.equal(motionGraphInteractive.body.flashcardSession.title, 'Motion graphs');
+  assert.deepEqual(motionGraphInteractive.body.flashcardSession.controls, ['show', 'next', 'stop']);
+}
+
 async function createHarnessSession() {
   const harness = createStudentRouteHarness({ studentGuidedFormulaTutoringEnabled: true });
   const create = await harness.request('POST', '/api/profile/create-student-session');
@@ -1008,12 +1103,14 @@ Promise.resolve()
   .then(testConcept3GeneralTutorVocabularyChoices)
   .then(testTwoUnitVelocityTutor)
   .then(testAccelerationClassroomRoundedFinalAcceptance)
+  .then(testInteractiveFlashcardUiMetadata)
   .then(() => {
     console.log('student tutor UI: formula tutor turns group into collapsible problem sessions');
     console.log('student tutor UI: guided formula startup preserves direct-answer mode when disabled');
     console.log('student tutor UI: conceptual formula tutor steps show numbered choices immediately');
     console.log('student tutor UI: Concept 3 General Tutor vocab steps show numbered choices immediately');
     console.log('student tutor UI: velocity and acceleration tutor regressions passed');
+    console.log('student tutor UI: interactive flashcard cards use backend session metadata');
   })
   .catch((error) => {
     console.error(error);

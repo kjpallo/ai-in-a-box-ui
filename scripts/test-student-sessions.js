@@ -1839,6 +1839,11 @@ async function testInteractiveFlashcardSessions() {
   assert.doesNotMatch(start.body.response, /Back: Static friction/i);
   assert.equal(start.body.flashcards.active, true);
   assert.equal(start.body.flashcards.cardCount, 3);
+  assert.deepEqual(start.body.flashcardSession.controls, ['show', 'next', 'stop']);
+  assert.equal(start.body.flashcardSession.front, 'What type of friction keeps objects from starting to slide?');
+  assert.equal(start.body.flashcardSession.back, null);
+  assert.equal(start.body.flashcardSession.totalCards, 3);
+  assert.equal(start.body.flashcardSession.isComplete, false);
 
   const hub = studentSessions[classSessionId].anonymousHubs['flashcards-friction'];
   assert.equal(hub.currentFlashcardSession.type, 'flashcards');
@@ -1859,6 +1864,10 @@ async function testInteractiveFlashcardSessions() {
   assert.equal(show.body.routeType, 'flashcard_session');
   assert.match(show.body.response, /^Back: Static Friction\./i);
   assert.match(show.body.response, /Type next for the next card, again to review this card, or stop to end\./i);
+  assert.deepEqual(show.body.flashcardSession.controls, ['again', 'next', 'stop']);
+  assert.equal(show.body.flashcardSession.showingBack, true);
+  assert.equal(show.body.flashcardSession.front, 'What type of friction keeps objects from starting to slide?');
+  assert.equal(show.body.flashcardSession.back, 'Static Friction.');
 
   const next = await request('POST', '/api/student/message', {
     sessionId: classSessionId,
@@ -1892,6 +1901,10 @@ async function testInteractiveFlashcardSessions() {
   assert.equal(complete.statusCode, 200);
   assert.match(complete.body.response, /^Flashcard deck complete: Types of friction/im);
   assert.match(complete.body.response, /You reviewed 3 cards\./i);
+  assert.deepEqual(complete.body.flashcardSession.controls, ['restart']);
+  assert.equal(complete.body.flashcardSession.active, false);
+  assert.equal(complete.body.flashcardSession.isComplete, true);
+  assert.equal(complete.body.flashcardSession.reviewedCount, 3);
   assert.equal(hub.currentFlashcardSession.active, false);
   assert.equal(hub.currentFlashcardSession.completed, true);
 

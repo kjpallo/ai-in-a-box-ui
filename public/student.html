@@ -210,6 +210,10 @@
         max-width: min(1000px, 94%);
       }
 
+      .student-chat-message.has-flashcard-session {
+        max-width: min(760px, 92%);
+      }
+
       .student-message-meta {
         display: flex;
         align-items: center;
@@ -287,6 +291,7 @@
       .panel-action-button,
       .student-tutor-choice-button,
       .student-composer-choice-button,
+      .flashcard-session-action,
       .student-calculator-use-result {
         min-height: 32px;
         padding: 0.42rem 0.64rem;
@@ -317,6 +322,8 @@
       .student-tutor-choice-button:focus-visible,
       .student-composer-choice-button:hover,
       .student-composer-choice-button:focus-visible,
+      .flashcard-session-action:hover,
+      .flashcard-session-action:focus-visible,
       .student-calculator-use-result:hover,
       .student-calculator-use-result:focus-visible {
         border-color: rgba(102,247,209,0.78);
@@ -332,6 +339,7 @@
       .panel-action-button:active,
       .student-tutor-choice-button:active,
       .student-composer-choice-button:active,
+      .flashcard-session-action:active,
       .student-calculator-use-result:active {
         transform: translateY(2px);
         box-shadow:
@@ -344,6 +352,7 @@
       .panel-action-button:disabled,
       .student-tutor-choice-button:disabled,
       .student-composer-choice-button:disabled,
+      .flashcard-session-action:disabled,
       .student-calculator-use-result:disabled {
         border-color: rgba(126,233,255,0.18);
         background: rgba(6,20,23,0.62);
@@ -390,6 +399,77 @@
         text-align: left;
         line-height: 1.18;
         white-space: normal;
+      }
+
+      .flashcard-session-card {
+        display: grid;
+        gap: 0.5rem;
+        min-width: 0;
+        padding: 0.64rem;
+        border: 1px solid rgba(255,214,102,0.34);
+        border-radius: 8px;
+        background:
+          linear-gradient(180deg, rgba(37,28,9,0.72), rgba(4,17,18,0.82));
+        color: #effff8;
+        white-space: normal;
+      }
+
+      .flashcard-session-card.is-complete {
+        border-color: rgba(102,247,209,0.44);
+        background:
+          linear-gradient(180deg, rgba(7,41,35,0.72), rgba(3,16,18,0.84));
+      }
+
+      .flashcard-session-title {
+        color: #f5fffb;
+        font-size: 0.98rem;
+        font-weight: 850;
+        line-height: 1.18;
+        overflow-wrap: anywhere;
+      }
+
+      .flashcard-session-progress {
+        margin: 0;
+        color: #ffd666;
+        font-size: 0.78rem;
+        font-weight: 850;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .flashcard-session-front {
+        margin: 0;
+        padding: 0.52rem 0.58rem;
+        border: 1px solid rgba(126,233,255,0.14);
+        border-radius: 7px;
+        background: rgba(2,8,10,0.34);
+        line-height: 1.35;
+        overflow-wrap: anywhere;
+      }
+
+      .flashcard-session-back {
+        margin: 0;
+        padding: 0.52rem 0.58rem;
+        border: 1px solid rgba(126,233,255,0.14);
+        border-radius: 7px;
+        line-height: 1.35;
+        overflow-wrap: anywhere;
+        border-color: rgba(102,247,209,0.3);
+        background: rgba(7,31,27,0.48);
+        color: #dffdf6;
+        font-weight: 760;
+      }
+
+      .flashcard-session-actions {
+        display: flex;
+        gap: 0.36rem;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+
+      .flashcard-session-action {
+        min-height: 38px;
+        border-radius: 8px;
       }
 
       .student-composer-actions {
@@ -1191,6 +1271,14 @@
 
         .student-tutor-session-meta {
           align-items: stretch;
+        }
+
+        .flashcard-session-actions {
+          align-items: stretch;
+        }
+
+        .flashcard-session-action {
+          flex: 1 1 100%;
         }
 
         .student-calculator-button {
