@@ -20,6 +20,7 @@ const SUITCASE_WEIGHT_QUESTION = 'Find the weight of a suitcase that has a mass 
 
 const tests = [
   testKnowledgePromptsAnswerDirectly,
+  testFlashcardTriggerBoundaries,
   testPjBlockDistanceDisplacement,
   testMaliSpinDistanceDisplacement,
   testKaiPoolDistanceDisplacement,
@@ -232,6 +233,120 @@ async function testKnowledgePromptsAnswerDirectly() {
       `${testCase.name} should not leave tutor state`
     );
   }
+}
+
+async function testFlashcardTriggerBoundaries() {
+  const harness = await createHarnessSession({ studentGuidedFormulaTutoringEnabled: true });
+  const normalCases = [
+    {
+      name: 'flashcard-boundary-inertia',
+      prompt: 'what is inertia',
+      routeTypes: ['definition', 'science_concept'],
+      includes: [/resistance to a change in motion/i]
+    },
+    {
+      name: 'flashcard-boundary-friction',
+      prompt: 'what is friction',
+      routeTypes: ['definition', 'science_concept'],
+      includes: [/Friction is a force that resists motion/i]
+    },
+    {
+      name: 'flashcard-boundary-speed-velocity',
+      prompt: 'what is the difference between speed and velocity',
+      routeTypes: ['science_concept'],
+      includes: [/Speed: Speed tells how fast/i, /Velocity[\s\S]*direction/i]
+    },
+    {
+      name: 'flashcard-boundary-friction-list',
+      prompt: 'list the types of friction',
+      routeTypes: ['science_concept'],
+      includes: [/1\. Static friction/i, /2\. Sliding friction/i, /3\. Rolling friction/i]
+    },
+    {
+      name: 'flashcard-boundary-newtons-laws',
+      prompt: "what are Newton's laws",
+      routeTypes: ['science_concept'],
+      includes: [/1\. First law \/ inertia/i, /2\. Second law/i, /3\. Third law/i]
+    },
+    {
+      name: 'flashcard-boundary-quiz-me',
+      prompt: 'quiz me',
+      routeTypes: ['no_match'],
+      includes: [/trusted local fact/i]
+    },
+    {
+      name: 'flashcard-boundary-practice-this',
+      prompt: 'practice this',
+      routeTypes: ['no_match'],
+      includes: [/trusted local fact/i]
+    },
+    {
+      name: 'flashcard-boundary-list-newtons-laws',
+      prompt: "list Newton's laws",
+      routeTypes: ['science_concept'],
+      includes: [/1\. First law \/ inertia/i, /2\. Second law/i, /3\. Third law/i]
+    }
+  ];
+
+  for (const testCase of normalCases) {
+    const route = routeWithTeacherKnowledge(testCase.prompt);
+    assertNotFlashcardsOrGeneralTutor(route, testCase.name);
+    assert.ok(testCase.routeTypes.includes(route.type), `${testCase.name} should use one of ${testCase.routeTypes.join(', ')}`);
+    assertAnswer(route.directAnswer, testCase);
+
+    const student = await sendHarnessMessage(harness, testCase.name, testCase.prompt);
+    assertNotFlashcardsOrGeneralTutor(student.body, testCase.name);
+    assert.notEqual(student.body.routeType, 'formula_tutor', `${testCase.name} should not start Formula Tutor`);
+    assert.ok(
+      testCase.routeTypes.includes(student.body.routeType),
+      `${testCase.name} should return ${testCase.routeTypes.join(', ')}`
+    );
+    assertAnswer(student.body.response, testCase);
+    assert.equal(
+      harness.studentSessions[harness.sessionId].anonymousHubs[testCase.name].currentTutorProblem,
+      null,
+      `${testCase.name} should not leave tutor state`
+    );
+    assert.equal(
+      harness.studentSessions[harness.sessionId].anonymousHubs[testCase.name].currentFlashcardSession,
+      null,
+      `${testCase.name} should not leave flashcard state`
+    );
+  }
+
+  const formulaPrompt = 'calculate speed if distance is 100 m and time is 20 s';
+  const formulaRoute = routeWithTeacherKnowledge(formulaPrompt);
+  assertNotFlashcardsOrGeneralTutor(formulaRoute, 'flashcard-boundary-speed-formula-route');
+  assert.equal(formulaRoute.type, 'science_formula');
+  assert.equal(formulaRoute.formulaWork?.formulaId, 'speed_distance_time');
+
+  const formulaStudent = await sendHarnessMessage(harness, 'flashcard-boundary-speed-formula', formulaPrompt);
+  assertNotFlashcardsOrGeneralTutor(formulaStudent.body, 'flashcard-boundary-speed-formula');
+  assert.equal(formulaStudent.body.routeType, 'formula_tutor');
+  assert.equal(formulaStudent.body.tutor?.formulaId, 'speed_distance_time');
+  assert.equal(formulaStudent.body.tutor?.tutorCategory, 'formula');
+  assert.equal(
+    harness.studentSessions[harness.sessionId].anonymousHubs['flashcard-boundary-speed-formula'].currentFlashcardSession,
+    null,
+    'formula prompt should not leave flashcard state'
+  );
+
+  const flashcards = await sendHarnessMessage(
+    harness,
+    'flashcard-boundary-explicit-flashcards',
+    'start flashcards for types of friction'
+  );
+  assert.equal(flashcards.body.routeType, 'flashcard_session');
+  assert.equal(flashcards.body.tutor, null);
+  assert.equal(flashcards.body.flashcards?.active, true);
+  assert.equal(flashcards.body.flashcards?.topicId, 'friction_types');
+  assert.equal(flashcards.body.flashcardSession?.cardCount, 3);
+  assert.deepEqual(flashcards.body.flashcardSession?.controls, ['show', 'next', 'stop']);
+  assert.equal(
+    harness.studentSessions[harness.sessionId].anonymousHubs['flashcard-boundary-explicit-flashcards'].currentTutorProblem,
+    null,
+    'explicit flashcards should not start tutor state'
+  );
 }
 
 async function testPjBlockDistanceDisplacement() {
@@ -565,6 +680,12 @@ function assertDirectKnowledgeRoute(route, testCase) {
     assert.ok(testCase.routeTypes.includes(route.type), `${testCase.name} should use one of ${testCase.routeTypes.join(', ')}`);
   }
   assertAnswer(route.directAnswer, testCase);
+}
+
+function assertNotFlashcardsOrGeneralTutor(body, name) {
+  const routeType = body.routeType || body.type;
+  assert.notEqual(routeType, 'flashcard_session', `${name} should not start flashcards`);
+  assert.notEqual(routeType, 'motion_force_knowledge_tutor', `${name} should not start Motion/Force Knowledge Tutor`);
 }
 
 function assertAnswer(answer, testCase) {

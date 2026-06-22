@@ -1834,6 +1834,9 @@ async function testInteractiveFlashcardSessions() {
   });
   assert.equal(start.statusCode, 200);
   assert.equal(start.body.routeType, 'flashcard_session');
+  assert.notEqual(start.body.routeType, 'formula_tutor');
+  assert.notEqual(start.body.routeType, 'motion_force_knowledge_tutor');
+  assert.equal(start.body.tutor, null);
   assert.match(start.body.response, /^Flashcards: Types of friction\n\nCard 1 of 3/im);
   assert.match(start.body.response, /Front: What type of friction keeps objects from starting to slide\?/i);
   assert.doesNotMatch(start.body.response, /Back: Static friction/i);

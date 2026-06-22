@@ -184,6 +184,14 @@ function testBasicAnswerRepresentationIntent() {
 }
 
 function testLearningShapeIntentAndRoutes() {
+  assert.notEqual(
+    detectAnswerRepresentationIntent('quiz me').requestedInteractionMode,
+    'interactive'
+  );
+  assert.notEqual(
+    detectAnswerRepresentationIntent('practice this').requestedInteractionMode,
+    'interactive'
+  );
   assert.deepEqual(
     detectAnswerRepresentationIntent('make flashcards for types of friction'),
     { requestedRepresentation: 'numbered_list', requestedLearningShape: 'flashcards', shouldAskRepresentationFollowup: false }
@@ -194,6 +202,10 @@ function testLearningShapeIntentAndRoutes() {
   );
   assert.equal(
     detectAnswerRepresentationIntent('one flashcard at a time for Newton\'s laws').requestedInteractionMode,
+    'interactive'
+  );
+  assert.equal(
+    detectAnswerRepresentationIntent('practice flashcards for Newtons laws').requestedInteractionMode,
     'interactive'
   );
   assert.deepEqual(
