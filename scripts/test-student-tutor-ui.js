@@ -408,7 +408,7 @@ async function testGuidedFormulaTutorStartup() {
       solveFor: 'acceleration',
       finalAnswer: /acceleration = about 2\.78 m\/s²/i,
       directAnswer: /a = about 2\.78 m\/s²/i,
-      steps: ['1', '1', '0', '70', '7', '2.78']
+      steps: ['1', '1', '0', '70', '19.4444', '7', '2.78']
     },
     {
       name: 'skateboarder-final-speed',

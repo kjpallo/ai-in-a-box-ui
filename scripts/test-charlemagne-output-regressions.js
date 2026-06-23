@@ -34,6 +34,7 @@ const tests = [
   testNicoleTutorAcceptsTotalDistance,
   ...buildMaliNaturalLanguageAcceptanceTests(),
   testCarAdAccelerationDisplayedRoundedAnswer,
+  testExplicitFromRestAccelerationTeachesVelocityConversion,
   testVelocityOutputIncludesRequestedUnits,
   testInstantaneousSpeedTypoUsesLocalFact,
   testGraphMotionUsesLocalFact,
@@ -544,6 +545,37 @@ function testCarAdAccelerationDisplayedRoundedAnswer() {
     result,
     'Tutor should accept 36000 km/hr^2 because the substitution uses the exact 7 / 3600 hr conversion'
   );
+}
+
+function testExplicitFromRestAccelerationTeachesVelocityConversion() {
+  const question = 'calculate acceleration from rest to 70 km/hr in 7 seconds';
+  let tutor = startTutorAtStep(question, 'identify_final_velocity', {
+    identify_solve_target: 'acceleration',
+    choose_formula: 'a = (vf - vi) / t',
+    identify_initial_velocity: '0'
+  });
+
+  const finalVelocity = answerFormulaTutorStep(tutor, '70');
+  assertAccepted(finalVelocity, 'Tutor should accept the original 70 km/hr final velocity');
+  assert.match(finalVelocity.response, /Correct\. The final velocity is 70 km\/hr/i);
+  assert.match(finalVelocity.response, /Because time is in seconds and acceleration is in m\/s², we convert km\/hr to m\/s/i);
+  assert.match(finalVelocity.response, /Convert 70 km\/hr to m\/s: 70 × 1000 ÷ 3600 = \?/i);
+
+  tutor = finalVelocity.currentTutorProblem;
+  assert.equal(currentStep(tutor).id, 'convert_final_velocity');
+  const conversion = answerFormulaTutorStep(tutor, '19.4444');
+  assertAccepted(conversion, 'Tutor should accept the converted final velocity');
+  assert.match(conversion.response, /70 km\/hr × 1000 ÷ 3600 = 19\.4444 m\/s/i);
+
+  tutor = conversion.currentTutorProblem;
+  assert.equal(currentStep(tutor).id, 'identify_time');
+  const time = answerFormulaTutorStep(tutor, '7');
+  assertAccepted(time, 'Tutor should advance from the time step');
+  assert.match(time.response, /a = \(19\.4444 - 0\) \/ 7/i);
+
+  const result = answerFormulaTutorStep(time.currentTutorProblem, '2.78');
+  assertAccepted(result, 'Tutor should finish with the SI acceleration answer');
+  assert.match(result.response, /acceleration = about 2\.78 m\/s²/i);
 }
 
 function testVelocityOutputIncludesRequestedUnits() {

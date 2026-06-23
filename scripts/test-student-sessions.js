@@ -483,10 +483,22 @@ async function testExplicitFromRestAccelerationAcceptsOriginalVelocity() {
   assert.equal(finalVelocity.statusCode, 200);
   assert.equal(finalVelocity.body.routeType, 'formula_tutor');
   assert.match(finalVelocity.body.response, /Correct\. The final velocity is 70 km\/hr/i);
-  assert.match(finalVelocity.body.response, /What number should go in for time/i);
+  assert.match(finalVelocity.body.response, /Because time is in seconds and acceleration is in m\/s², we convert km\/hr to m\/s/i);
+  assert.match(finalVelocity.body.response, /Convert 70 km\/hr to m\/s: 70 × 1000 ÷ 3600 = \?/i);
   assert.doesNotMatch(finalVelocity.body.response, /Not quite yet/i);
 
-  await harness.request('POST', '/api/student/message', { sessionId: create.body.sessionId, studentHubId, message: '7' });
+  const conversion = await harness.request('POST', '/api/student/message', {
+    sessionId: create.body.sessionId,
+    studentHubId,
+    message: '19.4444'
+  });
+  assert.equal(conversion.statusCode, 200);
+  assert.match(conversion.body.response, /70 km\/hr × 1000 ÷ 3600 = 19\.4444 m\/s/i);
+  assert.match(conversion.body.response, /What number should go in for time/i);
+
+  const substitution = await harness.request('POST', '/api/student/message', { sessionId: create.body.sessionId, studentHubId, message: '7' });
+  assert.match(substitution.body.response, /a = \(19\.4444 - 0\) \/ 7/i);
+
   const completed = await harness.request('POST', '/api/student/message', {
     sessionId: create.body.sessionId,
     studentHubId,
