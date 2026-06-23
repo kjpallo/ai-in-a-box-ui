@@ -402,6 +402,15 @@ async function testGuidedFormulaTutorStartup() {
       steps: ['acceleration', '1', '4 m/s', '22 m/s', '3 s', '6']
     },
     {
+      name: 'from-rest-kmhr-acceleration',
+      question: 'calculate acceleration from rest to 70 km/hr in 7 seconds',
+      formulaId: 'acceleration_velocity_time',
+      solveFor: 'acceleration',
+      finalAnswer: /acceleration = about 2\.78 m\/s²/i,
+      directAnswer: /a = about 2\.78 m\/s²/i,
+      steps: ['1', '1', '0', '70', '7', '2.78']
+    },
+    {
       name: 'skateboarder-final-speed',
       question: 'A skateboarder has an acceleration of 1.5 m/s2. Starting from rest, if he accelerates for 2 s, what speed will he reach?',
       formulaId: 'acceleration_velocity_time',

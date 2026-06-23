@@ -230,16 +230,6 @@ async function testPhase6FormulaTutorCoverage() {
       directAnswer: /a = 4 m\/s²/i
     },
     {
-      name: 'acceleration-explicit-target-one-speed-time',
-      question: 'calculate acceleration from 70 km/hr in 7 seconds',
-      formulaId: 'acceleration_velocity_time',
-      solveFor: 'acceleration',
-      formula: 'a = (vf - vi) / t',
-      directAnswer: /a = about 2\.78 m\/s²/i,
-      knownValues: ['0 m/s', '19.4444 m/s', '7 s'],
-      excludes: [/distance = speed × time/i, /distance = 0\.1361 km/i]
-    },
-    {
       name: 'final-velocity',
       question: 'A car starts from rest and accelerates at 3 m/s² for 8 seconds. What is its final velocity?',
       formulaId: 'acceleration_velocity_time',
@@ -427,10 +417,84 @@ async function testPhase6FormulaTutorCoverage() {
     }
   }
 
+  await testAmbiguousOneSpeedAccelerationClarifies();
+  await testExplicitFromRestAccelerationAcceptsOriginalVelocity();
+
   const { questionAnswer } = createRouteHarness();
   const gravity = await questionAnswer.answerStudentMessage('What is the acceleration due to gravity near Earth?');
   assert.match(gravity.response, /9\.8 m\/s²/i);
   assert.ok(!gravity.questionRoute.formulaWork, 'gravity constant should remain a direct fact answer');
+}
+
+async function testAmbiguousOneSpeedAccelerationClarifies() {
+  const harness = createRouteHarness({ studentGuidedFormulaTutoringEnabled: true });
+  const create = await harness.request('POST', '/api/profile/create-student-session');
+  assert.equal(create.statusCode, 201);
+
+  const response = await harness.request('POST', '/api/student/message', {
+    sessionId: create.body.sessionId,
+    studentHubId: 'ambiguous-one-speed-acceleration',
+    message: 'calculate acceleration from 70 km/hr in 7 seconds'
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.notEqual(response.body.routeType, 'formula_tutor');
+  assert.match(response.body.response, /need starting velocity and ending velocity/i);
+  assert.match(response.body.response, /start from rest and reach 70 km\/hr in 7 seconds/i);
+  assert.doesNotMatch(response.body.response, /distance = speed × time/i);
+  assert.doesNotMatch(response.body.response, /distance = 0\.1361 km/i);
+  assert.equal(
+    harness.studentSessions[create.body.sessionId].anonymousHubs['ambiguous-one-speed-acceleration'].currentTutorProblem,
+    null,
+    'ambiguous one-speed acceleration should not store formula tutor state'
+  );
+}
+
+async function testExplicitFromRestAccelerationAcceptsOriginalVelocity() {
+  const harness = createRouteHarness({ studentGuidedFormulaTutoringEnabled: true });
+  const create = await harness.request('POST', '/api/profile/create-student-session');
+  assert.equal(create.statusCode, 201);
+  const studentHubId = 'explicit-from-rest-acceleration';
+
+  const start = await harness.request('POST', '/api/student/message', {
+    sessionId: create.body.sessionId,
+    studentHubId,
+    message: 'calculate acceleration from rest to 70 km/hr in 7 seconds'
+  });
+
+  assert.equal(start.statusCode, 200);
+  assert.equal(start.body.routeType, 'formula_tutor');
+  assert.equal(start.body.tutor.formulaId, 'acceleration_velocity_time');
+  assert.equal(start.body.tutor.solveFor, 'acceleration');
+  assert.deepEqual(
+    start.body.tutor.knownValues.map((value) => value.display),
+    ['0 m/s', '70 km/hr = 19.4444 m/s', '7 s']
+  );
+
+  await harness.request('POST', '/api/student/message', { sessionId: create.body.sessionId, studentHubId, message: '1' });
+  await harness.request('POST', '/api/student/message', { sessionId: create.body.sessionId, studentHubId, message: '1' });
+  await harness.request('POST', '/api/student/message', { sessionId: create.body.sessionId, studentHubId, message: '0' });
+
+  const finalVelocity = await harness.request('POST', '/api/student/message', {
+    sessionId: create.body.sessionId,
+    studentHubId,
+    message: '70'
+  });
+  assert.equal(finalVelocity.statusCode, 200);
+  assert.equal(finalVelocity.body.routeType, 'formula_tutor');
+  assert.match(finalVelocity.body.response, /Correct\. The final velocity is 70 km\/hr/i);
+  assert.match(finalVelocity.body.response, /What number should go in for time/i);
+  assert.doesNotMatch(finalVelocity.body.response, /Not quite yet/i);
+
+  await harness.request('POST', '/api/student/message', { sessionId: create.body.sessionId, studentHubId, message: '7' });
+  const completed = await harness.request('POST', '/api/student/message', {
+    sessionId: create.body.sessionId,
+    studentHubId,
+    message: '2.78'
+  });
+  assert.equal(completed.statusCode, 200);
+  assert.equal(completed.body.tutor.completed, true);
+  assert.match(completed.body.response, /acceleration = about 2\.78 m\/s²/i);
 }
 
 async function testExpandedFormulaTutorFlows() {

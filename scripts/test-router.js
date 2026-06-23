@@ -978,8 +978,26 @@ const tests = [
     aiAllowed: false
   },
   {
-    name: 'explicit acceleration target beats speed time distance fallback',
+    name: 'ambiguous one-speed acceleration asks for clarification',
     question: 'calculate acceleration from 70 km/hr in 7 seconds',
+    type: 'science_formula',
+    includes: ['To calculate acceleration, I need starting velocity and ending velocity.', 'Did it start from rest and reach 70 km/hr in 7 seconds, or start at 70 km/hr and change to another speed?'],
+    excludes: ['Use the acceleration formula: a = (vf - vi) / t.', 'Use the motion formula: distance = speed × time.', 'distance = 0.1361 km'],
+    noFormulaWork: true,
+    aiAllowed: false
+  },
+  {
+    name: 'ambiguous one-speed acceleration with leading typo asks for clarification',
+    question: 'alculate acceleration from 70 km/hr in 7 seconds',
+    type: 'science_formula',
+    includes: ['To calculate acceleration, I need starting velocity and ending velocity.', 'Did it start from rest and reach 70 km/hr in 7 seconds'],
+    excludes: ['Use the acceleration formula: a = (vf - vi) / t.', 'Use the motion formula: distance = speed × time.', 'distance = 0.1361 km'],
+    noFormulaWork: true,
+    aiAllowed: false
+  },
+  {
+    name: 'explicit from-rest acceleration uses velocity time formula',
+    question: 'calculate acceleration from rest to 70 km/hr in 7 seconds',
     type: 'science_formula',
     includes: ['Use the acceleration formula: a = (vf - vi) / t.', 'a = (19.4444 m/s - 0 m/s) / 7 s', 'a = about 2.78 m/s²'],
     excludes: ['Use the motion formula: distance = speed × time.', 'distance = 0.1361 km'],
@@ -992,20 +1010,6 @@ const tests = [
         'final velocity': { value: 19.444444444444443, unit: 'm/s', display: '19.4444 m/s' },
         time: { value: 7, unit: 's', display: '7 s' }
       },
-      finalAnswerDisplay: 'about 2.78 m/s²',
-      minStepCount: 4
-    },
-    aiAllowed: false
-  },
-  {
-    name: 'explicit acceleration target with leading typo beats speed time distance fallback',
-    question: 'alculate acceleration from 70 km/hr in 7 seconds',
-    type: 'science_formula',
-    includes: ['Use the acceleration formula: a = (vf - vi) / t.', 'a = about 2.78 m/s²'],
-    excludes: ['Use the motion formula: distance = speed × time.', 'distance = 0.1361 km'],
-    formulaWork: {
-      formulaId: 'acceleration_velocity_time',
-      solveFor: 'acceleration',
       finalAnswerDisplay: 'about 2.78 m/s²',
       minStepCount: 4
     },

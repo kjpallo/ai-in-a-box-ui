@@ -25,6 +25,7 @@ const tests = [
   testMaliSpinDistanceDisplacement,
   testKaiPoolDistanceDisplacement,
   testVelocityInMilesPerHourAndMetersPerSecond,
+  testAmbiguousOneSpeedAccelerationClarifies,
   testAccelerationWithSecondsConvertedToHours,
   testFinalSpeedFormulaTutor,
   testMomentumMassFormulaTutor,
@@ -416,6 +417,27 @@ async function testVelocityInMilesPerHourAndMetersPerSecond() {
     assert.match(final.body.response, /35\.76 m\/s south/i);
     assert.doesNotMatch(final.body.response, /write|type.*final sentence/i);
   }
+}
+
+async function testAmbiguousOneSpeedAccelerationClarifies() {
+  const route = routeWithTeacherKnowledge('calculate acceleration from 70 km/hr in 7 seconds');
+  assert.equal(route.type, 'science_formula');
+  assert.ok(!route.formulaWork, 'ambiguous one-speed acceleration should not create formula work');
+  assert.match(route.directAnswer, /need starting velocity and ending velocity/i);
+  assert.match(route.directAnswer, /start from rest and reach 70 km\/hr in 7 seconds/i);
+  assert.doesNotMatch(route.directAnswer, /distance = speed × time/i);
+
+  const harness = await createHarnessSession({ studentGuidedFormulaTutoringEnabled: true });
+  const student = await sendHarnessMessage(harness, 'ambiguous-one-speed-acceleration', 'calculate acceleration from 70 km/hr in 7 seconds');
+  assert.notEqual(student.body.routeType, 'formula_tutor', 'ambiguous one-speed acceleration should not start Formula Tutor');
+  assert.notEqual(student.body.routeType, 'motion_force_knowledge_tutor', 'ambiguous one-speed acceleration should not start General Tutor');
+  assert.match(student.body.response, /need starting velocity and ending velocity/i);
+  assert.doesNotMatch(student.body.response, /distance = speed × time/i);
+  assert.equal(
+    harness.studentSessions[harness.sessionId].anonymousHubs['ambiguous-one-speed-acceleration'].currentTutorProblem,
+    null,
+    'ambiguous one-speed acceleration should not leave tutor state'
+  );
 }
 
 async function testAccelerationWithSecondsConvertedToHours() {
