@@ -230,6 +230,16 @@ async function testPhase6FormulaTutorCoverage() {
       directAnswer: /a = 4 m\/s²/i
     },
     {
+      name: 'acceleration-explicit-target-one-speed-time',
+      question: 'calculate acceleration from 70 km/hr in 7 seconds',
+      formulaId: 'acceleration_velocity_time',
+      solveFor: 'acceleration',
+      formula: 'a = (vf - vi) / t',
+      directAnswer: /a = about 2\.78 m\/s²/i,
+      knownValues: ['0 m/s', '19.4444 m/s', '7 s'],
+      excludes: [/distance = speed × time/i, /distance = 0\.1361 km/i]
+    },
+    {
       name: 'final-velocity',
       question: 'A car starts from rest and accelerates at 3 m/s² for 8 seconds. What is its final velocity?',
       formulaId: 'acceleration_velocity_time',

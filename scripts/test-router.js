@@ -978,6 +978,55 @@ const tests = [
     aiAllowed: false
   },
   {
+    name: 'explicit acceleration target beats speed time distance fallback',
+    question: 'calculate acceleration from 70 km/hr in 7 seconds',
+    type: 'science_formula',
+    includes: ['Use the acceleration formula: a = (vf - vi) / t.', 'a = (19.4444 m/s - 0 m/s) / 7 s', 'a = about 2.78 m/s²'],
+    excludes: ['Use the motion formula: distance = speed × time.', 'distance = 0.1361 km'],
+    formulaWork: {
+      formulaId: 'acceleration_velocity_time',
+      solveFor: 'acceleration',
+      formula: 'a = (vf - vi) / t',
+      variables: {
+        'initial velocity': { value: 0, unit: 'm/s', display: '0 m/s' },
+        'final velocity': { value: 19.444444444444443, unit: 'm/s', display: '19.4444 m/s' },
+        time: { value: 7, unit: 's', display: '7 s' }
+      },
+      finalAnswerDisplay: 'about 2.78 m/s²',
+      minStepCount: 4
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'explicit acceleration target with leading typo beats speed time distance fallback',
+    question: 'alculate acceleration from 70 km/hr in 7 seconds',
+    type: 'science_formula',
+    includes: ['Use the acceleration formula: a = (vf - vi) / t.', 'a = about 2.78 m/s²'],
+    excludes: ['Use the motion formula: distance = speed × time.', 'distance = 0.1361 km'],
+    formulaWork: {
+      formulaId: 'acceleration_velocity_time',
+      solveFor: 'acceleration',
+      finalAnswerDisplay: 'about 2.78 m/s²',
+      minStepCount: 4
+    },
+    aiAllowed: false
+  },
+  {
+    name: 'explicit distance target still uses speed time distance formula',
+    question: 'calculate distance if speed is 70 km/hr and time is 7 seconds',
+    type: 'science_formula',
+    includes: ['Use the motion formula: distance = speed × time.', 'distance = 0.1361 km'],
+    excludes: ['Use the acceleration formula: a = (vf - vi) / t.', 'about 2.78 m/s²'],
+    formulaWork: {
+      formulaId: 'speed_distance_time',
+      solveFor: 'distance',
+      formula: 'distance = speed × time',
+      finalAnswerDisplay: '0.1361 km',
+      minStepCount: 4
+    },
+    aiAllowed: false
+  },
+  {
     name: 'acceleration final speed from rest uses vf formula',
     question: 'A skateboarder has an acceleration of 1.5 m/s2. Starting from rest, if he accelerates for 2 s, what speed will he reach?',
     type: 'science_formula',

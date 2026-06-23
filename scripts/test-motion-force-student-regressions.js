@@ -209,6 +209,13 @@ async function testKnowledgePromptsAnswerDirectly() {
       name: 'electric-current-resistance-direct',
       prompt: 'what is the thing that slow electricity or curent',
       includes: [/resistance|electrical resistance/i, /current|slows|resists/i]
+    },
+    {
+      name: 'acceleration-definition-direct',
+      prompt: 'what is acceleration',
+      routeTypes: ['definition', 'science_concept'],
+      includes: [/acceleration/i, /velocity changes|velocity is changing|speeds up|slowing down/i],
+      excludes: [/What variable are we solving for\?/i, /Use the acceleration formula/i]
     }
   ];
 
