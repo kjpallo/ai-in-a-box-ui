@@ -192,6 +192,7 @@ async function main() {
 
   await testFormulaTutorBypassesQuestionEnergy();
   await testInteractiveFlashcardSessions();
+  await testCompletedFormulaTutorDoesNotInterceptNextMessages();
   await testGuidedFormulaTutorDisabled();
   await testGuidedMotionForceKnowledgeTutor();
   await testAccelerationFormulaTutorEnabledAndDisabled();
@@ -1958,6 +1959,133 @@ async function testInteractiveFlashcardSessions() {
   assert.equal(flashcardsDuringFormula.statusCode, 200);
   assert.equal(flashcardsDuringFormula.body.routeType, 'formula_tutor');
   assert.equal(studentSessions[classSessionId].anonymousHubs['flashcards-formula-priority'].currentFlashcardSession, null);
+}
+
+async function testCompletedFormulaTutorDoesNotInterceptNextMessages() {
+  const harness = createRouteHarness({ studentGuidedFormulaTutoringEnabled: true });
+  const { request, studentSessions } = harness;
+  const create = await request('POST', '/api/profile/create-student-session');
+  assert.equal(create.statusCode, 201);
+  const classSessionId = create.body.sessionId;
+
+  const flashcardHubId = 'completed-speed-then-flashcards';
+  const staleFlashcardTutor = await completeSpeedFormulaTutor(harness, classSessionId, flashcardHubId);
+  studentSessions[classSessionId].anonymousHubs[flashcardHubId].currentTutorProblem = staleFlashcardTutor;
+  const flashcards = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: flashcardHubId,
+    message: 'start flashcards for types of friction'
+  });
+  assert.equal(flashcards.statusCode, 200);
+  assert.equal(flashcards.body.routeType, 'flashcard_session');
+  assert.equal(flashcards.body.tutor, null);
+  assert.equal(flashcards.body.flashcardSession.title, 'Types of friction');
+  assert.match(flashcards.body.response, /^Flashcards: Types of friction/im);
+  assert.equal(studentSessions[classSessionId].anonymousHubs[flashcardHubId].currentTutorProblem, null);
+
+  const quizHubId = 'completed-speed-then-quiz-me';
+  const staleQuizTutor = await completeSpeedFormulaTutor(harness, classSessionId, quizHubId);
+  studentSessions[classSessionId].anonymousHubs[quizHubId].currentTutorProblem = staleQuizTutor;
+  const quizMe = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: quizHubId,
+    message: 'quiz me'
+  });
+  assert.equal(quizMe.statusCode, 200);
+  assert.notEqual(quizMe.body.routeType, 'formula_tutor');
+  assert.notEqual(quizMe.body.routeType, 'flashcard_session');
+  assert.equal(quizMe.body.flashcardSession, undefined);
+  assert.equal(studentSessions[classSessionId].anonymousHubs[quizHubId].currentTutorProblem, null);
+  assert.equal(studentSessions[classSessionId].anonymousHubs[quizHubId].currentFlashcardSession, null);
+
+  const practiceHubId = 'completed-speed-then-practice-this';
+  const stalePracticeTutor = await completeSpeedFormulaTutor(harness, classSessionId, practiceHubId);
+  studentSessions[classSessionId].anonymousHubs[practiceHubId].currentTutorProblem = stalePracticeTutor;
+  const practiceThis = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: practiceHubId,
+    message: 'practice this'
+  });
+  assert.equal(practiceThis.statusCode, 200);
+  assert.notEqual(practiceThis.body.routeType, 'formula_tutor');
+  assert.notEqual(practiceThis.body.routeType, 'flashcard_session');
+  assert.equal(studentSessions[classSessionId].anonymousHubs[practiceHubId].currentTutorProblem, null);
+  assert.equal(studentSessions[classSessionId].anonymousHubs[practiceHubId].currentFlashcardSession, null);
+
+  const conceptHubId = 'completed-speed-then-concept';
+  const staleConceptTutor = await completeSpeedFormulaTutor(harness, classSessionId, conceptHubId);
+  studentSessions[classSessionId].anonymousHubs[conceptHubId].currentTutorProblem = staleConceptTutor;
+  const concept = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: conceptHubId,
+    message: 'what is friction'
+  });
+  assert.equal(concept.statusCode, 200);
+  assert.notEqual(concept.body.routeType, 'formula_tutor');
+  assert.match(concept.body.response, /force that resists motion/i);
+  assert.equal(studentSessions[classSessionId].anonymousHubs[conceptHubId].currentTutorProblem, null);
+
+  const formulaHubId = 'completed-speed-then-new-formula';
+  const staleFormulaTutor = await completeSpeedFormulaTutor(harness, classSessionId, formulaHubId);
+  studentSessions[classSessionId].anonymousHubs[formulaHubId].currentTutorProblem = staleFormulaTutor;
+  const newFormulaQuestion = 'calculate force if mass is 2 kg and acceleration is 4 m/s2';
+  const newFormula = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId: formulaHubId,
+    message: newFormulaQuestion
+  });
+  assert.equal(newFormula.statusCode, 200);
+  assert.equal(newFormula.body.routeType, 'formula_tutor');
+  assert.equal(newFormula.body.tutor.active, true);
+  assert.equal(newFormula.body.tutor.completed, false);
+  assert.equal(newFormula.body.tutor.formulaId, 'force_mass_acceleration');
+  assert.equal(newFormula.body.tutor.originalQuestion, newFormulaQuestion);
+  assert.match(newFormula.body.response, /What variable are we solving for\?/i);
+  assert.doesNotMatch(newFormula.body.response, /starting a new problem/i);
+  assert.doesNotMatch(newFormula.body.response, /distance = 100 m/i);
+}
+
+async function completeSpeedFormulaTutor(harness, classSessionId, studentHubId) {
+  const { request, studentSessions } = harness;
+  const question = 'calculate speed if distance is 100 m and time is 20 s';
+
+  const start = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId,
+    message: question
+  });
+  assert.equal(start.statusCode, 200);
+  assert.equal(start.body.routeType, 'formula_tutor');
+  assert.equal(start.body.tutor.formulaId, 'speed_distance_time');
+
+  for (const message of ['1', '1', '100', '20']) {
+    const step = await request('POST', '/api/student/message', {
+      sessionId: classSessionId,
+      studentHubId,
+      message
+    });
+    assert.equal(step.statusCode, 200);
+    assert.equal(step.body.routeType, 'formula_tutor');
+    assert.equal(step.body.tutor.active, true);
+  }
+
+  const hub = studentSessions[classSessionId].anonymousHubs[studentHubId];
+  const staleCompletedTutor = JSON.parse(JSON.stringify(hub.currentTutorProblem));
+  staleCompletedTutor.currentStepIndex = staleCompletedTutor.steps.length;
+
+  const completed = await request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId,
+    message: '5'
+  });
+  assert.equal(completed.statusCode, 200);
+  assert.equal(completed.body.routeType, 'formula_tutor');
+  assert.equal(completed.body.tutor.active, false);
+  assert.equal(completed.body.tutor.completed, true);
+  assert.match(completed.body.response, /speed = 5 m\/s/i);
+  assert.equal(studentSessions[classSessionId].anonymousHubs[studentHubId].currentTutorProblem, null);
+
+  return staleCompletedTutor;
 }
 
 async function testFormulaTutorBypassesQuestionEnergy() {

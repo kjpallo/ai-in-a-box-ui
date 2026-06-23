@@ -119,6 +119,7 @@ function registerStudentRoutes(app, {
 
       const contextMessages = hub.messages;
       const lastAnsweredContext = findLastAnsweredContext(contextMessages);
+      closeInactiveFormulaTutorProblem(hub);
 
       const tutorCelebrationFeedback = answerTutorCelebrationFeedback(message, contextMessages);
       if (!hub.currentTutorProblem && tutorCelebrationFeedback) {
@@ -448,7 +449,9 @@ function registerStudentRoutes(app, {
         }
 
         const tutorResult = answerFormulaTutorStep(previousTutorProblem, message);
-        hub.currentTutorProblem = tutorResult.currentTutorProblem;
+        hub.currentTutorProblem = tutorResult.completed || tutorResult.stopped
+          ? null
+          : tutorResult.currentTutorProblem;
         const tutorProblemForResponse = hub.currentTutorProblem || tutorResult.completedTutorProblem || previousTutorProblem;
         const tutorMetadata = buildFormulaTutorMetadata(
           tutorProblemForResponse,
@@ -703,6 +706,31 @@ function normalizeStudentControls(value = {}) {
       : true,
     studentQuestionsPerMinute: normalizeQuestionLimit(controls.studentQuestionsPerMinute)
   };
+}
+
+function closeInactiveFormulaTutorProblem(hub) {
+  if (!hub || !isClosedFormulaTutorProblem(hub.currentTutorProblem)) return false;
+  hub.currentTutorProblem = null;
+  return true;
+}
+
+function isClosedFormulaTutorProblem(problem) {
+  if (!problem || typeof problem !== 'object') return false;
+  if (isMotionForceKnowledgeTutorProblem(problem)) return false;
+
+  const formulaLike = Boolean(
+    problem.tutorCategory === 'formula' ||
+    problem.formulaId ||
+    problem.formula ||
+    problem.finalAnswer ||
+    Array.isArray(problem.steps)
+  );
+  if (!formulaLike) return false;
+  if (problem.completed === true || problem.stopped === true) return true;
+
+  const stepCount = Array.isArray(problem.steps) ? problem.steps.length : 0;
+  const currentStepIndex = Number(problem.currentStepIndex);
+  return stepCount > 0 && Number.isFinite(currentStepIndex) && currentStepIndex >= stepCount;
 }
 
 function logFormulaTutorDecisionDebug(context, decision) {
