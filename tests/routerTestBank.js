@@ -5183,6 +5183,83 @@ routerTestBank.push(
     type: 'definition',
     includes: ['Mass is the amount of matter in an object', 'Formula: mass can be found from m = F/a'],
     aiAllowed: false
+  },
+  {
+    category: 'force_motion_concepts',
+    name: 'air resistance factors beats generic definition',
+    question: 'Which of the following factors does not affect air resistance?',
+    type: 'science_concept',
+    includes: ['Air resistance is affected by speed', 'shape/frontal area/surface area', 'air or fluid conditions'],
+    excludes: ['electrons', 'wire diameter'],
+    aiAllowed: false
+  },
+  {
+    category: 'force_motion_concepts',
+    name: 'free fall constant is acceleration',
+    question: 'An object that is falling freely has a constant what?',
+    type: 'cloze_completion',
+    includes: ['The answer is acceleration', 'constant acceleration due to gravity'],
+    excludes: ['Velocity is speed'],
+    aiAllowed: false
+  },
+  {
+    category: 'force_motion_concepts',
+    name: 'constant velocity unless unbalanced force is first law',
+    question: 'An object will move at a constant velocity unless an unbalanced force acts upon it.',
+    type: 'law_identification',
+    includes: ['Newton’s First Law', 'law of inertia'],
+    excludes: ['Velocity is speed'],
+    aiAllowed: false
+  },
+  {
+    category: 'force_motion_concepts',
+    name: 'classroom force needed clue is momentum',
+    question: "Related to the amount of force needed to change an object's motion.",
+    type: 'definition',
+    includes: ['answer is momentum', 'tendency to resist changes in motion'],
+    aiAllowed: false
+  },
+  {
+    category: 'force_motion_concepts',
+    name: 'bowling ball acceleration explains second law',
+    question: 'Why does it take more effort to make a bowling ball accelerate 25 m/s² than to make a tennis ball accelerate 25 m/s²? Make sure to include which law explains this.',
+    type: 'law_identification',
+    includes: ['Newton’s Second Law', 'more force', 'more mass'],
+    excludes: ['compound', 'chemistry', 'sodium chloride'],
+    aiAllowed: false
+  },
+  {
+    category: 'force_motion_concepts',
+    name: 'trampoline explains third law directly',
+    question: 'How does a trampoline work? Make sure to include which law explains this.',
+    type: 'law_identification',
+    includes: ['Newton’s Third Law', 'pushes down', 'pushes up'],
+    excludes: ['swimmer', 'water backward'],
+    aiAllowed: false
+  },
+  {
+    category: 'force_motion_concepts',
+    name: 'chair support force is normal force up',
+    question: 'A man weighing 800 N is standing on a chair. In order to support the man, what force is the chair exerting?',
+    type: 'science_concept',
+    includes: ['800 N upward normal force', 'support force'],
+    aiAllowed: false
+  },
+  {
+    category: 'force_motion_concepts',
+    name: 'friction factors and types bonus',
+    question: 'Explain the factors that affect the amount of friction and list the 3 types of friction.',
+    type: 'science_concept',
+    includes: ['roughness or type of surface', 'normal force', 'surface area', 'Static friction', 'Sliding friction', 'Rolling friction'],
+    aiAllowed: false
+  },
+  {
+    category: 'force_motion_concepts',
+    name: 'third law action reaction phrase',
+    question: 'Which law states, “To every action there is an equal but opposite reaction”?',
+    type: 'law_identification',
+    includes: ['Newton’s Third Law', 'equal and opposite reaction force'],
+    aiAllowed: false
   }
 );
 

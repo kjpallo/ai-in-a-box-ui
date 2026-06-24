@@ -207,6 +207,65 @@ async function testKnowledgePromptsAnswerDirectly() {
       includes: [/drag|air resistance/i, /resists motion|opposite (?:the )?(?:object'?s )?motion|acts opposite/i]
     },
     {
+      name: 'air-resistance-factors-direct',
+      prompt: 'Which of the following factors does not affect air resistance?',
+      routeTypes: ['science_concept'],
+      includes: [/speed/i, /shape|frontal area|surface area/i, /air or fluid conditions|density/i],
+      excludes: [/electrons|wire diameter/i]
+    },
+    {
+      name: 'free-fall-constant-acceleration-direct',
+      prompt: 'An object that is falling freely has a constant what?',
+      routeTypes: ['cloze_completion'],
+      includes: [/acceleration/i, /gravity|9\.8 m\/s²/i],
+      excludes: [/Velocity is speed/i]
+    },
+    {
+      name: 'newton-first-law-constant-velocity-direct',
+      prompt: 'An object will move at a constant velocity unless an unbalanced force acts upon it.',
+      routeTypes: ['law_identification'],
+      includes: [/Newton’s First Law|Newton's First Law/i, /law of inertia/i],
+      excludes: [/Velocity is speed/i]
+    },
+    {
+      name: 'momentum-classroom-key-direct',
+      prompt: "Related to the amount of force needed to change an object's motion.",
+      routeTypes: ['definition'],
+      includes: [/answer is momentum/i, /tendency to resist changes in motion.*inertia/i]
+    },
+    {
+      name: 'bowling-tennis-second-law-direct',
+      prompt: 'Why does it take more effort to make a bowling ball accelerate 25 m/s² than to make a tennis ball accelerate 25 m/s²? Make sure to include which law explains this.',
+      routeTypes: ['law_identification'],
+      includes: [/Newton’s Second Law|Newton's Second Law/i, /more mass/i, /more force/i],
+      excludes: [/compound|chemistry|sodium chloride/i]
+    },
+    {
+      name: 'trampoline-third-law-direct',
+      prompt: 'How does a trampoline work? Make sure to include which law explains this.',
+      routeTypes: ['law_identification'],
+      includes: [/Newton’s Third Law|Newton's Third Law/i, /pushes down/i, /pushes up/i],
+      excludes: [/swimmer|water backward/i]
+    },
+    {
+      name: 'chair-normal-force-direct',
+      prompt: 'A man weighing 800 N is standing on a chair. In order to support the man, what force is the chair exerting?',
+      routeTypes: ['science_concept'],
+      includes: [/800 N upward/i, /normal force|support force/i]
+    },
+    {
+      name: 'friction-factors-and-types-direct',
+      prompt: 'Explain the factors that affect the amount of friction and list the 3 types of friction.',
+      routeTypes: ['science_concept'],
+      includes: [/roughness or type of surface/i, /normal force|force pressing/i, /surface area/i, /Static friction/i, /Sliding friction/i, /Rolling friction/i]
+    },
+    {
+      name: 'newton-third-law-action-reaction-direct',
+      prompt: 'Which law states, “To every action there is an equal but opposite reaction”?',
+      routeTypes: ['law_identification'],
+      includes: [/Newton’s Third Law|Newton's Third Law/i]
+    },
+    {
       name: 'electric-current-resistance-direct',
       prompt: 'what is the thing that slow electricity or curent',
       includes: [/resistance|electrical resistance/i, /current|slows|resists/i]

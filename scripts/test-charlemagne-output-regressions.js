@@ -37,6 +37,7 @@ const tests = [
   testExplicitFromRestAccelerationTeachesVelocityConversion,
   testVelocityOutputIncludesRequestedUnits,
   testForceMotionFoundationalCuePrompts,
+  testRemainingForceMotionConceptPrompts,
   testInstantaneousSpeedTypoUsesLocalFact,
   testGraphMotionUsesLocalFact,
   testSlopeFragmentDoesNotRouteToNewtonsSecondLaw,
@@ -640,6 +641,74 @@ function testForceMotionFoundationalCuePrompts() {
   assert.equal(formula.formulaWork?.formulaId, 'net_force_newton_second_law');
   assert.match(formula.directAnswer, /a = 6 N \/ 0\.5 kg/i);
   assert.match(formula.directAnswer, /12 m\/s² right/i);
+}
+
+function testRemainingForceMotionConceptPrompts() {
+  const airResistance = routeWithTeacherKnowledge('Which of the following factors does not affect air resistance?');
+  assert.equal(airResistance.type, 'science_concept');
+  assert.match(airResistance.directAnswer, /speed/i);
+  assert.match(airResistance.directAnswer, /shape|frontal area|surface area/i);
+  assert.match(airResistance.directAnswer, /air or fluid conditions|density/i);
+  assert.doesNotMatch(airResistance.directAnswer, /^Air resistance is drag, a force that resists motion through air/i);
+
+  const freeFall = routeWithTeacherKnowledge('An object that is falling freely has a constant what?');
+  assert.notEqual(freeFall.type, 'no_match');
+  assert.match(freeFall.directAnswer, /acceleration/i);
+  assert.match(freeFall.directAnswer, /gravity|9\.8 m\/s²/i);
+  assert.doesNotMatch(freeFall.directAnswer, /^Velocity is speed/i);
+
+  const firstLaw = routeWithTeacherKnowledge('An object will move at a constant velocity unless an unbalanced force acts upon it.');
+  assert.equal(firstLaw.type, 'law_identification');
+  assert.match(firstLaw.directAnswer, /Newton’s First Law|Newton's First Law/i);
+  assert.match(firstLaw.directAnswer, /law of inertia/i);
+  assert.doesNotMatch(firstLaw.directAnswer, /^Velocity is speed/i);
+
+  const momentum = routeWithTeacherKnowledge("Related to the amount of force needed to change an object's motion.");
+  assert.equal(momentum.type, 'definition');
+  assert.match(momentum.directAnswer, /answer is momentum/i);
+  assert.match(momentum.directAnswer, /tendency to resist changes in motion.*inertia/i);
+
+  const inertia = routeWithTeacherKnowledge('Tendency of an object to resist changes in motion.');
+  assert.notEqual(inertia.type, 'no_match');
+  assert.match(inertia.directAnswer, /inertia/i);
+  assert.doesNotMatch(inertia.directAnswer, /answer is momentum/i);
+
+  const bowling = routeWithTeacherKnowledge('Why does it take more effort to make a bowling ball accelerate 25 m/s² than to make a tennis ball accelerate 25 m/s²? Make sure to include which law explains this.');
+  assert.equal(bowling.type, 'law_identification');
+  assert.match(bowling.directAnswer, /Newton’s Second Law|Newton's Second Law/i);
+  assert.match(bowling.directAnswer, /more mass/i);
+  assert.match(bowling.directAnswer, /more force/i);
+  assert.doesNotMatch(bowling.directAnswer, /compound|chemistry|sodium chloride|NaCl/i);
+
+  const trampoline = routeWithTeacherKnowledge('How does a trampoline work? Make sure to include which law explains this.');
+  assert.equal(trampoline.type, 'law_identification');
+  assert.match(trampoline.directAnswer, /Newton’s Third Law|Newton's Third Law/i);
+  assert.match(trampoline.directAnswer, /pushes down/i);
+  assert.match(trampoline.directAnswer, /pushes up/i);
+  assert.doesNotMatch(trampoline.directAnswer, /swimmer|water backward/i);
+
+  const chair = routeWithTeacherKnowledge('A man weighing 800 N is standing on a chair. In order to support the man, what force is the chair exerting?');
+  assert.equal(chair.type, 'science_concept');
+  assert.match(chair.directAnswer, /800 N upward/i);
+  assert.match(chair.directAnswer, /normal force|support force/i);
+
+  const friction = routeWithTeacherKnowledge('Explain the factors that affect the amount of friction and list the 3 types of friction.');
+  assert.equal(friction.type, 'science_concept');
+  assert.match(friction.directAnswer, /roughness or type of surface/i);
+  assert.match(friction.directAnswer, /force pressing the surfaces together|normal force/i);
+  assert.match(friction.directAnswer, /surface area/i);
+  assert.match(friction.directAnswer, /Static friction/i);
+  assert.match(friction.directAnswer, /Sliding friction/i);
+  assert.match(friction.directAnswer, /Rolling friction/i);
+
+  for (const prompt of [
+    'Which law states, “To every action there is an equal but opposite reaction”?',
+    'Which law states, “o every action there is an equal but opposite reaction”?'
+  ]) {
+    const thirdLaw = routeWithTeacherKnowledge(prompt);
+    assert.equal(thirdLaw.type, 'law_identification');
+    assert.match(thirdLaw.directAnswer, /Newton’s Third Law|Newton's Third Law/i);
+  }
 }
 
 function testInstantaneousSpeedTypoUsesLocalFact() {
