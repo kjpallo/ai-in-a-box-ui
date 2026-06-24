@@ -1176,6 +1176,8 @@ async function testPatch4NetForceOnlyDirectAnswerWithTutorOn() {
   assert.ok(!direct.body.tutor, 'net-force-only prompt should not start Formula Tutor with an open-ended first step');
   assert.match(direct.body.response, /16 N right and 16 N left cancel out/i);
   assert.match(direct.body.response, /net force is 4 N downward/i);
+  assert.doesNotMatch(direct.body.response, /← 4 N downward/i);
+  assert.match(direct.body.response, /\[box\] ↓ 4 N downward/i);
   assert.equal(
     harness.studentSessions[harness.sessionId].anonymousHubs['patch-4-net-force-direct'].currentTutorProblem,
     null,

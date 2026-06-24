@@ -718,6 +718,8 @@ function testPatch3ComposedForceMotionFormulaPrompts() {
   assert.equal(multiAxisNetForce.formulaWork?.formulaId, 'net_force');
   assert.match(multiAxisNetForce.directAnswer, /16 N right and 16 N left cancel out/i);
   assert.match(multiAxisNetForce.directAnswer, /net force is 4 N downward/i);
+  assert.doesNotMatch(multiAxisNetForce.directAnswer, /← 4 N downward/i);
+  assert.match(multiAxisNetForce.diagramText, /\[box\] ↓ 4 N downward/i);
   assert.doesNotMatch(multiAxisNetForce.directAnswer, /^Newton.?s Second Law/i);
 
   const multiAxisAcceleration = routeWithTeacherKnowledge('An object has 16 N of force being applied to the right, 16 N of force being applied to the left, and 4 N of force being applied downward. What is the acceleration of the object if it’s mass is 0.35 kg?');
@@ -733,6 +735,16 @@ function testPatch3ComposedForceMotionFormulaPrompts() {
     assert.equal(route.type, 'science_formula');
     assert.equal(route.formulaWork?.formulaId, 'net_force_newton_second_law');
     assert.ok(route.formulaWork.steps.length > 0);
+    assert.match(
+      route.directAnswer,
+      /Forces in the same direction are added\. Forces in opposite directions are subtracted or cancel out\./i
+    );
+    assert.match(route.directAnswer, /2 N right \+ 8 N right = 10 N right/i);
+    assert.match(route.directAnswer, /10 N right - 4 N left = 6 N right/i);
+    assert.match(
+      route.formulaWork.steps.find((step) => step.id === 'calculate_net_force')?.prompt || '',
+      /Forces in the same direction are added\. Forces in opposite directions are subtracted or cancel out\./i
+    );
     assert.match(route.directAnswer, /a = 6 N \/ 0\.5 kg/i);
     assert.match(route.directAnswer, /12 m\/s² right/i);
   }

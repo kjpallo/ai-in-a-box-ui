@@ -552,7 +552,7 @@ async function testPatch3FormulaDirectAnswers() {
       name: 'multi-axis-net-force',
       question: 'An object has 16 N of force being applied to the right, 16 N of force being applied to the left, and 4 N of force being applied downward. What is the net force on the object?',
       includes: [/16 N right and 16 N left cancel out/i, /net force is 4 N downward/i],
-      excludes: [/^Newton.?s Second Law/i]
+      excludes: [/^Newton.?s Second Law/i, /← 4 N downward/i]
     },
     {
       name: 'multi-axis-acceleration',
@@ -562,7 +562,13 @@ async function testPatch3FormulaDirectAnswers() {
     {
       name: 'net-force-acceleration-leading-dot',
       question: 'A 2 N and an 8 N force pull on an object to the right and a 4 N force pulls on the object to the left. If the object has a mass of .5 kg what is its acceleration?',
-      includes: [/10 N right - 4 N left = 6 N right/i, /a = 6 N \/ 0\.5 kg/i, /12 m\/s² right/i]
+      includes: [
+        /Forces in the same direction are added\. Forces in opposite directions are subtracted or cancel out\./i,
+        /2 N right \+ 8 N right = 10 N right/i,
+        /10 N right - 4 N left = 6 N right/i,
+        /a = 6 N \/ 0\.5 kg/i,
+        /12 m\/s² right/i
+      ]
     },
     {
       name: 'boulder-weight-force',
@@ -610,6 +616,11 @@ async function testPatch3FormulaDirectAnswers() {
   for (const mass of ['.5', '0.5', '0.50']) {
     const route = routeWithTeacherKnowledge(`A 2 N and an 8 N force pull on an object to the right and a 4 N force pulls on the object to the left. If the object has a mass of ${mass} kg what is its acceleration?`);
     assert.match(route.directAnswer, /12 m\/s² right/i, `${mass} kg should produce 12 m/s² right`);
+    assert.match(
+      route.formulaWork?.steps?.find((step) => step.id === 'calculate_net_force')?.prompt || '',
+      /Forces in the same direction are added\. Forces in opposite directions are subtracted or cancel out\./i,
+      `${mass} kg tutor step should explain same-direction and opposite-direction forces`
+    );
   }
 }
 
