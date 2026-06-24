@@ -498,6 +498,66 @@ async function testGuidedFormulaTutorStartup() {
       steps: ['1', '1', '42 kg', '9.8 m/s²', '411.6']
     },
     {
+      name: 'patch-3-net-force-acceleration-leading-dot',
+      question: 'A 2 N and an 8 N force pull on an object to the right and a 4 N force pulls on the object to the left. If the object has a mass of .5 kg what is its acceleration?',
+      formulaId: 'net_force_newton_second_law',
+      solveFor: 'acceleration',
+      formula: 'a = Fnet / m',
+      finalAnswer: /acceleration = 12 m\/s² right/i,
+      directAnswer: /The acceleration is 12 m\/s² right/i,
+      steps: ['2', '6', '1', '.5 kg', '12']
+    },
+    {
+      name: 'patch-3-boulder-weight-force',
+      question: 'If a 53 kg boulder falls off a cliff, what is the force with which it will hit the ground?',
+      formulaId: 'weight_mass_gravity',
+      solveFor: 'weight',
+      formula: 'Fg = m × g',
+      finalAnswer: /weight = 519\.4 N/i,
+      directAnswer: /Fg = 519\.4 N downward/i,
+      steps: ['1', '1', '53 kg', '9.8 m/s²', '519.4']
+    },
+    {
+      name: 'patch-3-runner-velocity-change-force',
+      question: 'A runner has a speed of 25 m/s. They see the finish line and speed up to 30 m/s. This happens in 5 seconds. If the runner has a mass of 75 kg, with what force did the runner cross the finish line? Show all work to receive full credit.',
+      formulaId: 'force_from_velocity_change',
+      solveFor: 'force',
+      formula: 'a = (vf - vi) / t, then F = m × a',
+      finalAnswer: /force = 75 N/i,
+      directAnswer: /F = 75 N/i,
+      steps: ['1', '1', '25 m/s', '30 m/s', '5 s', '1', '1', '75 kg', '75']
+    },
+    {
+      name: 'patch-3-truck-mass-momentum-comma',
+      question: 'What is the mass of a truck that has a momentum of 10,000 kg*m/s and a velocity of 4 m/s North?',
+      formulaId: 'momentum_mass_velocity',
+      solveFor: 'mass',
+      formula: 'm = p / v',
+      finalAnswer: /mass = 2500 kg/i,
+      directAnswer: /m = 2500 kg/i,
+      steps: ['2', '1', '10000', '4 m/s', '2500']
+    },
+    {
+      name: 'patch-3-collision-momentum-transfer',
+      question: 'In a collision, a 25 kg ball moving at 3 m/s transfers all of its momentum to a 5 kg ball. What is the velocity of the 5 kg ball after the collision?',
+      formulaId: 'momentum_transfer_velocity',
+      solveFor: 'velocity',
+      formula: 'p = m × v, then v = p / m',
+      finalAnswer: /velocity = 15 m\/s forward/i,
+      directAnswer: /v = 15 m\/s forward/i,
+      steps: ['1', '1', '25 kg', '3 m/s', '75', '1', '5 kg', '15']
+    },
+    {
+      name: 'patch-3-bike-force-final-momentum',
+      question: 'A man and his bike are 95 kg. His instantaneous speed at one point is 14m/s. The next time his speed is checked he is going 28m/s. If the second speed was taken 7 seconds later, what force must the man have given his bike to change the speed? What was the bicyclist\'s final momentum?',
+      formulaId: 'force_and_final_momentum',
+      solveFor: 'force',
+      formula: 'a = (vf - vi) / t, then F = m × a',
+      finalAnswer: /Force = 190 N[\s\S]*Final momentum = 2660 kg·m\/s/i,
+      directAnswer: /F = 190 N[\s\S]*p = 2660 kg·m\/s/i,
+      steps: ['1', '1', '14 m/s', '28 m/s', '7 s', '2', '1', '95 kg', '190']
+    },
+    {
       name: 'prompt-3c-rock-thrown-force',
       question: 'A rock is skipped into a lake at 24 m/s², with what force was the rock thrown if it was 1.75 kg?',
       formulaId: 'force_mass_acceleration',

@@ -30,6 +30,7 @@ const tests = [
   testFinalSpeedFormulaTutor,
   testMomentumMassFormulaTutor,
   testWeightFormulaTutor,
+  testPatch3FormulaDirectAnswers,
   testGuidedFormulaTutorOffAnswersDirectly
 ];
 
@@ -543,6 +544,73 @@ async function testWeightFormulaTutor() {
     steps: ['1', '1', '42 kg', '9.8 m/s\u00b2', '411.6']
   });
   assert.match(final.body.response, /411\.6 N/i);
+}
+
+async function testPatch3FormulaDirectAnswers() {
+  const cases = [
+    {
+      name: 'multi-axis-net-force',
+      question: 'An object has 16 N of force being applied to the right, 16 N of force being applied to the left, and 4 N of force being applied downward. What is the net force on the object?',
+      includes: [/16 N right and 16 N left cancel out/i, /net force is 4 N downward/i],
+      excludes: [/^Newton.?s Second Law/i]
+    },
+    {
+      name: 'multi-axis-acceleration',
+      question: 'An object has 16 N of force being applied to the right, 16 N of force being applied to the left, and 4 N of force being applied downward. What is the acceleration of the object if it’s mass is 0.35 kg?',
+      includes: [/Net force = 4 N downward/i, /a = 4 N \/ 0\.35 kg/i, /11\.4\d* m\/s² downward/i]
+    },
+    {
+      name: 'net-force-acceleration-leading-dot',
+      question: 'A 2 N and an 8 N force pull on an object to the right and a 4 N force pulls on the object to the left. If the object has a mass of .5 kg what is its acceleration?',
+      includes: [/10 N right - 4 N left = 6 N right/i, /a = 6 N \/ 0\.5 kg/i, /12 m\/s² right/i]
+    },
+    {
+      name: 'boulder-weight-force',
+      question: 'If a 53 kg boulder falls off a cliff, what is the force with which it will hit the ground?',
+      includes: [/Fg = 53 kg × 9\.8 m\/s²/i, /Fg = 519\.4 N downward/i]
+    },
+    {
+      name: 'runner-velocity-change-force',
+      question: 'A runner has a speed of 25 m/s. They see the finish line and speed up to 30 m/s. This happens in 5 seconds. If the runner has a mass of 75 kg, with what force did the runner cross the finish line? Show all work to receive full credit.',
+      includes: [/a = \(30 m\/s - 25 m\/s\) \/ 5 s/i, /F = 75 kg × 1 m\/s²/i, /F = 75 N/i]
+    },
+    {
+      name: 'truck-momentum-mass-comma-direction',
+      question: 'What is the mass of a truck that has a momentum of 10,000 kg*m/s and a velocity of 4 m/s North?',
+      includes: [/m = 10000 kg·m\/s \/ 4 m\/s/i, /m = 2500 kg/i],
+      excludes: [/^Momentum is/i]
+    },
+    {
+      name: 'collision-momentum-transfer',
+      question: 'In a collision, a 25 kg ball moving at 3 m/s transfers all of its momentum to a 5 kg ball. What is the velocity of the 5 kg ball after the collision?',
+      includes: [/p = 25 kg × 3 m\/s/i, /p = 75 kg·m\/s/i, /v = 75 kg·m\/s \/ 5 kg/i, /v = 15 m\/s forward/i],
+      excludes: [/^Momentum is/i]
+    },
+    {
+      name: 'bocce-momentum-transfer',
+      question: 'You and your friends are playing Bocce ball on the beach. The small white ball is sitting in the sand and has a mass of 0.05 kg. You toss your 0.2 kg red ball and it rolls with a velocity of 3.9 m/s towards the white ball. They collide, and the red ball transfers all of its momentum to the white ball. Find the velocity of the white ball after the collision.',
+      includes: [/p = 0\.2 kg × 3\.9 m\/s/i, /p = 0\.78 kg·m\/s/i, /v = 0\.78 kg·m\/s \/ 0\.05 kg/i, /v = 15\.6 m\/s forward/i],
+      excludes: [/^Momentum is/i]
+    },
+    {
+      name: 'bike-force-final-momentum',
+      question: 'A man and his bike are 95 kg. His instantaneous speed at one point is 14m/s. The next time his speed is checked he is going 28m/s. If the second speed was taken 7 seconds later, what force must the man have given his bike to change the speed? What was the bicyclist\'s final momentum?',
+      includes: [/a = \(28 m\/s - 14 m\/s\) \/ 7 s/i, /F = 190 N/i, /p = 95 kg × 28 m\/s/i, /p = 2660 kg·m\/s/i],
+      excludes: [/1330 kg·m\/s/i]
+    }
+  ];
+
+  for (const testCase of cases) {
+    const route = routeWithTeacherKnowledge(testCase.question);
+    assert.equal(route.type, 'science_formula', `${testCase.name} should route as formula`);
+    assert.ok(route.directAnswer, `${testCase.name} should answer directly`);
+    assertAnswer(route.directAnswer, testCase);
+  }
+
+  for (const mass of ['.5', '0.5', '0.50']) {
+    const route = routeWithTeacherKnowledge(`A 2 N and an 8 N force pull on an object to the right and a 4 N force pulls on the object to the left. If the object has a mass of ${mass} kg what is its acceleration?`);
+    assert.match(route.directAnswer, /12 m\/s² right/i, `${mass} kg should produce 12 m/s² right`);
+  }
 }
 
 async function testGuidedFormulaTutorOffAnswersDirectly() {

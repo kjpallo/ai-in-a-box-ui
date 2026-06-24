@@ -39,6 +39,30 @@ const samples = [
   {
     label: 'KAI SWIM',
     question: 'Kai swims for the school swim team. He specializes in a backstroke event where he has to swim the 50-m length of the pool three times. Find his distance and displacement.'
+  },
+  {
+    label: 'NET FORCE A',
+    question: 'A 2 N and an 8 N force pull on an object to the right and a 4 N force pulls on the object to the left. If the object has a mass of .5 kg what is its acceleration?'
+  },
+  {
+    label: 'BOULDER FG',
+    question: 'If a 53 kg boulder falls off a cliff, what is the force with which it will hit the ground?'
+  },
+  {
+    label: 'RUNNER FORCE',
+    question: 'A runner has a speed of 25 m/s. They see the finish line and speed up to 30 m/s. This happens in 5 seconds. If the runner has a mass of 75 kg, with what force did the runner cross the finish line? Show all work to receive full credit.'
+  },
+  {
+    label: 'TRUCK MASS',
+    question: 'What is the mass of a truck that has a momentum of 10,000 kg*m/s and a velocity of 4 m/s North?'
+  },
+  {
+    label: 'TRANSFER',
+    question: 'In a collision, a 25 kg ball moving at 3 m/s transfers all of its momentum to a 5 kg ball. What is the velocity of the 5 kg ball after the collision?'
+  },
+  {
+    label: 'BIKE BOTH',
+    question: 'A man and his bike are 95 kg. His instantaneous speed at one point is 14m/s. The next time his speed is checked he is going 28m/s. If the second speed was taken 7 seconds later, what force must the man have given his bike to change the speed? What was the bicyclist\'s final momentum?'
   }
 ];
 

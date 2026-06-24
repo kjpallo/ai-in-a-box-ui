@@ -38,6 +38,7 @@ const tests = [
   testVelocityOutputIncludesRequestedUnits,
   testForceMotionFoundationalCuePrompts,
   testRemainingForceMotionConceptPrompts,
+  testPatch3ComposedForceMotionFormulaPrompts,
   testInstantaneousSpeedTypoUsesLocalFact,
   testGraphMotionUsesLocalFact,
   testSlopeFragmentDoesNotRouteToNewtonsSecondLaw,
@@ -709,6 +710,84 @@ function testRemainingForceMotionConceptPrompts() {
     assert.equal(thirdLaw.type, 'law_identification');
     assert.match(thirdLaw.directAnswer, /Newton’s Third Law|Newton's Third Law/i);
   }
+}
+
+function testPatch3ComposedForceMotionFormulaPrompts() {
+  const multiAxisNetForce = routeWithTeacherKnowledge('An object has 16 N of force being applied to the right, 16 N of force being applied to the left, and 4 N of force being applied downward. What is the net force on the object?');
+  assert.equal(multiAxisNetForce.type, 'science_formula');
+  assert.equal(multiAxisNetForce.formulaWork?.formulaId, 'net_force');
+  assert.match(multiAxisNetForce.directAnswer, /16 N right and 16 N left cancel out/i);
+  assert.match(multiAxisNetForce.directAnswer, /net force is 4 N downward/i);
+  assert.doesNotMatch(multiAxisNetForce.directAnswer, /^Newton.?s Second Law/i);
+
+  const multiAxisAcceleration = routeWithTeacherKnowledge('An object has 16 N of force being applied to the right, 16 N of force being applied to the left, and 4 N of force being applied downward. What is the acceleration of the object if it’s mass is 0.35 kg?');
+  assert.equal(multiAxisAcceleration.type, 'science_formula');
+  assert.equal(multiAxisAcceleration.formulaWork?.formulaId, 'net_force_newton_second_law');
+  assert.ok(multiAxisAcceleration.formulaWork.steps.length > 0);
+  assert.match(multiAxisAcceleration.directAnswer, /16 N right and 16 N left cancel out/i);
+  assert.match(multiAxisAcceleration.directAnswer, /a = 4 N \/ 0\.35 kg/i);
+  assert.match(multiAxisAcceleration.directAnswer, /11\.4\d* m\/s² downward/i);
+
+  for (const mass of ['.5', '0.5', '0.50']) {
+    const route = routeWithTeacherKnowledge(`A 2 N and an 8 N force pull on an object to the right and a 4 N force pulls on the object to the left. If the object has a mass of ${mass} kg what is its acceleration?`);
+    assert.equal(route.type, 'science_formula');
+    assert.equal(route.formulaWork?.formulaId, 'net_force_newton_second_law');
+    assert.ok(route.formulaWork.steps.length > 0);
+    assert.match(route.directAnswer, /a = 6 N \/ 0\.5 kg/i);
+    assert.match(route.directAnswer, /12 m\/s² right/i);
+  }
+
+  const boulder = routeWithTeacherKnowledge('If a 53 kg boulder falls off a cliff, what is the force with which it will hit the ground?');
+  assert.equal(boulder.type, 'science_formula');
+  assert.equal(boulder.formulaWork?.formulaId, 'weight_mass_gravity');
+  assert.ok(boulder.formulaWork.steps.length > 0);
+  assert.match(boulder.directAnswer, /Fg = 53 kg × 9\.8 m\/s²/i);
+  assert.match(boulder.directAnswer, /Fg = 519\.4 N downward/i);
+
+  const runner = routeWithTeacherKnowledge('A runner has a speed of 25 m/s. They see the finish line and speed up to 30 m/s. This happens in 5 seconds. If the runner has a mass of 75 kg, with what force did the runner cross the finish line? Show all work to receive full credit.');
+  assert.equal(runner.type, 'science_formula');
+  assert.equal(runner.formulaWork?.formulaId, 'force_from_velocity_change');
+  assert.ok(runner.formulaWork.steps.length > 0);
+  assert.match(runner.directAnswer, /a = \(30 m\/s - 25 m\/s\) \/ 5 s/i);
+  assert.match(runner.directAnswer, /F = 75 kg × 1 m\/s²/i);
+  assert.match(runner.directAnswer, /F = 75 N/i);
+
+  const truck = routeWithTeacherKnowledge('What is the mass of a truck that has a momentum of 10,000 kg*m/s and a velocity of 4 m/s North?');
+  assert.equal(truck.type, 'science_formula');
+  assert.equal(truck.formulaWork?.formulaId, 'momentum_mass_velocity');
+  assert.ok(truck.formulaWork.steps.length > 0);
+  assert.match(truck.directAnswer, /m = 10000 kg·m\/s \/ 4 m\/s/i);
+  assert.match(truck.directAnswer, /m = 2500 kg/i);
+  assert.doesNotMatch(truck.directAnswer, /^Momentum is/i);
+
+  const collision = routeWithTeacherKnowledge('In a collision, a 25 kg ball moving at 3 m/s transfers all of its momentum to a 5 kg ball. What is the velocity of the 5 kg ball after the collision?');
+  assert.equal(collision.type, 'science_formula');
+  assert.equal(collision.formulaWork?.formulaId, 'momentum_transfer_velocity');
+  assert.ok(collision.formulaWork.steps.length > 0);
+  assert.match(collision.directAnswer, /p = 25 kg × 3 m\/s/i);
+  assert.match(collision.directAnswer, /p = 75 kg·m\/s/i);
+  assert.match(collision.directAnswer, /v = 75 kg·m\/s \/ 5 kg/i);
+  assert.match(collision.directAnswer, /v = 15 m\/s forward/i);
+  assert.doesNotMatch(collision.directAnswer, /^Momentum is/i);
+
+  const bocce = routeWithTeacherKnowledge('You and your friends are playing Bocce ball on the beach. The small white ball is sitting in the sand and has a mass of 0.05 kg. You toss your 0.2 kg red ball and it rolls with a velocity of 3.9 m/s towards the white ball. They collide, and the red ball transfers all of its momentum to the white ball. Find the velocity of the white ball after the collision.');
+  assert.equal(bocce.type, 'science_formula');
+  assert.equal(bocce.formulaWork?.formulaId, 'momentum_transfer_velocity');
+  assert.match(bocce.directAnswer, /p = 0\.2 kg × 3\.9 m\/s/i);
+  assert.match(bocce.directAnswer, /p = 0\.78 kg·m\/s/i);
+  assert.match(bocce.directAnswer, /v = 0\.78 kg·m\/s \/ 0\.05 kg/i);
+  assert.match(bocce.directAnswer, /v = 15\.6 m\/s forward/i);
+  assert.doesNotMatch(bocce.directAnswer, /^Momentum is/i);
+
+  const bike = routeWithTeacherKnowledge('A man and his bike are 95 kg. His instantaneous speed at one point is 14m/s. The next time his speed is checked he is going 28m/s. If the second speed was taken 7 seconds later, what force must the man have given his bike to change the speed? What was the bicyclist\'s final momentum?');
+  assert.equal(bike.type, 'science_formula');
+  assert.equal(bike.formulaWork?.formulaId, 'force_and_final_momentum');
+  assert.ok(bike.formulaWork.steps.length > 0);
+  assert.match(bike.directAnswer, /a = \(28 m\/s - 14 m\/s\) \/ 7 s/i);
+  assert.match(bike.directAnswer, /F = 190 N/i);
+  assert.match(bike.directAnswer, /p = 95 kg × 28 m\/s/i);
+  assert.match(bike.directAnswer, /p = 2660 kg·m\/s/i);
+  assert.doesNotMatch(bike.directAnswer, /1330 kg·m\/s/i);
 }
 
 function testInstantaneousSpeedTypoUsesLocalFact() {
