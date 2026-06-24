@@ -36,6 +36,7 @@ const tests = [
   testCarAdAccelerationDisplayedRoundedAnswer,
   testExplicitFromRestAccelerationTeachesVelocityConversion,
   testVelocityOutputIncludesRequestedUnits,
+  testForceMotionFoundationalCuePrompts,
   testInstantaneousSpeedTypoUsesLocalFact,
   testGraphMotionUsesLocalFact,
   testSlopeFragmentDoesNotRouteToNewtonsSecondLaw,
@@ -590,6 +591,55 @@ function testVelocityOutputIncludesRequestedUnits() {
   assert.ok(alternate, 'Velocity formula work should carry the requested m/s alternate answer');
   assert.equal(alternate.unit, 'm/s');
   assert.match(alternate.display, /south/i);
+}
+
+function testForceMotionFoundationalCuePrompts() {
+  assert.doesNotThrow(() => routeWithTeacherKnowledge('The relationship among mass, force, and acceleration is explained by ___'));
+  const newtonSecondLaw = routeWithTeacherKnowledge('The relationship among mass, force, and acceleration is explained by ___');
+  assert.notEqual(newtonSecondLaw.type, 'no_match');
+  assert.match(newtonSecondLaw.directAnswer, /Newton’s Second Law|Newton's Second Law/i);
+
+  const airResistance = routeWithTeacherKnowledge('The upward force on an object falling through the air is ____');
+  assert.notEqual(airResistance.type, 'no_match');
+  assert.match(airResistance.directAnswer, /air resistance/i);
+
+  const acceleration = routeWithTeacherKnowledge('For any object, the greater the force that’s applied to it, the greater its ___');
+  assert.notEqual(acceleration.type, 'no_match');
+  assert.match(acceleration.directAnswer, /acceleration/i);
+
+  const gravityFactors = routeWithTeacherKnowledge('The size of the gravitational force between two objects depends on their _____');
+  assert.notEqual(gravityFactors.type, 'no_match');
+  assert.match(gravityFactors.directAnswer, /masses and distance between them/i);
+
+  const balancedForces = routeWithTeacherKnowledge('When two forces on the same object are equal and opposite, these forces are called ___ forces');
+  assert.notEqual(balancedForces.type, 'no_match');
+  assert.match(balancedForces.directAnswer, /balanced forces/i);
+
+  const force = routeWithTeacherKnowledge('Push or pull one body exerts on another.');
+  assert.notEqual(force.type, 'no_match');
+  assert.match(force.directAnswer, /force/i);
+  assert.match(force.directAnswer, /push or pull/i);
+  assert.doesNotMatch(force.directAnswer, /voltage/i);
+
+  const terminalVelocity = routeWithTeacherKnowledge('The highest velocity a falling object will reach.');
+  assert.notEqual(terminalVelocity.type, 'no_match');
+  assert.match(terminalVelocity.directAnswer, /terminal velocity/i);
+  assert.doesNotMatch(terminalVelocity.directAnswer, /^Velocity is speed in a specific direction/i);
+
+  const inertia = routeWithTeacherKnowledge('Tendency of an object to resist changes in motion.');
+  assert.notEqual(inertia.type, 'no_match');
+  assert.match(inertia.directAnswer, /inertia/i);
+
+  const gravity = routeWithTeacherKnowledge('The attraction any two objects have on one another.');
+  assert.notEqual(gravity.type, 'no_match');
+  assert.match(gravity.directAnswer, /gravity/i);
+  assert.doesNotMatch(gravity.directAnswer, /electric charges?/i);
+
+  const formula = routeWithTeacherKnowledge('A 2 N and an 8 N force pull on an object to the right and a 4 N force pulls on the object to the left. If the object has a mass of .5 kg what is its acceleration?');
+  assert.equal(formula.type, 'science_formula');
+  assert.equal(formula.formulaWork?.formulaId, 'net_force_newton_second_law');
+  assert.match(formula.directAnswer, /a = 6 N \/ 0\.5 kg/i);
+  assert.match(formula.directAnswer, /12 m\/s² right/i);
 }
 
 function testInstantaneousSpeedTypoUsesLocalFact() {
