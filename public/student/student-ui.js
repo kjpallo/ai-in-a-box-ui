@@ -457,6 +457,24 @@
     return chatTurns.find((turn) => turn.id === turnId) || null;
   }
 
+  function getCurrentActiveTutorTurn() {
+    const latestTurn = chatTurns[chatTurns.length - 1] || null;
+    const tutor = latestTurn?.tutor;
+    if (!tutor || latestTurn.system || latestTurn.pending || latestTurn.error) return null;
+    if (tutor.active !== true || tutor.completed || tutor.stopped) return null;
+    return latestTurn;
+  }
+
+  function isCurrentActiveTutorTurn(turn) {
+    return Boolean(turn?.id && getCurrentActiveTutorTurn()?.id === turn.id);
+  }
+
+  function isLiveTutorControl(control) {
+    const turnElement = control?.closest?.('[data-tutor-turn-id]');
+    const turnId = turnElement?.getAttribute('data-tutor-turn-id') || '';
+    return Boolean(turnId && getCurrentActiveTutorTurn()?.id === turnId);
+  }
+
   function collapseTutorCardsForNewTurn() {
     for (const turn of chatTurns) {
       if (turn.tutor && !getTutorSessionKey(turn)) turn.tutorCollapsed = true;
@@ -547,20 +565,28 @@
   }
 
   function getActiveTutorChoiceState() {
-    for (let index = chatTurns.length - 1; index >= 0; index -= 1) {
-      const tutor = chatTurns[index]?.tutor;
-      if (!tutor || tutor.active !== true || tutor.completed || tutor.stopped) continue;
-      const work = getTutorWork(tutor);
-      const choices = getCurrentTutorChoices(tutor, work);
-      return choices.length > 0 ? { tutor, work, choices } : null;
-    }
-    return null;
+    const activeTurn = getCurrentActiveTutorTurn();
+    const tutor = activeTurn?.tutor;
+    if (!tutor) return null;
+
+    const work = getTutorWork(tutor);
+    const choices = getCurrentTutorChoices(tutor, work);
+    return choices.length > 0 ? { tutor, work, choices } : null;
+  }
+
+  function isActiveTutorChoiceNumber(number) {
+    const choiceNumber = String(number || '').trim();
+    if (!choiceNumber) return false;
+
+    const activeChoiceState = getActiveTutorChoiceState();
+    return Boolean(activeChoiceState?.choices?.some((choice) => choice.number === choiceNumber));
   }
 
   function buildTimelineItems() {
     const items = [];
     const sessionsByKey = new Map();
     let latestFormulaSessionKey = '';
+    let activeTutorSessionKey = '';
 
     for (const turn of chatTurns) {
       const sessionKey = getTutorSessionKey(turn);
@@ -591,12 +617,14 @@
       latestFormulaSessionKey = sessionKey;
     }
 
+    activeTutorSessionKey = getTutorSessionKey(getCurrentActiveTutorTurn());
+
     for (const session of sessionsByKey.values()) {
       const latestTutor = session.lastTurn?.tutor || {};
-      session.isActive = latestTutor.active === true && !latestTutor.completed && !latestTutor.stopped;
+      session.isActive = Boolean(activeTutorSessionKey && session.key === activeTutorSessionKey);
       session.isComplete = latestTutor.completed === true;
       session.isStopped = latestTutor.stopped === true;
-      session.isCurrent = session.key === latestFormulaSessionKey;
+      session.isCurrent = session.isActive || session.key === latestFormulaSessionKey;
     }
 
     return items;
@@ -965,13 +993,14 @@
     if (!tutor || typeof tutor !== 'object') return '';
 
     const work = getTutorWork(tutor);
+    const isCurrentActiveTutor = isCurrentActiveTutorTurn(turn);
     if (turn.tutorCollapsed) {
       if (!tutor.completed && !tutor.stopped) return '';
       return renderCollapsedTutorCard(turn, tutor, work);
     }
 
     const title = getTutorTitle(tutor, work);
-    const stateClass = tutor.completed ? 'is-complete' : tutor.stopped ? 'is-stopped' : 'is-active';
+    const stateClass = tutor.completed ? 'is-complete' : tutor.stopped ? 'is-stopped' : isCurrentActiveTutor ? 'is-active' : 'is-paused';
     const progress = formatTutorProgress(tutor, work) || (tutor.completed ? 'Complete' : tutor.stopped ? 'Stopped' : '');
     const knownValues = getKnownValuesForTutor(tutor, work);
     const answer = work.finalAnswer || work.answer || formatTutorAnswer(tutor.solveFor, tutor.finalAnswerDisplay);
@@ -980,8 +1009,9 @@
     const solveFor = work.solveFor || work.solvingFor || tutor.solveFor || tutor.solvingFor || '';
     const originalQuestion = work.originalQuestion || tutor.originalQuestion || '';
     const currentStep = getCurrentTutorPrompt(tutor, work);
-    const canUseCalculator = isFormulaTutor && tutor.active === true && !tutor.completed && !tutor.stopped;
+    const canUseCalculator = isFormulaTutor && isCurrentActiveTutor;
     const showCalculator = canUseCalculator && shouldShowCalculator(turn.id, tutor, work, currentStep);
+    const controlTutor = isCurrentActiveTutor ? tutor : { ...tutor, active: false };
 
     return `
       <section class="student-tutor-card ${stateClass}" data-tutor-card data-tutor-turn-id="${escapeAttr(turn.id)}">
@@ -1001,10 +1031,10 @@
             ${answer ? renderTutorDetail('Final answer', answer, 'student-tutor-answer') : ''}
             ${tutor.currentHint ? renderTutorDetail('Hint', tutor.currentHint, 'is-wide') : ''}
           </div>
-          ${renderTutorChoiceButtons(tutor, work)}
+          ${renderTutorChoiceButtons(controlTutor, work)}
           ${canUseCalculator ? renderCalculatorArea(turn.id, showCalculator) : ''}
         </div>
-        ${renderTutorActions(turn, tutor)}
+        ${renderTutorActions(turn, controlTutor)}
       </section>
     `;
   }
@@ -1282,12 +1312,14 @@
 
     const tutorButton = event.target.closest('[data-tutor-action]');
     if (tutorButton && timeline.contains(tutorButton)) {
+      if (!isLiveTutorControl(tutorButton)) return;
       sendTutorCommand(tutorButton.getAttribute('data-tutor-action') || '');
       return;
     }
 
     const tutorChoiceButton = event.target.closest('[data-tutor-choice]');
     if (tutorChoiceButton && timeline.contains(tutorChoiceButton)) {
+      if (!isLiveTutorControl(tutorChoiceButton)) return;
       sendTutorCommand(tutorChoiceButton.getAttribute('data-tutor-choice') || '');
       return;
     }
@@ -1313,7 +1345,9 @@
   function handleComposerTutorChoiceClick(event) {
     const tutorChoiceButton = event.target.closest('[data-tutor-choice]');
     if (!tutorChoiceButton || !composerTutorChoices?.contains(tutorChoiceButton)) return;
-    sendTutorCommand(tutorChoiceButton.getAttribute('data-tutor-choice') || '');
+    const choiceNumber = tutorChoiceButton.getAttribute('data-tutor-choice') || '';
+    if (!isActiveTutorChoiceNumber(choiceNumber)) return;
+    sendTutorCommand(choiceNumber);
   }
 
   function toggleTutorWork(turnId) {

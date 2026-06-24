@@ -242,7 +242,7 @@ assert.match(
 );
 assert.match(
   studentUi,
-  /const tutorChoiceButton = event\.target\.closest\('\[data-tutor-choice\]'\);[\s\S]*sendTutorCommand\(tutorChoiceButton\.getAttribute\('data-tutor-choice'\) \|\| ''\)/,
+  /const tutorChoiceButton = event\.target\.closest\('\[data-tutor-choice\]'\);[\s\S]*if \(!isLiveTutorControl\(tutorChoiceButton\)\) return;[\s\S]*sendTutorCommand\(tutorChoiceButton\.getAttribute\('data-tutor-choice'\) \|\| ''\)/,
   'Choice buttons should submit the numeric choice value.'
 );
 assert.match(
@@ -257,8 +257,28 @@ assert.match(
 );
 assert.match(
   studentUi,
-  /function handleComposerTutorChoiceClick\(event\)[\s\S]*sendTutorCommand\(tutorChoiceButton\.getAttribute\('data-tutor-choice'\) \|\| ''\)/,
-  'Composer choice buttons should submit the numeric choice value.'
+  /function handleComposerTutorChoiceClick\(event\)[\s\S]*const choiceNumber = tutorChoiceButton\.getAttribute\('data-tutor-choice'\) \|\| '';[\s\S]*if \(!isActiveTutorChoiceNumber\(choiceNumber\)\) return;[\s\S]*sendTutorCommand\(choiceNumber\)/,
+  'Composer choice buttons should submit only the current active numeric choice value.'
+);
+assert.match(
+  studentUi,
+  /function getCurrentActiveTutorTurn\(\)[\s\S]*const latestTurn = chatTurns\[chatTurns\.length - 1\][\s\S]*tutor\.active !== true \|\| tutor\.completed \|\| tutor\.stopped[\s\S]*return latestTurn;/,
+  'Only the latest completed interaction should be treated as the active tutor turn.'
+);
+assert.match(
+  studentUi,
+  /function getActiveTutorChoiceState\(\)[\s\S]*const activeTurn = getCurrentActiveTutorTurn\(\)[\s\S]*return choices\.length > 0 \? \{ tutor, work, choices \} : null;/,
+  'Composer choices should clear after tutor completion, tutor stop, pending turns, or normal non-tutor responses.'
+);
+assert.match(
+  studentUi,
+  /function buildTimelineItems\(\)[\s\S]*activeTutorSessionKey = getTutorSessionKey\(getCurrentActiveTutorTurn\(\)\)[\s\S]*session\.isActive = Boolean\(activeTutorSessionKey && session\.key === activeTutorSessionKey\);/,
+  'Grouped formula session controls should only remain live for the current active tutor session.'
+);
+assert.match(
+  studentUi,
+  /function isLiveTutorControl\(control\)[\s\S]*closest\?\.\('\[data-tutor-turn-id\]'\)[\s\S]*getCurrentActiveTutorTurn\(\)\?\.id === turnId/,
+  'Old tutor transcript controls should be blocked from submitting stale tutor commands.'
 );
 assert.match(
   studentUi,
@@ -1147,6 +1167,22 @@ async function testInteractiveFlashcardUiMetadata() {
   assert.deepEqual(motionGraphInteractive.body.flashcardSession.controls, ['show', 'next', 'stop']);
 }
 
+async function testPatch4NetForceOnlyDirectAnswerWithTutorOn() {
+  const harness = await createHarnessSession();
+  const question = 'An object has 16 N of force being applied to the right, 16 N of force being applied to the left, and 4 N of force being applied downward. What is the net force on the object?';
+  const direct = await sendHarnessMessage(harness, 'patch-4-net-force-direct', question);
+
+  assert.equal(direct.body.routeType, 'science_formula', 'net-force-only prompt should stay a formula answer');
+  assert.ok(!direct.body.tutor, 'net-force-only prompt should not start Formula Tutor with an open-ended first step');
+  assert.match(direct.body.response, /16 N right and 16 N left cancel out/i);
+  assert.match(direct.body.response, /net force is 4 N downward/i);
+  assert.equal(
+    harness.studentSessions[harness.sessionId].anonymousHubs['patch-4-net-force-direct'].currentTutorProblem,
+    null,
+    'net-force-only direct answer should not leave tutor state'
+  );
+}
+
 async function createHarnessSession() {
   const harness = createStudentRouteHarness({ studentGuidedFormulaTutoringEnabled: true });
   const create = await harness.request('POST', '/api/profile/create-student-session');
@@ -1172,6 +1208,7 @@ Promise.resolve()
   .then(testConcept3GeneralTutorVocabularyChoices)
   .then(testTwoUnitVelocityTutor)
   .then(testAccelerationClassroomRoundedFinalAcceptance)
+  .then(testPatch4NetForceOnlyDirectAnswerWithTutorOn)
   .then(testInteractiveFlashcardUiMetadata)
   .then(() => {
     console.log('student tutor UI: formula tutor turns group into collapsible problem sessions');
@@ -1179,6 +1216,7 @@ Promise.resolve()
     console.log('student tutor UI: conceptual formula tutor steps show numbered choices immediately');
     console.log('student tutor UI: Concept 3 General Tutor vocab steps show numbered choices immediately');
     console.log('student tutor UI: velocity and acceleration tutor regressions passed');
+    console.log('student tutor UI: Patch 4 stale tutor controls and net-force direct-answer regressions passed');
     console.log('student tutor UI: interactive flashcard cards use backend session metadata');
   })
   .catch((error) => {
