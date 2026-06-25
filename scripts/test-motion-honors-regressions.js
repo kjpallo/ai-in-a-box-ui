@@ -6,8 +6,10 @@ const tests = [
   testMotionVocabularyConcepts,
   testFillInTheBlank,
   testSpeedDistanceTimeFormulas,
+  testBikeTripAverageSpeedTutorHint,
   testAccelerationFormulas,
   testDistanceAndDisplacement,
+  testTrackDistanceDisplacementTutorWording,
   testGraphConceptPrompts,
   testFormulaTutorStartsForSupportedItems
 ];
@@ -231,6 +233,24 @@ async function testAccelerationFormulas() {
   await assertFormulaDirectCases(cases);
 }
 
+async function testBikeTripAverageSpeedTutorHint() {
+  const harness = await createHarnessSession({ studentGuidedFormulaTutoringEnabled: true });
+  const name = 'bike-trip-average-speed-tutor-hint';
+  const prompt = 'A group of bike riders took a 4 hour trip. During the first 3 hours, they traveled a total of 50 km, but during the last hour they traveled only 10 km. What was the group’s average speed for the entire trip?';
+
+  await sendHarnessMessage(harness, name, prompt);
+  await sendHarnessMessage(harness, name, '1');
+  await sendHarnessMessage(harness, name, '1');
+  const wrongDistance = await sendHarnessMessage(harness, name, '50');
+  const hint = await sendHarnessMessage(harness, name, 'hint');
+  const tutorText = `${wrongDistance.body.response}\n${hint.body.response}`;
+
+  assert.match(tutorText, /50\s*km\s*\+\s*10\s*km/i, 'bike trip tutor should name both distance parts');
+  assert.match(tutorText, /total distance/i, 'bike trip tutor should point to total distance');
+  assert.match(tutorText, /60\s*km/i, 'bike trip tutor should show summed distance');
+  assert.doesNotMatch(tutorText, /Look for the number with km/i, 'bike trip tutor should not use single-distance hint');
+}
+
 async function testDistanceAndDisplacement() {
   const cases = [
     {
@@ -254,6 +274,31 @@ async function testDistanceAndDisplacement() {
   ];
 
   await assertDirectStudentCases(cases, { guidedTutorEnabled: false });
+}
+
+async function testTrackDistanceDisplacementTutorWording() {
+  const harness = await createHarnessSession({ studentGuidedFormulaTutoringEnabled: true });
+  const name = 'track-distance-displacement-tutor-wording';
+  const prompt = 'A runner goes around a 1 mile track. If they end up at their starting position, what is their distance traveled and displacement?';
+
+  await sendHarnessMessage(harness, name, prompt);
+  const activeTutor = harness.studentSessions[harness.sessionId].anonymousHubs[name].currentTutorProblem;
+  assert.ok(activeTutor, 'track prompt should start a formula tutor');
+  const stepText = JSON.stringify(activeTutor.steps);
+
+  assert.doesNotMatch(stepText, /PJ|sidewalk|doorstep|around the block/i, 'track tutor steps should not include old block scenario wording');
+  assert.match(stepText, /runner|track|starting position/i, 'track tutor steps should use track-specific or neutral wording');
+
+  await sendHarnessMessage(harness, name, '1');
+  await sendHarnessMessage(harness, name, '1');
+  await sendHarnessMessage(harness, name, '1 mile');
+  await sendHarnessMessage(harness, name, '1');
+  const completed = await sendHarnessMessage(harness, name, '1');
+  const completedText = String(completed.body.response || '');
+
+  assert.doesNotMatch(completedText, /PJ|sidewalk|doorstep|around the block/i, 'track completion should not include old block scenario wording');
+  assert.match(completedText, /distance\s*=\s*1\s*mile/i, 'track completion should include distance = 1 mile');
+  assert.match(completedText, /displacement\s*=\s*0/i, 'track completion should include displacement = 0');
 }
 
 async function testGraphConceptPrompts() {
