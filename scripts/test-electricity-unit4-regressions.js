@@ -45,6 +45,10 @@ const CATEGORIES = [
     run: () => assertTutorWordingCases(tutorWordingCases())
   },
   {
+    name: 'manual UI regressions',
+    run: () => assertManualUiRegressionCases()
+  },
+  {
     name: 'circuit concepts',
     run: () => assertDirectStudentCases(circuitConceptCases(), {
       guidedTutorEnabled: true,
@@ -245,6 +249,88 @@ async function assertStudentRouteDebugCases(cases) {
       }
     });
   }
+
+  return results;
+}
+
+async function assertManualUiRegressionCases() {
+  const results = [];
+
+  await record(results, {
+    category: 'manual UI regressions',
+    name: 'series-voltage-drop-live-prompt',
+    prompt: 'A 9V battery has 2 ohm, 3 ohm, and 4 ohm resistors in series. What is the voltage drop across the 3 ohm resistor?',
+    expectedIdea: 'Series voltage-drop prompt derives current from battery voltage and total resistance.',
+    includes: [/Rt\s*=\s*9\s*ohms?/i, /I\s*=\s*9\s*\/\s*9/i, /1\s*A\b|1\s*amp/i, /3\s*V\b|3\s*volts/i],
+    excludes: [/should not guess/i, /need the current/i]
+  }, async () => {
+    const testCase = {
+      category: 'manual UI regressions',
+      name: 'series-voltage-drop-live-prompt',
+      prompt: 'A 9V battery has 2 ohm, 3 ohm, and 4 ohm resistors in series. What is the voltage drop across the 3 ohm resistor?',
+      expectedIdea: 'Series voltage-drop prompt derives current from battery voltage and total resistance.',
+      includes: [/Rt\s*=\s*9\s*ohms?/i, /I\s*=\s*9\s*\/\s*9/i, /1\s*A\b|1\s*amp/i, /3\s*V\b|3\s*volts/i],
+      excludes: [/should not guess/i, /need the current/i]
+    };
+    const harness = await createHarnessSession({ studentGuidedFormulaTutoringEnabled: true });
+    const response = await sendHarnessMessage(harness, testCase.name, testCase.prompt);
+    assertDirectBody(response.body, testCase);
+  });
+
+  await record(results, {
+    category: 'manual UI regressions',
+    name: 'parallel-branch-current-live-prompt',
+    prompt: 'A 12 V battery has two 6 ohm resistors in parallel. What current flows through one resistor?',
+    expectedIdea: 'Branch-current prompt answers current through one branch, not total circuit current.'
+  }, async () => {
+    const testCase = {
+      category: 'manual UI regressions',
+      name: 'parallel-branch-current-live-prompt',
+      prompt: 'A 12 V battery has two 6 ohm resistors in parallel. What current flows through one resistor?',
+      expectedIdea: 'Branch-current prompt answers current through one branch, not total circuit current.',
+      routeTypes: ['science_formula'],
+      includes: [/parallel/i, /branch/i, /12\s*V\b|12\s*volts/i, /6\s*ohms?/i, /2\s*A\b|2\s*amps?/i],
+      excludes: [/totalResistance/i, /\bRt\s*=\s*3\s*ohms?\b/i, /\bI\s*=\s*12\s*\/\s*3\b/i, /currentSubstitution/i, /Longitudinal Waves/i]
+    };
+    const harness = await createHarnessSession({ studentGuidedFormulaTutoringEnabled: true });
+    const response = await sendHarnessMessage(harness, testCase.name, testCase.prompt);
+    assertDirectBody(response.body, testCase);
+
+    const startText = `${response.body.response || ''}\n${JSON.stringify(response.body.tutor || {})}`;
+    assert.doesNotMatch(startText, /Longitudinal Waves/i, detail(testCase, null, response.body, 'electricity branch-current response should not mention Longitudinal Waves'));
+
+    if (response.body.routeType === 'formula_tutor') {
+      const hint = await sendHarnessMessage(harness, testCase.name, 'hint');
+      assert.doesNotMatch(`${hint.body.response || ''}\n${JSON.stringify(hint.body.tutor || {})}`, /Longitudinal Waves/i, detail(testCase, null, hint.body, 'electricity branch-current tutor hint should not mention Longitudinal Waves'));
+    }
+  });
+
+  await record(results, {
+    category: 'manual UI regressions',
+    name: 'derived-power-current-hint',
+    prompt: 'A circuit has 10 V and 5 ohms. Find the current and power.',
+    expectedIdea: 'Derived-current tutor hint should teach I = V / R instead of saying 2 A was in the problem.'
+  }, async () => {
+    const testCase = {
+      category: 'manual UI regressions',
+      name: 'derived-power-current-hint',
+      prompt: 'A circuit has 10 V and 5 ohms. Find the current and power.',
+      expectedIdea: 'Derived-current tutor hint should teach I = V / R instead of saying 2 A was in the problem.'
+    };
+    const harness = await createHarnessSession({ studentGuidedFormulaTutoringEnabled: true });
+    const start = await sendHarnessMessage(harness, testCase.name, testCase.prompt);
+    assert.equal(start.body.routeType, 'formula_tutor', detail(testCase, null, start.body, 'derived power should start Formula Tutor'));
+    assert.match(JSON.stringify(start.body.tutor || {}), /5\s*(?:Ω|ohms?)/i, detail(testCase, null, start.body, 'derived power tutor should expose resistance as a known value'));
+
+    await sendHarnessMessage(harness, testCase.name, '1');
+    await sendHarnessMessage(harness, testCase.name, '1');
+    await sendHarnessMessage(harness, testCase.name, '10');
+    await sendHarnessMessage(harness, testCase.name, '5');
+    const wrongCurrent = await sendHarnessMessage(harness, testCase.name, '5');
+    const wrongText = `${wrongCurrent.body.response || ''}\n${JSON.stringify(wrongCurrent.body.tutor || {})}`;
+    assert.doesNotMatch(wrongText, /Look for 2\s*A in the problem/i, detail(testCase, null, wrongCurrent.body, 'derived current hint should not say 2 A is printed in the problem'));
+    assert.match(wrongText, /current is not given directly|use Ohm.?s Law first|I\s*=\s*10\s*\/\s*5/i, detail(testCase, null, wrongCurrent.body, 'derived current hint should explain the current derivation'));
+  });
 
   return results;
 }
