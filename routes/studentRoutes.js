@@ -742,7 +742,7 @@ function logFormulaTutorDecisionDebug(context, decision) {
 }
 
 function maybeFormulaTutorDecisionDebug(decision) {
-  return isFormulaTutorDebugEnabled() ? decision : undefined;
+  return decision || undefined;
 }
 
 function isFormulaTutorDebugEnabled() {
