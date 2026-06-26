@@ -249,6 +249,29 @@ async function assertManualBrowserPolishCases() {
 
   await record(results, {
     category: 'manual browser polish',
+    name: 'finger-crocket-glass-water-refraction',
+    prompt: 'why did the my finger look like it was crocket when I put it in a glass of water',
+    expectedIdea: 'Typo-ish finger/glass-of-water wording should route to Unit 5 refraction, not chemistry/H2O.'
+  }, async () => {
+    const testCase = {
+      category: 'manual browser polish',
+      name: 'finger-crocket-glass-water-refraction',
+      prompt: 'why did the my finger look like it was crocket when I put it in a glass of water',
+      expectedIdea: 'A finger can look crooked in water because of refraction.',
+      includes: [/refraction|refract/i, /light/i, /bend|bends|bent|crooked|crocket|shifted|distorted/i, /water/i],
+      excludes: [/H2O|covalent|hydrogen|oxygen|chemistry/i]
+    };
+    const route = routeWithTeacherKnowledge(testCase.prompt);
+    assert.notEqual(route.type, 'chemistry_formula', detail(testCase, route, null, 'should not route to chemistry'));
+    assertDirectRoute(route, testCase);
+
+    const harness = await createHarnessSession({ studentGuidedFormulaTutoringEnabled: true });
+    const response = await sendHarnessMessage(harness, testCase.name, testCase.prompt);
+    assertDirectBody(response.body, testCase);
+  });
+
+  await record(results, {
+    category: 'manual browser polish',
     name: 'microwave-period-step-helpful-hint',
     prompt: 'A microwave operates at 2,358,000 Hz. If speed of light is 300,000,000 m/s, what is period and wavelength?',
     expectedIdea: 'Wrong wavelength answer on period step should get a helpful period hint; scientific notation should be accepted.'
