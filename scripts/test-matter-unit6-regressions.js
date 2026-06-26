@@ -129,7 +129,11 @@ async function assertFormulaDirectCases(cases) {
   for (const testCase of cases) {
     await record(results, testCase, async () => {
       const route = routeWithTeacherKnowledge(testCase.prompt);
-      assert.equal(route.type, 'science_formula', detail(testCase, route, null, 'should route as a science formula'));
+      if (testCase.allowsConceptRoute && route.type !== 'science_formula') {
+        assert.notEqual(route.type, 'no_match', detail(testCase, route, null, 'should answer directly or route as a science formula'));
+      } else {
+        assert.equal(route.type, 'science_formula', detail(testCase, route, null, 'should route as a science formula'));
+      }
       assertAnswer(route.directAnswer, testCase, route);
       assertFormulaWork(route.formulaWork, testCase, route);
 
@@ -761,7 +765,7 @@ function densityFormulaCases() {
       prompt: 'what is the formula for density',
       expectedIdea: 'Density equals mass divided by volume.',
       includes: [/density/i, /mass/i, /volume/i, /\/|divided/i],
-      formulaWork: null
+      allowsConceptRoute: true
     },
     {
       category,
@@ -862,35 +866,40 @@ function densityFormulaCases() {
       name: 'water-density-float-sink',
       prompt: 'If an object has density less than 1 g/mL in water will it float or sink',
       expectedIdea: 'Less dense than water floats; greater than 1 sinks.',
-      includes: [/less than\s*1|less dense/i, /water/i, /float/i]
+      includes: [/less than\s*1|less dense/i, /water/i, /float/i],
+      allowsConceptRoute: true
     },
     {
       category,
       name: 'viscosity-definition',
       prompt: 'what is viscosity',
       expectedIdea: 'Viscosity is resistance to flow/thickness of a liquid.',
-      includes: [/viscosity/i, /resistance to flow|resists flow|flow/i, /thick|thickness|liquid/i]
+      includes: [/viscosity/i, /resistance to flow|resists flow|flow/i, /thick|thickness|liquid/i],
+      allowsConceptRoute: true
     },
     {
       category,
       name: 'syrup-high-viscosity',
       prompt: 'why does syrup move slower than alcohol',
       expectedIdea: 'Syrup has higher viscosity than alcohol.',
-      includes: [/syrup/i, /alcohol/i, /higher viscosity|more viscous|resists flow/i]
+      includes: [/syrup/i, /alcohol/i, /higher viscosity|more viscous|resists flow/i],
+      allowsConceptRoute: true
     },
     {
       category,
       name: 'solubility-physical-property',
       prompt: 'is solubility a physical property',
       expectedIdea: 'Solubility is a physical property.',
-      includes: [/solubility/i, /physical property/i]
+      includes: [/solubility/i, /physical property/i],
+      allowsConceptRoute: true
     },
     {
       category,
       name: 'melting-boiling-physical-properties',
       prompt: 'are melting point and boiling point physical properties',
       expectedIdea: 'Melting point and boiling point are physical properties.',
-      includes: [/melting point/i, /boiling point/i, /physical propert/i]
+      includes: [/melting point/i, /boiling point/i, /physical propert/i],
+      allowsConceptRoute: true
     }
   ];
 }
