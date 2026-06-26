@@ -75,6 +75,10 @@ const CATEGORIES = [
     run: () => assertFormulaTutorCases(formulaTutorCases())
   },
   {
+    name: 'manual browser polish',
+    run: () => assertManualBrowserPolishCases()
+  },
+  {
     name: 'concept tutor audit shape',
     run: () => assertConceptTutorCases(conceptTutorCases())
   }
@@ -213,6 +217,69 @@ async function assertConceptTutorCases(cases) {
       }
     });
   }
+
+  return results;
+}
+
+async function assertManualBrowserPolishCases() {
+  const results = [];
+
+  await record(results, {
+    category: 'manual browser polish',
+    name: 'objects-look-bent-water-refraction',
+    prompt: 'what do objects look bent in water',
+    expectedIdea: 'Natural bent-in-water wording should route to Unit 5 refraction, not chemistry/H2O.'
+  }, async () => {
+    const testCase = {
+      category: 'manual browser polish',
+      name: 'objects-look-bent-water-refraction',
+      prompt: 'what do objects look bent in water',
+      expectedIdea: 'Objects look bent in water because of refraction.',
+      includes: [/refraction|refract/i, /light/i, /speed/i, /bend|bends|bent/i, /air/i, /water/i],
+      excludes: [/H2O|covalent|hydrogen|oxygen|chemistry/i]
+    };
+    const route = routeWithTeacherKnowledge(testCase.prompt);
+    assert.notEqual(route.type, 'chemistry_formula', detail(testCase, route, null, 'should not route to chemistry'));
+    assertDirectRoute(route, testCase);
+
+    const harness = await createHarnessSession({ studentGuidedFormulaTutoringEnabled: true });
+    const response = await sendHarnessMessage(harness, testCase.name, testCase.prompt);
+    assertDirectBody(response.body, testCase);
+  });
+
+  await record(results, {
+    category: 'manual browser polish',
+    name: 'microwave-period-step-helpful-hint',
+    prompt: 'A microwave operates at 2,358,000 Hz. If speed of light is 300,000,000 m/s, what is period and wavelength?',
+    expectedIdea: 'Wrong wavelength answer on period step should get a helpful period hint; scientific notation should be accepted.'
+  }, async () => {
+    const testCase = {
+      category: 'manual browser polish',
+      name: 'microwave-period-step-helpful-hint',
+      prompt: 'A microwave operates at 2,358,000 Hz. If speed of light is 300,000,000 m/s, what is period and wavelength?',
+      expectedIdea: 'Wrong wavelength answer on period step should get a helpful period hint; scientific notation should be accepted.'
+    };
+    const harness = await createHarnessSession({ studentGuidedFormulaTutoringEnabled: true });
+    const start = await sendHarnessMessage(harness, testCase.name, testCase.prompt);
+    assert.equal(start.body.routeType, 'formula_tutor', detail(testCase, null, start.body, 'should start Formula Tutor'));
+
+    await sendHarnessMessage(harness, testCase.name, '1');
+    await sendHarnessMessage(harness, testCase.name, '1');
+    await sendHarnessMessage(harness, testCase.name, '300000000 m/s');
+    const periodStep = await sendHarnessMessage(harness, testCase.name, '2358000 Hz');
+    assert.match(periodStep.body.tutor?.currentStepPrompt || periodStep.body.response || '', /period/i, detail(testCase, null, periodStep.body, 'should ask for period before wavelength'));
+
+    const wrong = await sendHarnessMessage(harness, testCase.name, '127.2');
+    const wrongText = `${wrong.body.response || ''}\n${JSON.stringify(wrong.body.tutor || {})}`;
+    assert.match(wrongText, /period/i, detail(testCase, null, wrong.body, 'hint should name period'));
+    assert.match(wrongText, /1\s*\/\s*frequency|reciprocal/i, detail(testCase, null, wrong.body, 'hint should explain reciprocal frequency'));
+    assert.match(wrongText, /small/i, detail(testCase, null, wrong.body, 'hint should flag tiny period value'));
+    assert.match(wrongText, /decimal|scientific|e-7|10\^-?7/i, detail(testCase, null, wrong.body, 'hint should mention acceptable tiny-number forms'));
+    assert.match(wrongText, /wavelength.*next|next.*wavelength/i, detail(testCase, null, wrong.body, 'hint should say wavelength comes next'));
+
+    const acceptedScientific = await sendHarnessMessage(harness, testCase.name, '4.24e-7 s');
+    assert.match(acceptedScientific.body.tutor?.currentStepPrompt || acceptedScientific.body.response || '', /wavelength/i, detail(testCase, null, acceptedScientific.body, 'scientific notation should advance to wavelength step'));
+  });
 
   return results;
 }
