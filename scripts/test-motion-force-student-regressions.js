@@ -31,6 +31,7 @@ const tests = [
   testMomentumMassFormulaTutor,
   testWeightFormulaTutor,
   testPatch3FormulaDirectAnswers,
+  testNumericNetForceFormulaTutorExamples,
   testGuidedFormulaTutorOffAnswersDirectly
 ];
 
@@ -622,6 +623,71 @@ async function testPatch3FormulaDirectAnswers() {
       `${mass} kg tutor step should explain same-direction and opposite-direction forces`
     );
   }
+}
+
+async function testNumericNetForceFormulaTutorExamples() {
+  await completeNetForceFormulaTutorCase({
+    name: 'net-force-opposite-example',
+    question: 'A 15 N force pulls right and a 10 N force pulls left. What is the net force?',
+    finalAnswer: /5 N right/i,
+    calculationPrompt: /What is the net force\? Use 15 - 10\./i,
+    steps: ['1', '1', 'opposite directions', 'subtract', '5', 'unbalanced']
+  });
+
+  await completeNetForceFormulaTutorCase({
+    name: 'net-force-same-direction-group-example',
+    question: 'A 2 N and an 8 N force pull on an object to the right and a 4 N force pulls on the object to the left. What is the net force?',
+    finalAnswer: /6 N right/i,
+    calculationPrompt: /What is the net force\? Use 10 - 4\./i,
+    steps: ['1', '1', 'opposite directions', 'subtract', '6', 'unbalanced']
+  });
+
+  await completeNetForceFormulaTutorCase({
+    name: 'net-force-balanced-example',
+    question: 'A 10 N force pulls left and a 10 N force pulls right. What is the net force?',
+    finalAnswer: /0 N/i,
+    calculationPrompt: /What is the net force\? Use 10 - 10\./i,
+    steps: ['1', '1', 'opposite directions', 'subtract', '0', 'balanced']
+  });
+
+  const harness = await createHarnessSession({ studentGuidedFormulaTutoringEnabled: true });
+  const direct = await sendHarnessMessage(
+    harness,
+    'net-force-multi-axis-direct',
+    'An object has 16 N of force being applied to the right, 16 N of force being applied to the left, and 4 N of force being applied downward. What is the net force on the object?'
+  );
+  assert.notEqual(direct.body.routeType, 'formula_tutor', 'multi-axis net force should keep direct answer fallback');
+  assert.match(direct.body.response, /16 N right and 16 N left cancel out/i);
+  assert.match(direct.body.response, /net force is 4 N downward/i);
+}
+
+async function completeNetForceFormulaTutorCase({ name, question, finalAnswer, calculationPrompt, steps }) {
+  const harness = await createHarnessSession({ studentGuidedFormulaTutoringEnabled: true });
+  let latest = await sendHarnessMessage(harness, name, question);
+  assert.equal(latest.body.routeType, 'formula_tutor', `${name} should start Formula Tutor`);
+  assert.equal(latest.body.tutor.formulaId, 'net_force', `${name} should use net force formula work`);
+  assert.equal(latest.body.tutor.originalQuestion, question, `${name} should preserve original question metadata`);
+  assert.match(latest.body.response, /Which force amounts are given\?/i);
+  assert.match(latest.body.response, /Click a choice or type only the number\./i);
+
+  const expectedPrompts = [
+    /Which directions match the force amounts\?/i,
+    /same direction or opposite directions/i,
+    /Should we add or subtract\?/i,
+    calculationPrompt,
+    /balanced or unbalanced/i,
+    finalAnswer
+  ];
+
+  for (const [index, step] of steps.entries()) {
+    latest = await sendHarnessMessage(harness, name, step);
+    assert.equal(latest.body.routeType, 'formula_tutor', `${name} should stay in Formula Tutor after ${step}`);
+    assert.match(latest.body.response, expectedPrompts[index], `${name} should show expected prompt after ${step}`);
+  }
+
+  assert.equal(latest.body.tutor.completed, true, `${name} should complete`);
+  assert.match(latest.body.response, finalAnswer);
+  assert.doesNotMatch(latest.body.response, /What forces are given\?|What direction is each force\?/i);
 }
 
 async function testGuidedFormulaTutorOffAnswersDirectly() {

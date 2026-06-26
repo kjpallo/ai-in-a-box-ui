@@ -1092,10 +1092,10 @@ async function testGuidedNetForceTutorFlows() {
     finalAnswer: '5 N right',
     balance: 'unbalanced',
     steps: [
-      { message: '10 N left and 15 N right', match: /What direction is each force\?/i },
-      { message: '10 N left and 15 N right', match: /same direction or opposite directions/i },
+      { message: '1', match: /Which directions match the force amounts\?/i },
+      { message: '1', match: /same direction or opposite directions/i },
       { message: 'opposite directions', match: /Should we add or subtract\?/i },
-      { message: 'subtract', match: /What is the net force\?/i },
+      { message: 'subtract', match: /What is the net force\? Use 15 - 10\./i },
       { message: '5 N', match: /balanced or unbalanced/i },
       { message: 'unbalanced', match: /Diagram:\n10 N left.*\[box\].*15 N right/is }
     ],
@@ -1108,10 +1108,10 @@ async function testGuidedNetForceTutorFlows() {
     finalAnswer: '0 N',
     balance: 'balanced',
     steps: [
-      { message: '100 N left and 100 N right', match: /What direction is each force\?/i },
-      { message: '100 N left and 100 N right', match: /same direction or opposite directions/i },
+      { message: '1', match: /Which directions match the force amounts\?/i },
+      { message: '1', match: /same direction or opposite directions/i },
       { message: 'opposite directions', match: /Should we add or subtract\?/i },
-      { message: 'subtract', match: /What is the net force\?/i },
+      { message: 'subtract', match: /What is the net force\? Use 100 - 100\./i },
       { message: '0 N', match: /balanced or unbalanced/i },
       { message: 'balanced', match: /Net force = 0 N/i }
     ],
@@ -1124,10 +1124,10 @@ async function testGuidedNetForceTutorFlows() {
     finalAnswer: '10 N east',
     balance: 'unbalanced',
     steps: [
-      { message: '6 N east and 4 N east', match: /What direction is each force\?/i },
-      { message: '6 N east and 4 N east', match: /same direction or opposite directions/i },
+      { message: '1', match: /Which directions match the force amounts\?/i },
+      { message: '1', match: /same direction or opposite directions/i },
       { message: 'same direction', match: /Should we add or subtract\?/i },
-      { message: 'add', match: /What is the net force\?/i },
+      { message: 'add', match: /What is the net force\? Use 6 \+ 4\./i },
       { message: '10 N', match: /balanced or unbalanced/i },
       { message: 'unbalanced', match: /Diagram:\n\[box\].*6 N east.*4 N east/is }
     ],
@@ -1163,15 +1163,17 @@ async function testPhase9CNetForceTutorRegression() {
   assert.equal(start.body.routeType, 'formula_tutor');
   assert.equal(start.body.tutor.formulaId, 'net_force');
   assert.equal(start.body.tutor.active, true);
-  assert.match(start.body.response, /What forces are given\?/i);
+  assert.equal(start.body.tutor.originalQuestion, question);
+  assert.match(start.body.response, /Which force amounts are given\?/i);
+  assert.match(start.body.response, /Click a choice or type only the number\./i);
   assert.doesNotMatch(start.body.response, /The net force is 5 N right\./i);
   assert.doesNotMatch(start.body.response, /Diagram:\n/i);
 
   const steps = [
-    { message: '15 N right and 10 N left', match: /What direction is each force\?/i },
-    { message: '15 N right and 10 N left', match: /same direction or opposite directions/i },
+    { message: '1', match: /Which directions match the force amounts\?/i },
+    { message: '1', match: /same direction or opposite directions/i },
     { message: 'opposite directions', match: /Should we add or subtract\?/i },
-    { message: 'subtract', match: /What is the net force\?/i },
+    { message: 'subtract', match: /What is the net force\? Use 15 - 10\./i },
     { message: '5 N right', match: /balanced or unbalanced/i },
     { message: 'unbalanced', match: /Diagram:\n10 N left.*\[box\].*15 N right/is }
   ];
@@ -1206,6 +1208,16 @@ async function testPhase9CNetForceTutorRegression() {
   assert.match(direct.body.response, /5 N right/i);
   assert.match(direct.body.response, /Diagram:\n/i);
   assert.match(direct.body.response, /Unbalanced/i);
+
+  const unsafeDirect = await enabled.request('POST', '/api/student/message', {
+    sessionId: enabledCreate.body.sessionId,
+    studentHubId: 'phase-9c-multi-axis-direct',
+    message: 'An object has 16 N of force being applied to the right, 16 N of force being applied to the left, and 4 N of force being applied downward. What is the net force on the object?'
+  });
+  assert.equal(unsafeDirect.statusCode, 200);
+  assert.notEqual(unsafeDirect.body.routeType, 'formula_tutor');
+  assert.match(unsafeDirect.body.response, /16 N right and 16 N left cancel out/i);
+  assert.match(unsafeDirect.body.response, /net force is 4 N downward/i);
 }
 
 async function runGuidedNetForceFlow({ name, question, finalAnswer, balance, steps, finalMatch }) {
@@ -1241,8 +1253,13 @@ async function runGuidedNetForceFlow({ name, question, finalAnswer, balance, ste
   assert.equal(start.body.tutor.formulaId, 'net_force');
   assert.equal(start.body.tutor.solveFor, 'net force');
   assert.equal(start.body.tutor.active, true);
-  assert.match(start.body.response, /What forces are given\?/i);
-  assert.doesNotMatch(start.body.response, new RegExp(escapeRegExp(finalAnswer), 'i'));
+  assert.equal(start.body.tutor.originalQuestion, question);
+  assert.match(start.body.response, /Which force amounts are given\?/i);
+  assert.match(start.body.response, /Choose one:/i);
+  if (finalAnswer !== '0 N') {
+    assert.doesNotMatch(start.body.response, new RegExp(escapeRegExp(finalAnswer), 'i'));
+  }
+  assert.doesNotMatch(start.body.response, /The net force is|Net force =|Diagram:/i);
 
   let response = start;
   for (const [index, step] of steps.entries()) {
