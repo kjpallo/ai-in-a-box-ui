@@ -1,5 +1,15 @@
 const { isInstructionalFollowUpPrompt } = require('../lib/standards/standardsFollowUp');
 const {
+  answerConceptTutorStep,
+  buildConceptTutorMetadata,
+  buildConceptTutorPrompt,
+  isConceptTutorProblem,
+  startConceptTutor
+} = require('../lib/tutor/conceptTutor/conceptTutorEngine');
+const {
+  buildMixtureConceptTutorPattern
+} = require('../lib/tutor/conceptTutor/conceptTutorPatterns');
+const {
   answerFormulaTutorStep,
   buildFormulaTutorMetadata,
   buildFormulaTutorPrompt,
@@ -160,11 +170,15 @@ function registerStudentRoutes(app, {
       }
 
       if (hub.currentTutorProblem && !controls.studentGuidedFormulaTutoringEnabled) {
-        const stoppedTutorType = isMotionForceKnowledgeTutorProblem(hub.currentTutorProblem)
+        const stoppedTutorType = isConceptTutorProblem(hub.currentTutorProblem)
+          ? 'concept_tutor'
+          : isMotionForceKnowledgeTutorProblem(hub.currentTutorProblem)
           ? 'motion_force_knowledge_tutor'
           : 'formula_tutor';
         hub.currentTutorProblem = null;
-        const response = stoppedTutorType === 'motion_force_knowledge_tutor'
+        const response = stoppedTutorType === 'concept_tutor'
+          ? 'Guided Concept tutoring is turned off right now. Ask your question again for a normal answer.'
+          : stoppedTutorType === 'motion_force_knowledge_tutor'
           ? 'Guided General tutoring is turned off right now. Ask your question again for a normal answer.'
           : 'Guided formula tutoring is turned off right now. Ask your formula question again for a normal answer.';
         const entry = appendStudentHubEntry({
@@ -180,7 +194,9 @@ function registerStudentRoutes(app, {
           message,
           questionRoute: stoppedTutorType === 'motion_force_knowledge_tutor'
             ? makeMotionForceKnowledgeTutorRoute(null, entry)
-            : makeFormulaTutorRoute(null, entry),
+            : stoppedTutorType === 'concept_tutor'
+              ? makeConceptTutorRoute(null, entry)
+              : makeFormulaTutorRoute(null, entry),
           answerGiven: response,
           source: 'student',
           sessionId,
@@ -284,6 +300,7 @@ function registerStudentRoutes(app, {
       // Guided math/formula tutor messages are already inside a teacher-safe scaffold, so they do not spend question energy.
       if (hub.currentTutorProblem) {
         const previousTutorProblem = hub.currentTutorProblem;
+        const previousTutorIsConcept = isConceptTutorProblem(previousTutorProblem);
         const previousTutorIsMotionForceKnowledge = isMotionForceKnowledgeTutorProblem(previousTutorProblem);
         if (isLikelyNewQuestionDuringTutor(message) && !isTutorCorrectionDuringTutor(message, previousTutorProblem)) {
           const result = await answerStudentMessage(message, {
@@ -384,7 +401,9 @@ function registerStudentRoutes(app, {
                 previousQuestion: previousTutorProblem.originalQuestion || ''
               },
               formulaTutorDecision: maybeFormulaTutorDecisionDebug(formulaTutorDecision),
-              previousTutorType: previousTutorIsMotionForceKnowledge ? 'motion_force_knowledge' : 'formula'
+              previousTutorType: previousTutorIsConcept
+                ? 'concept'
+                : previousTutorIsMotionForceKnowledge ? 'motion_force_knowledge' : 'formula'
             }
           });
 
@@ -394,6 +413,63 @@ function registerStudentRoutes(app, {
             confidence: result.confidence,
             rateLimit: rateLimitInfo,
             tutor: null
+          });
+        }
+
+        if (previousTutorIsConcept) {
+          const tutorResult = answerConceptTutorStep(previousTutorProblem, message);
+          hub.currentTutorProblem = tutorResult.completed || tutorResult.stopped
+            ? null
+            : tutorResult.currentTutorProblem;
+          const tutorProblemForResponse = hub.currentTutorProblem || tutorResult.completedTutorProblem || previousTutorProblem;
+          const tutorMetadata = buildConceptTutorMetadata(
+            tutorProblemForResponse,
+            {
+              completed: tutorResult.completed,
+              stopped: tutorResult.stopped,
+              latestStudentReply: message
+            }
+          );
+
+          const entry = appendStudentHubEntry({
+            session,
+            hub,
+            message,
+            response: tutorResult.response,
+            routeType: 'concept_tutor',
+            confidence: 'strong',
+            contextPrompt: previousTutorProblem.originalQuestion || '',
+            isTutorStep: true,
+            reportableForStandards: false,
+            tutorOriginalQuestion: previousTutorProblem.originalQuestion || ''
+          });
+
+          logCompletedInteraction({
+            message,
+            questionRoute: makeConceptTutorRoute(tutorProblemForResponse, entry),
+            answerGiven: tutorResult.response,
+            source: 'student',
+            sessionId,
+            isTutorStep: true,
+            reportableForStandards: false,
+            tutorOriginalQuestion: previousTutorProblem.originalQuestion || '',
+            debug: {
+              className: session.className || '',
+              studentHubId,
+              conceptTutor: {
+                active: Boolean(hub.currentTutorProblem),
+                completed: Boolean(tutorResult.completed),
+                stopped: Boolean(tutorResult.stopped)
+              }
+            }
+          });
+
+          return res.json({
+            response: tutorResult.response,
+            routeType: 'concept_tutor',
+            confidence: 'strong',
+            rateLimit: rateLimitInfo,
+            tutor: tutorMetadata
           });
         }
 
@@ -565,6 +641,58 @@ function registerStudentRoutes(app, {
       }
 
       logFormulaTutorDecisionDebug('student_message_bypassed', formulaTutorDecision);
+
+      const mixtureConceptPattern = buildMixtureConceptTutorPattern(message);
+      const mixtureConceptTutorProblem = shouldStartMixtureConceptTutor(mixtureConceptPattern, result)
+        ? startConceptTutor(mixtureConceptPattern, message)
+        : null;
+      if (mixtureConceptTutorProblem) {
+        hub.currentTutorProblem = mixtureConceptTutorProblem;
+        hub.pendingClarification = null;
+        const response = buildConceptTutorPrompt(hub.currentTutorProblem);
+        const tutorMetadata = buildConceptTutorMetadata(hub.currentTutorProblem, {
+          latestStudentReply: message
+        });
+        const entry = appendStudentHubEntry({
+          session,
+          hub,
+          message,
+          response,
+          routeType: 'concept_tutor',
+          confidence: 'strong',
+          standardId: result.standardId || result.questionRoute?.standardId || result.questionRoute?.public?.standardId || '',
+          isStandardsFollowUp: Boolean(result.isStandardsFollowUp),
+          reportableForStandards: false
+        });
+
+        logCompletedInteraction({
+          message,
+          questionRoute: makeConceptTutorRoute(hub.currentTutorProblem, entry),
+          answerGiven: response,
+          source: 'student',
+          sessionId,
+          reportableForStandards: false,
+          debug: {
+            className: session.className || '',
+            studentHubId,
+            originalRouteType: result.routeType,
+            conceptTutor: {
+              active: true,
+              patternId: hub.currentTutorProblem.id,
+              originalQuestion: hub.currentTutorProblem.originalQuestion || ''
+            },
+            formulaTutorDecision: maybeFormulaTutorDecisionDebug(formulaTutorDecision)
+          }
+        });
+
+        return res.json({
+          response,
+          routeType: 'concept_tutor',
+          confidence: 'strong',
+          rateLimit: rateLimitInfo,
+          tutor: tutorMetadata
+        });
+      }
 
       const requestedInteraction = detectAnswerRepresentationIntent(message);
       const shouldStartFlashcards = requestedInteraction.requestedLearningShape === 'flashcards' &&
@@ -747,6 +875,18 @@ function maybeFormulaTutorDecisionDebug(decision) {
 
 function isFormulaTutorDebugEnabled() {
   return process.env.FORMULA_TUTOR_DEBUG === '1';
+}
+
+function shouldStartMixtureConceptTutor(pattern, result) {
+  if (!pattern) return false;
+  if (pattern.supportedExample === true) return true;
+
+  const routeType = String(result?.routeType || result?.questionRoute?.type || '').trim();
+  const publicType = String(result?.questionRoute?.public?.type || '').trim();
+  const response = String(result?.response || result?.questionRoute?.directAnswer || '').trim();
+  return routeType === 'no_match' ||
+    publicType === 'no_match' ||
+    /^I need more information about whether the parts are evenly distributed or visible\/separating\./i.test(response);
 }
 
 function isLikelyNewQuestionDuringTutor(message) {
@@ -1039,7 +1179,7 @@ function findRecentCompletedTutorEntry(recentMessages = []) {
   for (let index = recentMessages.length - 1; index >= 0; index -= 1) {
     const entry = recentMessages[index] || {};
     const routeType = String(entry.routeType || '');
-    if (routeType !== 'formula_tutor' && routeType !== 'motion_force_knowledge_tutor') continue;
+    if (routeType !== 'formula_tutor' && routeType !== 'motion_force_knowledge_tutor' && routeType !== 'concept_tutor') continue;
 
     const response = String(entry.response || '').trim();
     if (/^(?:correct|yes)\b/i.test(response)) return entry;
@@ -1428,6 +1568,53 @@ function makeMotionForceKnowledgeTutorRoute(currentTutorProblem) {
         topic: problem.topic || '',
         category: problem.category || '',
         hasGuidedSteps: Array.isArray(problem.guidingQuestions) && problem.guidingQuestions.length > 0
+      }
+    }
+  };
+}
+
+function makeConceptTutorRoute(currentTutorProblem) {
+  const problem = currentTutorProblem || {};
+  const isComplete = Array.isArray(problem.steps) &&
+    problem.steps.length > 0 &&
+    Number(problem.currentStepIndex) >= problem.steps.length;
+  const finalAnswer = isComplete ? (problem.finalAnswer || '') : '';
+
+  return {
+    type: 'concept_tutor',
+    confidence: 'strong',
+    toolsUsed: ['concept_tutor', 'mixture_concept_pattern'],
+    notes: 'Guided concept tutor step.',
+    aiAllowed: false,
+    tutorCategory: 'concept',
+    tutorLabel: 'Concept Tutor',
+    originalQuestion: problem.originalQuestion || '',
+    topic: problem.topic || '',
+    title: problem.topic || '',
+    finalAnswer,
+    finalExplanation: finalAnswer,
+    conceptTutor: {
+      id: problem.id || '',
+      topic: problem.topic || '',
+      steps: Array.isArray(problem.steps) ? problem.steps : []
+    },
+    public: {
+      type: 'concept_tutor',
+      confidence: 'strong',
+      toolsUsed: ['concept_tutor', 'mixture_concept_pattern'],
+      notes: 'Guided concept tutor step.',
+      aiAllowed: false,
+      tutorCategory: 'concept',
+      tutorLabel: 'Concept Tutor',
+      originalQuestion: problem.originalQuestion || '',
+      topic: problem.topic || '',
+      title: problem.topic || '',
+      finalAnswer,
+      finalExplanation: finalAnswer,
+      conceptTutor: {
+        id: problem.id || '',
+        topic: problem.topic || '',
+        hasGuidedSteps: Array.isArray(problem.steps) && problem.steps.length > 0
       }
     }
   };

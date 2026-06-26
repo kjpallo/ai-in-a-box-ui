@@ -115,6 +115,19 @@ async function assertDirectStudentCases(cases, { guidedTutorEnabled, assertRoute
 
       const response = await sendHarnessMessage(harness, testCase.name, testCase.prompt);
       assert.equal(response.statusCode, 200, detail(testCase, null, response.body, 'student route should return 200'));
+      if (testCase.conceptTutorChoice) {
+        assert.equal(response.body.routeType, 'concept_tutor', detail(testCase, null, response.body, 'student route should start Concept Tutor'));
+        assert.match(response.body.response, /Is it the same throughout, or can you see different parts\?/i, detail(testCase, null, response.body, 'Concept Tutor should ask the mixture clue first'));
+        assert.doesNotMatch(response.body.response, testCase.includes[0], detail(testCase, null, response.body, 'Concept Tutor should hide the final answer before completion'));
+        assert.equal(response.body.tutor?.originalQuestion, testCase.prompt, detail(testCase, null, response.body, 'Concept Tutor should preserve original question'));
+
+        const completed = await sendHarnessMessage(harness, testCase.name, String(testCase.conceptTutorChoice));
+        assert.equal(completed.statusCode, 200, detail(testCase, null, completed.body, 'concept tutor completion should return 200'));
+        assert.equal(completed.body.routeType, 'concept_tutor', detail(testCase, null, completed.body, 'completion should stay in Concept Tutor'));
+        assert.equal(completed.body.tutor?.completed, true, detail(testCase, null, completed.body, 'Concept Tutor should complete after correct choice'));
+        assertAnswer(completed.body.response, testCase, null, completed.body);
+        return;
+      }
       assertDirectBody(response.body, testCase);
     });
   }
@@ -509,7 +522,8 @@ function classificationCases() {
       name: 'trail-mix-heterogeneous',
       prompt: 'is trail mix homogeneous or heterogeneous',
       expectedIdea: 'Trail mix is heterogeneous.',
-      includes: [/trail mix/i, /heterogeneous/i]
+      includes: [/trail mix/i, /heterogeneous/i],
+      conceptTutorChoice: 2
     },
     {
       category,
@@ -1434,8 +1448,9 @@ function studentWordingCases() {
       name: 'olive-oil-water-heterogeneous-not-h2o',
       prompt: 'olive oil in water is that a homo or hetero',
       expectedIdea: 'Oil in water is heterogeneous/suspension, not H2O compound routing.',
-      includes: [/olive oil|oil/i, /water/i, /heterogeneous|suspension/i, /separate|settle|not.*solution/i],
-      excludes: [/H2O|covalent|hydrogen|oxygen/i]
+      includes: [/olive oil|oil/i, /water/i, /heterogeneous/i, /separate|different parts/i],
+      excludes: [/H2O|covalent|hydrogen|oxygen/i],
+      conceptTutorChoice: 2
     },
     {
       category,
