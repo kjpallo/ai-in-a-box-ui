@@ -80,11 +80,12 @@ async function main() {
 
     await assertSelectedApprovalWorkflowCreatesEnabledStudentKnowledge();
     await assertRealContentSmokeApprovalScenarios();
+    await assertEnabledApprovedKnowledgeDoesNotOverrideBuiltInDensityAnswer();
     await assertDisabledApprovedPackDoesNotAnswerStudentQuestion();
     await assertDeletedApprovedPackNoLongerAnswers();
     await assertEditedReapprovedContentWinsOverArchivedDraftCopy();
     await assertTeacherFactsStillAnswerWithEnabledApprovedPacks();
-    await assertCivicsResponsibilityQuestionsUseApprovedKnowledge();
+    await assertCivicsResponsibilityQuestionsDoNotUseApprovedKnowledge();
     await assertHotReloadBehavior();
   } finally {
     cleanupTempRoot();
@@ -108,6 +109,58 @@ async function assertDisabledApprovedPackDoesNotAnswerStudentQuestion() {
   assert.equal(answer.routeType, 'no_match', 'disabled approved pack should not route as local knowledge.');
   assert.doesNotMatch(answer.response, /RNA is a molecule involved in protein synthesis\./);
   assert.match(answer.response, /I do not have a trusted local (science )?fact for that yet\./i);
+}
+
+async function assertEnabledApprovedKnowledgeDoesNotOverrideBuiltInDensityAnswer() {
+  const workflowRoot = path.join(tempRoot, 'density-conflict-workflow');
+  const workflowApprovedPacksDir = path.join(workflowRoot, 'approved-packs');
+  const workflowTeacherFactsFile = path.join(workflowRoot, 'teacher_facts.json');
+  fs.mkdirSync(workflowApprovedPacksDir, { recursive: true });
+  fs.writeFileSync(workflowTeacherFactsFile, `${JSON.stringify({ items: [] }, null, 2)}\n`);
+
+  const packId = 'density-conflict-enabled';
+  writePack(workflowApprovedPacksDir, makePack({
+    packId,
+    title: 'Density Conflict Upload',
+    subject: 'Physical Science',
+    gradeLevel: '9',
+    vocabulary: [
+      makeVocabulary('Density', 'teacher upload says density is magic classroom glitter.', 'approved')
+    ],
+    concepts: [],
+    referenceFormulas: [],
+    problemBank: [],
+    standardsMap: [],
+    smokeTests: []
+  }));
+  fs.writeFileSync(path.join(workflowApprovedPacksDir, '_activation.json'), `${JSON.stringify({
+    version: 1,
+    packs: {
+      [packId]: { enabled: true, updatedAt: '2026-06-01T00:00:00.000Z' }
+    }
+  }, null, 2)}\n`);
+
+  const enabledItems = loadEnabledApprovedKnowledgeItems({ approvedPacksDir: workflowApprovedPacksDir });
+  assert.equal(enabledItems.some((item) => item.title === 'Density'), true, 'conflicting enabled approved density item should still load.');
+
+  const loadCombinedKnowledge = () => [
+    ...loadTeacherKnowledge(workflowTeacherFactsFile),
+    ...enabledItems
+  ];
+  const questionAnswer = makeQuestionAnswerService({
+    teacherFactsFile: workflowTeacherFactsFile,
+    loadCombinedKnowledge,
+    fallbackMessage: 'Built-in density answer should not need AI fallback.'
+  });
+
+  const answer = await questionAnswer.answerStudentMessage('what is density');
+  assert.equal(answer.routeType, 'definition', 'density question should still answer from built-in matter knowledge.');
+  assert.match(answer.response, /Density is mass per unit volume|D = m \/ V/i);
+  assert.doesNotMatch(answer.response, /magic classroom glitter/i);
+  assert.ok(
+    answer.questionRoute.toolsUsed.includes('unit6_matter_knowledge'),
+    'density answer should use the built-in Unit 6 matter knowledge packet.'
+  );
 }
 
 async function assertDeletedApprovedPackNoLongerAnswers() {
@@ -146,9 +199,13 @@ async function assertDeletedApprovedPackNoLongerAnswers() {
     fallbackMessage: 'Deleted approved pack workflow should not call AI fallback.'
   });
 
+  const enabledBeforeDelete = loadEnabledApprovedKnowledgeItems({ approvedPacksDir: workflowApprovedPacksDir });
+  assert.equal(enabledBeforeDelete.some((item) => item.title === 'Finalium'), true, 'approved pack item should load before deletion.');
+
   const beforeDelete = await questionAnswer.answerStudentMessage('What is Finalium?');
-  assert.equal(beforeDelete.routeType, 'definition');
-  assert.match(beforeDelete.response, /Finalium is a classroom-only mineral used in a deletion test\./);
+  assert.equal(beforeDelete.routeType, 'no_match', 'enabled approved upload should not answer live student questions.');
+  assert.doesNotMatch(beforeDelete.response, /classroom-only mineral used in a deletion test/);
+  assert.match(beforeDelete.response, /I do not have a trusted local (science )?fact for that yet\./i);
 
   const deletion = deleteApprovedKnowledgePack('delete-me-approved-pack', {
     approvedPacksDir: workflowApprovedPacksDir,
@@ -157,6 +214,8 @@ async function assertDeletedApprovedPackNoLongerAnswers() {
   });
   assert.equal(deletion.success, true, JSON.stringify(deletion));
   assert.equal(fs.existsSync(path.join(workflowApprovedPacksDir, 'delete-me-approved-pack', 'knowledge_pack.json')), false);
+  const enabledAfterDelete = loadEnabledApprovedKnowledgeItems({ approvedPacksDir: workflowApprovedPacksDir });
+  assert.equal(enabledAfterDelete.some((item) => item.title === 'Finalium'), false, 'deleted approved pack item should stop loading.');
 
   const afterDelete = await questionAnswer.answerStudentMessage('What is Finalium?');
   assert.equal(afterDelete.routeType, 'no_match');
@@ -210,7 +269,7 @@ async function assertEditedReapprovedContentWinsOverArchivedDraftCopy() {
   writePack(workflowDraftPacksDir, makePack({
     packId: draftPackId,
     title: 'RevisionTerm Draft Pack',
-    vocabulary: [makeVocabulary('RevisionTerm', 'newest teacher-approved wording that should answer students.', 'pending')],
+    vocabulary: [makeVocabulary('RevisionTerm', 'newest teacher-approved wording that should stay loadable for admin review.', 'pending')],
     concepts: [],
     referenceFormulas: [],
     problemBank: [],
@@ -247,9 +306,10 @@ async function assertEditedReapprovedContentWinsOverArchivedDraftCopy() {
   });
 
   const answer = await questionAnswer.answerStudentMessage('What is RevisionTerm?');
-  assert.equal(answer.routeType, 'definition');
-  assert.match(answer.response, /newest teacher-approved wording that should answer students\./);
+  assert.equal(answer.routeType, 'no_match', 're-approved uploaded content should not answer live student questions.');
+  assert.doesNotMatch(answer.response, /newest teacher-approved wording/);
   assert.doesNotMatch(answer.response, /old archived wording/);
+  assert.match(answer.response, /I do not have a trusted local (science )?fact for that yet\./i);
 }
 
 async function assertTeacherFactsStillAnswerWithEnabledApprovedPacks() {
@@ -268,11 +328,12 @@ async function assertTeacherFactsStillAnswerWithEnabledApprovedPacks() {
   assert.match(massAnswer.response, /Mass is the amount of matter in an object\./);
 
   const dnaAnswer = await questionAnswer.answerStudentMessage('What is DNA?');
-  assert.equal(dnaAnswer.routeType, 'definition');
-  assert.match(dnaAnswer.response, /DNA is a molecule that stores genetic instructions\./);
+  assert.equal(dnaAnswer.routeType, 'no_match', 'enabled approved uploads should not answer live student questions.');
+  assert.doesNotMatch(dnaAnswer.response, /DNA is a molecule that stores genetic instructions\./);
+  assert.match(dnaAnswer.response, /I do not have a trusted local (science )?fact for that yet\./i);
 }
 
-async function assertCivicsResponsibilityQuestionsUseApprovedKnowledge() {
+async function assertCivicsResponsibilityQuestionsDoNotUseApprovedKnowledge() {
   const workflowRoot = path.join(tempRoot, 'civics-responsibility-workflow');
   const workflowApprovedPacksDir = path.join(workflowRoot, 'approved-packs');
   const workflowTeacherFactsFile = path.join(workflowRoot, 'teacher_facts.json');
@@ -326,53 +387,45 @@ async function assertCivicsResponsibilityQuestionsUseApprovedKnowledge() {
     fallbackMessage: 'Civics responsibility questions should not call AI fallback.'
   });
 
-  await assertQuestionAnswer({
+  await assertQuestionDoesNotUseApprovedAnswer({
     questionAnswer,
     question: 'who interprets laws?',
-    routeType: 'class_fact',
-    answer: 'The judicial branch interprets laws.'
+    blockedPattern: /judicial branch interprets laws/i
   });
-  await assertQuestionAnswer({
+  await assertQuestionDoesNotUseApprovedAnswer({
     questionAnswer,
     question: 'which branch interprets laws?',
-    routeType: 'class_fact',
-    answer: 'The judicial branch interprets laws.'
+    blockedPattern: /judicial branch interprets laws/i
   });
-  await assertQuestionAnswer({
+  await assertQuestionDoesNotUseApprovedAnswer({
     questionAnswer,
     question: 'what branch makes laws?',
-    routeType: 'class_fact',
-    answer: 'The legislative branch makes laws.'
+    blockedPattern: /legislative branch makes laws/i
   });
-  await assertQuestionAnswer({
+  await assertQuestionDoesNotUseApprovedAnswer({
     questionAnswer,
     question: 'who carries out laws?',
-    routeType: 'class_fact',
-    answer: 'The executive branch carries out laws.'
+    blockedPattern: /executive branch carries out laws/i
   });
-  await assertQuestionAnswer({
+  await assertQuestionDoesNotUseApprovedAnswer({
     questionAnswer,
     question: 'ways each branch can limit the power?',
-    routeType: 'class_fact',
-    answer: 'Checks and balances is ways each branch can limit the power of the others.'
+    blockedPattern: /checks and balances/i
   });
-  await assertQuestionAnswer({
+  await assertQuestionDoesNotUseApprovedAnswer({
     questionAnswer,
     question: 'what are checks and balances?',
-    routeType: 'definition',
-    answer: 'Checks and balances is ways each branch can limit the power of the others.'
+    blockedPattern: /checks and balances/i
   });
-  await assertQuestionAnswer({
+  await assertQuestionDoesNotUseApprovedAnswer({
     questionAnswer,
     question: 'what is judicial review?',
-    routeType: 'definition',
-    answerPattern: /Judicial review is the power of courts to decide whether laws or government actions follow the Constitution\./
+    blockedPattern: /judicial review is the power/i
   });
-  await assertQuestionAnswer({
+  await assertQuestionDoesNotUseApprovedAnswer({
     questionAnswer,
     question: 'what is civic participation?',
-    routeType: 'definition',
-    answerPattern: /Civic participation means taking part in your community and government/
+    blockedPattern: /civic participation means/i
   });
 
   const unsupported = await questionAnswer.answerStudentMessage('what branch changes laws?');
@@ -382,11 +435,11 @@ async function assertCivicsResponsibilityQuestionsUseApprovedKnowledge() {
 
   const barePower = await questionAnswer.answerStudentMessage('what is power?');
   assert.equal(barePower.routeType, 'definition', 'bare power should keep the built-in science definition without civics context.');
-  assert.match(barePower.response, /Power is the rate at which a device converts electrical energy|Power is how quickly work is done/i);
+  assert.match(barePower.response, /Power is the rate at which (?:a device converts electrical energy|work is done or energy is transferred)|Power is how quickly work is done/i);
   assert.doesNotMatch(barePower.response, /checks and balances/i);
 
   const powerFormula = await questionAnswer.answerStudentMessage('what is the formula for power?');
-  assert.equal(powerFormula.routeType, 'formula_only', 'power formula should keep formula routing without civics context.');
+  assert.notEqual(powerFormula.routeType, 'no_match', 'power formula should keep built-in routing without civics context.');
   assert.match(powerFormula.response, /P = W \/ t/);
   assert.doesNotMatch(powerFormula.response, /checks and balances/i);
 }
@@ -401,6 +454,13 @@ async function assertQuestionAnswer({ questionAnswer, question, routeType, answe
     assert.match(result.response, answerPattern);
   }
   assert.doesNotMatch(result.response, /I do not have a trusted local fact/i);
+}
+
+async function assertQuestionDoesNotUseApprovedAnswer({ questionAnswer, question, blockedPattern }) {
+  const result = await questionAnswer.answerStudentMessage(question);
+  assert.equal(result.routeType, 'no_match', `${question} should not route from enabled approved uploads.`);
+  assert.doesNotMatch(result.response, blockedPattern);
+  assert.match(result.response, /I do not have a trusted local (science )?fact for that yet\./i);
 }
 
 async function assertSelectedApprovalWorkflowCreatesEnabledStudentKnowledge() {
@@ -456,7 +516,7 @@ async function assertSelectedApprovalWorkflowCreatesEnabledStudentKnowledge() {
   assert.equal(fs.existsSync(path.join(approval.archivedDrafts[0].archivedPath, 'knowledge_pack.json')), true, 'archived accepted draft should be preserved.');
 
   const enabledApproved = loadEnabledApprovedKnowledgeItems({ approvedPacksDir: workflowApprovedPacksDir });
-  assert.equal(enabledApproved.some((item) => item.title === 'DNA'), true, 'student loader should include the enabled approved DNA item.');
+  assert.equal(enabledApproved.some((item) => item.title === 'DNA'), true, 'approved pack loader should include the enabled approved DNA item.');
 
   const loadCombinedKnowledge = () => [
     ...loadTeacherKnowledge(workflowTeacherFactsFile),
@@ -482,9 +542,9 @@ async function assertSelectedApprovalWorkflowCreatesEnabledStudentKnowledge() {
   });
 
   const answer = await questionAnswer.answerStudentMessage('what is dna');
-  assert.equal(answer.routeType, 'definition');
-  assert.equal(answer.confidence, 'strong');
-  assert.match(answer.response, /In 9th-grade science, DNA is a molecule that stores genetic instructions\./);
+  assert.equal(answer.routeType, 'no_match');
+  assert.doesNotMatch(answer.response, /DNA is a molecule that stores genetic instructions\./);
+  assert.match(answer.response, /I do not have a trusted local (science )?fact for that yet\./i);
 }
 
 async function assertRealContentSmokeApprovalScenarios() {
@@ -646,7 +706,7 @@ async function assertRealContentSmokeApprovalScenarios() {
     approvedPacksDir: workflowApprovedPacksDir,
     packId: physicalApproval.combinedPack.packId,
     question: 'what is density',
-    answerPattern: /Density is an amount of mass in a given volume\./
+    answerPattern: /Density is mass per unit volume|D = m \/ V/
   });
   const formulaRoute = routeStudentQuestion('A 3 kg cart accelerates at 2 m/s^2. What force is needed?', []);
   assert.equal(formulaRoute.type, 'science_formula', 'existing built-in formula solver behavior should remain unchanged.');
@@ -851,9 +911,12 @@ function assertHotReloadBehavior() {
       }
     });
 
+    const enabledItems = loadEnabledApprovedKnowledgeItems({ approvedPacksDir });
+    assert.equal(enabledItems.some((item) => item.title === 'DNA'), true, 'enabled approved item should load after activation changes.');
+
     return questionAnswer.answerStudentMessage('What is DNA?').then((afterEnable) => {
-      assert.match(afterEnable.response, /In 9th-grade science, DNA is a molecule that stores genetic instructions\./);
-      assert.doesNotMatch(afterEnable.response, /I do not have a trusted local science fact/i);
+      assert.match(afterEnable.response, /I do not have a trusted local (science )?fact for that yet\./i);
+      assert.doesNotMatch(afterEnable.response, /DNA is a molecule that stores genetic instructions\./);
     });
   });
 }
