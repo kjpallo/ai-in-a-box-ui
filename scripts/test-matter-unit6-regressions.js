@@ -240,6 +240,9 @@ function assertDirectBody(body, testCase) {
   if (testCase.routeTypes) {
     assert.ok(testCase.routeTypes.includes(body.routeType), detail(testCase, null, body, `body route should be one of ${testCase.routeTypes.join(', ')}`));
   }
+  if (testCase.allowsTutor && body.routeType === 'formula_tutor') {
+    return;
+  }
   assertAnswer(body.response, testCase, null, body);
 }
 
@@ -919,6 +922,36 @@ function densityTutorCases() {
     },
     {
       category,
+      name: 'rectangular-prism-density-has-formula-work-or-tutor',
+      prompt: 'A piece of wood measures 3 cm by 6 cm by 4 cm and has a mass of 80 g. What is its density?',
+      expectedIdea: 'Derived rectangular-prism volume density should expose Formula Tutor work.',
+      includes: [/72\s*cm/i, /1\.11\s*g\/cm/i],
+      minimumKnownValues: 5,
+      formulaChoice: /density.*mass.*volume|D\s*=\s*m\s*\/\s*V/i,
+      formulaWork: { formulaId: /density_mass_volume/, solveFor: /density/i, minimumSteps: 8 }
+    },
+    {
+      category,
+      name: 'displacement-density-has-formula-work-or-tutor',
+      prompt: 'A graduated cylinder has 33.5 mL of water. A piece of metal is added and the new volume is 46.2 mL. The metal has a mass of 16.25 g. What is its density?',
+      expectedIdea: 'Derived displacement-volume density should expose Formula Tutor work.',
+      includes: [/12\.7\s*mL/i, /1\.28\s*g\/mL/i],
+      minimumKnownValues: 4,
+      formulaChoice: /density.*mass.*volume|D\s*=\s*m\s*\/\s*V/i,
+      formulaWork: { formulaId: /density_mass_volume/, solveFor: /density/i, minimumSteps: 7 }
+    },
+    {
+      category,
+      name: 'shorthand-displacement-density-has-formula-work-or-tutor',
+      prompt: 'water goes from 33.5 to 46.2 ml and metal mass 16.25 what density',
+      expectedIdea: 'Student shorthand displacement density should expose Formula Tutor work.',
+      includes: [/12\.7\s*mL/i, /1\.28\s*g\/mL/i],
+      minimumKnownValues: 4,
+      formulaChoice: /density.*mass.*volume|D\s*=\s*m\s*\/\s*V/i,
+      formulaWork: { formulaId: /density_mass_volume/, solveFor: /density/i, minimumSteps: 7 }
+    },
+    {
+      category,
       name: 'density-tutor-solving-mass',
       prompt: 'A metal cube has a density of 2.7 g/cm³ and a volume of 10 cm³. What is its mass?',
       expectedIdea: 'Formula Tutor should solve mass with m = D x V.',
@@ -1161,10 +1194,18 @@ function stateChangeHeatingCurveCases() {
     },
     {
       category,
-      name: 'segment-four-heating-curve',
+      name: 'bare-heating-curve-segment-needs-context',
       prompt: 'what is segment 4 on a heating curve',
-      expectedIdea: 'Segment 4 is boiling point/heat of vaporization/liquid plus gas.',
-      includes: [/segment 4/i, /boiling|heat of vaporization/i, /liquid/i, /gas/i]
+      expectedIdea: 'Bare segment-number prompts should ask for diagram context while giving the standard Unit 6 water curve as a cautious reference.',
+      includes: [/need|diagram|context|know for sure/i, /standard Unit 6 water heating curve/i, /segment 4/i, /boiling|heat of vaporization/i, /liquid/i, /gas/i]
+    },
+    {
+      category,
+      name: 'standard-unit6-heating-curve-segment-4',
+      prompt: 'on the standard Unit 6 water heating curve what is segment 4',
+      expectedIdea: 'On the standard Unit 6 water heating curve, segment 4 is boiling/heat of vaporization/liquid plus gas.',
+      includes: [/segment 4/i, /boiling|heat of vaporization/i, /liquid/i, /gas/i],
+      excludes: [/need.*diagram|diagram.*know for sure/i]
     },
     {
       category,
@@ -1383,6 +1424,64 @@ function studentWordingCases() {
     },
     {
       category,
+      name: 'paint-typo-pant-homo',
+      prompt: 'is pant homo',
+      expectedIdea: 'Pant should be treated as likely paint only in homo/hetero classification context.',
+      includes: [/paint/i, /colloid|heterogeneous/i, /not.*homogeneous|not.*solution/i]
+    },
+    {
+      category,
+      name: 'olive-oil-water-heterogeneous-not-h2o',
+      prompt: 'olive oil in water is that a homo or hetero',
+      expectedIdea: 'Oil in water is heterogeneous/suspension, not H2O compound routing.',
+      includes: [/olive oil|oil/i, /water/i, /heterogeneous|suspension/i, /separate|settle|not.*solution/i],
+      excludes: [/H2O|covalent|hydrogen|oxygen/i]
+    },
+    {
+      category,
+      name: 'mineral-water-homogeneous-not-h2o',
+      prompt: 'mineral water is homo or hetero',
+      expectedIdea: 'Mineral water is usually homogeneous because minerals are dissolved evenly.',
+      includes: [/mineral water/i, /homogeneous|solution/i, /evenly|same throughout|dissolved/i],
+      excludes: [/H2O|covalent|hydrogen|oxygen/i]
+    },
+    {
+      category,
+      name: 'bleach-homogeneous',
+      prompt: 'bleach is homo or hetero',
+      expectedIdea: 'Bleach is a homogeneous mixture/solution.',
+      includes: [/bleach/i, /homogeneous|solution/i]
+    },
+    {
+      category,
+      name: 'dirt-heterogeneous-usually',
+      prompt: 'dirt is homo or hetero',
+      expectedIdea: 'Dirt is usually heterogeneous because it has different visible particles.',
+      includes: [/dirt|soil/i, /usually/i, /heterogeneous/i, /different|visible|particles/i]
+    },
+    {
+      category,
+      name: 'skittles-typo-heterogeneous',
+      prompt: 'skittles ar homogeneous or heterogeneous',
+      expectedIdea: 'Skittles are heterogeneous because different pieces/colors are visible.',
+      includes: [/skittles/i, /heterogeneous/i, /pieces|colors|visible/i]
+    },
+    {
+      category,
+      name: 'asphalt-heterogeneous-usually',
+      prompt: 'Asphalt is homo or hetero',
+      expectedIdea: 'Asphalt is usually heterogeneous because aggregate/stone and binder are mixed.',
+      includes: [/asphalt/i, /usually/i, /heterogeneous/i, /aggregate|stone|binder|different materials/i]
+    },
+    {
+      category,
+      name: 'toothpaste-colloid-usually',
+      prompt: 'toothpaste is homo or hetero',
+      expectedIdea: 'Toothpaste is usually treated as a colloid/heterogeneous mixture in this unit.',
+      includes: [/toothpaste/i, /usually/i, /colloid/i, /heterogeneous/i]
+    },
+    {
+      category,
       name: 'mayo-mixture',
       prompt: 'is mayo a mixture',
       expectedIdea: 'Mayo is a colloid/heterogeneous mixture.',
@@ -1415,7 +1514,8 @@ function studentWordingCases() {
       prompt: 'density if mass is 80g and box is 3 by 6 by 4',
       expectedIdea: 'Student shorthand should solve volume 72 and density about 1.11.',
       includes: [/72/i, /1\.11/i, /density/i],
-      allowsFormulaRoute: true
+      allowsFormulaRoute: true,
+      allowsTutor: true
     },
     {
       category,
@@ -1423,7 +1523,8 @@ function studentWordingCases() {
       prompt: 'water goes from 33.5 to 46.2 ml and metal mass 16.25 what density',
       expectedIdea: 'Student shorthand should use displacement 12.7 mL and density about 1.28.',
       includes: [/12\.7/i, /1\.28/i, /density/i],
-      allowsFormulaRoute: true
+      allowsFormulaRoute: true,
+      allowsTutor: true
     },
     {
       category,
