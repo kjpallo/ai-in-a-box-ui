@@ -11,51 +11,63 @@ const NEWTONS_LAWS_CONCEPT_TUTOR_CASES = [
     prompt: "Which Newton's law is shown when a soccer ball stays still until kicked?",
     law: 'first',
     triggerGroup: '1st Law / inertia',
-    triggerPrompt: /Which Newton's law best matches the clue\?/i
+    triggerPrompt: /Which clue best matches the situation\?/i
   },
   {
     prompt: "Which Newton's law is a rocket launching?",
     law: 'third',
     triggerGroup: '3rd Law / action-reaction',
-    triggerPrompt: /Which Newton's law best matches the clue\?/i
+    triggerPrompt: /Which clue best matches the situation\?/i
   },
   {
     prompt: "Which Newton's law is a swimmer pushing water backward and moving forward?",
     law: 'third',
     triggerGroup: '3rd Law / action-reaction',
-    triggerPrompt: /Which Newton's law best matches the clue\?/i
+    triggerPrompt: /Which clue best matches the situation\?/i
   },
   {
     prompt: "Which Newton's law is force equals mass times acceleration?",
     law: 'second',
     triggerGroup: '2nd Law / F = ma',
-    triggerPrompt: /Which Newton's law best matches the clue\?/i
+    triggerPrompt: /Which clue best matches the situation\?/i
   },
   {
     prompt: "Which Newton's law is about action and reaction?",
     law: 'third',
     triggerGroup: '3rd Law / action-reaction',
-    triggerPrompt: /Which Newton's law best matches the clue\?/i
+    triggerPrompt: /Which clue best matches the situation\?/i
   },
   {
     prompt: "Which Newton's law is about inertia?",
     law: 'first',
     triggerGroup: '1st Law / inertia',
-    triggerPrompt: /Which Newton's law best matches the clue\?/i
+    triggerPrompt: /Which clue best matches the situation\?/i
   },
   {
     prompt: "Which Newton's law is shown when a seatbelt stops you in a car?",
     law: 'first',
     triggerGroup: '1st Law / inertia',
-    triggerPrompt: /Which Newton's law best matches the clue\?/i
+    triggerPrompt: /Which clue best matches the situation\?/i
   },
   {
     prompt: "Which Newton's law is shown when pushing a shopping cart harder makes it accelerate more?",
     law: 'second',
     triggerGroup: '2nd Law / F = ma',
-    triggerPrompt: /Which Newton's law best matches the clue\?/i
+    triggerPrompt: /Which clue best matches the situation\?/i
   }
 ];
+
+const NEWTONS_LAWS_CLUE_LABELS = [
+  'An object stays still or keeps moving until a force changes it.',
+  'Force, mass, and acceleration are connected.',
+  'Two objects push or pull on each other with opposite forces.'
+];
+
+const NEWTONS_LAWS_FINAL_ANSWERS = {
+  first: "This shows Newton's First Law because the object stays at rest or keeps moving until a force changes it.",
+  second: "This shows Newton's Second Law because force, mass, and acceleration are connected.",
+  third: "This shows Newton's Third Law because two objects push or pull on each other with equal and opposite forces."
+};
 
 const DIRECT_ANSWER_CASES_TO_PRESERVE = [
   {
@@ -124,6 +136,22 @@ function testNewtonLawConceptTutorPatternCandidates() {
       pattern.steps[0].choices.map((choice) => choice.number),
       [1, 2, 3],
       'Newton law tutor must stay numbered-choice only'
+    );
+    assert.deepEqual(
+      pattern.steps[0].choices.map((choice) => choice.label),
+      NEWTONS_LAWS_CLUE_LABELS,
+      'Newton law tutor choices must show clues, not law names'
+    );
+    assert.deepEqual(
+      pattern.steps[0].choices.map((choice) => choice.value),
+      ['first', 'second', 'third'],
+      'Newton law tutor choice values should preserve law mapping'
+    );
+    assert.equal(pattern.finalAnswer, NEWTONS_LAWS_FINAL_ANSWERS[testCase.law]);
+    assert.equal(
+      pattern.steps[0].choices.find((choice) => choice.correct)?.finalAnswer,
+      NEWTONS_LAWS_FINAL_ANSWERS[testCase.law],
+      'correct clue should reveal the matching law only as the final answer'
     );
 
     const route = routeStudentQuestion(testCase.prompt, []);

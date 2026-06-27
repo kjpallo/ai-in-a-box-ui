@@ -6,44 +6,50 @@ const NEWTONS_LAWS_IDENTIFICATION_CASES = [
   {
     prompt: "Which Newton's law is shown when a soccer ball stays still until kicked?",
     choice: '1',
-    finalPattern: /Newton's First Law: objects stay at rest or keep moving unless a force changes their motion/i
+    finalPattern: /This shows Newton's First Law because the object stays at rest or keeps moving until a force changes it\./i
   },
   {
     prompt: "Which Newton's law is a rocket launching?",
     choice: '3',
-    finalPattern: /Newton's Third Law: forces come in action-reaction pairs/i
+    finalPattern: /This shows Newton's Third Law because two objects push or pull on each other with equal and opposite forces\./i
   },
   {
     prompt: "Which Newton's law is a swimmer pushing water backward and moving forward?",
     choice: '3',
-    finalPattern: /Newton's Third Law: forces come in action-reaction pairs/i,
+    finalPattern: /This shows Newton's Third Law because two objects push or pull on each other with equal and opposite forces\./i,
     rejectsPattern: /chemistry|compound|mixture|h2o|water is/i
   },
   {
     prompt: "Which Newton's law is force equals mass times acceleration?",
     choice: '2',
-    finalPattern: /Newton's Second Law: force, mass, and acceleration are connected/i
+    finalPattern: /This shows Newton's Second Law because force, mass, and acceleration are connected\./i
   },
   {
     prompt: "Which Newton's law is about action and reaction?",
     choice: '3',
-    finalPattern: /Newton's Third Law: forces come in action-reaction pairs/i
+    finalPattern: /This shows Newton's Third Law because two objects push or pull on each other with equal and opposite forces\./i
   },
   {
     prompt: "Which Newton's law is about inertia?",
     choice: '1',
-    finalPattern: /Newton's First Law: objects stay at rest or keep moving unless a force changes their motion/i
+    finalPattern: /This shows Newton's First Law because the object stays at rest or keeps moving until a force changes it\./i
   },
   {
     prompt: "Which Newton's law is shown when a seatbelt stops you in a car?",
     choice: '1',
-    finalPattern: /Newton's First Law: objects stay at rest or keep moving unless a force changes their motion/i
+    finalPattern: /This shows Newton's First Law because the object stays at rest or keeps moving until a force changes it\./i
   },
   {
     prompt: "Which Newton's law is shown when pushing a shopping cart harder makes it accelerate more?",
     choice: '2',
-    finalPattern: /Newton's Second Law: force, mass, and acceleration are connected/i
+    finalPattern: /This shows Newton's Second Law because force, mass, and acceleration are connected\./i
   }
+];
+
+const NEWTONS_LAWS_CLUE_LABELS = [
+  'An object stays still or keeps moving until a force changes it.',
+  'Force, mass, and acceleration are connected.',
+  'Two objects push or pull on each other with opposite forces.'
 ];
 
 const DIRECT_ANSWER_CASES_TO_PRESERVE = [
@@ -113,10 +119,23 @@ async function assertSupportedIdentificationPromptsStartAndComplete({
     assert.equal(start.body.tutor.originalQuestion, testCase.prompt);
     assert.equal(start.body.tutor.finalAnswer, undefined, 'active tutor metadata should hide final answer');
     assert.equal(start.body.tutor.work.finalAnswer, '', 'active tutor work should hide final answer');
-    assert.match(start.body.response, /Which Newton's law best matches the clue\?/i);
-    assert.match(start.body.response, /1\. Newton's First Law/i);
-    assert.match(start.body.response, /2\. Newton's Second Law/i);
-    assert.match(start.body.response, /3\. Newton's Third Law/i);
+    assert.match(start.body.response, /Which clue best matches the situation\?/i);
+    assert.match(start.body.response, /1\. An object stays still or keeps moving until a force changes it\./i);
+    assert.match(start.body.response, /2\. Force, mass, and acceleration are connected\./i);
+    assert.match(start.body.response, /3\. Two objects push or pull on each other with opposite forces\./i);
+    assert.doesNotMatch(start.body.response, /^1\. Newton's First Law$/im);
+    assert.doesNotMatch(start.body.response, /^2\. Newton's Second Law$/im);
+    assert.doesNotMatch(start.body.response, /^3\. Newton's Third Law$/im);
+    assert.deepEqual(
+      start.body.tutor.currentStep.choices.map((choice) => choice.label),
+      NEWTONS_LAWS_CLUE_LABELS,
+      'active tutor metadata should expose clue labels, not law names'
+    );
+    assert.deepEqual(
+      start.body.tutor.work.currentStep.choices.map((choice) => choice.label),
+      NEWTONS_LAWS_CLUE_LABELS,
+      'active tutor work should expose clue labels, not law names'
+    );
     assert.match(start.body.response, /type only the number/i);
     assert.doesNotMatch(start.body.response, testCase.finalPattern, 'start response should hide final answer');
     if (testCase.rejectsPattern) {
@@ -162,7 +181,7 @@ async function assertWrongNumberedChoiceRetries({ request, classSessionId }) {
   assert.equal(wrong.body.tutor.active, true);
   assert.equal(wrong.body.tutor.currentStepIndex, 0);
   assert.match(wrong.body.response, /Not quite/i);
-  assert.doesNotMatch(wrong.body.response, /Newton's Third Law: forces come in action-reaction pairs/i);
+  assert.doesNotMatch(wrong.body.response, /This shows Newton's Third Law because two objects push or pull on each other with equal and opposite forces\./i);
 
   const correct = await request('POST', '/api/student/message', {
     sessionId: classSessionId,
@@ -172,7 +191,7 @@ async function assertWrongNumberedChoiceRetries({ request, classSessionId }) {
   assert.equal(correct.statusCode, 200);
   assert.equal(correct.body.routeType, 'concept_tutor');
   assert.equal(correct.body.tutor.completed, true);
-  assert.match(correct.body.response, /Newton's Third Law: forces come in action-reaction pairs/i);
+  assert.match(correct.body.response, /This shows Newton's Third Law because two objects push or pull on each other with equal and opposite forces\./i);
 }
 
 async function assertDirectAnswerPromptsBypassConceptTutor({ request, classSessionId }) {
