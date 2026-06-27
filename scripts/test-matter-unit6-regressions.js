@@ -115,13 +115,27 @@ async function assertDirectStudentCases(cases, { guidedTutorEnabled, assertRoute
 
       const response = await sendHarnessMessage(harness, testCase.name, testCase.prompt);
       assert.equal(response.statusCode, 200, detail(testCase, null, response.body, 'student route should return 200'));
-      if (testCase.conceptTutorChoice) {
+      if (testCase.conceptTutorChoice || testCase.conceptTutorChoices) {
+        const conceptTutorChoices = Array.isArray(testCase.conceptTutorChoices)
+          ? testCase.conceptTutorChoices
+          : [testCase.conceptTutorChoice];
+        const hiddenFinalPattern = testCase.hiddenFinalPattern || testCase.includes[0];
         assert.equal(response.body.routeType, 'concept_tutor', detail(testCase, null, response.body, 'student route should start Concept Tutor'));
-        assert.match(response.body.response, /Is it the same throughout, or can you see different parts\?/i, detail(testCase, null, response.body, 'Concept Tutor should ask the mixture clue first'));
-        assert.doesNotMatch(response.body.response, testCase.includes[0], detail(testCase, null, response.body, 'Concept Tutor should hide the final answer before completion'));
+        assert.match(response.body.response, testCase.conceptTutorPrompt || /Is it the same throughout, or can you see different parts\?/i, detail(testCase, null, response.body, 'Concept Tutor should ask the expected clue first'));
+        assert.doesNotMatch(response.body.response, hiddenFinalPattern, detail(testCase, null, response.body, 'Concept Tutor should hide the final answer before completion'));
         assert.equal(response.body.tutor?.originalQuestion, testCase.prompt, detail(testCase, null, response.body, 'Concept Tutor should preserve original question'));
 
-        const completed = await sendHarnessMessage(harness, testCase.name, String(testCase.conceptTutorChoice));
+        let completed = null;
+        for (let index = 0; index < conceptTutorChoices.length; index += 1) {
+          completed = await sendHarnessMessage(harness, testCase.name, String(conceptTutorChoices[index]));
+          assert.equal(completed.statusCode, 200, detail(testCase, null, completed.body, 'concept tutor step should return 200'));
+          assert.equal(completed.body.routeType, 'concept_tutor', detail(testCase, null, completed.body, 'concept tutor step should stay in Concept Tutor'));
+          if (index < conceptTutorChoices.length - 1) {
+            assert.equal(completed.body.tutor?.active, true, detail(testCase, null, completed.body, 'Concept Tutor should stay active before final choice'));
+            assert.doesNotMatch(completed.body.response, hiddenFinalPattern, detail(testCase, null, completed.body, 'Concept Tutor should hide the final answer before completion'));
+          }
+        }
+
         assert.equal(completed.statusCode, 200, detail(testCase, null, completed.body, 'concept tutor completion should return 200'));
         assert.equal(completed.body.routeType, 'concept_tutor', detail(testCase, null, completed.body, 'completion should stay in Concept Tutor'));
         assert.equal(completed.body.tutor?.completed, true, detail(testCase, null, completed.body, 'Concept Tutor should complete after correct choice'));
@@ -452,35 +466,46 @@ function classificationCases() {
       name: 'salt-compound',
       prompt: 'is salt an element compound or mixture',
       expectedIdea: 'Salt/NaCl is a compound.',
-      includes: [/compound/i, /salt|NaCl|sodium chloride/i]
+      includes: [/compound/i, /salt|NaCl|sodium chloride/i],
+      hiddenFinalPattern: /Salt is a compound/i,
+      conceptTutorPrompt: /Is it made of one kind of atom\?/i,
+      conceptTutorChoices: [2, 1]
     },
     {
       category,
       name: 'oxygen-element',
       prompt: 'is oxygen an element or compound',
       expectedIdea: 'Oxygen is an element.',
-      includes: [/oxygen/i, /element/i]
+      includes: [/oxygen/i, /element/i],
+      conceptTutorPrompt: /Is it made of one kind of atom\?/i,
+      conceptTutorChoices: [1]
     },
     {
       category,
       name: 'carbon-dioxide-compound',
       prompt: 'is carbon dioxide a compound',
       expectedIdea: 'Carbon dioxide/CO2 is a compound.',
-      includes: [/carbon dioxide|CO2/i, /compound/i, /carbon/i, /oxygen/i]
+      includes: [/carbon dioxide|CO2/i, /compound/i, /carbon/i, /oxygen/i],
+      conceptTutorPrompt: /Is it made of one kind of atom\?/i,
+      conceptTutorChoices: [2, 1]
     },
     {
       category,
       name: 'hcl-compound',
       prompt: 'is HCl an element compound or mixture',
       expectedIdea: 'HCl is a compound.',
-      includes: [/HCl|hydrogen chloride|hydrochloric/i, /compound/i]
+      includes: [/HCl|hydrogen chloride|hydrochloric/i, /compound/i],
+      conceptTutorPrompt: /Is it made of one kind of atom\?/i,
+      conceptTutorChoices: [2, 1]
     },
     {
       category,
       name: 'chlorine-element',
       prompt: 'is chlorine an element',
       expectedIdea: 'Chlorine is an element.',
-      includes: [/chlorine/i, /element/i]
+      includes: [/chlorine/i, /element/i],
+      conceptTutorPrompt: /Is it made of one kind of atom\?/i,
+      conceptTutorChoices: [1]
     },
     {
       category,

@@ -7,6 +7,7 @@ const {
   startConceptTutor
 } = require('../lib/tutor/conceptTutor/conceptTutorEngine');
 const {
+  buildElementCompoundMixtureConceptTutorPattern,
   buildMixtureConceptTutorPattern
 } = require('../lib/tutor/conceptTutor/conceptTutorPatterns');
 const {
@@ -642,12 +643,13 @@ function registerStudentRoutes(app, {
 
       logFormulaTutorDecisionDebug('student_message_bypassed', formulaTutorDecision);
 
-      const mixtureConceptPattern = buildMixtureConceptTutorPattern(message);
-      const mixtureConceptTutorProblem = shouldStartMixtureConceptTutor(mixtureConceptPattern, result)
-        ? startConceptTutor(mixtureConceptPattern, message)
+      const conceptPattern = buildElementCompoundMixtureConceptTutorPattern(message) ||
+        buildMixtureConceptTutorPattern(message);
+      const conceptTutorProblem = shouldStartMixtureConceptTutor(conceptPattern, result)
+        ? startConceptTutor(conceptPattern, message)
         : null;
-      if (mixtureConceptTutorProblem) {
-        hub.currentTutorProblem = mixtureConceptTutorProblem;
+      if (conceptTutorProblem) {
+        hub.currentTutorProblem = conceptTutorProblem;
         hub.pendingClarification = null;
         const response = buildConceptTutorPrompt(hub.currentTutorProblem);
         const tutorMetadata = buildConceptTutorMetadata(hub.currentTutorProblem, {
@@ -1579,11 +1581,12 @@ function makeConceptTutorRoute(currentTutorProblem) {
     problem.steps.length > 0 &&
     Number(problem.currentStepIndex) >= problem.steps.length;
   const finalAnswer = isComplete ? (problem.finalAnswer || '') : '';
+  const toolsUsed = getConceptTutorToolsUsed(problem);
 
   return {
     type: 'concept_tutor',
     confidence: 'strong',
-    toolsUsed: ['concept_tutor', 'mixture_concept_pattern'],
+    toolsUsed,
     notes: 'Guided concept tutor step.',
     aiAllowed: false,
     tutorCategory: 'concept',
@@ -1601,7 +1604,7 @@ function makeConceptTutorRoute(currentTutorProblem) {
     public: {
       type: 'concept_tutor',
       confidence: 'strong',
-      toolsUsed: ['concept_tutor', 'mixture_concept_pattern'],
+      toolsUsed,
       notes: 'Guided concept tutor step.',
       aiAllowed: false,
       tutorCategory: 'concept',
@@ -1618,6 +1621,17 @@ function makeConceptTutorRoute(currentTutorProblem) {
       }
     }
   };
+}
+
+function getConceptTutorToolsUsed(problem) {
+  const id = String(problem?.id || '');
+  if (id === 'matter.element-compound-mixture') {
+    return ['concept_tutor', 'element_compound_mixture_concept_pattern'];
+  }
+  if (id === 'matter.mixtures.homogeneous-heterogeneous') {
+    return ['concept_tutor', 'mixture_concept_pattern'];
+  }
+  return ['concept_tutor'];
 }
 
 function makeFlashcardSessionRoute(session) {
