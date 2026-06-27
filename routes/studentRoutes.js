@@ -7,6 +7,7 @@ const {
   startConceptTutor
 } = require('../lib/tutor/conceptTutor/conceptTutorEngine');
 const {
+  buildBalancedUnbalancedForcesConceptTutorPattern,
   buildElementCompoundMixtureConceptTutorPattern,
   buildMixtureConceptTutorPattern,
   buildNewtonsLawsConceptTutorPattern
@@ -646,6 +647,7 @@ function registerStudentRoutes(app, {
 
       const conceptPattern = buildElementCompoundMixtureConceptTutorPattern(message) ||
         buildMixtureConceptTutorPattern(message) ||
+        buildBalancedUnbalancedForcesConceptTutorPattern(message) ||
         buildNewtonsLawsConceptTutorPattern(message);
       const conceptTutorProblem = shouldStartConceptTutorPattern(conceptPattern, result)
         ? startConceptTutor(conceptPattern, message)
@@ -1635,6 +1637,9 @@ function getConceptTutorToolsUsed(problem) {
   }
   if (id === 'motion-force.newtons-laws.identification') {
     return ['concept_tutor', 'newtons_laws_identification_concept_pattern'];
+  }
+  if (id === 'motion-force.balanced-unbalanced-forces.identification') {
+    return ['concept_tutor', 'balanced_unbalanced_forces_concept_pattern'];
   }
   return ['concept_tutor'];
 }
