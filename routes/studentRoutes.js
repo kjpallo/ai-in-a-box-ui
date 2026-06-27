@@ -8,6 +8,7 @@ const {
 } = require('../lib/tutor/conceptTutor/conceptTutorEngine');
 const {
   buildAccelerationConceptTutorPattern,
+  buildAcidsBasesConceptTutorPattern,
   buildBalancedUnbalancedForcesConceptTutorPattern,
   buildDistanceDisplacementConceptTutorPattern,
   buildElementCompoundMixtureConceptTutorPattern,
@@ -662,7 +663,8 @@ function registerStudentRoutes(app, {
         buildAccelerationConceptTutorPattern(message) ||
         buildTransverseLongitudinalWavesConceptTutorPattern(message) ||
         buildMechanicalElectromagneticWavesConceptTutorPattern(message) ||
-        buildEnergyTransferConceptTutorPattern(message);
+        buildEnergyTransferConceptTutorPattern(message) ||
+        buildAcidsBasesConceptTutorPattern(message);
       const conceptTutorProblem = shouldStartConceptTutorPattern(conceptPattern, result)
         ? startConceptTutor(conceptPattern, message)
         : null;
@@ -1669,6 +1671,9 @@ function getConceptTutorToolsUsed(problem) {
   }
   if (id === 'energy.transfer.conduction-convection-radiation') {
     return ['concept_tutor', 'energy_transfer_concept_pattern'];
+  }
+  if (id === 'chemistry.acids-bases.identification') {
+    return ['concept_tutor', 'acids_bases_concept_pattern'];
   }
   return ['concept_tutor'];
 }
