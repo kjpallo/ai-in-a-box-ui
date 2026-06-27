@@ -8,7 +8,8 @@ const {
 } = require('../lib/tutor/conceptTutor/conceptTutorEngine');
 const {
   buildElementCompoundMixtureConceptTutorPattern,
-  buildMixtureConceptTutorPattern
+  buildMixtureConceptTutorPattern,
+  buildNewtonsLawsConceptTutorPattern
 } = require('../lib/tutor/conceptTutor/conceptTutorPatterns');
 const {
   answerFormulaTutorStep,
@@ -644,8 +645,9 @@ function registerStudentRoutes(app, {
       logFormulaTutorDecisionDebug('student_message_bypassed', formulaTutorDecision);
 
       const conceptPattern = buildElementCompoundMixtureConceptTutorPattern(message) ||
-        buildMixtureConceptTutorPattern(message);
-      const conceptTutorProblem = shouldStartMixtureConceptTutor(conceptPattern, result)
+        buildMixtureConceptTutorPattern(message) ||
+        buildNewtonsLawsConceptTutorPattern(message);
+      const conceptTutorProblem = shouldStartConceptTutorPattern(conceptPattern, result)
         ? startConceptTutor(conceptPattern, message)
         : null;
       if (conceptTutorProblem) {
@@ -879,7 +881,7 @@ function isFormulaTutorDebugEnabled() {
   return process.env.FORMULA_TUTOR_DEBUG === '1';
 }
 
-function shouldStartMixtureConceptTutor(pattern, result) {
+function shouldStartConceptTutorPattern(pattern, result) {
   if (!pattern) return false;
   if (pattern.supportedExample === true) return true;
 
@@ -1630,6 +1632,9 @@ function getConceptTutorToolsUsed(problem) {
   }
   if (id === 'matter.mixtures.homogeneous-heterogeneous') {
     return ['concept_tutor', 'mixture_concept_pattern'];
+  }
+  if (id === 'motion-force.newtons-laws.identification') {
+    return ['concept_tutor', 'newtons_laws_identification_concept_pattern'];
   }
   return ['concept_tutor'];
 }
