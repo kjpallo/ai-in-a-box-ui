@@ -11,7 +11,8 @@ const {
   buildElementCompoundMixtureConceptTutorPattern,
   buildMixtureConceptTutorPattern,
   buildNewtonsLawsConceptTutorPattern,
-  buildReferencePointConceptTutorPattern
+  buildReferencePointConceptTutorPattern,
+  buildSpeedVelocityConceptTutorPattern
 } = require('../lib/tutor/conceptTutor/conceptTutorPatterns');
 const {
   answerFormulaTutorStep,
@@ -650,7 +651,8 @@ function registerStudentRoutes(app, {
         buildMixtureConceptTutorPattern(message) ||
         buildBalancedUnbalancedForcesConceptTutorPattern(message) ||
         buildNewtonsLawsConceptTutorPattern(message) ||
-        buildReferencePointConceptTutorPattern(message);
+        buildReferencePointConceptTutorPattern(message) ||
+        buildSpeedVelocityConceptTutorPattern(message);
       const conceptTutorProblem = shouldStartConceptTutorPattern(conceptPattern, result)
         ? startConceptTutor(conceptPattern, message)
         : null;
