@@ -7,6 +7,7 @@ const {
   startConceptTutor
 } = require('../lib/tutor/conceptTutor/conceptTutorEngine');
 const {
+  buildAccelerationConceptTutorPattern,
   buildBalancedUnbalancedForcesConceptTutorPattern,
   buildDistanceDisplacementConceptTutorPattern,
   buildElementCompoundMixtureConceptTutorPattern,
@@ -654,7 +655,8 @@ function registerStudentRoutes(app, {
         buildNewtonsLawsConceptTutorPattern(message) ||
         buildReferencePointConceptTutorPattern(message) ||
         buildDistanceDisplacementConceptTutorPattern(message) ||
-        buildSpeedVelocityConceptTutorPattern(message);
+        buildSpeedVelocityConceptTutorPattern(message) ||
+        buildAccelerationConceptTutorPattern(message);
       const conceptTutorProblem = shouldStartConceptTutorPattern(conceptPattern, result)
         ? startConceptTutor(conceptPattern, message)
         : null;
@@ -1649,6 +1651,9 @@ function getConceptTutorToolsUsed(problem) {
   }
   if (id === 'motion-force.distance-displacement.identification') {
     return ['concept_tutor', 'distance_displacement_concept_pattern'];
+  }
+  if (id === 'motion-force.acceleration.identification') {
+    return ['concept_tutor', 'acceleration_concept_pattern'];
   }
   return ['concept_tutor'];
 }
