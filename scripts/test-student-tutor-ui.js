@@ -72,6 +72,8 @@ const sessionScrollBlock = getCssBlock('.student-tutor-session-scroll');
 const sessionStepBlock = getCssBlock('.student-tutor-session-step');
 const sessionSideAnswerStepBlock = getCssBlock('.student-tutor-session-step.has-side-answer');
 const tutorBodyBlock = getCssBlock('.student-tutor-body');
+const tutorOriginalQuestionBlock = getCssBlock('.student-tutor-detail.student-tutor-original-question');
+const tutorOriginalQuestionTextBlock = getCssBlock('.student-tutor-detail.student-tutor-original-question p');
 const calculatorBlock = getCssBlock('.student-calculator');
 const calculatorKeysBlock = getCssBlock('.student-calculator-keys');
 const tutorChoicesBlock = getCssBlock('.student-tutor-choices');
@@ -109,7 +111,7 @@ assert.match(flashcardActionsBlock, /flex-wrap:\s*wrap;/, 'Flashcard controls sh
 assert.match(flashcardActionBlock, /min-height:\s*38px;/, 'Flashcard action buttons should be easy tap targets.');
 
 const overflowMatches = [...studentHtml.matchAll(/overflow-y:\s*auto;/g)];
-assert.equal(overflowMatches.length, 2, 'Student page should expose the timeline scroll plus one scoped formula-session scroll.');
+assert.equal(overflowMatches.length, 3, 'Student page should expose timeline, formula-session, and original-question scoped scroll areas.');
 
 assert.ok(sessionBlock, 'Formula tutor sessions should have a CSS rule.');
 assert.match(sessionHeaderBlock, /grid-template-columns:\s*minmax\(0,\s*1fr\) auto;/, 'Session header should keep summary beside controls on desktop.');
@@ -369,6 +371,10 @@ assert.match(
 );
 
 assert.match(tutorBodyBlock, /grid-template-columns:\s*minmax\(0,\s*1fr\);/, 'Non-formula tutor cards should stay in one timeline column without reserving a blank side panel.');
+assert.match(tutorOriginalQuestionBlock, /align-items:\s*start;/, 'Original Question labels should stay aligned with compact scrollable text.');
+assert.match(tutorOriginalQuestionTextBlock, /max-height:\s*4\.8rem;/, 'Original Question text should stay compact when a long pasted prompt is shown.');
+assert.match(tutorOriginalQuestionTextBlock, /overflow-y:\s*auto;/, 'Original Question text should scroll internally instead of stretching the tutor card.');
+assert.match(tutorOriginalQuestionTextBlock, /overscroll-behavior:\s*contain;/, 'Original Question scrolling should not fight the main timeline scroll.');
 assert.match(calculatorBlock, /min-width:\s*0;/, 'Calculator should shrink within its timeline card.');
 assert.match(calculatorBlock, /width:\s*min\(100%,\s*320px\);/, 'Calculator should remain compact inside active tutor work.');
 assert.match(calculatorKeysBlock, /grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\);/, 'Calculator keys should fit inside the tutor card.');

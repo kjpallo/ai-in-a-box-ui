@@ -795,8 +795,16 @@
       }
 
       .student-tutor-detail.student-tutor-original-question {
+        align-items: start;
         border-color: rgba(255,214,102,0.32);
         background: rgba(42,28,8,0.26);
+      }
+
+      .student-tutor-detail.student-tutor-original-question p {
+        max-height: 4.8rem;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-gutter: stable;
       }
 
       .student-tutor-detail.student-tutor-answer,
