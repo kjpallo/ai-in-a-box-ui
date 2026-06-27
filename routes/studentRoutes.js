@@ -11,6 +11,7 @@ const {
   buildBalancedUnbalancedForcesConceptTutorPattern,
   buildDistanceDisplacementConceptTutorPattern,
   buildElementCompoundMixtureConceptTutorPattern,
+  buildMechanicalElectromagneticWavesConceptTutorPattern,
   buildMixtureConceptTutorPattern,
   buildNewtonsLawsConceptTutorPattern,
   buildReferencePointConceptTutorPattern,
@@ -658,7 +659,8 @@ function registerStudentRoutes(app, {
         buildDistanceDisplacementConceptTutorPattern(message) ||
         buildSpeedVelocityConceptTutorPattern(message) ||
         buildAccelerationConceptTutorPattern(message) ||
-        buildTransverseLongitudinalWavesConceptTutorPattern(message);
+        buildTransverseLongitudinalWavesConceptTutorPattern(message) ||
+        buildMechanicalElectromagneticWavesConceptTutorPattern(message);
       const conceptTutorProblem = shouldStartConceptTutorPattern(conceptPattern, result)
         ? startConceptTutor(conceptPattern, message)
         : null;
@@ -1659,6 +1661,9 @@ function getConceptTutorToolsUsed(problem) {
   }
   if (id === 'waves.transverse-longitudinal.identification') {
     return ['concept_tutor', 'transverse_longitudinal_waves_concept_pattern'];
+  }
+  if (id === 'waves.mechanical-electromagnetic.identification') {
+    return ['concept_tutor', 'mechanical_electromagnetic_waves_concept_pattern'];
   }
   return ['concept_tutor'];
 }
