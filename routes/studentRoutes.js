@@ -14,7 +14,8 @@ const {
   buildMixtureConceptTutorPattern,
   buildNewtonsLawsConceptTutorPattern,
   buildReferencePointConceptTutorPattern,
-  buildSpeedVelocityConceptTutorPattern
+  buildSpeedVelocityConceptTutorPattern,
+  buildTransverseLongitudinalWavesConceptTutorPattern
 } = require('../lib/tutor/conceptTutor/conceptTutorPatterns');
 const {
   answerFormulaTutorStep,
@@ -656,7 +657,8 @@ function registerStudentRoutes(app, {
         buildReferencePointConceptTutorPattern(message) ||
         buildDistanceDisplacementConceptTutorPattern(message) ||
         buildSpeedVelocityConceptTutorPattern(message) ||
-        buildAccelerationConceptTutorPattern(message);
+        buildAccelerationConceptTutorPattern(message) ||
+        buildTransverseLongitudinalWavesConceptTutorPattern(message);
       const conceptTutorProblem = shouldStartConceptTutorPattern(conceptPattern, result)
         ? startConceptTutor(conceptPattern, message)
         : null;
@@ -1654,6 +1656,9 @@ function getConceptTutorToolsUsed(problem) {
   }
   if (id === 'motion-force.acceleration.identification') {
     return ['concept_tutor', 'acceleration_concept_pattern'];
+  }
+  if (id === 'waves.transverse-longitudinal.identification') {
+    return ['concept_tutor', 'transverse_longitudinal_waves_concept_pattern'];
   }
   return ['concept_tutor'];
 }
