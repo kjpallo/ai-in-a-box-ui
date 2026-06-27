@@ -1021,7 +1021,7 @@
         </div>
         <div class="student-tutor-body">
           <div class="student-tutor-grid">
-            ${isFormulaTutor ? renderTutorDetail('ORIGINAL QUESTION', originalQuestion, 'student-tutor-original-question is-wide', { showWaiting: true }) : ''}
+            ${originalQuestion ? renderTutorDetail('Original Question', originalQuestion, 'student-tutor-original-question is-wide') : ''}
             ${renderTutorDetail('Current Step', currentStep, 'student-tutor-current-step', { showWaiting: true })}
             ${isFormulaTutor ? renderTutorDetail('Solving For', solveFor, '', { showWaiting: true }) : ''}
             ${isFormulaTutor ? renderTutorDetail('Formula', work.formula || tutor.formula || '', 'student-tutor-formula', { showWaiting: true }) : ''}
@@ -1240,11 +1240,21 @@
   }
 
   function getTutorTitle(tutor, work = {}) {
-    const isFormulaTutor = (tutor?.tutorCategory && tutor.tutorCategory !== 'general') || tutor?.formulaId || work.formula;
-    const baseTitle = isFormulaTutor ? 'Formula Tutor' : (tutor?.tutorLabel || 'Guided math/formula tutor');
+    const baseTitle = getTutorBaseTitle(tutor, work);
     if (tutor?.completed) return `${baseTitle} Complete`;
     if (tutor?.stopped) return `${baseTitle} Stopped`;
     return baseTitle;
+  }
+
+  function getTutorBaseTitle(tutor, work = {}) {
+    const category = String(tutor?.tutorCategory || '').trim().toLowerCase();
+    const tutorType = String(tutor?.tutorType || tutor?.routeType || '').trim().toLowerCase();
+    const label = String(tutor?.tutorLabel || '').trim();
+
+    if (category === 'formula' || tutorType === 'formula_tutor' || tutor?.formulaId || work.formula) return label || 'Formula Tutor';
+    if (category === 'concept' || tutorType === 'concept_tutor') return label || 'Concept Tutor';
+    if (category === 'general' || tutorType === 'motion_force_knowledge_tutor') return label || 'General Tutor';
+    return label || 'Tutor';
   }
 
   function getCurrentTutorPrompt(tutor, work = {}) {

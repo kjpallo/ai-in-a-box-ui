@@ -217,6 +217,11 @@ assert.match(
 );
 assert.match(
   studentUi,
+  /function renderTutorCardHtml\(turn\)[\s\S]*const originalQuestion = work\.originalQuestion \|\| tutor\.originalQuestion \|\| '';[\s\S]*renderTutorDetail\('Original Question', originalQuestion, 'student-tutor-original-question is-wide'\)[\s\S]*renderTutorDetail\('Current Step', currentStep/,
+  'Active tutor cards should show original question context above the current step for formula and concept tutors.'
+);
+assert.match(
+  studentUi,
   /function renderTutorSessionAnswer\(turn, stepIndex\)[\s\S]*if \(stepIndex === 0\) return '';/,
   'The first step should not show a side Original Question panel.'
 );
@@ -239,6 +244,11 @@ assert.match(
   studentUi,
   /function renderTutorChoiceButtons\(tutor, work = \{\}\)[\s\S]*data-tutor-choice="\$\{escapeAttr\(choice\.number\)\}"[\s\S]*\$\{escapeHtml\(`\$\{choice\.number\}\. \$\{choice\.label\}`\)\}/,
   'Formula tutor choices should render as clickable numbered buttons.'
+);
+assert.match(
+  studentUi,
+  /function getTutorBaseTitle\(tutor, work = \{\}\)[\s\S]*category === 'formula'[\s\S]*'Formula Tutor'[\s\S]*category === 'concept'[\s\S]*'Concept Tutor'[\s\S]*category === 'general'[\s\S]*'General Tutor'[\s\S]*return label \|\| 'Tutor';/,
+  'Tutor card titles should distinguish formula, concept, and general tutors.'
 );
 assert.match(
   studentUi,
