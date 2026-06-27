@@ -18,6 +18,13 @@ const CATEGORIES = [
     })
   },
   {
+    name: 'energy-type direct answers',
+    run: () => assertDirectStudentCases(energyTypeDirectAnswerCases(), {
+      guidedTutorEnabled: true,
+      assertRoute: true
+    })
+  },
+  {
     name: 'wrong-domain answer',
     run: () => assertDirectStudentCases(wrongDomainCases(), {
       guidedTutorEnabled: true,
@@ -502,9 +509,325 @@ function wrongDomainCases() {
   ];
 }
 
+function energyTypeDirectAnswerCases() {
+  const category = 'energy-type direct answers';
+  const routeTypes = ['science_concept', 'definition'];
+  return [
+    {
+      category,
+      routeTypes,
+      name: 'moving-car-kinetic-mechanical',
+      prompt: 'What type of energy does a moving car have?',
+      includes: [/kinetic energy/i, /motion/i, /mechanical energy/i]
+    },
+    {
+      category,
+      routeTypes,
+      name: 'rolling-ball-kinetic',
+      prompt: 'What type of energy does a rolling ball have?',
+      includes: [/kinetic energy/i, /moving|motion/i]
+    },
+    {
+      category,
+      routeTypes,
+      name: 'running-person-kinetic',
+      prompt: 'What type of energy does a running person have?',
+      includes: [/kinetic energy/i, /moving|motion/i]
+    },
+    {
+      category,
+      routeTypes,
+      name: 'mechanical-kinetic-alias',
+      prompt: 'What is mechanical kinetic energy?',
+      includes: [/kinetic energy/i, /energy of motion/i, /form of mechanical energy/i],
+      excludes: [/separate energy type/i]
+    },
+    {
+      category,
+      routeTypes,
+      name: 'kinetic-is-mechanical',
+      prompt: 'Is kinetic energy mechanical energy?',
+      includes: [/yes/i, /kinetic energy/i, /form of mechanical energy/i]
+    },
+    {
+      category,
+      routeTypes,
+      name: 'book-shelf-gpe',
+      prompt: 'What type of energy does a book on a shelf have?',
+      includes: [/gravitational potential energy/i, /height|position/i]
+    },
+    {
+      category,
+      routeTypes,
+      name: 'ball-above-ground-gpe',
+      prompt: 'What type of energy does a ball held above the ground have?',
+      includes: [/gravitational potential energy/i, /height|position/i]
+    },
+    {
+      category,
+      routeTypes,
+      name: 'water-behind-dam-gpe',
+      prompt: 'What type of energy does water behind a dam have?',
+      includes: [/gravitational potential energy/i, /height|position/i]
+    },
+    {
+      category,
+      routeTypes,
+      name: 'stretched-rubber-band-elastic',
+      prompt: 'What type of energy does a stretched rubber band have?',
+      includes: [/elastic potential energy/i, /stretched|compressed/i]
+    },
+    {
+      category,
+      routeTypes,
+      name: 'compressed-spring-elastic',
+      prompt: 'What type of energy does a compressed spring have?',
+      includes: [/elastic potential energy/i, /stretched|compressed/i]
+    },
+    {
+      category,
+      routeTypes,
+      name: 'pulled-back-bow-elastic',
+      prompt: 'What type of energy does a pulled-back bow have?',
+      includes: [/elastic potential energy/i, /stretched|compressed/i]
+    },
+    {
+      category,
+      routeTypes,
+      name: 'food-chemical',
+      prompt: 'What type of energy is stored in food?',
+      includes: [/chemical energy/i, /chemical potential energy/i]
+    },
+    {
+      category,
+      routeTypes,
+      name: 'battery-stored-chemical',
+      prompt: 'What type of energy is stored in a battery?',
+      includes: [/chemical energy/i, /electrical energy/i, /circuit|used/i]
+    },
+    {
+      category,
+      routeTypes,
+      name: 'gasoline-fuel-chemical',
+      prompt: 'What type of energy is stored in gasoline or fuel?',
+      includes: [/chemical energy/i, /bonds/i]
+    },
+    {
+      category,
+      routeTypes,
+      name: 'hot-soup-thermal',
+      prompt: 'What type of energy does hot soup have?',
+      includes: [/thermal energy/i, /particle motion|particles/i]
+    },
+    {
+      category,
+      routeTypes,
+      name: 'heat-is-thermal',
+      prompt: 'What type of energy is heat?',
+      includes: [/thermal energy/i, /particle motion|particles/i]
+    },
+    {
+      category,
+      routeTypes,
+      name: 'particles-faster-thermal',
+      prompt: 'What type of energy increases when particles move faster?',
+      includes: [/thermal energy/i, /particle motion|particles/i]
+    },
+    {
+      category,
+      routeTypes,
+      name: 'electric-current-electrical',
+      prompt: 'What type of energy is in an electric current?',
+      includes: [/electrical energy/i, /charges|electricity/i]
+    },
+    {
+      category,
+      routeTypes,
+      name: 'lightning-electrical',
+      prompt: 'What type of energy does lightning have?',
+      includes: [/electrical energy/i, /charges|electricity/i]
+    },
+    {
+      category,
+      routeTypes,
+      name: 'outlet-electrical',
+      prompt: 'What type of energy comes from an outlet?',
+      includes: [/electrical energy/i, /charges|electricity/i]
+    },
+    {
+      category,
+      routeTypes,
+      name: 'sunlight-radiant',
+      prompt: 'What type of energy is sunlight?',
+      includes: [/radiant energy/i, /light|optical/i]
+    },
+    {
+      category,
+      routeTypes,
+      name: 'lamp-radiant-light',
+      prompt: 'What type of energy does a lamp give off?',
+      includes: [/radiant energy/i, /light energy/i]
+    },
+    {
+      category,
+      routeTypes,
+      name: 'optical-energy-definition',
+      prompt: 'What is optical energy?',
+      includes: [/light energy/i, /radiant energy/i]
+    },
+    {
+      category,
+      routeTypes,
+      name: 'radiant-same-as-light',
+      prompt: 'Is radiant energy the same as light energy?',
+      includes: [/radiant energy/i, /light energy|light/i, /electromagnetic waves|class context|classroom/i]
+    },
+    {
+      category,
+      routeTypes,
+      name: 'sound-energy-definition',
+      prompt: 'What type of energy is sound?',
+      includes: [/sound energy/i, /vibrations?|sound waves/i]
+    },
+    {
+      category,
+      routeTypes,
+      name: 'vibrating-speaker-sound',
+      prompt: 'What type of energy comes from a vibrating speaker?',
+      includes: [/sound energy/i, /vibrations?|sound waves/i]
+    },
+    {
+      category,
+      routeTypes,
+      name: 'vibrations-through-matter-sound',
+      prompt: 'What type of energy travels as vibrations through matter?',
+      includes: [/sound energy/i, /vibrations?|sound waves/i]
+    },
+    {
+      category,
+      routeTypes,
+      name: 'moving-car-kinetic-or-mechanical',
+      prompt: 'Does a moving car have kinetic or mechanical energy?',
+      includes: [/both/i, /kinetic energy/i, /mechanical energy/i, /more specific/i]
+    },
+    {
+      category,
+      routeTypes,
+      name: 'rubber-band-elastic-or-potential',
+      prompt: 'Is a stretched rubber band elastic or potential energy?',
+      includes: [/elastic potential energy/i, /specific kind of potential energy/i]
+    },
+    {
+      category,
+      routeTypes,
+      name: 'sunlight-radiant-or-optical',
+      prompt: 'Is sunlight radiant or optical energy?',
+      includes: [/both/i, /radiant energy/i, /optical|light energy/i]
+    },
+    {
+      category,
+      routeTypes,
+      name: 'battery-chemical-or-electrical',
+      prompt: 'Is a battery chemical or electrical energy?',
+      includes: [/chemical energy/i, /electrical energy/i, /circuit|used/i]
+    },
+    {
+      category,
+      routeTypes,
+      name: 'define-chemical-energy',
+      prompt: 'What is chemical energy?',
+      includes: [/stored/i, /chemical bonds/i]
+    },
+    {
+      category,
+      routeTypes,
+      name: 'define-electrical-energy',
+      prompt: 'What is electrical energy?',
+      includes: [/moving electric charges|electricity/i]
+    },
+    {
+      category,
+      routeTypes,
+      name: 'define-radiant-energy',
+      prompt: 'What is radiant energy?',
+      includes: [/light|electromagnetic waves/i]
+    },
+    {
+      category,
+      routeTypes,
+      name: 'define-light-energy',
+      prompt: 'What is light energy?',
+      includes: [/light energy/i, /radiant energy/i]
+    },
+    {
+      category,
+      routeTypes,
+      name: 'define-sound-energy',
+      prompt: 'What is sound energy?',
+      includes: [/vibrations?/i, /sound waves/i]
+    },
+    {
+      category,
+      routeTypes,
+      name: 'kinetic-potential-difference',
+      prompt: 'Explain the difference between kinetic and potential energy.',
+      includes: [/kinetic energy/i, /motion/i, /potential energy/i, /stored energy/i]
+    },
+    {
+      category,
+      routeTypes,
+      name: 'radiant-thermal-difference',
+      prompt: 'Explain the difference between radiant and thermal energy.',
+      includes: [/radiant energy/i, /light|electromagnetic waves/i, /thermal energy/i, /particles/i]
+    },
+    {
+      category,
+      routeTypes,
+      name: 'chemical-electrical-difference',
+      prompt: 'Explain the difference between chemical and electrical energy.',
+      includes: [/chemical energy/i, /chemical bonds/i, /electrical energy/i, /moving electric charges|electricity/i]
+    }
+  ];
+}
+
 function formulaSolvingCases() {
   const category = 'formula solving';
   return [
+    {
+      category,
+      name: 'boundary-calculate-ke-2kg-3ms',
+      prompt: 'Calculate kinetic energy if mass is 2 kg and velocity is 3 m/s.',
+      includes: [/KE\s*=\s*(?:1\/2|0\.5)/i, /9\s*J\b/i],
+      units: [/\bJ\b/]
+    },
+    {
+      category,
+      name: 'boundary-calculate-pe-5kg-10m',
+      prompt: 'Calculate potential energy if mass is 5 kg and height is 10 m.',
+      includes: [/(?:G?PE)\s*=/i, /490\s*J\b/i],
+      units: [/\bJ\b/]
+    },
+    {
+      category,
+      name: 'boundary-calculate-work-20n-3m',
+      prompt: 'Calculate work if force is 20 N and distance is 3 m.',
+      includes: [/W\s*=/i, /60\s*J\b/i],
+      units: [/\bJ\b/]
+    },
+    {
+      category,
+      name: 'boundary-calculate-power-100j-5s',
+      prompt: 'Calculate power if work is 100 J and time is 5 s.',
+      includes: [/P\s*=/i, /20\s*(?:W|J\/s)\b/i],
+      units: [/\bW\b|J\/s/]
+    },
+    {
+      category,
+      name: 'boundary-calculate-wave-speed-2m-5hz',
+      prompt: 'Calculate wave speed if wavelength is 2 m and frequency is 5 Hz.',
+      includes: [/wave speed\s*=/i, /10\s*m\/s/i],
+      units: [/m\/s/]
+    },
     {
       category,
       name: 'baseball-ke-120j',
