@@ -15,6 +15,7 @@ const {
   buildEndothermicExothermicConceptTutorPattern,
   buildEnergyTransferConceptTutorPattern,
   buildMechanicalElectromagneticWavesConceptTutorPattern,
+  buildMechanicalEnergyTypesConceptTutorPattern,
   buildMixtureConceptTutorPattern,
   buildNewtonsLawsConceptTutorPattern,
   buildOpenClosedCircuitsConceptTutorPattern,
@@ -672,6 +673,7 @@ function registerStudentRoutes(app, {
         buildMechanicalElectromagneticWavesConceptTutorPattern(message) ||
         buildEnergyTransferConceptTutorPattern(message) ||
         buildEndothermicExothermicConceptTutorPattern(message) ||
+        buildMechanicalEnergyTypesConceptTutorPattern(message) ||
         buildReflectionRefractionAbsorptionConceptTutorPattern(message) ||
         buildWavePropertiesConceptTutorPattern(message) ||
         buildOpenClosedCircuitsConceptTutorPattern(message) ||
@@ -1686,6 +1688,9 @@ function getConceptTutorToolsUsed(problem) {
   }
   if (id === 'energy.processes.endothermic-exothermic.identification') {
     return ['concept_tutor', 'endothermic_exothermic_concept_pattern'];
+  }
+  if (id === 'energy.mechanical-types.kinetic-gpe-elastic.identification') {
+    return ['concept_tutor', 'mechanical_energy_types_concept_pattern'];
   }
   if (id === 'waves.reflection-refraction-absorption.identification') {
     return ['concept_tutor', 'reflection_refraction_absorption_concept_pattern'];
