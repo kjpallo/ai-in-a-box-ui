@@ -16,6 +16,7 @@ const {
   buildMechanicalElectromagneticWavesConceptTutorPattern,
   buildMixtureConceptTutorPattern,
   buildNewtonsLawsConceptTutorPattern,
+  buildPhysicalChemicalChangeConceptTutorPattern,
   buildReferencePointConceptTutorPattern,
   buildSpeedVelocityConceptTutorPattern,
   buildTransverseLongitudinalWavesConceptTutorPattern
@@ -655,6 +656,7 @@ function registerStudentRoutes(app, {
 
       const conceptPattern = buildElementCompoundMixtureConceptTutorPattern(message) ||
         buildMixtureConceptTutorPattern(message) ||
+        buildPhysicalChemicalChangeConceptTutorPattern(message) ||
         buildBalancedUnbalancedForcesConceptTutorPattern(message) ||
         buildNewtonsLawsConceptTutorPattern(message) ||
         buildReferencePointConceptTutorPattern(message) ||
@@ -1674,6 +1676,9 @@ function getConceptTutorToolsUsed(problem) {
   }
   if (id === 'chemistry.acids-bases.identification') {
     return ['concept_tutor', 'acids_bases_concept_pattern'];
+  }
+  if (id === 'matter.physical-chemical-change.identification') {
+    return ['concept_tutor', 'physical_chemical_change_concept_pattern'];
   }
   return ['concept_tutor'];
 }
