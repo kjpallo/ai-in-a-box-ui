@@ -20,7 +20,8 @@ const {
   buildReflectionRefractionAbsorptionConceptTutorPattern,
   buildReferencePointConceptTutorPattern,
   buildSpeedVelocityConceptTutorPattern,
-  buildTransverseLongitudinalWavesConceptTutorPattern
+  buildTransverseLongitudinalWavesConceptTutorPattern,
+  buildWavePropertiesConceptTutorPattern
 } = require('../lib/tutor/conceptTutor/conceptTutorPatterns');
 const {
   answerFormulaTutorStep,
@@ -668,6 +669,7 @@ function registerStudentRoutes(app, {
         buildMechanicalElectromagneticWavesConceptTutorPattern(message) ||
         buildEnergyTransferConceptTutorPattern(message) ||
         buildReflectionRefractionAbsorptionConceptTutorPattern(message) ||
+        buildWavePropertiesConceptTutorPattern(message) ||
         buildAcidsBasesConceptTutorPattern(message);
       const conceptTutorProblem = shouldStartConceptTutorPattern(conceptPattern, result)
         ? startConceptTutor(conceptPattern, message)
@@ -1678,6 +1680,9 @@ function getConceptTutorToolsUsed(problem) {
   }
   if (id === 'waves.reflection-refraction-absorption.identification') {
     return ['concept_tutor', 'reflection_refraction_absorption_concept_pattern'];
+  }
+  if (id === 'waves.properties.amplitude-wavelength-frequency') {
+    return ['concept_tutor', 'wave_properties_concept_pattern'];
   }
   if (id === 'chemistry.acids-bases.identification') {
     return ['concept_tutor', 'acids_bases_concept_pattern'];
