@@ -17,6 +17,7 @@ const {
   buildMixtureConceptTutorPattern,
   buildNewtonsLawsConceptTutorPattern,
   buildPhysicalChemicalChangeConceptTutorPattern,
+  buildReflectionRefractionAbsorptionConceptTutorPattern,
   buildReferencePointConceptTutorPattern,
   buildSpeedVelocityConceptTutorPattern,
   buildTransverseLongitudinalWavesConceptTutorPattern
@@ -666,6 +667,7 @@ function registerStudentRoutes(app, {
         buildTransverseLongitudinalWavesConceptTutorPattern(message) ||
         buildMechanicalElectromagneticWavesConceptTutorPattern(message) ||
         buildEnergyTransferConceptTutorPattern(message) ||
+        buildReflectionRefractionAbsorptionConceptTutorPattern(message) ||
         buildAcidsBasesConceptTutorPattern(message);
       const conceptTutorProblem = shouldStartConceptTutorPattern(conceptPattern, result)
         ? startConceptTutor(conceptPattern, message)
@@ -1673,6 +1675,9 @@ function getConceptTutorToolsUsed(problem) {
   }
   if (id === 'energy.transfer.conduction-convection-radiation') {
     return ['concept_tutor', 'energy_transfer_concept_pattern'];
+  }
+  if (id === 'waves.reflection-refraction-absorption.identification') {
+    return ['concept_tutor', 'reflection_refraction_absorption_concept_pattern'];
   }
   if (id === 'chemistry.acids-bases.identification') {
     return ['concept_tutor', 'acids_bases_concept_pattern'];
