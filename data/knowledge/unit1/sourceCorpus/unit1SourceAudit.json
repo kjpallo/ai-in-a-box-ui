@@ -1,0 +1,278 @@
+{
+  "id": "unit1_source_audit",
+  "generatedAt": "2026-06-28",
+  "chunk": "Chunk 0 - Source processing / OCR / corpus extraction",
+  "sourceDirectory": "knowledge/uploads/unit1-source",
+  "sourceNamingPolicy": "Clean canonical filenames are used. Source IDs and display titles omit external platform branding.",
+  "extractionLimitations": [
+    "Poppler and Tesseract were not available in this environment.",
+    "Machine text extraction used the repo extractor for PDFs/PPTX files.",
+    "Scanned quiz/test key pages were rendered with pdfjs and manually reviewed for visible answers.",
+    "PPTX decks with embedded images/media are flagged for later visual review before live equipment/image routing."
+  ],
+  "renderedPageReview": [
+    "/private/tmp/unit1-rendered-pages/unit1_honors_quiz_key_page_01.png",
+    "/private/tmp/unit1-rendered-pages/unit1_honors_quiz_key_page_02.png",
+    "/private/tmp/unit1-rendered-pages/unit1_honors_test_key_page_01.png",
+    "/private/tmp/unit1-rendered-pages/unit1_honors_test_key_page_02.png",
+    "/private/tmp/unit1-rendered-pages/unit1_honors_test_key_page_03.png",
+    "/private/tmp/unit1-rendered-pages/unit1_honors_test_key_page_04.png",
+    "/private/tmp/unit1-rendered-pages/unit1_honors_test_key_page_05.png",
+    "/private/tmp/unit1-rendered-pages/unit1_honors_test_key_page_06.png",
+    "/private/tmp/unit1-rendered-pages/unit1_scientific_method_review_2025_page_01.png",
+    "/private/tmp/unit1-rendered-pages/unit1_scientific_method_review_2025_page_02.png",
+    "/private/tmp/unit1-rendered-pages/unit1_honors_packet_filled_page_01.png",
+    "/private/tmp/unit1-rendered-pages/unit1_honors_packet_filled_page_02.png"
+  ],
+  "sources": [
+    {
+      "id": "unit1_concept1_safety_equipment_notes",
+      "cleanFileName": "unit1_concept1_safety_equipment_notes.pptx",
+      "displayTitle": "Concept 1 Notes - Safety and Equipment",
+      "sourceType": "notes",
+      "pageOrSlideCount": 18,
+      "textExtractionWorked": true,
+      "ocrOrImageReviewNeeded": true,
+      "topicsFound": [
+        "lab-safety-equipment"
+      ],
+      "questionCountFound": 20,
+      "graphImageTableQuestionsFound": 12,
+      "answerKeyInformationFound": false,
+      "lowConfidenceItems": [
+        "PPTX contains embedded images/media; text extraction captured slide text and speaker notes, but equipment/picture prompts may need slide rendering review before live routing."
+      ],
+      "notes": [
+        "PPTX embedded images or media were detected. OCR/vision for image-only slides is not part of this phase; image-only slides may need OCR later.",
+        "PPTX machine text includes slide text and speaker notes; embedded visuals were not fully OCRed in Chunk 0.",
+        "12 graph/image/table/equipment entries flagged for later visual handling.",
+        "20 corpus entries created for this source."
+      ]
+    },
+    {
+      "id": "unit1_concept2_measurement_notes",
+      "cleanFileName": "unit1_concept2_measurement_notes.pptx",
+      "displayTitle": "Concept 2 Notes - Measurement",
+      "sourceType": "notes",
+      "pageOrSlideCount": 18,
+      "textExtractionWorked": true,
+      "ocrOrImageReviewNeeded": true,
+      "topicsFound": [
+        "measurement-data-quality"
+      ],
+      "questionCountFound": 12,
+      "graphImageTableQuestionsFound": 0,
+      "answerKeyInformationFound": false,
+      "lowConfidenceItems": [
+        "PPTX contains embedded images/media; text extraction captured slide text and speaker notes, but equipment/picture prompts may need slide rendering review before live routing."
+      ],
+      "notes": [
+        "PPTX embedded images or media were detected. OCR/vision for image-only slides is not part of this phase; image-only slides may need OCR later.",
+        "PPTX machine text includes slide text and speaker notes; embedded visuals were not fully OCRed in Chunk 0.",
+        "12 corpus entries created for this source."
+      ]
+    },
+    {
+      "id": "unit1_concept3_dimensional_analysis_scientific_notation_notes",
+      "cleanFileName": "unit1_concept3_dimensional_analysis_scientific_notation_notes.pptx",
+      "displayTitle": "Concept 3 Notes - Dimensional Analysis and Scientific Notation",
+      "sourceType": "notes",
+      "pageOrSlideCount": 16,
+      "textExtractionWorked": true,
+      "ocrOrImageReviewNeeded": true,
+      "topicsFound": [
+        "dimensional-analysis-conversions-scientific-notation"
+      ],
+      "questionCountFound": 10,
+      "graphImageTableQuestionsFound": 0,
+      "answerKeyInformationFound": false,
+      "lowConfidenceItems": [
+        "PPTX contains embedded images/media; text extraction captured slide text and speaker notes, but equipment/picture prompts may need slide rendering review before live routing."
+      ],
+      "notes": [
+        "PPTX embedded images or media were detected. OCR/vision for image-only slides is not part of this phase; image-only slides may need OCR later.",
+        "PPTX machine text includes slide text and speaker notes; embedded visuals were not fully OCRed in Chunk 0.",
+        "10 corpus entries created for this source."
+      ]
+    },
+    {
+      "id": "unit1_concept4_scientific_method_notes",
+      "cleanFileName": "unit1_concept4_scientific_method_notes.pptx",
+      "displayTitle": "Concept 4 Notes - Scientific Method",
+      "sourceType": "notes",
+      "pageOrSlideCount": 16,
+      "textExtractionWorked": true,
+      "ocrOrImageReviewNeeded": true,
+      "topicsFound": [
+        "scientific-method-variables"
+      ],
+      "questionCountFound": 17,
+      "graphImageTableQuestionsFound": 2,
+      "answerKeyInformationFound": false,
+      "lowConfidenceItems": [
+        "PPTX contains embedded images/media; text extraction captured slide text and speaker notes, but equipment/picture prompts may need slide rendering review before live routing."
+      ],
+      "notes": [
+        "PPTX embedded images or media were detected. OCR/vision for image-only slides is not part of this phase; image-only slides may need OCR later.",
+        "PPTX machine text includes slide text and speaker notes; embedded visuals were not fully OCRed in Chunk 0.",
+        "2 graph/image/table/equipment entries flagged for later visual handling.",
+        "17 corpus entries created for this source."
+      ]
+    },
+    {
+      "id": "unit1_honors_packet_filled",
+      "cleanFileName": "unit1_honors_packet_filled.pdf",
+      "displayTitle": "Scientific Method Honors Packet - Filled",
+      "sourceType": "packet",
+      "pageOrSlideCount": 32,
+      "textExtractionWorked": true,
+      "ocrOrImageReviewNeeded": true,
+      "topicsFound": [
+        "dimensional-analysis-conversions-scientific-notation",
+        "graphing-data-analysis",
+        "mixed-unit1"
+      ],
+      "questionCountFound": 13,
+      "graphImageTableQuestionsFound": 1,
+      "answerKeyInformationFound": true,
+      "lowConfidenceItems": [
+        "unit1.corpus.0060: Convert 23 oC to oF.",
+        "unit1.corpus.0061: Convert 48 oF to oC.",
+        "unit1.corpus.0063: Convert 6.1 ks to s."
+      ],
+      "notes": [
+        "Packet text extraction worked, but some page layout/table structure collapsed into larger practice blocks.",
+        "1 graph/image/table/equipment entries flagged for later visual handling.",
+        "13 corpus entries created for this source."
+      ]
+    },
+    {
+      "id": "unit1_science_practices_test",
+      "cleanFileName": "unit1_science_practices_test.pdf",
+      "displayTitle": "Introduction to Science Practices Test",
+      "sourceType": "test",
+      "pageOrSlideCount": 6,
+      "textExtractionWorked": true,
+      "ocrOrImageReviewNeeded": true,
+      "topicsFound": [
+        "dimensional-analysis-conversions-scientific-notation",
+        "graphing-data-analysis",
+        "mixed-unit1",
+        "scientific-method-variables"
+      ],
+      "questionCountFound": 21,
+      "graphImageTableQuestionsFound": 3,
+      "answerKeyInformationFound": false,
+      "lowConfidenceItems": [],
+      "notes": [
+        "3 graph/image/table/equipment entries flagged for later visual handling.",
+        "21 corpus entries created for this source."
+      ]
+    },
+    {
+      "id": "unit1_scientific_method_variables_review",
+      "cleanFileName": "unit1_scientific_method_variables_review.pdf",
+      "displayTitle": "Scientific Method and Variables Review",
+      "sourceType": "worksheet",
+      "pageOrSlideCount": 5,
+      "textExtractionWorked": true,
+      "ocrOrImageReviewNeeded": true,
+      "topicsFound": [
+        "graphing-data-analysis",
+        "measurement-data-quality",
+        "mixed-unit1",
+        "scientific-method-variables"
+      ],
+      "questionCountFound": 24,
+      "graphImageTableQuestionsFound": 1,
+      "answerKeyInformationFound": false,
+      "lowConfidenceItems": [],
+      "notes": [
+        "1 graph/image/table/equipment entries flagged for later visual handling.",
+        "24 corpus entries created for this source."
+      ]
+    },
+    {
+      "id": "unit1_scientific_method_review_2025",
+      "cleanFileName": "unit1_scientific_method_review_2025.pdf",
+      "displayTitle": "Scientific Method Review 2025",
+      "sourceType": "worksheet",
+      "pageOrSlideCount": 7,
+      "textExtractionWorked": true,
+      "ocrOrImageReviewNeeded": true,
+      "topicsFound": [
+        "dimensional-analysis-conversions-scientific-notation",
+        "graphing-data-analysis",
+        "lab-safety-equipment",
+        "measurement-data-quality",
+        "mixed-unit1",
+        "scientific-method-variables"
+      ],
+      "questionCountFound": 36,
+      "graphImageTableQuestionsFound": 5,
+      "answerKeyInformationFound": false,
+      "lowConfidenceItems": [],
+      "notes": [
+        "5 graph/image/table/equipment entries flagged for later visual handling.",
+        "36 corpus entries created for this source."
+      ]
+    },
+    {
+      "id": "unit1_honors_quiz_key",
+      "cleanFileName": "unit1_honors_quiz_key.pdf",
+      "displayTitle": "Math Skills Quiz Honors Key",
+      "sourceType": "quiz",
+      "pageOrSlideCount": 2,
+      "textExtractionWorked": false,
+      "ocrOrImageReviewNeeded": true,
+      "topicsFound": [
+        "dimensional-analysis-conversions-scientific-notation"
+      ],
+      "questionCountFound": 16,
+      "graphImageTableQuestionsFound": 0,
+      "answerKeyInformationFound": true,
+      "lowConfidenceItems": [
+        "Machine text extraction was insufficient; answer-key items were captured by rendered-page visual review, not full OCR. Handwritten work should be rechecked before formula solver implementation."
+      ],
+      "notes": [
+        "PDF extracted little or no embedded text. It may be scanned or image-based and may need OCR in a later phase.",
+        "Rendered pages 1-2 were visually reviewed; answers are handwritten and should be rechecked before formula-solver work.",
+        "16 corpus entries created for this source."
+      ]
+    },
+    {
+      "id": "unit1_honors_test_key",
+      "cleanFileName": "unit1_honors_test_key.pdf",
+      "displayTitle": "Scientific Method Test Honors Key",
+      "sourceType": "test",
+      "pageOrSlideCount": 6,
+      "textExtractionWorked": false,
+      "ocrOrImageReviewNeeded": true,
+      "topicsFound": [
+        "dimensional-analysis-conversions-scientific-notation",
+        "graphing-data-analysis",
+        "lab-safety-equipment",
+        "measurement-data-quality",
+        "scientific-method-variables"
+      ],
+      "questionCountFound": 58,
+      "graphImageTableQuestionsFound": 15,
+      "answerKeyInformationFound": true,
+      "lowConfidenceItems": [
+        "Machine text extraction was insufficient; answer-key items were captured by rendered-page visual review, not full OCR. Handwritten work should be rechecked before formula solver implementation."
+      ],
+      "notes": [
+        "PDF extracted little or no embedded text. It may be scanned or image-based and may need OCR in a later phase.",
+        "Rendered pages 1-6 were visually reviewed; graph, ruler, graduated cylinder, data-table, and equipment-image questions were identified.",
+        "15 graph/image/table/equipment entries flagged for later visual handling.",
+        "58 corpus entries created for this source."
+      ]
+    }
+  ],
+  "totals": {
+    "sourceCount": 10,
+    "questionCountFound": 227,
+    "graphImageTableQuestionsFound": 39,
+    "lowConfidenceItemCount": 104
+  }
+}
