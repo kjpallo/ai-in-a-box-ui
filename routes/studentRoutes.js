@@ -16,6 +16,7 @@ const {
   buildMechanicalElectromagneticWavesConceptTutorPattern,
   buildMixtureConceptTutorPattern,
   buildNewtonsLawsConceptTutorPattern,
+  buildOpenClosedCircuitsConceptTutorPattern,
   buildPhysicalChemicalChangeConceptTutorPattern,
   buildReflectionRefractionAbsorptionConceptTutorPattern,
   buildReferencePointConceptTutorPattern,
@@ -670,6 +671,7 @@ function registerStudentRoutes(app, {
         buildEnergyTransferConceptTutorPattern(message) ||
         buildReflectionRefractionAbsorptionConceptTutorPattern(message) ||
         buildWavePropertiesConceptTutorPattern(message) ||
+        buildOpenClosedCircuitsConceptTutorPattern(message) ||
         buildAcidsBasesConceptTutorPattern(message);
       const conceptTutorProblem = shouldStartConceptTutorPattern(conceptPattern, result)
         ? startConceptTutor(conceptPattern, message)
@@ -1683,6 +1685,9 @@ function getConceptTutorToolsUsed(problem) {
   }
   if (id === 'waves.properties.amplitude-wavelength-frequency') {
     return ['concept_tutor', 'wave_properties_concept_pattern'];
+  }
+  if (id === 'electricity.circuits.open-closed.identification') {
+    return ['concept_tutor', 'open_closed_circuits_concept_pattern'];
   }
   if (id === 'chemistry.acids-bases.identification') {
     return ['concept_tutor', 'acids_bases_concept_pattern'];
