@@ -12,6 +12,7 @@ const {
   buildBalancedUnbalancedForcesConceptTutorPattern,
   buildDistanceDisplacementConceptTutorPattern,
   buildElementCompoundMixtureConceptTutorPattern,
+  buildEndothermicExothermicConceptTutorPattern,
   buildEnergyTransferConceptTutorPattern,
   buildMechanicalElectromagneticWavesConceptTutorPattern,
   buildMixtureConceptTutorPattern,
@@ -670,6 +671,7 @@ function registerStudentRoutes(app, {
         buildTransverseLongitudinalWavesConceptTutorPattern(message) ||
         buildMechanicalElectromagneticWavesConceptTutorPattern(message) ||
         buildEnergyTransferConceptTutorPattern(message) ||
+        buildEndothermicExothermicConceptTutorPattern(message) ||
         buildReflectionRefractionAbsorptionConceptTutorPattern(message) ||
         buildWavePropertiesConceptTutorPattern(message) ||
         buildOpenClosedCircuitsConceptTutorPattern(message) ||
@@ -1681,6 +1683,9 @@ function getConceptTutorToolsUsed(problem) {
   }
   if (id === 'energy.transfer.conduction-convection-radiation') {
     return ['concept_tutor', 'energy_transfer_concept_pattern'];
+  }
+  if (id === 'energy.processes.endothermic-exothermic.identification') {
+    return ['concept_tutor', 'endothermic_exothermic_concept_pattern'];
   }
   if (id === 'waves.reflection-refraction-absorption.identification') {
     return ['concept_tutor', 'reflection_refraction_absorption_concept_pattern'];
