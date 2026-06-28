@@ -20,6 +20,7 @@ const {
   buildPhysicalChemicalChangeConceptTutorPattern,
   buildReflectionRefractionAbsorptionConceptTutorPattern,
   buildReferencePointConceptTutorPattern,
+  buildSeriesParallelCircuitsConceptTutorPattern,
   buildSpeedVelocityConceptTutorPattern,
   buildTransverseLongitudinalWavesConceptTutorPattern,
   buildWavePropertiesConceptTutorPattern
@@ -672,6 +673,7 @@ function registerStudentRoutes(app, {
         buildReflectionRefractionAbsorptionConceptTutorPattern(message) ||
         buildWavePropertiesConceptTutorPattern(message) ||
         buildOpenClosedCircuitsConceptTutorPattern(message) ||
+        buildSeriesParallelCircuitsConceptTutorPattern(message) ||
         buildAcidsBasesConceptTutorPattern(message);
       const conceptTutorProblem = shouldStartConceptTutorPattern(conceptPattern, result)
         ? startConceptTutor(conceptPattern, message)
@@ -1688,6 +1690,9 @@ function getConceptTutorToolsUsed(problem) {
   }
   if (id === 'electricity.circuits.open-closed.identification') {
     return ['concept_tutor', 'open_closed_circuits_concept_pattern'];
+  }
+  if (id === 'electricity.circuits.series-parallel.identification') {
+    return ['concept_tutor', 'series_parallel_circuits_concept_pattern'];
   }
   if (id === 'chemistry.acids-bases.identification') {
     return ['concept_tutor', 'acids_bases_concept_pattern'];
