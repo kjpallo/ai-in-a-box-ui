@@ -64,6 +64,7 @@
   let activeCalculatorStepKey = '';
   const calculatorOpenTurnIds = new Set();
   const metricStairStepState = new Map();
+  const picketFenceState = new Map();
   const tutorSessionExpandedState = new Map();
   let completedCelebrationKey = '';
   let fireworksTimer = null;
@@ -1082,6 +1083,9 @@
     if (visual.visualType === 'metric_stair_step') {
       return renderMetricStairStepVisual(visual, turnId);
     }
+    if (visual.visualType === 'picket_fence') {
+      return renderPicketFenceVisual(visual, turnId);
+    }
     return '';
   }
 
@@ -1228,6 +1232,169 @@
   }
 
   function formatMetricVisualValue(value) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return String(value || '').trim();
+    if (Math.abs(number) >= 1000) return number.toLocaleString('en-US', { maximumFractionDigits: 12 });
+    if (Number.isInteger(number)) return String(number);
+    return number.toLocaleString('en-US', {
+      maximumFractionDigits: 12,
+      useGrouping: false
+    });
+  }
+
+  function renderPicketFenceVisual(visual, turnId) {
+    const cells = Array.isArray(visual.cells) ? visual.cells : [];
+    const cancellations = Array.isArray(visual.cancellationSteps) ? visual.cancellationSteps : [];
+    const stateKey = picketFenceKey(turnId);
+    const progress = getPicketFenceProgress(stateKey, visual);
+    const given = visual.given || {};
+    const arithmetic = visual.arithmetic || {};
+    const resultDisplay = `${formatPicketFenceNumber(arithmetic.resultValue)} ${arithmetic.resultUnit || visual.targetUnit || ''}`.trim();
+
+    return `
+      <section class="picket-fence-visual" data-picket-fence-id="${escapeAttr(stateKey)}" aria-label="Picket fence method visual">
+        <div class="picket-fence-header">
+          <strong>Picket fence method</strong>
+          <span>${escapeHtml(`${given.value || ''} ${given.unit || ''} to ${visual.targetUnit || ''}`.trim())}</span>
+        </div>
+        <div class="picket-fence-summary">
+          <span>Given: <strong>${escapeHtml(`${formatPicketFenceNumber(given.value)} ${given.unit || ''}`.trim())}</strong></span>
+          <span>Target: <strong>${escapeHtml(visual.targetUnit || '')}</strong></span>
+          <span>Final result: <strong>${escapeHtml(resultDisplay)}</strong></span>
+        </div>
+        <div class="picket-fence-cells" aria-label="Conversion factor cells">
+          ${cells.map((cell, index) => renderPicketFenceCell(cell, index, {
+            stateKey,
+            progress,
+            visual
+          })).join('')}
+        </div>
+        <div class="picket-fence-cancellations" aria-label="Unit cancellations">
+          ${cancellations.map((step, index) => `
+            <button
+              type="button"
+              class="picket-fence-cancellation ${progress >= cells.length + index ? 'is-revealed' : ''}"
+              data-picket-fence-id="${escapeAttr(stateKey)}"
+              data-picket-fence-cancellation="${escapeAttr(index)}"
+            >
+              ${escapeHtml(step.unit || '')} cancels
+            </button>
+          `).join('')}
+        </div>
+        <div class="picket-fence-arithmetic">
+          <span>Top: <strong>${escapeHtml(formatPicketFenceNumber(arithmetic.multiplyNumerators))}</strong></span>
+          <span>Bottom: <strong>${escapeHtml(formatPicketFenceNumber(arithmetic.multiplyDenominators))}</strong></span>
+          <span>Divide: <strong>${escapeHtml(arithmetic.divide || '')}</strong></span>
+          <span>Final result: <strong>${escapeHtml(resultDisplay)}</strong></span>
+        </div>
+        <div class="picket-fence-controls">
+          <button type="button" class="picket-fence-control" data-picket-fence-action="next" data-picket-fence-id="${escapeAttr(stateKey)}">Show next step</button>
+          <button type="button" class="picket-fence-control" data-picket-fence-action="reset" data-picket-fence-id="${escapeAttr(stateKey)}">Reset</button>
+        </div>
+      </section>
+    `;
+  }
+
+  function renderPicketFenceCell(cell, index, context) {
+    const classes = [
+      'picket-fence-cell',
+      index <= context.progress ? 'is-revealed' : 'is-pending',
+      index === context.progress ? 'is-highlighted' : ''
+    ].filter(Boolean).join(' ');
+    const numerator = renderPicketFenceTerm(cell?.numerator, context.visual);
+    const denominator = renderPicketFenceTerm(cell?.denominator, context.visual);
+
+    return `
+      <button
+        type="button"
+        class="${escapeAttr(classes)}"
+        data-picket-fence-id="${escapeAttr(context.stateKey)}"
+        data-picket-fence-cell="${escapeAttr(index)}"
+      >
+        <span class="picket-fence-multiply">${index === 0 ? 'Given' : '&times;'}</span>
+        <span class="picket-fence-fraction">
+          <span class="picket-fence-numerator">${numerator || '&nbsp;'}</span>
+          <span class="picket-fence-denominator">${denominator || '&nbsp;'}</span>
+        </span>
+      </button>
+    `;
+  }
+
+  function renderPicketFenceTerm(value, visual) {
+    const text = String(value || '').trim();
+    if (!text) return '';
+    const match = text.match(/^(.+?)\s+([A-Za-zµ]+)$/u);
+    if (!match) return escapeHtml(text);
+    const [, amount, unit] = match;
+    const unitClass = isPicketFenceCancelledUnit(unit, visual) ? 'picket-fence-cancelled' : 'picket-fence-final-unit';
+    return `${escapeHtml(amount)} <span class="${unitClass}">${escapeHtml(unit)}</span>`;
+  }
+
+  function handlePicketFenceClick(control) {
+    if (!control || !timeline?.contains(control)) return false;
+    const stateKey = control.getAttribute('data-picket-fence-id') || '';
+    if (!stateKey) return false;
+
+    const visual = findPicketFenceVisualForStateKey(stateKey);
+    if (!visual) return true;
+
+    const cells = Array.isArray(visual.cells) ? visual.cells : [];
+    const currentProgress = getPicketFenceProgress(stateKey, visual);
+    const action = control.getAttribute('data-picket-fence-action') || '';
+    const directCell = Number(control.getAttribute('data-picket-fence-cell'));
+    const directCancellation = Number(control.getAttribute('data-picket-fence-cancellation'));
+    let nextProgress = currentProgress;
+
+    if (action === 'reset') nextProgress = 0;
+    if (action === 'next') nextProgress = currentProgress + 1;
+    if (Number.isFinite(directCell)) nextProgress = directCell;
+    if (Number.isFinite(directCancellation)) nextProgress = cells.length + directCancellation;
+
+    picketFenceState.set(stateKey, clampPicketFenceProgress(nextProgress, visual));
+    renderTimeline();
+    return true;
+  }
+
+  function findPicketFenceVisualForStateKey(stateKey) {
+    const turnId = String(stateKey || '').replace(/^picket-fence:/, '');
+    const turn = findTurn(turnId);
+    const tutor = turn?.tutor || {};
+    const work = getTutorWork(tutor);
+    const visual = work.visualMetadata || tutor.visualMetadata || null;
+    return visual?.visualType === 'picket_fence' ? visual : null;
+  }
+
+  function picketFenceKey(turnId) {
+    return `picket-fence:${String(turnId || '').trim()}`;
+  }
+
+  function getPicketFenceProgress(stateKey, visual) {
+    const saved = picketFenceState.has(stateKey) ? Number(picketFenceState.get(stateKey)) : 0;
+    return clampPicketFenceProgress(Number.isFinite(saved) ? saved : 0, visual);
+  }
+
+  function clampPicketFenceProgress(progress, visual) {
+    const cells = Array.isArray(visual?.cells) ? visual.cells : [];
+    const cancellations = Array.isArray(visual?.cancellationSteps) ? visual.cancellationSteps : [];
+    const max = Math.max(0, cells.length + cancellations.length);
+    return Math.max(0, Math.min(max, Number(progress) || 0));
+  }
+
+  function isPicketFenceCancelledUnit(unit, visual) {
+    const normalizedUnit = normalizePicketFenceUnit(unit);
+    const targetUnit = normalizePicketFenceUnit(visual?.arithmetic?.resultUnit || visual?.targetUnit);
+    if (!normalizedUnit || normalizedUnit === targetUnit) return false;
+    const cancellations = Array.isArray(visual?.cancellationSteps) ? visual.cancellationSteps : [];
+    return cancellations.some((step) => normalizePicketFenceUnit(step?.unit) === normalizedUnit);
+  }
+
+  function normalizePicketFenceUnit(unit) {
+    const text = String(unit || '').trim().toLowerCase();
+    if (text.length > 2 && text.endsWith('s')) return text.slice(0, -1);
+    return text;
+  }
+
+  function formatPicketFenceNumber(value) {
     const number = Number(value);
     if (!Number.isFinite(number)) return String(value || '').trim();
     if (Math.abs(number) >= 1000) return number.toLocaleString('en-US', { maximumFractionDigits: 12 });
@@ -1486,6 +1653,11 @@
 
     const metricStairStepControl = event.target.closest('[data-metric-stair-step-index], [data-metric-stair-step-move]');
     if (metricStairStepControl && handleMetricStairStepClick(metricStairStepControl)) {
+      return;
+    }
+
+    const picketFenceControl = event.target.closest('[data-picket-fence-action], [data-picket-fence-cell], [data-picket-fence-cancellation]');
+    if (picketFenceControl && handlePicketFenceClick(picketFenceControl)) {
       return;
     }
 

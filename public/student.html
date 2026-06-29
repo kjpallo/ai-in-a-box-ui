@@ -962,6 +962,146 @@
         margin: 0;
       }
 
+      .picket-fence-visual {
+        display: grid;
+        gap: 0.46rem;
+        min-width: 0;
+        padding: 0.5rem;
+        border: 1px solid rgba(126,233,255,0.24);
+        border-radius: 8px;
+        background: rgba(4,16,18,0.46);
+      }
+
+      .picket-fence-header,
+      .picket-fence-summary,
+      .picket-fence-controls,
+      .picket-fence-cancellations,
+      .picket-fence-arithmetic {
+        display: flex;
+        align-items: center;
+        gap: 0.42rem;
+        flex-wrap: wrap;
+        min-width: 0;
+      }
+
+      .picket-fence-header {
+        justify-content: space-between;
+      }
+
+      .picket-fence-header strong {
+        color: #f5fffb;
+        font-size: 0.88rem;
+      }
+
+      .picket-fence-header span,
+      .picket-fence-summary span,
+      .picket-fence-arithmetic span {
+        color: #dffdf6;
+        font-size: 0.8rem;
+        line-height: 1.25;
+      }
+
+      .picket-fence-summary strong,
+      .picket-fence-arithmetic strong {
+        color: #fff2a8;
+      }
+
+      .picket-fence-cells {
+        display: flex;
+        align-items: stretch;
+        gap: 0.34rem;
+        min-width: 0;
+        overflow-x: auto;
+        padding-bottom: 0.08rem;
+        scrollbar-gutter: stable;
+      }
+
+      .picket-fence-cell {
+        display: grid;
+        grid-template-columns: auto minmax(5.2rem, 1fr);
+        align-items: center;
+        gap: 0.28rem;
+        min-width: 6.8rem;
+        padding: 0.38rem;
+        border: 1px solid rgba(126,233,255,0.18);
+        border-radius: 7px;
+        background: rgba(2,8,10,0.42);
+        color: #effff8;
+        text-align: center;
+      }
+
+      .picket-fence-cell.is-highlighted {
+        background: rgba(102,247,209,0.14);
+        box-shadow: inset 0 0 0 1px rgba(102,247,209,0.42);
+      }
+
+      .picket-fence-cell.is-pending {
+        opacity: 0.84;
+      }
+
+      .picket-fence-multiply {
+        color: #fff2a8;
+        font-size: 0.72rem;
+        font-weight: 850;
+        text-transform: uppercase;
+      }
+
+      .picket-fence-fraction {
+        display: grid;
+        gap: 0.12rem;
+        min-width: 0;
+      }
+
+      .picket-fence-numerator,
+      .picket-fence-denominator {
+        min-height: 1.16rem;
+        color: #effff8;
+        font-size: 0.86rem;
+        font-weight: 800;
+        line-height: 1.1;
+        overflow-wrap: anywhere;
+      }
+
+      .picket-fence-numerator {
+        padding-bottom: 0.16rem;
+        border-bottom: 1px solid rgba(223,253,246,0.34);
+      }
+
+      .picket-fence-cancelled {
+        color: rgba(255,214,102,0.92);
+        text-decoration: line-through;
+        text-decoration-thickness: 0.14rem;
+      }
+
+      .picket-fence-final-unit {
+        color: #66f7d1;
+      }
+
+      .picket-fence-cancellation,
+      .picket-fence-control {
+        min-height: 34px;
+        padding: 0.32rem 0.58rem;
+        border: 1px solid rgba(126,233,255,0.24);
+        border-radius: 7px;
+        background: rgba(4,20,20,0.74);
+        color: #effff8;
+        font-weight: 800;
+      }
+
+      .picket-fence-cancellation.is-revealed {
+        border-color: rgba(255,214,102,0.58);
+        color: #fff2a8;
+      }
+
+      .picket-fence-control:hover,
+      .picket-fence-control:focus-visible,
+      .picket-fence-cancellation:hover,
+      .picket-fence-cancellation:focus-visible,
+      .picket-fence-cell:hover,
+      .picket-fence-cell:focus-visible {
+        border-color: rgba(102,247,209,0.7);
+      }
+
       .student-tutor-known-values {
         display: grid;
         gap: 0.16rem;

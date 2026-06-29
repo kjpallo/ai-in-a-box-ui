@@ -83,6 +83,10 @@ const metricStairStepTrackBlock = getCssBlock('.metric-stair-step-track');
 const metricStairStepButtonBlock = getCssBlock('.metric-stair-step-button');
 const metricStairStepCurrentButtonBlock = getCssBlock('.metric-stair-step-button.is-current');
 const metricStairStepControlBlock = getCssBlock('.metric-stair-step-control');
+const picketFenceVisualBlock = getCssBlock('.picket-fence-visual');
+const picketFenceCellBlock = getCssBlock('.picket-fence-cell');
+const picketFenceCancelledBlock = getCssBlock('.picket-fence-cancelled');
+const picketFenceControlBlock = getCssBlock('.picket-fence-control');
 const composerTutorChoicesBlock = getCssBlock('.student-composer-tutor-choices');
 const composerTutorChoicesHiddenBlock = getCssBlock('.student-composer-tutor-choices[hidden]');
 const composerChoiceButtonBlock = getCssBlock('.student-composer-choice-button');
@@ -113,6 +117,11 @@ assert.match(metricStairStepTrackBlock, /overflow-x:\s*auto;/, 'Metric stair-ste
 assert.match(metricStairStepButtonBlock, /min-height:\s*68px;/, 'Metric stair-step buttons should keep stable dimensions.');
 assert.match(metricStairStepCurrentButtonBlock, /box-shadow:\s*inset 0 0 0 1px rgba\(102,247,209,0\.42\);/, 'Current metric stair step should be visibly marked.');
 assert.match(metricStairStepControlBlock, /min-height:\s*34px;/, 'Metric stair-step controls should be usable tap targets.');
+assert.ok(picketFenceVisualBlock, 'Picket fence tutor visual should have a card style.');
+assert.match(picketFenceVisualBlock, /border-radius:\s*8px;/, 'Picket fence visual should stay compact inside Formula Tutor cards.');
+assert.match(picketFenceCellBlock, /min-width:\s*6\.8rem;/, 'Picket fence cells should keep stable dimensions.');
+assert.match(picketFenceCancelledBlock, /text-decoration:\s*line-through;/, 'Picket fence visual should visibly mark cancelled units.');
+assert.match(picketFenceControlBlock, /min-height:\s*34px;/, 'Picket fence reveal controls should be usable tap targets.');
 assert.ok(flashcardCardBlock, 'Interactive flashcards should have a compact card style.');
 assert.match(flashcardCardBlock, /border-radius:\s*8px;/, 'Flashcard cards should stay compact in the chat timeline.');
 assert.match(flashcardTitleBlock, /font-weight:\s*850;/, 'Flashcard card titles should be visually prominent.');
@@ -231,8 +240,8 @@ assert.match(
 );
 assert.match(
   studentUi,
-  /function renderFormulaVisualMetadata\(visual, turnId\)[\s\S]*visual\.visualType === 'metric_stair_step'[\s\S]*renderMetricStairStepVisual\(visual, turnId\)/,
-  'Formula Tutor visual metadata should route metric stair-step metadata to a renderer.'
+  /function renderFormulaVisualMetadata\(visual, turnId\)[\s\S]*visual\.visualType === 'metric_stair_step'[\s\S]*renderMetricStairStepVisual\(visual, turnId\)[\s\S]*visual\.visualType === 'picket_fence'[\s\S]*renderPicketFenceVisual\(visual, turnId\)/,
+  'Formula Tutor visual metadata should route metric stair-step and picket-fence metadata to renderers.'
 );
 assert.match(
   studentUi,
@@ -258,6 +267,31 @@ assert.match(
   studentUi,
   /function metricUnitForStep\(step, baseUnit\)[\s\S]*if \(label === 'UNIT'\) return base;[\s\S]*return `\$\{label\}\$\{base\}`;/,
   'Metric stair-step labels should combine prefixes with the problem base unit.'
+);
+assert.match(
+  studentUi,
+  /function renderPicketFenceVisual\(visual, turnId\)[\s\S]*Picket fence method[\s\S]*Final result:[\s\S]*data-picket-fence-action="next"[\s\S]*data-picket-fence-action="reset"/,
+  'Picket fence renderer should show title, local reveal controls, and final result.'
+);
+assert.match(
+  studentUi,
+  /function renderPicketFenceCell\(cell, index, context\)[\s\S]*renderPicketFenceTerm\(cell\?\.numerator[\s\S]*data-picket-fence-cell="\$\{escapeAttr\(index\)\}"[\s\S]*picket-fence-fraction/,
+  'Picket fence cells should expose clickable conversion-factor cells.'
+);
+assert.match(
+  studentUi,
+  /function renderPicketFenceTerm\(value, visual\)[\s\S]*picket-fence-cancelled[\s\S]*picket-fence-final-unit/,
+  'Picket fence terms should mark cancelled units and leave final units uncancelled.'
+);
+assert.match(
+  studentUi,
+  /function handleTimelineClick\(event\)[\s\S]*data-picket-fence-action[\s\S]*handlePicketFenceClick\(picketFenceControl\)/,
+  'Picket fence controls should be handled by the timeline click pipeline.'
+);
+assert.match(
+  studentUi,
+  /function handlePicketFenceClick\(control\)[\s\S]*picketFenceState\.set\(stateKey, clampPicketFenceProgress\(nextProgress, visual\)\)[\s\S]*renderTimeline\(\)/,
+  'Picket fence controls should update local reveal state and rerender the visual.'
 );
 assert.match(
   studentUi,
@@ -1314,6 +1348,86 @@ function assertMetricStairStepVisual(visual, testCase) {
   assert.ok(Math.abs(Number(visual.resultValue) - testCase.resultValue) < 1e-9, `${testCase.name} result value`);
 }
 
+async function testPicketFenceFormulaTutorVisualMetadata() {
+  const harness = await createHarnessSession();
+  const picketFenceCases = [
+    {
+      name: 'picket-fence-cm-to-feet',
+      prompt: 'Convert 250.4 cm to feet.',
+      givenUnit: 'cm',
+      targetUnit: 'ft',
+      resultUnit: 'ft',
+      resultValue: 8.22,
+      minFactors: 2,
+      expectedCancelUnits: ['cm', 'in']
+    },
+    {
+      name: 'picket-fence-seconds-in-year',
+      prompt: 'How many seconds are in one year?',
+      givenUnit: 'year',
+      targetUnit: 's',
+      resultUnit: 's',
+      resultValue: 31536000,
+      minFactors: 4,
+      expectedCancelUnits: ['year', 'days', 'hr', 'min']
+    }
+  ];
+
+  for (const testCase of picketFenceCases) {
+    const response = await sendHarnessMessage(harness, testCase.name, testCase.prompt);
+    assert.equal(response.body.routeType, 'formula_tutor', `${testCase.name} should start Formula Tutor`);
+    assert.equal(response.body.tutor?.formulaId, 'unit1_picket_fence_conversion', `${testCase.name} formula id`);
+    assertPicketFenceVisual(response.body.tutor?.work?.visualMetadata, testCase);
+    assertPicketFenceVisual(response.body.tutor?.visualMetadata, testCase);
+  }
+
+  const boundaryCases = [
+    {
+      name: 'metric-no-picket-fence-km-to-m',
+      prompt: 'Convert 48 km to meters.',
+      visualType: 'metric_stair_step'
+    },
+    {
+      name: 'metric-no-picket-fence-mg-to-kg',
+      prompt: 'Convert 45,456 mg to kilograms.',
+      visualType: 'metric_stair_step'
+    },
+    {
+      name: 'temperature-no-picket-fence',
+      prompt: 'Convert 23 C to F.',
+      visualType: 'temperature_conversion'
+    },
+    {
+      name: 'scientific-notation-no-picket-fence',
+      prompt: 'Write 354,000,000 in scientific notation.',
+      visualType: 'scientific_notation_decimal_move'
+    }
+  ];
+
+  for (const testCase of boundaryCases) {
+    const response = await sendHarnessMessage(harness, testCase.name, testCase.prompt);
+    assert.equal(response.body.routeType, 'formula_tutor', `${testCase.name} should still start Formula Tutor`);
+    assert.equal(response.body.tutor?.work?.visualMetadata?.visualType, testCase.visualType, `${testCase.name} visual type`);
+    assert.notEqual(response.body.tutor?.work?.visualMetadata?.visualType, 'picket_fence', `${testCase.name} should not use picket-fence visual`);
+  }
+}
+
+function assertPicketFenceVisual(visual, testCase) {
+  assert.ok(visual, `${testCase.name} should expose visual metadata`);
+  assert.equal(visual.visualType, 'picket_fence', `${testCase.name} visual type`);
+  assert.equal(visual.given?.unit, testCase.givenUnit, `${testCase.name} given unit`);
+  assert.equal(visual.targetUnit, testCase.targetUnit, `${testCase.name} target unit`);
+  assert.equal(visual.arithmetic?.resultUnit, testCase.resultUnit, `${testCase.name} result unit`);
+  assert.ok(Math.abs(Number(visual.arithmetic?.resultValue) - testCase.resultValue) < 1e-9, `${testCase.name} result value`);
+  assert.ok(Array.isArray(visual.conversionFactors) && visual.conversionFactors.length >= testCase.minFactors, `${testCase.name} should include conversion factors`);
+  assert.ok(Array.isArray(visual.cancellationSteps) && visual.cancellationSteps.length >= testCase.expectedCancelUnits.length, `${testCase.name} should include cancellation steps`);
+  assert.ok(Array.isArray(visual.cells) && visual.cells.length >= testCase.minFactors + 1, `${testCase.name} should include fraction cells`);
+  const cancellationUnits = visual.cancellationSteps.map((step) => String(step.unit || '').toLowerCase());
+  for (const unit of testCase.expectedCancelUnits) {
+    assert.ok(cancellationUnits.includes(unit.toLowerCase()), `${testCase.name} should cancel ${unit}`);
+  }
+}
+
 async function createHarnessSession() {
   const harness = createStudentRouteHarness({ studentGuidedFormulaTutoringEnabled: true });
   const create = await harness.request('POST', '/api/profile/create-student-session');
@@ -1341,6 +1455,7 @@ Promise.resolve()
   .then(testAccelerationClassroomRoundedFinalAcceptance)
   .then(testPatch4NetForceOnlyDirectAnswerWithTutorOn)
   .then(testMetricStairStepFormulaTutorVisualMetadata)
+  .then(testPicketFenceFormulaTutorVisualMetadata)
   .then(testInteractiveFlashcardUiMetadata)
   .then(() => {
     console.log('student tutor UI: formula tutor turns group into collapsible problem sessions');
@@ -1350,6 +1465,7 @@ Promise.resolve()
     console.log('student tutor UI: velocity and acceleration tutor regressions passed');
     console.log('student tutor UI: Patch 4 stale tutor controls and net-force direct-answer regressions passed');
     console.log('student tutor UI: metric stair-step Formula Tutor visual metadata passed');
+    console.log('student tutor UI: picket fence Formula Tutor visual metadata passed');
     console.log('student tutor UI: interactive flashcard cards use backend session metadata');
   })
   .catch((error) => {
