@@ -25,6 +25,7 @@ const {
   buildSeriesParallelCircuitsConceptTutorPattern,
   buildSpeedVelocityConceptTutorPattern,
   buildTransverseLongitudinalWavesConceptTutorPattern,
+  buildUnit1VariablesConceptTutorPattern,
   buildWavePropertiesConceptTutorPattern
 } = require('../lib/tutor/conceptTutor/conceptTutorPatterns');
 const {
@@ -674,6 +675,7 @@ function registerStudentRoutes(app, {
         buildEnergyTransferConceptTutorPattern(message) ||
         buildEndothermicExothermicConceptTutorPattern(message) ||
         buildMechanicalEnergyTypesConceptTutorPattern(message) ||
+        buildUnit1VariablesConceptTutorPattern(message) ||
         buildReflectionRefractionAbsorptionConceptTutorPattern(message) ||
         buildWavePropertiesConceptTutorPattern(message) ||
         buildOpenClosedCircuitsConceptTutorPattern(message) ||

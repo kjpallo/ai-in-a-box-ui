@@ -2,6 +2,8 @@ const assert = require('node:assert/strict');
 
 const { createStudentRouteHarness } = require('./test-helpers/studentRouteHarness');
 
+const UNIT1_VARIABLES_TUTOR_ID = 'unit1.scientific_method.variables.identification';
+
 const DIRECT_CASES = [
   {
     name: 'science-definition',
@@ -227,31 +229,37 @@ const SCENARIO_CASES = [
   {
     name: 'sunlight-plant-growth-iv',
     prompt: 'In an experiment testing how sunlight affects plant growth, what is the independent variable?',
+    choice: '1',
     includes: [/independent variable/i, /amount of sunlight/i]
   },
   {
     name: 'sunlight-plant-growth-dv',
     prompt: 'In an experiment testing how sunlight affects plant growth, what is the dependent variable?',
+    choice: '2',
     includes: [/dependent variable/i, /plant growth/i]
   },
   {
     name: 'fertilizer-plant-height-iv',
     prompt: 'In an experiment testing which fertilizer makes plants grow taller, what is the independent variable?',
+    choice: '1',
     includes: [/independent variable/i, /type of fertilizer/i]
   },
   {
     name: 'fertilizer-plant-height-dv',
     prompt: 'In an experiment testing which fertilizer makes plants grow taller, what is the dependent variable?',
+    choice: '2',
     includes: [/dependent variable/i, /plant height|growth/i]
   },
   {
     name: 'temperature-dissolving-iv',
     prompt: 'In an experiment testing how temperature affects dissolving, what is the independent variable?',
+    choice: '1',
     includes: [/independent variable/i, /temperature/i]
   },
   {
     name: 'temperature-dissolving-dv',
     prompt: 'In an experiment testing how temperature affects dissolving, what is the dependent variable?',
+    choice: '2',
     includes: [/dependent variable/i, /dissolves|dissolving|how fast|how much/i]
   }
 ];
@@ -343,9 +351,17 @@ async function main() {
   }
 
   for (const testCase of SCENARIO_CASES) {
-    const response = await ask(request, sessionId, `unit1-scimethod-scenario-${slug(testCase.name)}`, testCase.prompt);
-    assertDirectAnswer(response, testCase.name);
-    assertAnswer(response.response, testCase);
+    const studentHubId = `unit1-scimethod-scenario-${slug(testCase.name)}`;
+    const response = await ask(request, sessionId, studentHubId, testCase.prompt);
+    assert.equal(response.routeType, 'concept_tutor', `${testCase.name} should now start the narrow Unit 1 variables Concept Tutor`);
+    assert.equal(response.tutor?.id, UNIT1_VARIABLES_TUTOR_ID, `${testCase.name} tutor id`);
+    assert.doesNotMatch(response.response, testCase.includes[0], `${testCase.name} should hide final answer until completion`);
+
+    const completed = await ask(request, sessionId, studentHubId, testCase.choice);
+    assert.equal(completed.routeType, 'concept_tutor', `${testCase.name} completion route`);
+    assert.equal(completed.tutor?.id, UNIT1_VARIABLES_TUTOR_ID, `${testCase.name} completion tutor id`);
+    assert.equal(completed.tutor?.completed, true, `${testCase.name} should complete after the correct number`);
+    assertAnswer(completed.response, testCase);
   }
 
   for (const testCase of UNIT1_BOUNDARY_CASES) {
@@ -372,7 +388,7 @@ async function main() {
     assertAnswer(response.response, testCase);
   }
 
-  console.log('PASS Unit 1 scientific method regressions: direct answers, typo handling, scenarios, and route boundaries');
+  console.log('PASS Unit 1 scientific method regressions: direct answers, typo handling, variable scenario tutor starts, and route boundaries');
 }
 
 async function ask(request, sessionId, studentHubId, message) {
