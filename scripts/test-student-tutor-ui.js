@@ -87,6 +87,11 @@ const picketFenceVisualBlock = getCssBlock('.picket-fence-visual');
 const picketFenceCellBlock = getCssBlock('.picket-fence-cell');
 const picketFenceCancelledBlock = getCssBlock('.picket-fence-cancelled');
 const picketFenceControlBlock = getCssBlock('.picket-fence-control');
+const scientificNotationVisualBlock = getCssBlock('.scientific-notation-visual');
+const scientificNotationNumberBlock = getCssBlock('.scientific-notation-number');
+const scientificNotationDecimalBlock = getCssBlock('.scientific-notation-decimal');
+const scientificNotationControlBlock = getCssBlock('.scientific-notation-control');
+const scientificNotationMoveBlock = getCssBlock('.scientific-notation-move');
 const composerTutorChoicesBlock = getCssBlock('.student-composer-tutor-choices');
 const composerTutorChoicesHiddenBlock = getCssBlock('.student-composer-tutor-choices[hidden]');
 const composerChoiceButtonBlock = getCssBlock('.student-composer-choice-button');
@@ -122,6 +127,12 @@ assert.match(picketFenceVisualBlock, /border-radius:\s*8px;/, 'Picket fence visu
 assert.match(picketFenceCellBlock, /min-width:\s*6\.8rem;/, 'Picket fence cells should keep stable dimensions.');
 assert.match(picketFenceCancelledBlock, /text-decoration:\s*line-through;/, 'Picket fence visual should visibly mark cancelled units.');
 assert.match(picketFenceControlBlock, /min-height:\s*34px;/, 'Picket fence reveal controls should be usable tap targets.');
+assert.ok(scientificNotationVisualBlock, 'Scientific notation tutor visual should have a card style.');
+assert.match(scientificNotationVisualBlock, /border-radius:\s*8px;/, 'Scientific notation visual should stay compact inside Formula Tutor cards.');
+assert.match(scientificNotationNumberBlock, /font-family:\s*ui-monospace/, 'Scientific notation number should use a stable numeric font.');
+assert.match(scientificNotationDecimalBlock, /box-shadow:\s*0 0 0 3px rgba\(102,247,209,0\.1\);/, 'Scientific notation decimal marker should be visibly highlighted.');
+assert.match(scientificNotationControlBlock, /min-height:\s*34px;/, 'Scientific notation controls should be usable tap targets.');
+assert.match(scientificNotationMoveBlock, /flex-wrap:\s*wrap;/, 'Scientific notation move summary should wrap on small screens.');
 assert.ok(flashcardCardBlock, 'Interactive flashcards should have a compact card style.');
 assert.match(flashcardCardBlock, /border-radius:\s*8px;/, 'Flashcard cards should stay compact in the chat timeline.');
 assert.match(flashcardTitleBlock, /font-weight:\s*850;/, 'Flashcard card titles should be visually prominent.');
@@ -240,8 +251,8 @@ assert.match(
 );
 assert.match(
   studentUi,
-  /function renderFormulaVisualMetadata\(visual, turnId\)[\s\S]*visual\.visualType === 'metric_stair_step'[\s\S]*renderMetricStairStepVisual\(visual, turnId\)[\s\S]*visual\.visualType === 'picket_fence'[\s\S]*renderPicketFenceVisual\(visual, turnId\)/,
-  'Formula Tutor visual metadata should route metric stair-step and picket-fence metadata to renderers.'
+  /function renderFormulaVisualMetadata\(visual, turnId\)[\s\S]*visual\.visualType === 'metric_stair_step'[\s\S]*renderMetricStairStepVisual\(visual, turnId\)[\s\S]*visual\.visualType === 'picket_fence'[\s\S]*renderPicketFenceVisual\(visual, turnId\)[\s\S]*visual\.visualType === 'scientific_notation_decimal_move'[\s\S]*renderScientificNotationVisual\(visual, turnId\)/,
+  'Formula Tutor visual metadata should route metric stair-step, picket-fence, and scientific-notation metadata to renderers.'
 );
 assert.match(
   studentUi,
@@ -292,6 +303,26 @@ assert.match(
   studentUi,
   /function handlePicketFenceClick\(control\)[\s\S]*picketFenceState\.set\(stateKey, clampPicketFenceProgress\(nextProgress, visual\)\)[\s\S]*renderTimeline\(\)/,
   'Picket fence controls should update local reveal state and rerender the visual.'
+);
+assert.match(
+  studentUi,
+  /function renderScientificNotationVisual\(visual, turnId\)[\s\S]*visual\.decimalMove[\s\S]*Scientific notation decimal mover[\s\S]*Final result:[\s\S]*data-scientific-notation-action="left"[\s\S]*data-scientific-notation-action="right"[\s\S]*data-scientific-notation-action="next"[\s\S]*data-scientific-notation-action="reset"/,
+  'Scientific notation renderer should show title, decimal move details, local controls, and final result.'
+);
+assert.match(
+  studentUi,
+  /function renderScientificNotationNumber\(value\)[\s\S]*scientific-notation-decimal/,
+  'Scientific notation renderer should mark the current decimal position.'
+);
+assert.match(
+  studentUi,
+  /function handleTimelineClick\(event\)[\s\S]*data-scientific-notation-action[\s\S]*handleScientificNotationVisualClick\(scientificNotationControl\)/,
+  'Scientific notation controls should be handled by the timeline click pipeline.'
+);
+assert.match(
+  studentUi,
+  /function handleScientificNotationVisualClick\(control\)[\s\S]*scientificNotationState\.set\(stateKey, clampScientificNotationSignedMoves\(nextSignedMoves, finalSignedMoves\)\)[\s\S]*renderTimeline\(\)/,
+  'Scientific notation controls should update local decimal state and rerender the visual.'
 );
 assert.match(
   studentUi,
@@ -1428,6 +1459,105 @@ function assertPicketFenceVisual(visual, testCase) {
   }
 }
 
+async function testScientificNotationFormulaTutorVisualMetadata() {
+  const harness = await createHarnessSession();
+  const scientificCases = [
+    {
+      name: 'scientific-notation-large-number',
+      prompt: 'Write 354,000,000 in scientific notation.',
+      formulaId: 'unit1_scientific_notation',
+      exponent: 8,
+      coefficient: 3.54,
+      decimalDirection: 'left',
+      decimalPlaces: 8
+    },
+    {
+      name: 'scientific-notation-small-decimal',
+      prompt: 'Write 0.000096 in scientific notation.',
+      formulaId: 'unit1_scientific_notation',
+      exponent: -5,
+      coefficient: 9.6,
+      decimalDirection: 'right',
+      decimalPlaces: 5
+    },
+    {
+      name: 'standard-notation-negative-exponent',
+      prompt: 'Write 2.76 x 10-3 in standard notation.',
+      formulaId: 'unit1_standard_notation',
+      exponent: -3,
+      resultValue: 0.00276,
+      decimalDirection: 'left',
+      decimalPlaces: 3
+    },
+    {
+      name: 'standard-notation-positive-exponent',
+      prompt: 'Write 4.011 x 10^4 in standard notation.',
+      formulaId: 'unit1_standard_notation',
+      exponent: 4,
+      resultValue: 40110,
+      decimalDirection: 'right',
+      decimalPlaces: 4
+    }
+  ];
+
+  for (const testCase of scientificCases) {
+    const response = await sendHarnessMessage(harness, testCase.name, testCase.prompt);
+    assert.equal(response.body.routeType, 'formula_tutor', `${testCase.name} should start Formula Tutor`);
+    assert.equal(response.body.tutor?.formulaId, testCase.formulaId, `${testCase.name} formula id`);
+    assertScientificNotationVisual(response.body.tutor?.work?.visualMetadata, testCase);
+    assertScientificNotationVisual(response.body.tutor?.visualMetadata, testCase);
+  }
+
+  const boundaryCases = [
+    {
+      name: 'metric-no-scientific-notation-km-to-m',
+      prompt: 'Convert 48 km to meters.',
+      visualType: 'metric_stair_step'
+    },
+    {
+      name: 'metric-no-scientific-notation-mg-to-kg',
+      prompt: 'Convert 45,456 mg to kilograms.',
+      visualType: 'metric_stair_step'
+    },
+    {
+      name: 'picket-fence-no-scientific-notation-cm-to-feet',
+      prompt: 'Convert 250.4 cm to feet.',
+      visualType: 'picket_fence'
+    },
+    {
+      name: 'picket-fence-no-scientific-notation-seconds-year',
+      prompt: 'How many seconds are in one year?',
+      visualType: 'picket_fence'
+    },
+    {
+      name: 'temperature-no-scientific-notation',
+      prompt: 'Convert 23 C to F.',
+      visualType: 'temperature_conversion'
+    }
+  ];
+
+  for (const testCase of boundaryCases) {
+    const response = await sendHarnessMessage(harness, testCase.name, testCase.prompt);
+    assert.equal(response.body.routeType, 'formula_tutor', `${testCase.name} should still start Formula Tutor`);
+    assert.equal(response.body.tutor?.work?.visualMetadata?.visualType, testCase.visualType, `${testCase.name} visual type`);
+    assert.notEqual(response.body.tutor?.work?.visualMetadata?.visualType, 'scientific_notation_decimal_move', `${testCase.name} should not use scientific notation visual`);
+  }
+}
+
+function assertScientificNotationVisual(visual, testCase) {
+  assert.ok(visual, `${testCase.name} should expose visual metadata`);
+  assert.equal(visual.visualType, 'scientific_notation_decimal_move', `${testCase.name} visual type`);
+  assert.equal(visual.exponent, testCase.exponent, `${testCase.name} exponent`);
+  assert.equal(visual.decimalMove?.direction, testCase.decimalDirection, `${testCase.name} decimal direction`);
+  assert.equal(visual.decimalMove?.places, testCase.decimalPlaces, `${testCase.name} decimal places`);
+  if (testCase.coefficient != null) {
+    assert.ok(Math.abs(Number(visual.coefficient) - testCase.coefficient) < 1e-9, `${testCase.name} coefficient`);
+  }
+  if (testCase.resultValue != null) {
+    assert.ok(Math.abs(Number(visual.resultValue) - testCase.resultValue) < 1e-9, `${testCase.name} result value`);
+  }
+}
+
 async function createHarnessSession() {
   const harness = createStudentRouteHarness({ studentGuidedFormulaTutoringEnabled: true });
   const create = await harness.request('POST', '/api/profile/create-student-session');
@@ -1456,6 +1586,7 @@ Promise.resolve()
   .then(testPatch4NetForceOnlyDirectAnswerWithTutorOn)
   .then(testMetricStairStepFormulaTutorVisualMetadata)
   .then(testPicketFenceFormulaTutorVisualMetadata)
+  .then(testScientificNotationFormulaTutorVisualMetadata)
   .then(testInteractiveFlashcardUiMetadata)
   .then(() => {
     console.log('student tutor UI: formula tutor turns group into collapsible problem sessions');
@@ -1466,6 +1597,7 @@ Promise.resolve()
     console.log('student tutor UI: Patch 4 stale tutor controls and net-force direct-answer regressions passed');
     console.log('student tutor UI: metric stair-step Formula Tutor visual metadata passed');
     console.log('student tutor UI: picket fence Formula Tutor visual metadata passed');
+    console.log('student tutor UI: scientific notation Formula Tutor visual metadata passed');
     console.log('student tutor UI: interactive flashcard cards use backend session metadata');
   })
   .catch((error) => {

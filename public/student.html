@@ -1102,6 +1102,102 @@
         border-color: rgba(102,247,209,0.7);
       }
 
+      .scientific-notation-visual {
+        display: grid;
+        gap: 0.46rem;
+        min-width: 0;
+        padding: 0.5rem;
+        border: 1px solid rgba(255,214,102,0.26);
+        border-radius: 8px;
+        background: rgba(20,18,10,0.42);
+      }
+
+      .scientific-notation-header,
+      .scientific-notation-summary,
+      .scientific-notation-move,
+      .scientific-notation-controls {
+        display: flex;
+        align-items: center;
+        gap: 0.42rem;
+        flex-wrap: wrap;
+        min-width: 0;
+      }
+
+      .scientific-notation-header {
+        justify-content: space-between;
+      }
+
+      .scientific-notation-header strong {
+        color: #f5fffb;
+        font-size: 0.88rem;
+      }
+
+      .scientific-notation-header span,
+      .scientific-notation-summary span,
+      .scientific-notation-move span,
+      .scientific-notation-rule {
+        color: #dffdf6;
+        font-size: 0.8rem;
+        line-height: 1.25;
+      }
+
+      .scientific-notation-summary strong,
+      .scientific-notation-move strong {
+        color: #fff2a8;
+      }
+
+      .scientific-notation-move {
+        flex-wrap: wrap;
+      }
+
+      .scientific-notation-number {
+        display: flex;
+        align-items: baseline;
+        min-width: 0;
+        max-width: 100%;
+        overflow-x: auto;
+        padding: 0.45rem 0.5rem;
+        border: 1px solid rgba(126,233,255,0.18);
+        border-radius: 7px;
+        background: rgba(2,8,10,0.42);
+        color: #effff8;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        font-size: 1.08rem;
+        font-weight: 850;
+        line-height: 1.2;
+        white-space: nowrap;
+      }
+
+      .scientific-notation-decimal {
+        display: inline-grid;
+        place-items: center;
+        min-width: 0.54rem;
+        margin: 0 0.02rem;
+        border-radius: 999px;
+        background: rgba(102,247,209,0.16);
+        color: #66f7d1;
+        box-shadow: 0 0 0 3px rgba(102,247,209,0.1);
+      }
+
+      .scientific-notation-control {
+        min-height: 34px;
+        padding: 0.32rem 0.58rem;
+        border: 1px solid rgba(126,233,255,0.24);
+        border-radius: 7px;
+        background: rgba(4,20,20,0.74);
+        color: #effff8;
+        font-weight: 800;
+      }
+
+      .scientific-notation-control:hover,
+      .scientific-notation-control:focus-visible {
+        border-color: rgba(102,247,209,0.7);
+      }
+
+      .scientific-notation-rule {
+        margin: 0;
+      }
+
       .student-tutor-known-values {
         display: grid;
         gap: 0.16rem;

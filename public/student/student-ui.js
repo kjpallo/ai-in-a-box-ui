@@ -65,6 +65,7 @@
   const calculatorOpenTurnIds = new Set();
   const metricStairStepState = new Map();
   const picketFenceState = new Map();
+  const scientificNotationState = new Map();
   const tutorSessionExpandedState = new Map();
   let completedCelebrationKey = '';
   let fireworksTimer = null;
@@ -1086,6 +1087,9 @@
     if (visual.visualType === 'picket_fence') {
       return renderPicketFenceVisual(visual, turnId);
     }
+    if (visual.visualType === 'scientific_notation_decimal_move') {
+      return renderScientificNotationVisual(visual, turnId);
+    }
     return '';
   }
 
@@ -1405,6 +1409,154 @@
     });
   }
 
+  function renderScientificNotationVisual(visual, turnId) {
+    const stateKey = scientificNotationKey(turnId);
+    const move = visual.decimalMove || {};
+    const finalSignedMoves = scientificNotationSignedMoves(move);
+    const currentSignedMoves = getScientificNotationSignedMoves(stateKey, finalSignedMoves);
+    const places = Math.abs(Number(move.places) || 0);
+    const currentValue = calculateScientificNotationCurrentValue(visual, currentSignedMoves);
+    const startDisplay = scientificNotationStartDisplay(visual);
+    const targetFormat = visual.mode === 'to_standard' ? 'standard notation' : 'scientific notation';
+    const rule = scientificNotationRule(visual);
+    const moveDirection = String(move.direction || '').trim();
+    const finalDisplay = visual.resultDisplay || String(visual.resultValue || '').trim();
+
+    return `
+      <section class="scientific-notation-visual" data-scientific-notation-id="${escapeAttr(stateKey)}" aria-label="Scientific notation decimal mover visual">
+        <div class="scientific-notation-header">
+          <strong>Scientific notation decimal mover</strong>
+          <span>${escapeHtml(targetFormat)}</span>
+        </div>
+        <div class="scientific-notation-summary">
+          <span>Start: <strong>${escapeHtml(startDisplay)}</strong></span>
+          <span>Move: <strong>${escapeHtml(`${moveDirection || 'unknown'} ${places} place${places === 1 ? '' : 's'}`)}</strong></span>
+          <span>Final result: <strong>${escapeHtml(finalDisplay)}</strong></span>
+        </div>
+        <div class="scientific-notation-number" aria-label="Current decimal position">
+          ${renderScientificNotationNumber(currentValue)}
+        </div>
+        <div class="scientific-notation-move">
+          <span>Current value: <strong>${escapeHtml(formatScientificNotationNumber(currentValue))}</strong></span>
+          <span>Moves shown: <strong>${escapeHtml(String(Math.abs(currentSignedMoves)))} / ${escapeHtml(String(places))}</strong></span>
+          <span>Coefficient: <strong>${escapeHtml(formatScientificNotationNumber(visual.coefficient))}</strong></span>
+          <span>Exponent: <strong>${escapeHtml(String(visual.exponent ?? ''))}</strong></span>
+        </div>
+        <p class="scientific-notation-rule">${escapeHtml(rule)}</p>
+        <div class="scientific-notation-controls">
+          <button type="button" class="scientific-notation-control" data-scientific-notation-action="left" data-scientific-notation-id="${escapeAttr(stateKey)}">Move left</button>
+          <button type="button" class="scientific-notation-control" data-scientific-notation-action="right" data-scientific-notation-id="${escapeAttr(stateKey)}">Move right</button>
+          <button type="button" class="scientific-notation-control" data-scientific-notation-action="next" data-scientific-notation-id="${escapeAttr(stateKey)}">Show next move</button>
+          <button type="button" class="scientific-notation-control" data-scientific-notation-action="reset" data-scientific-notation-id="${escapeAttr(stateKey)}">Reset</button>
+        </div>
+      </section>
+    `;
+  }
+
+  function renderScientificNotationNumber(value) {
+    const text = formatScientificNotationNumber(value);
+    const parts = text.split('.');
+    if (parts.length < 2) {
+      return `<span>${escapeHtml(text)}</span><span class="scientific-notation-decimal">.</span>`;
+    }
+    return `
+      <span>${escapeHtml(parts[0])}</span>
+      <span class="scientific-notation-decimal">.</span>
+      <span>${escapeHtml(parts.slice(1).join('.'))}</span>
+    `;
+  }
+
+  function handleScientificNotationVisualClick(control) {
+    if (!control || !timeline?.contains(control)) return false;
+    const stateKey = control.getAttribute('data-scientific-notation-id') || '';
+    if (!stateKey) return false;
+
+    const visual = findScientificNotationVisualForStateKey(stateKey);
+    if (!visual) return true;
+
+    const finalSignedMoves = scientificNotationSignedMoves(visual.decimalMove || {});
+    const currentSignedMoves = getScientificNotationSignedMoves(stateKey, finalSignedMoves);
+    const action = control.getAttribute('data-scientific-notation-action') || '';
+    let nextSignedMoves = currentSignedMoves;
+
+    if (action === 'reset') nextSignedMoves = 0;
+    if (action === 'left') nextSignedMoves = currentSignedMoves - 1;
+    if (action === 'right') nextSignedMoves = currentSignedMoves + 1;
+    if (action === 'next') {
+      if (finalSignedMoves > currentSignedMoves) nextSignedMoves = currentSignedMoves + 1;
+      if (finalSignedMoves < currentSignedMoves) nextSignedMoves = currentSignedMoves - 1;
+    }
+
+    scientificNotationState.set(stateKey, clampScientificNotationSignedMoves(nextSignedMoves, finalSignedMoves));
+    renderTimeline();
+    return true;
+  }
+
+  function findScientificNotationVisualForStateKey(stateKey) {
+    const turnId = String(stateKey || '').replace(/^scientific-notation:/, '');
+    const turn = findTurn(turnId);
+    const tutor = turn?.tutor || {};
+    const work = getTutorWork(tutor);
+    const visual = work.visualMetadata || tutor.visualMetadata || null;
+    return visual?.visualType === 'scientific_notation_decimal_move' ? visual : null;
+  }
+
+  function scientificNotationKey(turnId) {
+    return `scientific-notation:${String(turnId || '').trim()}`;
+  }
+
+  function getScientificNotationSignedMoves(stateKey, finalSignedMoves) {
+    const saved = scientificNotationState.has(stateKey) ? Number(scientificNotationState.get(stateKey)) : 0;
+    return clampScientificNotationSignedMoves(Number.isFinite(saved) ? saved : 0, finalSignedMoves);
+  }
+
+  function scientificNotationSignedMoves(decimalMove) {
+    const places = Math.abs(Number(decimalMove?.places) || 0);
+    return decimalMove?.direction === 'right' ? places : -places;
+  }
+
+  function clampScientificNotationSignedMoves(signedMoves, finalSignedMoves) {
+    const max = Math.abs(Number(finalSignedMoves) || 0);
+    return Math.max(-max, Math.min(max, Number(signedMoves) || 0));
+  }
+
+  function calculateScientificNotationCurrentValue(visual, signedMoves) {
+    const startValue = visual.mode === 'to_standard' ? Number(visual.coefficient) : Number(visual.startValue);
+    if (!Number.isFinite(startValue)) return visual.startValue || visual.coefficient || '';
+    return startValue * (10 ** signedMoves);
+  }
+
+  function scientificNotationStartDisplay(visual) {
+    if (visual.mode === 'to_standard') {
+      return `${formatScientificNotationNumber(visual.coefficient)} x 10^${visual.exponent}`;
+    }
+    return formatScientificNotationNumber(visual.startValue);
+  }
+
+  function scientificNotationRule(visual) {
+    const mode = visual.mode || '';
+    const exponent = Number(visual.exponent) || 0;
+    if (mode === 'to_standard') {
+      return exponent >= 0
+        ? 'Positive exponent to standard notation: move the decimal right.'
+        : 'Negative exponent to standard notation: move the decimal left.';
+    }
+    return exponent >= 0
+      ? 'Large number to scientific notation: move the decimal left for a positive exponent.'
+      : 'Small decimal to scientific notation: move the decimal right for a negative exponent.';
+  }
+
+  function formatScientificNotationNumber(value) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return String(value || '').trim();
+    if (number === 0) return '0';
+    if (Math.abs(number) >= 1000) return number.toLocaleString('en-US', { maximumFractionDigits: 12 });
+    return number.toLocaleString('en-US', {
+      maximumFractionDigits: 12,
+      useGrouping: false
+    });
+  }
+
   function getKnownValuesForTutor(tutor, work = {}) {
     if (Array.isArray(work.knownValues) && work.knownValues.length > 0) return work.knownValues;
     if (Array.isArray(tutor?.knownValues) && tutor.knownValues.length > 0) return tutor.knownValues;
@@ -1658,6 +1810,11 @@
 
     const picketFenceControl = event.target.closest('[data-picket-fence-action], [data-picket-fence-cell], [data-picket-fence-cancellation]');
     if (picketFenceControl && handlePicketFenceClick(picketFenceControl)) {
+      return;
+    }
+
+    const scientificNotationControl = event.target.closest('[data-scientific-notation-action]');
+    if (scientificNotationControl && handleScientificNotationVisualClick(scientificNotationControl)) {
       return;
     }
 
