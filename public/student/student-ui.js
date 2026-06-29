@@ -63,6 +63,7 @@
   let calculatorJustEvaluated = false;
   let activeCalculatorStepKey = '';
   const calculatorOpenTurnIds = new Set();
+  const metricStairStepState = new Map();
   const tutorSessionExpandedState = new Map();
   let completedCelebrationKey = '';
   let fireworksTimer = null;
@@ -878,6 +879,7 @@
             ${answer ? renderTutorDetail('Final answer', answer, 'student-tutor-answer') : ''}
             ${tutor.currentHint ? renderTutorDetail('Hint', tutor.currentHint, 'is-wide') : ''}
           </div>
+          ${isFormulaTutor ? renderFormulaVisualMetadata(work.visualMetadata || tutor.visualMetadata, turn.id) : ''}
           ${isCurrentStep ? renderTutorChoiceButtons(tutor, work) : ''}
           ${canUseCalculator ? renderCalculatorArea(turn.id, showCalculator) : ''}
           ${isCurrentStep ? renderTutorActions(turn, tutor, { hideCompletedAction: true }) : ''}
@@ -1031,6 +1033,7 @@
             ${answer ? renderTutorDetail('Final answer', answer, 'student-tutor-answer') : ''}
             ${tutor.currentHint ? renderTutorDetail('Hint', tutor.currentHint, 'is-wide') : ''}
           </div>
+          ${isFormulaTutor ? renderFormulaVisualMetadata(work.visualMetadata || tutor.visualMetadata, turn.id) : ''}
           ${renderTutorChoiceButtons(controlTutor, work)}
           ${canUseCalculator ? renderCalculatorArea(turn.id, showCalculator) : ''}
         </div>
@@ -1072,6 +1075,167 @@
       : 'No known values yet.';
 
     return renderTutorDetail('Known Values', content, 'student-tutor-known');
+  }
+
+  function renderFormulaVisualMetadata(visual, turnId) {
+    if (!visual || typeof visual !== 'object') return '';
+    if (visual.visualType === 'metric_stair_step') {
+      return renderMetricStairStepVisual(visual, turnId);
+    }
+    return '';
+  }
+
+  function renderMetricStairStepVisual(visual, turnId) {
+    const steps = Array.isArray(visual.steps) ? visual.steps : [];
+    const startUnit = String(visual.startUnit || '').trim();
+    const targetUnit = String(visual.targetUnit || '').trim();
+    const baseUnit = String(visual.baseUnit || '').trim();
+    const startIndex = findMetricStepIndex(steps, visual.startPrefix, startUnit, baseUnit);
+    const targetIndex = findMetricStepIndex(steps, visual.targetPrefix, targetUnit, baseUnit);
+    const stateKey = metricStairStepKey(turnId);
+    const savedIndex = metricStairStepState.has(stateKey) ? Number(metricStairStepState.get(stateKey)) : startIndex;
+    const currentIndex = clampMetricStepIndex(Number.isFinite(savedIndex) ? savedIndex : startIndex, steps);
+    const currentStep = steps[currentIndex] || steps[startIndex] || {};
+    const startStep = steps[startIndex] || {};
+    const startExponent = Number(startStep.exponent) || 0;
+    const currentExponent = Number(currentStep.exponent) || 0;
+    const startValue = Number(visual.startValue);
+    const currentValue = Number.isFinite(startValue)
+      ? startValue * (10 ** (startExponent - currentExponent))
+      : visual.startValue;
+    const currentUnit = metricUnitForStep(currentStep, baseUnit);
+    const finalDisplay = `${formatMetricVisualValue(visual.resultValue)} ${visual.resultUnit || targetUnit}`.trim();
+    const decimalMove = visual.decimalMove || {};
+    const moveDirection = String(decimalMove.direction || '').trim();
+    const places = Number(decimalMove.places);
+    const moveMessage = moveDirection && Number.isFinite(places)
+      ? `Move decimal ${moveDirection} ${places} place${places === 1 ? '' : 's'}.`
+      : '';
+
+    return `
+      <section class="metric-stair-step-visual" data-metric-stair-step-id="${escapeAttr(stateKey)}" aria-label="Metric stair-step visual">
+        <div class="metric-stair-step-header">
+          <strong>Metric stair-step</strong>
+          <span>${escapeHtml(`${startUnit} to ${targetUnit}`)}</span>
+        </div>
+        <div class="metric-stair-step-summary">
+          <span>Start: <strong>${escapeHtml(`${formatMetricVisualValue(visual.startValue)} ${startUnit}`)}</strong></span>
+          <span>Target: <strong>${escapeHtml(targetUnit)}</strong></span>
+          <span>Current: <strong>${escapeHtml(`${formatMetricVisualValue(currentValue)} ${currentUnit}`)}</strong></span>
+        </div>
+        <div class="metric-stair-step-track" role="list" aria-label="Metric staircase">
+          ${steps.map((step, index) => renderMetricStairStepButton(step, index, {
+            baseUnit,
+            currentIndex,
+            startIndex,
+            targetIndex,
+            stateKey
+          })).join('')}
+        </div>
+        <div class="metric-stair-step-controls">
+          <button type="button" class="metric-stair-step-control" data-metric-stair-step-move="up" data-metric-stair-step-id="${escapeAttr(stateKey)}">Move up</button>
+          <button type="button" class="metric-stair-step-control" data-metric-stair-step-move="down" data-metric-stair-step-id="${escapeAttr(stateKey)}">Move down</button>
+        </div>
+        <p class="metric-stair-step-note">${escapeHtml(moveMessage)} Final result: <strong>${escapeHtml(finalDisplay)}</strong></p>
+      </section>
+    `;
+  }
+
+  function renderMetricStairStepButton(step, index, context) {
+    const classes = [
+      'metric-stair-step-button',
+      index === context.currentIndex ? 'is-current' : '',
+      index === context.startIndex ? 'is-start' : '',
+      index === context.targetIndex ? 'is-target' : ''
+    ].filter(Boolean).join(' ');
+    const unitLabel = metricUnitForStep(step, context.baseUnit);
+    const badges = [
+      index === context.startIndex ? 'Start' : '',
+      index === context.targetIndex ? 'Target' : ''
+    ].filter(Boolean).join(' / ');
+
+    return `
+      <button
+        type="button"
+        class="${escapeAttr(classes)}"
+        data-metric-stair-step-id="${escapeAttr(context.stateKey)}"
+        data-metric-stair-step-index="${escapeAttr(index)}"
+        role="listitem"
+      >
+        <span class="metric-stair-step-dot" aria-hidden="true"></span>
+        <span class="metric-stair-step-label">${escapeHtml(unitLabel)}</span>
+        ${badges ? `<span class="metric-stair-step-badge">${escapeHtml(badges)}</span>` : ''}
+      </button>
+    `;
+  }
+
+  function handleMetricStairStepClick(control) {
+    if (!control || !timeline?.contains(control)) return false;
+    const stateKey = control.getAttribute('data-metric-stair-step-id') || '';
+    if (!stateKey) return false;
+
+    const visual = findMetricStairStepVisualForStateKey(stateKey);
+    const steps = Array.isArray(visual?.steps) ? visual.steps : [];
+    if (steps.length === 0) return true;
+
+    const startIndex = findMetricStepIndex(steps, visual.startPrefix, visual.startUnit, visual.baseUnit);
+    const currentIndex = metricStairStepState.has(stateKey)
+      ? Number(metricStairStepState.get(stateKey))
+      : startIndex;
+    const directIndex = Number(control.getAttribute('data-metric-stair-step-index'));
+    const movement = control.getAttribute('data-metric-stair-step-move') || '';
+    let nextIndex = Number.isFinite(directIndex) ? directIndex : currentIndex;
+    if (movement === 'up') nextIndex = currentIndex - 1;
+    if (movement === 'down') nextIndex = currentIndex + 1;
+
+    metricStairStepState.set(stateKey, clampMetricStepIndex(nextIndex, steps));
+    renderTimeline();
+    return true;
+  }
+
+  function findMetricStairStepVisualForStateKey(stateKey) {
+    const turnId = String(stateKey || '').replace(/^metric-stair-step:/, '');
+    const turn = findTurn(turnId);
+    const tutor = turn?.tutor || {};
+    const work = getTutorWork(tutor);
+    const visual = work.visualMetadata || tutor.visualMetadata || null;
+    return visual?.visualType === 'metric_stair_step' ? visual : null;
+  }
+
+  function metricStairStepKey(turnId) {
+    return `metric-stair-step:${String(turnId || '').trim()}`;
+  }
+
+  function findMetricStepIndex(steps, prefixLabel, unit, baseUnit) {
+    const byPrefix = steps.findIndex((step) => String(step?.label || '') === String(prefixLabel || ''));
+    if (byPrefix >= 0) return byPrefix;
+
+    const byUnit = steps.findIndex((step) => metricUnitForStep(step, baseUnit) === String(unit || ''));
+    return byUnit >= 0 ? byUnit : 0;
+  }
+
+  function clampMetricStepIndex(index, steps) {
+    const max = Math.max(0, (Array.isArray(steps) ? steps.length : 1) - 1);
+    return Math.max(0, Math.min(max, Number(index) || 0));
+  }
+
+  function metricUnitForStep(step, baseUnit) {
+    const label = String(step?.label || '').trim();
+    const base = String(baseUnit || '').trim();
+    if (!label) return base;
+    if (label === 'UNIT') return base;
+    return `${label}${base}`;
+  }
+
+  function formatMetricVisualValue(value) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return String(value || '').trim();
+    if (Math.abs(number) >= 1000) return number.toLocaleString('en-US', { maximumFractionDigits: 12 });
+    if (Number.isInteger(number)) return String(number);
+    return number.toLocaleString('en-US', {
+      maximumFractionDigits: 12,
+      useGrouping: false
+    });
   }
 
   function getKnownValuesForTutor(tutor, work = {}) {
@@ -1317,6 +1481,11 @@
     const copyButton = event.target.closest('[data-copy-turn-id]');
     if (copyButton && timeline.contains(copyButton)) {
       copyTurnAnswer(copyButton.getAttribute('data-copy-turn-id') || '');
+      return;
+    }
+
+    const metricStairStepControl = event.target.closest('[data-metric-stair-step-index], [data-metric-stair-step-move]');
+    if (metricStairStepControl && handleMetricStairStepClick(metricStairStepControl)) {
       return;
     }
 

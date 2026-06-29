@@ -78,6 +78,11 @@ const calculatorBlock = getCssBlock('.student-calculator');
 const calculatorKeysBlock = getCssBlock('.student-calculator-keys');
 const tutorChoicesBlock = getCssBlock('.student-tutor-choices');
 const tutorChoiceButtonBlock = getCssBlock('.student-tutor-choice-button');
+const metricStairStepVisualBlock = getCssBlock('.metric-stair-step-visual');
+const metricStairStepTrackBlock = getCssBlock('.metric-stair-step-track');
+const metricStairStepButtonBlock = getCssBlock('.metric-stair-step-button');
+const metricStairStepCurrentButtonBlock = getCssBlock('.metric-stair-step-button.is-current');
+const metricStairStepControlBlock = getCssBlock('.metric-stair-step-control');
 const composerTutorChoicesBlock = getCssBlock('.student-composer-tutor-choices');
 const composerTutorChoicesHiddenBlock = getCssBlock('.student-composer-tutor-choices[hidden]');
 const composerChoiceButtonBlock = getCssBlock('.student-composer-choice-button');
@@ -101,6 +106,13 @@ assert.match(composerTutorChoicesHiddenBlock, /display:\s*none;/, 'Composer tuto
 assert.match(composerChoiceButtonBlock, /min-height:\s*42px;/, 'Composer tutor choice buttons should be prominent tap targets.');
 assert.match(tutorChoicesBlock, /align-items:\s*stretch;/, 'Formula Tutor choices inside work should render as primary controls.');
 assert.match(tutorChoiceButtonBlock, /min-height:\s*40px;/, 'Formula Tutor choice buttons should be prominent.');
+assert.ok(metricStairStepVisualBlock, 'Metric stair-step tutor visual should have a card style.');
+assert.match(metricStairStepVisualBlock, /border-radius:\s*8px;/, 'Metric stair-step visual should stay compact inside Formula Tutor cards.');
+assert.match(metricStairStepTrackBlock, /grid-template-columns:\s*repeat\(10,\s*minmax\(3\.1rem,\s*1fr\)\);/, 'Metric stair-step visual should render ten stable stair positions.');
+assert.match(metricStairStepTrackBlock, /overflow-x:\s*auto;/, 'Metric stair-step visual should scroll horizontally on small screens.');
+assert.match(metricStairStepButtonBlock, /min-height:\s*68px;/, 'Metric stair-step buttons should keep stable dimensions.');
+assert.match(metricStairStepCurrentButtonBlock, /box-shadow:\s*inset 0 0 0 1px rgba\(102,247,209,0\.42\);/, 'Current metric stair step should be visibly marked.');
+assert.match(metricStairStepControlBlock, /min-height:\s*34px;/, 'Metric stair-step controls should be usable tap targets.');
 assert.ok(flashcardCardBlock, 'Interactive flashcards should have a compact card style.');
 assert.match(flashcardCardBlock, /border-radius:\s*8px;/, 'Flashcard cards should stay compact in the chat timeline.');
 assert.match(flashcardTitleBlock, /font-weight:\s*850;/, 'Flashcard card titles should be visually prominent.');
@@ -216,6 +228,36 @@ assert.match(
   studentUi,
   /function renderTutorSessionStep\(turn, options = \{\}\)[\s\S]*renderTutorDetail\('Original Question'[\s\S]*Current Step[\s\S]*Solving For[\s\S]*Formula[\s\S]*renderKnownValuesDetail[\s\S]*Calculator check[\s\S]*Final answer/,
   'Each grouped tutor step should include original question context above the current step and formula work fields.'
+);
+assert.match(
+  studentUi,
+  /function renderFormulaVisualMetadata\(visual, turnId\)[\s\S]*visual\.visualType === 'metric_stair_step'[\s\S]*renderMetricStairStepVisual\(visual, turnId\)/,
+  'Formula Tutor visual metadata should route metric stair-step metadata to a renderer.'
+);
+assert.match(
+  studentUi,
+  /function renderMetricStairStepVisual\(visual, turnId\)[\s\S]*Metric stair-step[\s\S]*data-metric-stair-step-move="up"[\s\S]*data-metric-stair-step-move="down"[\s\S]*Final result:/,
+  'Metric stair-step renderer should show title, local movement controls, and final result.'
+);
+assert.match(
+  studentUi,
+  /function renderMetricStairStepButton\(step, index, context\)[\s\S]*Start[\s\S]*Target[\s\S]*data-metric-stair-step-index="\$\{escapeAttr\(index\)\}"/,
+  'Metric stair-step buttons should expose clickable stair labels with start and target badges.'
+);
+assert.match(
+  studentUi,
+  /function handleTimelineClick\(event\)[\s\S]*data-metric-stair-step-index[\s\S]*handleMetricStairStepClick\(metricStairStepControl\)/,
+  'Metric stair-step controls should be handled by the timeline click pipeline.'
+);
+assert.match(
+  studentUi,
+  /function handleMetricStairStepClick\(control\)[\s\S]*metricStairStepState\.set\(stateKey, clampMetricStepIndex\(nextIndex, steps\)\)[\s\S]*renderTimeline\(\)/,
+  'Metric stair-step controls should update local marker state and rerender the visual.'
+);
+assert.match(
+  studentUi,
+  /function metricUnitForStep\(step, baseUnit\)[\s\S]*if \(label === 'UNIT'\) return base;[\s\S]*return `\$\{label\}\$\{base\}`;/,
+  'Metric stair-step labels should combine prefixes with the problem base unit.'
 );
 assert.match(
   studentUi,
@@ -1201,6 +1243,77 @@ async function testPatch4NetForceOnlyDirectAnswerWithTutorOn() {
   );
 }
 
+async function testMetricStairStepFormulaTutorVisualMetadata() {
+  const harness = await createHarnessSession();
+  const metricCases = [
+    {
+      name: 'metric-stair-step-km-to-m',
+      prompt: 'Convert 48 km to meters.',
+      startUnit: 'km',
+      targetUnit: 'm',
+      resultUnit: 'm',
+      resultValue: 48000,
+      decimalDirection: 'right',
+      decimalPlaces: 3
+    },
+    {
+      name: 'metric-stair-step-mg-to-kg',
+      prompt: 'Convert 45,456 mg to kilograms.',
+      startUnit: 'mg',
+      targetUnit: 'kg',
+      resultUnit: 'kg',
+      resultValue: 0.045456,
+      decimalDirection: 'left',
+      decimalPlaces: 6
+    }
+  ];
+
+  for (const testCase of metricCases) {
+    const response = await sendHarnessMessage(harness, testCase.name, testCase.prompt);
+    assert.equal(response.body.routeType, 'formula_tutor', `${testCase.name} should start Formula Tutor`);
+    assert.equal(response.body.tutor?.formulaId, 'unit1_metric_stair_step_conversion', `${testCase.name} formula id`);
+    assertMetricStairStepVisual(response.body.tutor?.work?.visualMetadata, testCase);
+    assertMetricStairStepVisual(response.body.tutor?.visualMetadata, testCase);
+  }
+
+  const boundaryCases = [
+    {
+      name: 'picket-fence-no-metric-stair-step',
+      prompt: 'Convert 250.4 cm to feet.',
+      visualType: 'picket_fence'
+    },
+    {
+      name: 'temperature-no-metric-stair-step',
+      prompt: 'Convert 23 C to F.',
+      visualType: 'temperature_conversion'
+    },
+    {
+      name: 'scientific-notation-no-metric-stair-step',
+      prompt: 'Write 354,000,000 in scientific notation.',
+      visualType: 'scientific_notation_decimal_move'
+    }
+  ];
+
+  for (const testCase of boundaryCases) {
+    const response = await sendHarnessMessage(harness, testCase.name, testCase.prompt);
+    assert.equal(response.body.routeType, 'formula_tutor', `${testCase.name} should still start Formula Tutor`);
+    assert.equal(response.body.tutor?.work?.visualMetadata?.visualType, testCase.visualType, `${testCase.name} visual type`);
+    assert.notEqual(response.body.tutor?.work?.visualMetadata?.visualType, 'metric_stair_step', `${testCase.name} should not use metric stair-step visual`);
+  }
+}
+
+function assertMetricStairStepVisual(visual, testCase) {
+  assert.ok(visual, `${testCase.name} should expose visual metadata`);
+  assert.equal(visual.visualType, 'metric_stair_step', `${testCase.name} visual type`);
+  assert.equal(visual.startUnit, testCase.startUnit, `${testCase.name} start unit`);
+  assert.equal(visual.targetUnit, testCase.targetUnit, `${testCase.name} target unit`);
+  assert.equal(visual.resultUnit, testCase.resultUnit, `${testCase.name} result unit`);
+  assert.equal(visual.decimalMove?.direction, testCase.decimalDirection, `${testCase.name} decimal direction`);
+  assert.equal(visual.decimalMove?.places, testCase.decimalPlaces, `${testCase.name} decimal places`);
+  assert.ok(Array.isArray(visual.steps) && visual.steps.length === 10, `${testCase.name} should expose ten metric stair steps`);
+  assert.ok(Math.abs(Number(visual.resultValue) - testCase.resultValue) < 1e-9, `${testCase.name} result value`);
+}
+
 async function createHarnessSession() {
   const harness = createStudentRouteHarness({ studentGuidedFormulaTutoringEnabled: true });
   const create = await harness.request('POST', '/api/profile/create-student-session');
@@ -1227,6 +1340,7 @@ Promise.resolve()
   .then(testTwoUnitVelocityTutor)
   .then(testAccelerationClassroomRoundedFinalAcceptance)
   .then(testPatch4NetForceOnlyDirectAnswerWithTutorOn)
+  .then(testMetricStairStepFormulaTutorVisualMetadata)
   .then(testInteractiveFlashcardUiMetadata)
   .then(() => {
     console.log('student tutor UI: formula tutor turns group into collapsible problem sessions');
@@ -1235,6 +1349,7 @@ Promise.resolve()
     console.log('student tutor UI: Concept 3 General Tutor vocab steps show numbered choices immediately');
     console.log('student tutor UI: velocity and acceleration tutor regressions passed');
     console.log('student tutor UI: Patch 4 stale tutor controls and net-force direct-answer regressions passed');
+    console.log('student tutor UI: metric stair-step Formula Tutor visual metadata passed');
     console.log('student tutor UI: interactive flashcard cards use backend session metadata');
   })
   .catch((error) => {
