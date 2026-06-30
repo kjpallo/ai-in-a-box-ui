@@ -24,6 +24,23 @@ const DIRECT_CATEGORIES = [
         name: 'waft-how',
         prompt: 'How do you waft?',
         includes: [/waft/i, /fumes|vapors?/i, /nose/i]
+      },
+      {
+        name: 'manual-aprons-during-lab',
+        prompt: 'Why do we wear aprons during a lab?',
+        includes: [/apron/i, /protect/i, /skin/i, /clothes|clothing/i, /spills|splashes/i]
+      },
+      {
+        name: 'manual-break-glass-lab',
+        prompt: 'What should I do if I break glass in the lab?',
+        includes: [/teacher/i, /broken glass|glass/i, /bare hands/i, /cleanup|method|directions/i],
+        excludes: [/insulator/i, /electrons/i]
+      },
+      {
+        name: 'manual-funel-science-class',
+        prompt: 'What is a funel used for in science class?',
+        includes: [/funnel/i, /pour|transfer/i, /liquids?|powders?/i, /without spilling|spilling/i],
+        excludes: [/periodic table/i, /\bindium\b/i]
       }
     ]
   },
@@ -44,6 +61,12 @@ const DIRECT_CATEGORIES = [
         name: 'meniscus',
         prompt: 'What is the meniscus?',
         includes: [/meniscus/i, /curve/i, /liquid/i]
+      },
+      {
+        name: 'manual-measurments-close-far-accepted',
+        prompt: 'If my measurments are close to each other but far from the accepted value, are they accurate or precise?',
+        includes: [/precise/i, /not accurate/i, /close to each other/i, /far from the accepted value/i],
+        excludes: [/^Accuracy is how close a measurement is to the accepted or true value\.$/i]
       }
     ]
   },
@@ -408,6 +431,9 @@ function assertAnswer(answer, testCase) {
   assert.ok(answerText.trim(), `${testCase.name || testCase.prompt} should produce an answer`);
   for (const expected of testCase.includes || []) {
     assert.match(answerText, expected, `${testCase.name || testCase.prompt} should include ${expected} but got:\n${answerText}`);
+  }
+  for (const unexpected of testCase.excludes || []) {
+    assert.doesNotMatch(answerText, unexpected, `${testCase.name || testCase.prompt} should not include ${unexpected} but got:\n${answerText}`);
   }
 }
 

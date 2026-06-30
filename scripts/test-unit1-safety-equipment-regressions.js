@@ -16,7 +16,12 @@ const DIRECT_CASES = [
   {
     name: 'lab-apron-purpose',
     prompt: 'what is a lab apron for',
-    includes: [/apron/i, /protect/i, /clothing/i, /skin/i]
+    includes: [/apron/i, /protect/i, /clothes|clothing/i, /skin/i]
+  },
+  {
+    name: 'manual-aprons-during-lab',
+    prompt: 'Why do we wear aprons during a lab?',
+    includes: [/apron/i, /protect/i, /skin/i, /clothes|clothing/i, /spills|splashes/i]
   },
   {
     name: 'heat-resistant-gloves',
@@ -76,7 +81,14 @@ const DIRECT_CASES = [
   {
     name: 'broken-glass-disposal',
     prompt: 'where does broken glass go',
-    includes: [/broken glass/i, /special|proper/i, /container/i, /regular trash|trash/i]
+    includes: [/broken glass/i, /teacher/i, /bare hands/i, /cleanup|method|directions/i],
+    excludes: [/insulator/i, /electrons/i]
+  },
+  {
+    name: 'manual-break-glass-lab',
+    prompt: 'What should I do if I break glass in the lab?',
+    includes: [/teacher/i, /broken glass|glass/i, /bare hands/i, /cleanup|method|directions/i],
+    excludes: [/insulator/i, /electrons/i]
   },
   {
     name: 'beaker-use',
@@ -126,7 +138,13 @@ const DIRECT_CASES = [
   {
     name: 'funnel-use',
     prompt: 'what is a funnel used for',
-    includes: [/funnel/i, /transfer/i, /liquids/i, /smaller openings/i]
+    includes: [/funnel/i, /pour|transfer/i, /liquids?|powders?/i, /spilling|without spilling|smaller openings/i]
+  },
+  {
+    name: 'manual-funel-science-class',
+    prompt: 'What is a funel used for in science class?',
+    includes: [/funnel/i, /pour|transfer/i, /liquids?|powders?/i, /without spilling|spilling/i],
+    excludes: [/periodic table/i, /\bindium\b/i]
   },
   {
     name: 'beaker-tongs-use',
@@ -266,6 +284,9 @@ function assertAnswer(answer, testCase) {
   assert.ok(answerText.trim(), `${testCase.name} should produce an answer`);
   for (const expected of testCase.includes || []) {
     assert.match(answerText, expected, `${testCase.name} should include ${expected} but got:\n${answerText}`);
+  }
+  for (const unexpected of testCase.excludes || []) {
+    assert.doesNotMatch(answerText, unexpected, `${testCase.name} should not include ${unexpected} but got:\n${answerText}`);
   }
 }
 

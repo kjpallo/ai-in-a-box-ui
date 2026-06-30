@@ -29,6 +29,12 @@ const DIRECT_CASES = [
     includes: [/yes/i, /close to each other/i, /far from|not accurate|accepted value/i]
   },
   {
+    name: 'manual-measurments-close-far-accepted',
+    prompt: 'If my measurments are close to each other but far from the accepted value, are they accurate or precise?',
+    includes: [/precise/i, /not accurate/i, /close to each other/i, /far from the accepted value/i],
+    excludes: [/^Accuracy is how close a measurement is to the accepted or true value\.$/i]
+  },
+  {
     name: 'accurate-not-precise',
     prompt: 'can measurements be accurate but not precise',
     includes: [/yes/i, /true value|accepted value/i, /spread out|not be close|not precise/i]
@@ -315,6 +321,9 @@ function assertAnswer(answer, testCase) {
   assert.ok(answerText.trim(), `${testCase.name || testCase.prompt} should produce an answer`);
   for (const expected of testCase.includes || []) {
     assert.match(answerText, expected, `${testCase.name || testCase.prompt} should include ${expected} but got:\n${answerText}`);
+  }
+  for (const unexpected of testCase.excludes || []) {
+    assert.doesNotMatch(answerText, unexpected, `${testCase.name || testCase.prompt} should not include ${unexpected} but got:\n${answerText}`);
   }
 }
 
