@@ -2,6 +2,8 @@ const assert = require('node:assert/strict');
 
 const { createStudentRouteHarness } = require('./test-helpers/studentRouteHarness');
 
+const UNIT1_GRAPHING_AXIS_TUTOR_ID = 'unit1.graphing.axes.identification';
+
 const DIRECT_CASES = [
   {
     name: 'graph-definition',
@@ -252,31 +254,37 @@ const SCENARIO_CASES = [
   {
     name: 'sunlight-x-axis',
     prompt: 'In a graph of sunlight vs plant growth, what goes on the x-axis?',
+    choice: '1',
     includes: [/amount of sunlight/i, /x-axis|x axis/i, /independent variable/i]
   },
   {
     name: 'sunlight-y-axis',
     prompt: 'In a graph of sunlight vs plant growth, what goes on the y-axis?',
+    choice: '2',
     includes: [/plant growth/i, /y-axis|y axis/i, /dependent variable/i]
   },
   {
     name: 'fertilizer-x-axis',
     prompt: 'In a graph of fertilizer type vs plant height, what goes on the x-axis?',
+    choice: '1',
     includes: [/type of fertilizer/i, /x-axis|x axis/i, /independent variable/i]
   },
   {
     name: 'fertilizer-y-axis',
     prompt: 'In a graph of fertilizer type vs plant height, what goes on the y-axis?',
+    choice: '2',
     includes: [/plant height|growth/i, /y-axis|y axis/i, /dependent variable/i]
   },
   {
     name: 'temperature-x-axis',
     prompt: 'In a graph of temperature vs dissolving rate, what goes on the x-axis?',
+    choice: '1',
     includes: [/temperature/i, /x-axis|x axis/i, /independent variable/i]
   },
   {
     name: 'temperature-y-axis',
     prompt: 'In a graph of temperature vs dissolving rate, what goes on the y-axis?',
+    choice: '2',
     includes: [/dissolving rate|how fast/i, /y-axis|y axis/i, /dependent variable/i]
   }
 ];
@@ -376,9 +384,17 @@ async function main() {
   }
 
   for (const testCase of SCENARIO_CASES) {
-    const response = await ask(request, sessionId, `unit1-graphing-scenario-${slug(testCase.name)}`, testCase.prompt);
-    assertDirectAnswer(response, testCase.name);
-    assertAnswer(response.response, testCase);
+    const studentHubId = `unit1-graphing-scenario-${slug(testCase.name)}`;
+    const response = await ask(request, sessionId, studentHubId, testCase.prompt);
+    assert.equal(response.routeType, 'concept_tutor', `${testCase.name} should now start the narrow Unit 1 graphing-axis Concept Tutor`);
+    assert.equal(response.tutor?.id, UNIT1_GRAPHING_AXIS_TUTOR_ID, `${testCase.name} tutor id`);
+    assert.doesNotMatch(response.response, /goes on the [xy]-axis because/i, `${testCase.name} should hide final answer until completion`);
+
+    const completed = await ask(request, sessionId, studentHubId, testCase.choice);
+    assert.equal(completed.routeType, 'concept_tutor', `${testCase.name} completion route`);
+    assert.equal(completed.tutor?.id, UNIT1_GRAPHING_AXIS_TUTOR_ID, `${testCase.name} completion tutor id`);
+    assert.equal(completed.tutor?.completed, true, `${testCase.name} should complete after the correct number`);
+    assertAnswer(completed.response, testCase);
   }
 
   for (const testCase of UNIT1_BOUNDARY_CASES) {
@@ -405,7 +421,7 @@ async function main() {
     assertAnswer(response.response, testCase);
   }
 
-  console.log('PASS Unit 1 graphing/data regressions: direct answers, typo handling, narrow graph scenarios, and route boundaries');
+  console.log('PASS Unit 1 graphing/data regressions: direct answers, typo handling, graph-axis tutor starts, and route boundaries');
 }
 
 async function ask(request, sessionId, studentHubId, message) {
