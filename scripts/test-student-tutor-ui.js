@@ -84,6 +84,7 @@ const tutorInstructionBlock = getCssBlock('.student-tutor-instruction');
 const tutorInstructionPromptBlock = getCssBlock('.student-tutor-instruction-prompt');
 const tutorHistoryRowBlock = getCssBlock('.student-tutor-history-row');
 const tutorHistoryExpandedBlock = getCssBlock('.student-tutor-history-expanded');
+const tutorJustAnsweredRowBlock = getCssBlock('.student-tutor-just-answered-row .student-tutor-history-row');
 const tutorBodyBlock = getCssBlock('.student-tutor-body');
 const tutorOriginalQuestionBlock = getCssBlock('.student-tutor-detail.student-tutor-original-question');
 const tutorOriginalQuestionTextBlock = getCssBlock('.student-tutor-detail.student-tutor-original-question p');
@@ -167,7 +168,8 @@ assert.ok(picketFenceVisualBlock, 'Picket fence tutor visual should have a card 
 assert.match(picketFenceVisualBlock, /border-radius:\s*8px;/, 'Picket fence visual should stay compact inside Formula Tutor cards.');
 assert.match(picketFenceCellBlock, /min-width:\s*6\.8rem;/, 'Picket fence cells should keep stable dimensions.');
 assert.match(picketFenceCancelledBlock, /text-decoration:\s*line-through;/, 'Picket fence visual should visibly mark cancelled units.');
-assert.match(studentHtml, /\.picket-fence-cancel-unit\s*\{[\s\S]*text-decoration:\s*line-through;/, 'Picket fence cancellation buttons should use a distinct cross-out control style.');
+assert.doesNotMatch(getCssBlock('.picket-fence-cancel-unit'), /text-decoration:\s*line-through/, 'Active picket-fence cancellation buttons should not look crossed out before the student clicks them.');
+assert.match(getCssBlock('.picket-fence-cancellation-state'), /text-decoration:\s*line-through;/, 'Read-only canceled picket-fence state should use crossed-out styling after cancellation.');
 assert.doesNotMatch(getCssBlock('.picket-fence-cancel-unit'), /255,150,126|84,33,26|39,15,16/, 'Picket fence cancellation buttons should not use danger/destructive styling.');
 assert.match(picketFenceControlBlock, /min-height:\s*34px;/, 'Picket fence cancellation tap targets should be usable.');
 assert.match(picketFencePlaceholderBlock, /font-style:\s*italic;/, 'Picket fence pending sections should render as explicit placeholders.');
@@ -195,6 +197,7 @@ assert.match(sessionPanelBlock, /transition:\s*max-height 220ms ease, opacity 18
 assert.match(collapsedPanelBlock, /max-height:\s*0;/, 'Collapsed formula sessions should hide the panel.');
 assert.match(collapsedPanelBlock, /visibility:\s*hidden;/, 'Collapsed formula sessions should remove hidden controls from focus.');
 assert.match(sessionPanelBlock, /max-height:\s*min\(980px,\s*calc\(100dvh - 11rem\)\);/, 'Expanded formula sessions should grow with content before hitting a panel limit.');
+assert.match(sessionQuestionBlock, /margin:\s*0\.44rem 0\.5rem 0\.46rem;/, 'Original Question should keep spacing before the active Formula Tutor instruction area.');
 assert.match(sessionScrollBlock, /max-height:\s*min\(760px,\s*calc\(100dvh - 15rem\)\);/, 'Expanded formula sessions should use a larger bounded inner step area.');
 assert.match(sessionScrollBlock, /overflow-y:\s*auto;/, 'Expanded formula sessions should use a scoped inner scroller.');
 assert.match(sessionScrollBlock, /overscroll-behavior:\s*contain;/, 'Formula session scroller should contain scroll gestures.');
@@ -300,8 +303,8 @@ assert.match(
 );
 assert.match(
   studentUi,
-  /function renderTutorSessionStep\(turn, options = \{\}\)[\s\S]*if \(isFormulaTutor && !isCurrentStep\)[\s\S]*return renderCompactTutorSessionStep[\s\S]*isCurrentStep && isFormulaTutor \? renderFormulaVisualMetadata/,
-  'Saved Formula Tutor history steps should render compactly and only the active step should render the full visual workspace.'
+  /function renderTutorSessionStep\(turn, options = \{\}\)[\s\S]*if \(isFormulaTutor && !isCurrentStep\)[\s\S]*return renderCompactTutorSessionStep[\s\S]*renderJustAnsweredTutorSessionRow[\s\S]*isCurrentStep && isFormulaTutor \? renderFormulaVisualMetadata/,
+  'Saved Formula Tutor history steps should render compactly, just-answered rows should appear before the active step, and only the active step should render the full visual workspace.'
 );
 assert.match(
   studentUi,
@@ -312,6 +315,11 @@ assert.match(
   studentUi,
   /function renderCompactTutorSessionStep\(turn, context = \{\}\)[\s\S]*const submitted = getTutorSubmittedMessage\(turn, context\.stepIndex\)[\s\S]*const answeredStep = getAnsweredTutorStepContext[\s\S]*formatTutorInstructionProgress\(answeredStep\.tutor, answeredStep\.work[\s\S]*summarizeTutorStepPrompt\(answeredStep\.currentStep\)[\s\S]*student-tutor-session-step-compact[\s\S]*student-tutor-history-answer[\s\S]*student-tutor-history-final/,
   'Compact Formula Tutor history rows should pair student answers with the answered step, not the next prompt.'
+);
+assert.match(
+  studentUi,
+  /function renderJustAnsweredTutorSessionRow\(turn, context = \{\}\)[\s\S]*getTutorSubmittedMessage\(turn, context\.stepIndex\)[\s\S]*doesSubmittedAnswerBelongToAnsweredFormulaStep\(context\)[\s\S]*if \(tutor\.completed === true \|\| work\.isComplete === true\) return '';[\s\S]*getAnsweredTutorStepContext\(turn,[\s\S]*formatTutorInstructionProgress\(answeredStep\.tutor, answeredStep\.work, 'Saved'\)[\s\S]*summarizeTutorStepPrompt\(answeredStep\.currentStep\)[\s\S]*student-tutor-just-answered-row[\s\S]*Student answer:/,
+  'Correct active Formula Tutor advancement should render the just-answered step as a compact row before the new prompt.'
 );
 assert.match(
   studentUi,
@@ -450,8 +458,23 @@ assert.match(
 );
 assert.match(
   studentUi,
-  /function renderPicketFenceVisual\(visual, turnId, context = \{\}\)[\s\S]*const progress = 0;[\s\S]*buildPicketFenceFillContext\(visual, context, progress\)[\s\S]*Picket fence method[\s\S]*Target:[\s\S]*Start:[\s\S]*Goal:[\s\S]*Answer:[\s\S]*Units cancel diagonally\. The remaining unit should match the target\.[\s\S]*picket-fence-cancel-unit student-tutor-control student-tutor-control--workspace[\s\S]*data-picket-fence-cancel-answer="\$\{escapeAttr\(step\.unit \|\| ''\)\}"[\s\S]*Cancel matching \$\{escapeHtml\(step\.unit \|\| ''\)\}/,
-  'Picket fence renderer should show title, Start/Goal/Answer summary, helper text, distinct clickable cancellations, and an answer slot that stays hidden until completion.'
+  /function renderPicketFenceVisual\(visual, turnId, context = \{\}\)[\s\S]*buildPicketFenceFillContext\(visual, context, progress\)[\s\S]*cancellationStepActive = isPicketFenceCancellationStep\(context\)[\s\S]*getPicketFenceHelperText\(visual[\s\S]*Picket fence method[\s\S]*Target:[\s\S]*Start:[\s\S]*Goal:[\s\S]*Answer:[\s\S]*renderPicketFenceCancellations\(cancellations/,
+  'Picket fence renderer should show title, Start/Goal/Answer summary, gated helper text, gated cancellations, and an answer slot that stays hidden until completion.'
+);
+assert.match(
+  studentUi,
+  /function renderPicketFenceCancellations\(cancellations, state = \{\}\)[\s\S]*if \(state\.cancellationStepActive\)[\s\S]*picket-fence-cancel-unit student-tutor-control student-tutor-control--workspace[\s\S]*data-picket-fence-cancel-answer="\$\{escapeAttr\(step\.unit \|\| ''\)\}"[\s\S]*Cancel matching \$\{escapeHtml\(step\.unit \|\| ''\)\}[\s\S]*if \(state\.cancellationFilled\)[\s\S]*picket-fence-cancellation-state[\s\S]*canceled[\s\S]*return '';/,
+  'Picket fence cancellation controls should render only on the cancellation step, then become read-only canceled state.'
+);
+assert.match(
+  studentUi,
+  /function isPicketFenceCancellationStep\(context = \{\}\)[\s\S]*stepId\.includes\('cancel'\)[\s\S]*unit[\s\S]*cancel/,
+  'Picket fence cancellation controls should be gated by the active cancellation step.'
+);
+assert.match(
+  studentUi,
+  /function getPicketFenceHelperText\(visual, state = \{\}\)[\s\S]*Click the matching[\s\S]*units to cancel them[\s\S]*cancels with[\s\S]*remains[\s\S]*Fill the fence from left to right/,
+  'Picket fence helper text should only mention cancellation during or after the cancellation step.'
 );
 assert.doesNotMatch(
   getFunctionBlock('renderPicketFenceVisual'),
@@ -470,8 +493,8 @@ assert.match(
 );
 assert.match(
   studentUi,
-  /function renderPicketFenceTerm\(value, visual, options = \{\}\)[\s\S]*picket-fence-placeholder[\s\S]*picket-fence-cancelled[\s\S]*picket-fence-final-unit/,
-  'Picket fence terms should show pending placeholders, mark cancelled units, and leave final units uncancelled.'
+  /function renderPicketFenceTerm\(value, visual, options = \{\}\)[\s\S]*picket-fence-placeholder[\s\S]*options\.cancelledUnitsRevealed[\s\S]*picket-fence-cancelled[\s\S]*picket-fence-final-unit/,
+  'Picket fence terms should show pending placeholders, mark cancelled units only after cancellation, and leave final units uncancelled.'
 );
 assert.match(
   studentUi,
@@ -540,8 +563,23 @@ assert.match(
 );
 assert.match(
   studentUi,
-  /function renderTutorSessionAnswer\(turn, stepIndex\)[\s\S]*if \(stepIndex === 0\) return '';/,
-  'The first step should not show a side Original Question panel.'
+  /function renderTutorSessionStep\(turn, options = \{\}\)[\s\S]*renderTutorSessionAnswer\(turn, \{[\s\S]*stepIndex: options\.stepIndex,[\s\S]*isCurrentStep,[\s\S]*isFormulaTutor,[\s\S]*responseText[\s\S]*\}\)/,
+  'Active Formula Tutor answer display should receive current-step context before rendering side answers.'
+);
+assert.match(
+  studentUi,
+  /function renderTutorSessionAnswer\(turn, context = \{\}\)[\s\S]*getTutorSubmittedMessage\(turn, context\.stepIndex\)[\s\S]*shouldRenderTutorSessionAnswer\(message, context\)/,
+  'Student answer side panels should use a display guard before rendering submitted tutor messages.'
+);
+assert.match(
+  studentUi,
+  /function shouldRenderTutorSessionAnswer\(message, context = \{\}\)[\s\S]*context\.isFormulaTutor && context\.isCurrentStep && doesSubmittedAnswerBelongToAnsweredFormulaStep\(context\)[\s\S]*return false;[\s\S]*return true;/,
+  'Active Formula Tutor steps should not show the previous correct answer beside the next prompt.'
+);
+assert.match(
+  studentUi,
+  /function doesSubmittedAnswerBelongToAnsweredFormulaStep\(context = \{\}\)[\s\S]*if \(!\/\^correct\\b\/i\.test\(responseText\)\) return false;[\s\S]*tutor\.completed === true \|\| work\.isComplete === true[\s\S]*return tutor\.active === true;/,
+  'Only correct advancement/completion responses should suppress stale active side answers; wrong-answer retries should keep the submitted answer visible.'
 );
 assert.doesNotMatch(
   studentUi,
@@ -689,6 +727,7 @@ assert.match(sessionQuestionBlock, /border:\s*1px solid rgba\(255,214,102,0\.3\)
 assert.match(sessionCompactStepBlock, /padding:\s*0\.36rem 0\.44rem;/, 'Saved Formula Tutor steps should use compact history-row spacing.');
 assert.match(studentHtml, /\.student-tutor-history-row,\s*\.student-tutor-history-final\s*\{[\s\S]*flex-wrap:\s*wrap;/, 'Saved Formula Tutor history rows should keep progress, feedback, prompt, and answer compact.');
 assert.match(tutorHistoryRowBlock, /cursor:\s*pointer;/, 'Saved Formula Tutor history rows should look tappable/clickable.');
+assert.match(tutorJustAnsweredRowBlock, /cursor:\s*default;/, 'Just-answered Formula Tutor rows should read as passive summaries, not expandable controls.');
 assert.match(tutorHistoryExpandedBlock, /display:\s*grid;/, 'Expanded saved Formula Tutor review details should render in a structured panel.');
 assert.match(tutorInstructionBlock, /display:\s*grid;/, 'Formula Tutor instruction block should be a compact shared prompt region.');
 assert.match(tutorInstructionPromptBlock, /font-weight:\s*760;/, 'Formula Tutor active prompt should be prominent in the instruction block.');

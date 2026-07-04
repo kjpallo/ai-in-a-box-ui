@@ -624,7 +624,7 @@
       .student-tutor-session-question {
         display: grid;
         gap: 0.16rem;
-        margin: 0.44rem 0.5rem 0;
+        margin: 0.44rem 0.5rem 0.46rem;
         padding: 0.38rem 0.48rem;
         border: 1px solid rgba(255,214,102,0.3);
         border-radius: 8px;
@@ -744,6 +744,16 @@
         color: #effff8;
         outline: 1px solid rgba(126,233,255,0.42);
         outline-offset: 3px;
+      }
+
+      .student-tutor-just-answered-row .student-tutor-history-row {
+        cursor: default;
+      }
+
+      .student-tutor-just-answered-row .student-tutor-history-row:hover,
+      .student-tutor-just-answered-row .student-tutor-history-row:focus-visible {
+        color: inherit;
+        outline: 0;
       }
 
       .student-tutor-history-caret {
@@ -1392,9 +1402,10 @@
       }
 
       .picket-fence-cancelled {
-        color: rgba(255,214,102,0.92);
+        color: rgba(255,214,102,0.96);
         text-decoration: line-through;
-        text-decoration-thickness: 0.14rem;
+        text-decoration-color: rgba(255,214,102,0.96);
+        text-decoration-thickness: 0.16rem;
       }
 
       .picket-fence-final-unit {
@@ -1407,6 +1418,7 @@
       }
 
       .picket-fence-cancellation,
+      .picket-fence-cancellation-state,
       .picket-fence-control {
         min-height: 34px;
         padding: 0.32rem 0.58rem;
@@ -1423,9 +1435,15 @@
           radial-gradient(circle at 50% 18%, rgba(255,255,255,0.14), transparent 24%),
           linear-gradient(180deg, rgba(72,58,14,0.96), rgba(31,28,8,0.96));
         color: #fff2a8;
+      }
+
+      .picket-fence-cancellation-state {
+        border-color: rgba(255,214,102,0.46);
+        background: rgba(72,58,14,0.48);
+        color: #fff2a8;
         text-decoration: line-through;
-        text-decoration-thickness: 0.12em;
         text-decoration-color: rgba(102,247,209,0.9);
+        text-decoration-thickness: 0.12em;
       }
 
       .picket-fence-cancellation.is-revealed {

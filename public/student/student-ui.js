@@ -897,7 +897,24 @@
       });
     }
 
-    const answerHtml = renderTutorSessionAnswer(turn, options.stepIndex);
+    const answerHtml = renderTutorSessionAnswer(turn, {
+      stepIndex: options.stepIndex,
+      tutor,
+      work,
+      isCurrentStep,
+      isFormulaTutor,
+      responseText
+    });
+    const justAnsweredHtml = renderJustAnsweredTutorSessionRow(turn, {
+      stepIndex: options.stepIndex,
+      tutor,
+      work,
+      currentStep,
+      responseText,
+      previousTurn: options.previousTurn,
+      isCurrentStep,
+      isFormulaTutor
+    });
     const sideAnswerClass = answerHtml ? 'has-side-answer' : 'has-no-side-answer';
     const instructionHtml = isFormulaTutor
       ? renderTutorInstructionBlock({
@@ -914,6 +931,7 @@
       <section class="student-tutor-session-step ${stateClass} ${sideAnswerClass}" data-tutor-turn-id="${escapeAttr(turn.id)}">
         ${answerHtml}
         <div class="student-tutor-session-step-work">
+          ${justAnsweredHtml}
           ${instructionHtml || `
             <div class="student-tutor-session-step-head">
               <strong>${escapeHtml(formatTutorProgress(tutor, work) || stepStatus)}</strong>
@@ -937,6 +955,32 @@
           ${isCurrentStep ? renderTutorActions(turn, tutor, { hideCompletedAction: true }) : ''}
         </div>
       </section>
+    `;
+  }
+
+  function renderJustAnsweredTutorSessionRow(turn, context = {}) {
+    const submitted = getTutorSubmittedMessage(turn, context.stepIndex);
+    if (!submitted || !context.isFormulaTutor || !context.isCurrentStep) return '';
+    if (!doesSubmittedAnswerBelongToAnsweredFormulaStep(context)) return '';
+    const tutor = context.tutor || turn.tutor || {};
+    const work = context.work || getTutorWork(tutor);
+    if (tutor.completed === true || work.isComplete === true) return '';
+    const answeredStep = getAnsweredTutorStepContext(turn, {
+      ...context,
+      submitted
+    });
+    const progress = formatTutorInstructionProgress(answeredStep.tutor, answeredStep.work, 'Saved');
+    const promptLabel = summarizeTutorStepPrompt(answeredStep.currentStep);
+    const feedback = getTutorCompactFeedback(context.responseText);
+    return `
+      <div class="student-tutor-session-step-compact student-tutor-just-answered-row">
+        <div class="student-tutor-history-row" aria-label="Just answered tutor step">
+          <strong>${escapeHtml(progress || 'Saved step')}</strong>
+          ${feedback ? `<span class="student-tutor-history-feedback">${escapeHtml(feedback)}</span>` : ''}
+          ${promptLabel ? `<span class="student-tutor-history-prompt">${escapeHtml(promptLabel)}</span>` : ''}
+          <span class="student-tutor-history-answer">Student answer: ${escapeHtml(formatTutorSubmittedMessage(submitted))}</span>
+        </div>
+      </div>
     `;
   }
 
@@ -1071,9 +1115,9 @@
     `;
   }
 
-  function renderTutorSessionAnswer(turn, stepIndex) {
-    const message = getTutorSubmittedMessage(turn, stepIndex);
-    if (!message) return '';
+  function renderTutorSessionAnswer(turn, context = {}) {
+    const message = getTutorSubmittedMessage(turn, context.stepIndex);
+    if (!shouldRenderTutorSessionAnswer(message, context)) return '';
 
     return `
       <div class="student-tutor-session-answer">
@@ -1081,6 +1125,23 @@
         <p>${escapeHtml(formatTutorSubmittedMessage(message))}</p>
       </div>
     `;
+  }
+
+  function shouldRenderTutorSessionAnswer(message, context = {}) {
+    if (!message) return '';
+    if (context.isFormulaTutor && context.isCurrentStep && doesSubmittedAnswerBelongToAnsweredFormulaStep(context)) {
+      return false;
+    }
+    return true;
+  }
+
+  function doesSubmittedAnswerBelongToAnsweredFormulaStep(context = {}) {
+    const responseText = String(context.responseText || '').trim();
+    if (!/^correct\b/i.test(responseText)) return false;
+    const tutor = context.tutor || {};
+    const work = context.work || {};
+    if (tutor.completed === true || work.isComplete === true) return true;
+    return tutor.active === true;
   }
 
   function getTutorSubmittedMessage(turn, stepIndex) {
@@ -1636,6 +1697,13 @@
     const resultDisplay = `${formatPicketFenceNumber(arithmetic.resultValue)} ${arithmetic.resultUnit || visual.targetUnit || ''}`.trim();
     const finalAnswerSection = getPicketFenceSection(visual, 'final_answer');
     const finalAnswerFilled = isPicketFenceSectionFilled(finalAnswerSection, fillContext);
+    const cancellationSection = getPicketFenceSection(visual, 'canceled_units');
+    const cancellationFilled = isPicketFenceSectionFilled(cancellationSection, fillContext);
+    const cancellationStepActive = isPicketFenceCancellationStep(context);
+    const helperText = getPicketFenceHelperText(visual, {
+      cancellationStepActive,
+      cancellationFilled
+    });
     const startDisplay = renderPicketFenceSectionValue(visual, 'given_value', fillContext, `${formatPicketFenceNumber(given.value)} ${given.unit || ''}`.trim(), 'enter given value');
     const finalAnswerDisplay = finalAnswerFilled ? escapeHtml(resultDisplay) : picketFencePlaceholder(finalAnswerSection, 'waiting');
 
@@ -1650,28 +1718,75 @@
           <span>Goal: <strong>${escapeHtml(visual.targetUnit || '')}</strong></span>
           <span>Answer: <strong>${finalAnswerDisplay}</strong></span>
         </div>
-        <p class="picket-fence-helper">Units cancel diagonally. The remaining unit should match the target.</p>
+        ${helperText ? `<p class="picket-fence-helper">${escapeHtml(helperText)}</p>` : ''}
         <div class="picket-fence-cells" aria-label="Conversion factor cells">
           ${cells.map((cell, index) => renderPicketFenceCell(cell, index, {
             stateKey,
             progress,
             visual,
-            fillContext
+            fillContext,
+            cancellationFilled
           })).join('')}
         </div>
-        <div class="picket-fence-cancellations" aria-label="Unit cancellations">
-          ${cancellations.map((step, index) => `
+        ${renderPicketFenceCancellations(cancellations, {
+          cancellationStepActive,
+          cancellationFilled
+        })}
+      </section>
+    `;
+  }
+
+  function renderPicketFenceCancellations(cancellations, state = {}) {
+    if (!Array.isArray(cancellations) || cancellations.length === 0) return '';
+    if (state.cancellationStepActive) {
+      return `
+        <div class="picket-fence-cancellations is-active" aria-label="Unit cancellations">
+          ${cancellations.map((step) => `
             <button
               type="button"
-              class="picket-fence-cancellation picket-fence-cancel-unit student-tutor-control student-tutor-control--workspace ${isPicketFenceSectionFilled(getPicketFenceSection(visual, 'canceled_units'), fillContext) ? 'is-revealed' : ''}"
+              class="picket-fence-cancellation picket-fence-cancel-unit student-tutor-control student-tutor-control--workspace"
               data-picket-fence-cancel-answer="${escapeAttr(step.unit || '')}"
             >
-              ${isPicketFenceSectionFilled(getPicketFenceSection(visual, 'canceled_units'), fillContext) ? `${escapeHtml(step.unit || '')} canceled` : `Cancel matching ${escapeHtml(step.unit || '')}`}
+              Cancel matching ${escapeHtml(step.unit || '')}
             </button>
           `).join('')}
         </div>
-      </section>
-    `;
+      `;
+    }
+    if (state.cancellationFilled) {
+      return `
+        <div class="picket-fence-cancellations is-revealed" aria-label="Unit cancellations">
+          ${cancellations.map((step) => `
+            <span class="picket-fence-cancellation-state">${escapeHtml(step.unit || '')} canceled</span>
+          `).join('')}
+        </div>
+      `;
+    }
+    return '';
+  }
+
+  function isPicketFenceCancellationStep(context = {}) {
+    const step = context?.work?.currentStep || context?.tutor?.currentStep || {};
+    const stepId = String(step?.id || context?.work?.stepId || context?.tutor?.stepId || '').toLowerCase();
+    const prompt = String(step?.prompt || context?.work?.currentStepPrompt || context?.tutor?.currentStepPrompt || '').toLowerCase();
+    return stepId.includes('cancel') || /\b(click|tap)\b[\s\S]*\b(unit|units)\b[\s\S]*\bcancel/.test(prompt);
+  }
+
+  function getPicketFenceHelperText(visual, state = {}) {
+    const cancellationUnits = (Array.isArray(visual?.cancellationSteps) ? visual.cancellationSteps : [])
+      .map((step) => String(step?.unit || '').trim())
+      .filter(Boolean);
+    const targetUnit = String(visual?.targetUnit || visual?.arithmetic?.resultUnit || '').trim();
+    if (state.cancellationStepActive) {
+      if (cancellationUnits.length === 1) return `Click the matching ${cancellationUnits[0]} units to cancel them.`;
+      return 'Click a matching unit to cancel it.';
+    }
+    if (state.cancellationFilled) {
+      if (cancellationUnits.length === 1 && targetUnit) return `${cancellationUnits[0]} cancels with ${cancellationUnits[0]}, so ${targetUnit} remains.`;
+      if (targetUnit) return `Canceled units are crossed out, so ${targetUnit} remains.`;
+      return 'Canceled units are crossed out.';
+    }
+    return 'Fill the fence from left to right. The remaining unit should match the target.';
   }
 
   function isUnit1ConversionVisual(visual) {
@@ -1691,11 +1806,13 @@
     const isGivenCell = index === 0;
     const numerator = renderPicketFenceTerm(cell?.numerator, context.visual, {
       filled: isPicketFenceSectionFilled(getPicketFenceSection(context.visual, cell?.numeratorSectionId), context.fillContext),
-      placeholder: picketFencePlaceholder(getPicketFenceSection(context.visual, cell?.numeratorSectionId), isGivenCell ? 'enter given value' : 'top number')
+      placeholder: picketFencePlaceholder(getPicketFenceSection(context.visual, cell?.numeratorSectionId), isGivenCell ? 'enter given value' : 'top number'),
+      cancelledUnitsRevealed: context.cancellationFilled
     });
     const denominator = renderPicketFenceTerm(cell?.denominator, context.visual, {
       filled: !cell?.denominatorSectionId || isPicketFenceSectionFilled(getPicketFenceSection(context.visual, cell?.denominatorSectionId), context.fillContext),
-      placeholder: cell?.denominatorSectionId ? picketFencePlaceholder(getPicketFenceSection(context.visual, cell.denominatorSectionId), 'bottom number') : ''
+      placeholder: cell?.denominatorSectionId ? picketFencePlaceholder(getPicketFenceSection(context.visual, cell.denominatorSectionId), 'bottom number') : '',
+      cancelledUnitsRevealed: context.cancellationFilled
     });
 
     return `
@@ -1718,7 +1835,7 @@
     const match = text.match(/^(.+?)\s+([A-Za-zµ]+)$/u);
     if (!match) return escapeHtml(text);
     const [, amount, unit] = match;
-    const unitClass = isPicketFenceCancelledUnit(unit, visual) ? 'picket-fence-cancelled' : 'picket-fence-final-unit';
+    const unitClass = options.cancelledUnitsRevealed && isPicketFenceCancelledUnit(unit, visual) ? 'picket-fence-cancelled' : 'picket-fence-final-unit';
     return `${escapeHtml(amount)} <span class="${unitClass}">${escapeHtml(unit)}</span>`;
   }
 
