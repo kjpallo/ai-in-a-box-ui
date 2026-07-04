@@ -95,6 +95,7 @@ const tutorControlHelperBlock = getCssBlock('.student-tutor-control--helper');
 const tutorControlWorkspaceBlock = getCssBlock('.student-tutor-control--workspace');
 const tutorControlToolBlock = getCssBlock('.student-tutor-control--tool');
 const tutorControlDangerBlock = getCssBlock('.student-tutor-control--danger');
+const tutorAnswerControlsBlock = getCssBlock('.student-tutor-answer-controls');
 const tutorChoicesBlock = getCssBlock('.student-tutor-choices');
 const tutorChoiceButtonBlock = getCssBlock('.student-tutor-choice-button');
 const tutorAnswerChipsBlock = getCssBlock('.student-tutor-answer-chips');
@@ -143,11 +144,12 @@ assert.match(tutorControlHelperBlock, /border-color:\s*rgba\(255,214,102,0\.62\)
 assert.match(tutorControlWorkspaceBlock, /border-color:\s*rgba\(126,233,255,0\.32\);/, 'Workspace controls should inherit the shared workspace variant.');
 assert.match(tutorControlToolBlock, /border-color:\s*rgba\(126,233,255,0\.42\);/, 'Tutor tools should inherit the shared tool variant.');
 assert.match(tutorControlDangerBlock, /border-color:\s*rgba\(255,150,126,0\.64\);/, 'Only truly destructive tutor tools should use the shared danger variant.');
+assert.match(tutorAnswerControlsBlock, /display:\s*grid;/, 'Active Formula Tutor answer controls should render in one shared in-card zone.');
 assert.match(tutorChoicesBlock, /align-items:\s*stretch;/, 'Formula Tutor choices inside work should render as primary controls.');
 assert.match(tutorChoiceButtonBlock, /min-height:\s*40px;/, 'Formula Tutor choice buttons should be prominent.');
 assert.match(tutorAnswerChipsBlock, /display:\s*flex;/, 'Formula Tutor answer chips should render as a compact chip row.');
 assert.match(tutorAnswerChipsBlock, /rgba\(255,214,102,0\.36\)/, 'Formula Tutor answer chips should use a distinct helper-chip theme.');
-assert.match(studentUi, /student-tutor-answer-chip-label[\s\S]*Quick choices:/, 'Formula Tutor answer chips should include a visible helper label.');
+assert.match(studentUi, /student-tutor-answer-chip-label[\s\S]*(Suggested answer:|Use given number:|Choose or type:)/, 'Formula Tutor answer chips should include a clear helper label.');
 assert.match(tutorAnswerChipBlock, /border-radius:\s*999px;/, 'Formula Tutor answer chips should use compact pill controls.');
 assert.match(tutorAnswerChipBlock, /linear-gradient\(180deg,\s*rgba\(109,72,8,0\.98\)/, 'Formula Tutor answer chips should not blend into normal tutor buttons.');
 assert.ok(metricStairStepVisualBlock, 'Metric stair-step tutor visual should have a card style.');
@@ -363,8 +365,8 @@ assert.match(
 );
 assert.match(
   studentUi,
-  /function renderTutorSessionStep\(turn, options = \{\}\)[\s\S]*renderTutorAnswerChips\(tutor, work\)[\s\S]*renderFormulaVisualMetadata/,
-  'Tutor answer helper chips should render directly after the current step details and before the conversion visual.'
+  /function renderTutorSessionStep\(turn, options = \{\}\)[\s\S]*renderTutorAnswerControls\(tutor, work\)[\s\S]*renderFormulaVisualMetadata/,
+  'Active Formula Tutor answer controls should render in the card before the workspace visual.'
 );
 assert.match(
   studentUi,
@@ -448,8 +450,18 @@ assert.match(
 );
 assert.match(
   studentUi,
-  /function renderPicketFenceVisual\(visual, turnId, context = \{\}\)[\s\S]*const progress = 0;[\s\S]*buildPicketFenceFillContext\(visual, context, progress\)[\s\S]*Picket fence method[\s\S]*Target:[\s\S]*renderPicketFenceSectionValue\(visual, 'given_value'[\s\S]*Answer:[\s\S]*picket-fence-cancel-unit student-tutor-control student-tutor-control--workspace[\s\S]*data-picket-fence-cancel-answer="\$\{escapeAttr\(step\.unit \|\| ''\)\}"[\s\S]*Cancel \$\{escapeHtml\(step\.unit \|\| ''\)\}/,
-  'Picket fence renderer should show title, completed-step fill context, pending sections, distinct clickable cancellations, and an answer slot that stays hidden until completion.'
+  /function renderPicketFenceVisual\(visual, turnId, context = \{\}\)[\s\S]*const progress = 0;[\s\S]*buildPicketFenceFillContext\(visual, context, progress\)[\s\S]*Picket fence method[\s\S]*Target:[\s\S]*Start:[\s\S]*Goal:[\s\S]*Answer:[\s\S]*Units cancel diagonally\. The remaining unit should match the target\.[\s\S]*picket-fence-cancel-unit student-tutor-control student-tutor-control--workspace[\s\S]*data-picket-fence-cancel-answer="\$\{escapeAttr\(step\.unit \|\| ''\)\}"[\s\S]*Cancel matching \$\{escapeHtml\(step\.unit \|\| ''\)\}/,
+  'Picket fence renderer should show title, Start/Goal/Answer summary, helper text, distinct clickable cancellations, and an answer slot that stays hidden until completion.'
+);
+assert.doesNotMatch(
+  getFunctionBlock('renderPicketFenceVisual'),
+  /given value \+ unit/,
+  'Picket fence summary should not expose raw placeholder wording like given value + unit.'
+);
+assert.match(
+  studentUi,
+  /function renderPicketFenceCell\(cell, index, context\)[\s\S]*isGivenCell \? 'enter given value' : 'top number'[\s\S]*'bottom number'[\s\S]*isGivenCell \? 'Start' : '&times;'/,
+  'Picket fence cells should use clearer Start, top number, and bottom number wording.'
 );
 assert.match(
   studentUi,
@@ -478,8 +490,18 @@ assert.match(
 );
 assert.match(
   studentUi,
-  /function renderTutorAnswerChips\(tutor, work = \{\}\)[\s\S]*student-tutor-answer-chips[\s\S]*Quick choices:[\s\S]*student-tutor-answer-chip student-tutor-control student-tutor-control--helper[\s\S]*data-tutor-answer-chip/,
+  /function renderTutorAnswerControls\(tutor, work = \{\}\)[\s\S]*student-tutor-answer-controls[\s\S]*renderTutorChoiceButtons[\s\S]*renderTutorAnswerChips/,
+  'Choices and quick chips should share one active answer-control zone.'
+);
+assert.match(
+  studentUi,
+  /function renderTutorAnswerChips\(tutor, work = \{\}\)[\s\S]*singleChip[\s\S]*getSingleAnswerChipLabel[\s\S]*student-tutor-answer-chips[\s\S]*student-tutor-answer-chip student-tutor-control student-tutor-control--helper[\s\S]*data-tutor-answer-chip/,
   'Picket fence fill-in steps should render labeled bounded answer chips that submit through tutor commands.'
+);
+assert.match(
+  studentUi,
+  /function getSingleAnswerChipLabel\(work = \{\}, chip = \{\}\)[\s\S]*given number[\s\S]*Use given number:[\s\S]*Suggested answer:/,
+  'Single quick-choice chips should use explicit suggested-answer wording.'
 );
 assert.match(
   studentUi,
@@ -563,13 +585,18 @@ assert.match(
 );
 assert.match(
   studentUi,
-  /function updateComposerTutorChoices\(\)[\s\S]*getActiveTutorChoiceState\(\)[\s\S]*class="student-composer-choice-button student-tutor-control student-tutor-control--choice"[\s\S]*data-tutor-choice="\$\{escapeAttr\(choice\.number\)\}"/,
-  'Active Formula Tutor choices should render above the input with shared choice control styling.'
+  /function updateComposerTutorChoices\(\)[\s\S]*shouldRenderChoicesInTutorCard\(activeChoiceState\?\.tutor, activeChoiceState\?\.work\)[\s\S]*composerTutorChoices\.hidden = true[\s\S]*class="student-composer-choice-button student-tutor-control student-tutor-control--choice"[\s\S]*data-tutor-choice="\$\{escapeAttr\(choice\.number\)\}"/,
+  'Formula Tutor choices should render in-card while preserving composer choice markup as a fallback.'
 );
 assert.match(
   studentUi,
-  /function shouldRenderInlineTutorChoices\(tutor = \{\}, work = \{\}\)[\s\S]*suppressInlineChoices[\s\S]*return Array\.isArray\(tutor\?\.currentStep\?\.choices\)/,
-  'Method-choice steps should be able to suppress duplicate inline tutor choice buttons while composer choices remain available.'
+  /function shouldRenderInlineTutorChoices\(tutor = \{\}, work = \{\}\)[\s\S]*getCurrentTutorChoices\(tutor, work\)[\s\S]*isStructuredFormulaTutor\(tutor, work\)[\s\S]*return true[\s\S]*suppressInlineChoices/,
+  'Formula Tutor method-choice steps should render choices in the active card even when composer duplicate choices are suppressed.'
+);
+assert.match(
+  studentUi,
+  /function shouldRenderChoicesInTutorCard\(tutor = \{\}, work = \{\}\)[\s\S]*isStructuredFormulaTutor\(tutor, work\) && shouldRenderInlineTutorChoices\(tutor, work\)/,
+  'Composer choices should hide when structured Formula Tutor choices are rendered inside the card.'
 );
 assert.match(
   studentUi,

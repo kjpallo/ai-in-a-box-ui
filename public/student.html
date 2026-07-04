@@ -1306,6 +1306,7 @@
 
       .picket-fence-header span,
       .picket-fence-summary span,
+      .picket-fence-helper,
       .picket-fence-arithmetic span {
         color: #dffdf6;
         font-size: 0.8rem;
@@ -1322,6 +1323,11 @@
         border: 1px solid rgba(126,233,255,0.16);
         border-radius: 7px;
         background: rgba(2,8,10,0.28);
+      }
+
+      .picket-fence-helper {
+        margin: 0;
+        color: rgba(223,253,246,0.78);
       }
 
       .picket-fence-cells {
@@ -1563,6 +1569,16 @@
         justify-content: flex-start;
       }
 
+      .student-tutor-answer-controls {
+        display: grid;
+        gap: 0.38rem;
+        min-width: 0;
+        padding: 0.42rem;
+        border: 1px solid rgba(102,247,209,0.24);
+        border-radius: 10px;
+        background: rgba(3,22,25,0.44);
+      }
+
       .student-tutor-choices {
         display: flex;
         gap: 0.4rem;
@@ -1585,6 +1601,11 @@
         border: 1px solid rgba(255,214,102,0.36);
         border-radius: 10px;
         background: rgba(52,37,8,0.5);
+      }
+
+      .student-tutor-answer-chips.has-single-chip {
+        border-color: rgba(255,214,102,0.28);
+        background: rgba(42,28,8,0.34);
       }
 
       .student-tutor-answer-chip-label {

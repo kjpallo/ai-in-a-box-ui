@@ -553,7 +553,7 @@
     updateInputPlaceholder(choices.length > 0);
 
     if (!composerTutorChoices) return;
-    if (choices.length === 0) {
+    if (choices.length === 0 || shouldRenderChoicesInTutorCard(activeChoiceState?.tutor, activeChoiceState?.work)) {
       composerTutorChoices.hidden = true;
       composerTutorChoices.innerHTML = '';
       return;
@@ -931,9 +931,8 @@
             ${answer ? renderTutorDetail('Final answer', answer, 'student-tutor-answer') : ''}
             ${!isFormulaTutor && tutor.currentHint ? renderTutorDetail('Hint', tutor.currentHint, 'is-wide') : ''}
           </div>
-          ${isCurrentStep ? renderTutorAnswerChips(tutor, work) : ''}
+          ${isCurrentStep ? renderTutorAnswerControls(tutor, work) : ''}
           ${isCurrentStep && isFormulaTutor ? renderFormulaVisualMetadata(work.visualMetadata || tutor.visualMetadata, turn.id, { tutor, work }) : ''}
-          ${isCurrentStep && shouldRenderInlineTutorChoices(tutor, work) ? renderTutorChoiceButtons(tutor, work) : ''}
           ${canUseCalculator ? renderCalculatorArea(turn.id, showCalculator) : ''}
           ${isCurrentStep ? renderTutorActions(turn, tutor, { hideCompletedAction: true }) : ''}
         </div>
@@ -1272,9 +1271,8 @@
             ${answer ? renderTutorDetail('Final answer', answer, 'student-tutor-answer') : ''}
             ${tutor.currentHint ? renderTutorDetail('Hint', tutor.currentHint, 'is-wide') : ''}
           </div>
-          ${renderTutorAnswerChips(controlTutor, work)}
+          ${renderTutorAnswerControls(controlTutor, work)}
           ${isFormulaTutor ? renderFormulaVisualMetadata(work.visualMetadata || tutor.visualMetadata, turn.id, { tutor, work }) : ''}
-          ${shouldRenderInlineTutorChoices(controlTutor, work) ? renderTutorChoiceButtons(controlTutor, work) : ''}
           ${canUseCalculator ? renderCalculatorArea(turn.id, showCalculator) : ''}
         </div>
         ${renderTutorActions(turn, controlTutor)}
@@ -1337,8 +1335,15 @@
   }
 
   function shouldRenderInlineTutorChoices(tutor = {}, work = {}) {
+    const choices = getCurrentTutorChoices(tutor, work);
+    if (choices.length === 0) return false;
+    if (isStructuredFormulaTutor(tutor, work)) return true;
     if (work?.currentStep?.suppressInlineChoices === true) return false;
-    return Array.isArray(tutor?.currentStep?.choices) && tutor.currentStep.choices.length > 0;
+    return true;
+  }
+
+  function shouldRenderChoicesInTutorCard(tutor = {}, work = {}) {
+    return isStructuredFormulaTutor(tutor, work) && shouldRenderInlineTutorChoices(tutor, work);
   }
 
   function renderFormulaVisualMetadata(visual, turnId, context = {}) {
@@ -1631,7 +1636,8 @@
     const resultDisplay = `${formatPicketFenceNumber(arithmetic.resultValue)} ${arithmetic.resultUnit || visual.targetUnit || ''}`.trim();
     const finalAnswerSection = getPicketFenceSection(visual, 'final_answer');
     const finalAnswerFilled = isPicketFenceSectionFilled(finalAnswerSection, fillContext);
-    const finalAnswerDisplay = finalAnswerFilled ? escapeHtml(resultDisplay) : picketFencePlaceholder(finalAnswerSection, 'final answer');
+    const startDisplay = renderPicketFenceSectionValue(visual, 'given_value', fillContext, `${formatPicketFenceNumber(given.value)} ${given.unit || ''}`.trim(), 'enter given value');
+    const finalAnswerDisplay = finalAnswerFilled ? escapeHtml(resultDisplay) : picketFencePlaceholder(finalAnswerSection, 'waiting');
 
     return `
       <section class="picket-fence-visual" data-picket-fence-id="${escapeAttr(stateKey)}" aria-label="Picket fence method visual">
@@ -1640,9 +1646,11 @@
           <span>${escapeHtml(`Target: ${visual.targetUnit || ''}`.trim())}</span>
         </div>
         <div class="picket-fence-summary">
-          <span>Given: <strong>${renderPicketFenceSectionValue(visual, 'given_value', fillContext, `${formatPicketFenceNumber(given.value)} ${given.unit || ''}`.trim(), 'given value + unit')}</strong></span>
+          <span>Start: <strong>${startDisplay}</strong></span>
+          <span>Goal: <strong>${escapeHtml(visual.targetUnit || '')}</strong></span>
           <span>Answer: <strong>${finalAnswerDisplay}</strong></span>
         </div>
+        <p class="picket-fence-helper">Units cancel diagonally. The remaining unit should match the target.</p>
         <div class="picket-fence-cells" aria-label="Conversion factor cells">
           ${cells.map((cell, index) => renderPicketFenceCell(cell, index, {
             stateKey,
@@ -1658,7 +1666,7 @@
               class="picket-fence-cancellation picket-fence-cancel-unit student-tutor-control student-tutor-control--workspace ${isPicketFenceSectionFilled(getPicketFenceSection(visual, 'canceled_units'), fillContext) ? 'is-revealed' : ''}"
               data-picket-fence-cancel-answer="${escapeAttr(step.unit || '')}"
             >
-              ${isPicketFenceSectionFilled(getPicketFenceSection(visual, 'canceled_units'), fillContext) ? `${escapeHtml(step.unit || '')} canceled` : `Cancel ${escapeHtml(step.unit || '')}`}
+              ${isPicketFenceSectionFilled(getPicketFenceSection(visual, 'canceled_units'), fillContext) ? `${escapeHtml(step.unit || '')} canceled` : `Cancel matching ${escapeHtml(step.unit || '')}`}
             </button>
           `).join('')}
         </div>
@@ -1680,20 +1688,21 @@
       index <= context.progress ? 'is-revealed' : 'is-pending',
       index === context.progress ? 'is-highlighted' : ''
     ].filter(Boolean).join(' ');
+    const isGivenCell = index === 0;
     const numerator = renderPicketFenceTerm(cell?.numerator, context.visual, {
       filled: isPicketFenceSectionFilled(getPicketFenceSection(context.visual, cell?.numeratorSectionId), context.fillContext),
-      placeholder: picketFencePlaceholder(getPicketFenceSection(context.visual, cell?.numeratorSectionId), 'top')
+      placeholder: picketFencePlaceholder(getPicketFenceSection(context.visual, cell?.numeratorSectionId), isGivenCell ? 'enter given value' : 'top number')
     });
     const denominator = renderPicketFenceTerm(cell?.denominator, context.visual, {
       filled: !cell?.denominatorSectionId || isPicketFenceSectionFilled(getPicketFenceSection(context.visual, cell?.denominatorSectionId), context.fillContext),
-      placeholder: cell?.denominatorSectionId ? picketFencePlaceholder(getPicketFenceSection(context.visual, cell.denominatorSectionId), 'bottom') : ''
+      placeholder: cell?.denominatorSectionId ? picketFencePlaceholder(getPicketFenceSection(context.visual, cell.denominatorSectionId), 'bottom number') : ''
     });
 
     return `
       <div
         class="${escapeAttr(classes)}"
       >
-        <span class="picket-fence-multiply">${index === 0 ? 'Given' : '&times;'}</span>
+        <span class="picket-fence-multiply">${isGivenCell ? 'Start' : '&times;'}</span>
         <span class="picket-fence-fraction">
           <span class="picket-fence-numerator">${numerator || '&nbsp;'}</span>
           <span class="picket-fence-denominator">${denominator || '&nbsp;'}</span>
@@ -2031,6 +2040,19 @@
     `;
   }
 
+  function renderTutorAnswerControls(tutor, work = {}) {
+    const chipsHtml = renderTutorAnswerChips(tutor, work);
+    const choicesHtml = shouldRenderInlineTutorChoices(tutor, work) ? renderTutorChoiceButtons(tutor, work) : '';
+    if (!chipsHtml && !choicesHtml) return '';
+
+    return `
+      <div class="student-tutor-answer-controls" aria-label="Active answer controls">
+        ${choicesHtml}
+        ${chipsHtml}
+      </div>
+    `;
+  }
+
   function renderTutorChoiceButtons(tutor, work = {}) {
     if (!tutor || tutor.active !== true || tutor.completed || tutor.stopped) return '';
 
@@ -2054,10 +2076,12 @@
     if (!tutor || tutor.active !== true || tutor.completed || tutor.stopped) return '';
     const chips = getCurrentTutorAnswerChips(tutor, work);
     if (chips.length === 0) return '';
+    const singleChip = chips.length === 1;
+    const label = singleChip ? getSingleAnswerChipLabel(work, chips[0]) : 'Choose or type:';
 
     return `
-      <div class="student-tutor-answer-chips" aria-label="Helpful answer options">
-        <span class="student-tutor-answer-chip-label">Quick choices:</span>
+      <div class="student-tutor-answer-chips ${singleChip ? 'has-single-chip' : 'has-multiple-chips'}" aria-label="Helpful answer options">
+        <span class="student-tutor-answer-chip-label">${escapeHtml(label)}</span>
         ${chips.map((chip) => `
           <button
             type="button"
@@ -2067,6 +2091,14 @@
         `).join('')}
       </div>
     `;
+  }
+
+  function getSingleAnswerChipLabel(work = {}, chip = {}) {
+    const prompt = String(work?.currentStep?.prompt || '').toLowerCase();
+    if (/\bgiven number\b/.test(prompt)) return 'Use given number:';
+    if (/\btop number\b/.test(prompt)) return 'Suggested answer:';
+    if (/\bbottom number\b/.test(prompt)) return 'Suggested answer:';
+    return 'Suggested answer:';
   }
 
   function getCurrentTutorAnswerChips(tutor, work = {}) {
