@@ -69,6 +69,7 @@
   const picketFenceState = new Map();
   const scientificNotationState = new Map();
   const tutorSessionExpandedState = new Map();
+  const tutorStepExpandedState = new Map();
   let completedCelebrationKey = '';
   let fireworksTimer = null;
   let turnCounter = 0;
@@ -855,7 +856,8 @@
             <div class="student-tutor-session-steps">
               ${session.turns.map((turn, index) => renderTutorSessionStep(turn, {
                 isLatestActiveStep: session.isActive && turn.id === latestTurn.id,
-                stepIndex: index
+                stepIndex: index,
+                previousTurn: index > 0 ? session.turns[index - 1] : null
               })).join('')}
             </div>
           </div>
@@ -882,6 +884,19 @@
     const showCalculator = canUseCalculator && shouldShowCalculator(turn.id, tutor, work, currentStep);
     const responseText = String(turn.response || '').trim();
     const stepStatus = getTutorStepStatus(tutor, isCurrentStep);
+    if (isFormulaTutor && !isCurrentStep) {
+      return renderCompactTutorSessionStep(turn, {
+        tutor,
+        work,
+        currentStep,
+        responseText,
+        stepStatus,
+        stepIndex: options.stepIndex,
+        previousTurn: options.previousTurn,
+        stateClass
+      });
+    }
+
     const answerHtml = renderTutorSessionAnswer(turn, options.stepIndex);
     const sideAnswerClass = answerHtml ? 'has-side-answer' : 'has-no-side-answer';
     const instructionHtml = isFormulaTutor
@@ -914,10 +929,10 @@
             ${isFormulaTutor && work.substitution ? renderTutorDetail('Substitution', work.substitution, 'student-tutor-substitution') : ''}
             ${calculatorCheck ? renderTutorDetail('Calculator check', calculatorCheck, 'student-tutor-check') : ''}
             ${answer ? renderTutorDetail('Final answer', answer, 'student-tutor-answer') : ''}
-            ${tutor.currentHint ? renderTutorDetail('Hint', tutor.currentHint, 'is-wide') : ''}
+            ${!isFormulaTutor && tutor.currentHint ? renderTutorDetail('Hint', tutor.currentHint, 'is-wide') : ''}
           </div>
           ${isCurrentStep ? renderTutorAnswerChips(tutor, work) : ''}
-          ${isFormulaTutor ? renderFormulaVisualMetadata(work.visualMetadata || tutor.visualMetadata, turn.id, { tutor, work }) : ''}
+          ${isCurrentStep && isFormulaTutor ? renderFormulaVisualMetadata(work.visualMetadata || tutor.visualMetadata, turn.id, { tutor, work }) : ''}
           ${isCurrentStep && shouldRenderInlineTutorChoices(tutor, work) ? renderTutorChoiceButtons(tutor, work) : ''}
           ${canUseCalculator ? renderCalculatorArea(turn.id, showCalculator) : ''}
           ${isCurrentStep ? renderTutorActions(turn, tutor, { hideCompletedAction: true }) : ''}
@@ -926,8 +941,114 @@
     `;
   }
 
+  function renderCompactTutorSessionStep(turn, context = {}) {
+    const tutor = context.tutor || turn.tutor || {};
+    const work = context.work || getTutorWork(tutor);
+    const submitted = getTutorSubmittedMessage(turn, context.stepIndex);
+    const answeredStep = getAnsweredTutorStepContext(turn, {
+      ...context,
+      submitted
+    });
+    const progress = formatTutorInstructionProgress(answeredStep.tutor, answeredStep.work, context.stepStatus);
+    const promptLabel = summarizeTutorStepPrompt(answeredStep.currentStep);
+    const feedback = getTutorCompactFeedback(context.responseText);
+    const finalAnswer = work.finalAnswer || work.answer || formatTutorAnswer(tutor.solveFor, tutor.finalAnswerDisplay);
+    const expanded = tutorStepExpandedState.get(turn.id) === true;
+    const expandedHtml = expanded ? renderTutorStepReviewDetails(turn, {
+      tutor,
+      work,
+      reviewTutor: answeredStep.tutor,
+      reviewWork: answeredStep.work,
+      currentStep: answeredStep.currentStep,
+      responseText: context.responseText,
+      submitted
+    }) : '';
+    const classes = [
+      'student-tutor-session-step',
+      'student-tutor-session-step-compact',
+      context.stateClass || '',
+      expanded ? 'is-expanded' : '',
+      finalAnswer ? 'has-final-answer' : ''
+    ].filter(Boolean).join(' ');
+
+    return `
+      <section class="${escapeAttr(classes)}" data-tutor-turn-id="${escapeAttr(turn.id)}">
+        <button
+          type="button"
+          class="student-tutor-history-row ${expanded ? 'is-expanded' : ''}"
+          data-toggle-tutor-step-id="${escapeAttr(turn.id)}"
+          aria-expanded="${expanded ? 'true' : 'false'}"
+        >
+          <span class="student-tutor-history-caret" aria-hidden="true">${expanded ? '▾' : '▸'}</span>
+          <strong>${escapeHtml(progress || 'Saved step')}</strong>
+          ${feedback ? `<span class="student-tutor-history-feedback">${escapeHtml(feedback)}</span>` : ''}
+          ${promptLabel ? `<span class="student-tutor-history-prompt">${escapeHtml(promptLabel)}</span>` : ''}
+          ${submitted ? `<span class="student-tutor-history-answer">Student answer: ${escapeHtml(formatTutorSubmittedMessage(submitted))}</span>` : ''}
+        </button>
+        ${expandedHtml}
+        ${finalAnswer ? `<div class="student-tutor-history-final"><strong>Final Answer</strong><span>${escapeHtml(finalAnswer)}</span></div>` : ''}
+      </section>
+    `;
+  }
+
+  function getAnsweredTutorStepContext(turn, context = {}) {
+    const currentTutor = context.tutor || turn.tutor || {};
+    const currentWork = context.work || getTutorWork(currentTutor);
+    const fallback = {
+      tutor: currentTutor,
+      work: currentWork,
+      currentStep: context.currentStep
+    };
+    if (!context.submitted) return fallback;
+
+    const previousTutor = context.previousTurn?.tutor || null;
+    const previousWork = previousTutor ? getTutorWork(previousTutor) : {};
+    if (!previousTutor || !isStructuredFormulaTutor(previousTutor, previousWork)) return fallback;
+
+    const currentProblemId = String(currentTutor?.tutorProblemId || currentWork?.tutorProblemId || '').trim();
+    const previousProblemId = String(previousTutor?.tutorProblemId || previousWork?.tutorProblemId || '').trim();
+    if (currentProblemId && previousProblemId && currentProblemId !== previousProblemId) return fallback;
+
+    return {
+      tutor: previousTutor,
+      work: previousWork,
+      currentStep: getCurrentTutorPrompt(previousTutor, previousWork)
+    };
+  }
+
+  function renderTutorStepReviewDetails(turn, context = {}) {
+    const tutor = context.tutor || turn.tutor || {};
+    const work = context.work || getTutorWork(tutor);
+    const reviewTutor = context.reviewTutor || tutor;
+    const reviewWork = context.reviewWork || work;
+    const knownValues = getKnownValuesForTutor(reviewTutor, reviewWork);
+    const rows = [
+      ['Prompt', context.currentStep],
+      ['Feedback', getTutorFeedbackLine(context.responseText, context.currentStep)],
+      ['Student answer', context.submitted ? formatTutorSubmittedMessage(context.submitted) : ''],
+      ['Hint', reviewTutor.currentHint],
+      ['Formula', shouldShowFormulaStepDetails(reviewWork) ? reviewWork.formula || reviewTutor.formula || '' : ''],
+      ['Known values', shouldShowFormulaKnownValues(reviewWork, knownValues) ? formatKnownValuesInline(knownValues) : ''],
+      ['Substitution', reviewWork.substitution],
+      ['Calculator check', formatTutorCalculatorCheck(reviewWork.calculatorCheck)]
+    ];
+    const visibleRows = rows.filter(([, value]) => String(value || '').trim());
+    if (visibleRows.length === 0) return '';
+
+    return `
+      <div class="student-tutor-history-expanded" aria-label="Saved step review details">
+        ${visibleRows.map(([label, value]) => `
+          <div class="student-tutor-history-detail">
+            <strong>${escapeHtml(label)}</strong>
+            <span>${escapeHtml(value)}</span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
   function renderTutorInstructionBlock({ tutor, work, currentStep, responseText, stepStatus, isCurrentStep }) {
-    const progress = formatTutorProgress(tutor, work) || stepStatus || '';
+    const progress = formatTutorInstructionProgress(tutor, work, stepStatus);
     const prompt = String(currentStep || '').trim();
     const feedback = getTutorFeedbackLine(responseText, prompt);
     const hint = String(tutor?.currentHint || '').trim();
@@ -952,9 +1073,7 @@
   }
 
   function renderTutorSessionAnswer(turn, stepIndex) {
-    if (stepIndex === 0) return '';
-
-    const message = String(turn.tutorSubmittedMessage || turn.message || '').trim();
+    const message = getTutorSubmittedMessage(turn, stepIndex);
     if (!message) return '';
 
     return `
@@ -963,6 +1082,11 @@
         <p>${escapeHtml(formatTutorSubmittedMessage(message))}</p>
       </div>
     `;
+  }
+
+  function getTutorSubmittedMessage(turn, stepIndex) {
+    if (stepIndex === 0) return '';
+    return String(turn?.tutorSubmittedMessage || turn?.message || '').trim();
   }
 
   function formatTutorSubmittedMessage(message) {
@@ -988,6 +1112,12 @@
       .find((item) => item.type === 'tutorSession' && item.key === sessionKey);
     const expanded = getTutorSessionExpandedState(session);
     tutorSessionExpandedState.set(sessionKey, !expanded);
+    renderTimeline();
+  }
+
+  function toggleTutorStepReview(turnId) {
+    if (!turnId) return;
+    tutorStepExpandedState.set(turnId, tutorStepExpandedState.get(turnId) !== true);
     renderTimeline();
   }
 
@@ -1034,6 +1164,34 @@
     if (tutor?.stopped) return 'Stopped';
     if (isCurrentStep && tutor?.active === true) return 'Current';
     return 'Saved';
+  }
+
+  function formatTutorInstructionProgress(tutor, work = {}, stepStatus = '') {
+    const stepId = String(work?.currentStep?.id || tutor?.currentStep?.id || tutor?.stepId || '').trim();
+    if (stepId === 'choose_method') return 'Choose method';
+    return formatTutorProgress(tutor, work) || stepStatus || '';
+  }
+
+  function summarizeTutorStepPrompt(prompt) {
+    const text = String(prompt || '').replace(/\s+/g, ' ').trim();
+    if (!text) return '';
+    const lower = text.toLowerCase();
+    if (/\bmethod\b/.test(lower)) return 'Method choice';
+    if (/\bgiven number\b/.test(lower)) return 'Given number';
+    if (/\btop number\b/.test(lower)) return 'Top number';
+    if (/\bbottom number\b/.test(lower)) return 'Bottom number';
+    if (/\bunit\b.*\bcancel|\bcancel/.test(lower)) return 'Canceling unit';
+    if (/\bfinal number\b/.test(lower)) return 'Final number';
+    if (/\bmarker\b.*\btarget unit\b|\btarget unit\b/.test(lower)) return 'Target unit';
+    return summarizeText(text, 64);
+  }
+
+  function getTutorCompactFeedback(response) {
+    const text = String(response || '').trim();
+    if (/^correct\b/i.test(text)) return 'Correct';
+    if (/^not quite yet\b/i.test(text)) return 'Not quite';
+    if (/^guided formula tutor stopped\b/i.test(text)) return 'Stopped';
+    return '';
   }
 
   function getTutorFeedbackLine(response, currentPrompt = '') {
@@ -1157,6 +1315,14 @@
       : 'No known values yet.';
 
     return renderTutorDetail('Known Values', content, 'student-tutor-known');
+  }
+
+  function formatKnownValuesInline(values) {
+    const safeValues = Array.isArray(values) ? values : [];
+    return safeValues.map((value) => {
+      const label = [value.label, value.symbol ? `(${value.symbol})` : ''].filter(Boolean).join(' ');
+      return `${label}: ${value.display || ''}`.trim();
+    }).filter(Boolean).join('; ');
   }
 
   function shouldShowFormulaStepDetails(work = {}) {
@@ -2087,6 +2253,12 @@
     const copyButton = event.target.closest('[data-copy-turn-id]');
     if (copyButton && timeline.contains(copyButton)) {
       copyTurnAnswer(copyButton.getAttribute('data-copy-turn-id') || '');
+      return;
+    }
+
+    const tutorStepToggleButton = event.target.closest('[data-toggle-tutor-step-id]');
+    if (tutorStepToggleButton && timeline.contains(tutorStepToggleButton)) {
+      toggleTutorStepReview(tutorStepToggleButton.getAttribute('data-toggle-tutor-step-id') || '');
       return;
     }
 

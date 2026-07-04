@@ -715,6 +715,110 @@
         border-color: rgba(255,214,102,0.34);
       }
 
+      .student-tutor-session-step-compact {
+        padding: 0.36rem 0.44rem;
+        background: rgba(2,8,10,0.24);
+      }
+
+      .student-tutor-history-row,
+      .student-tutor-history-final {
+        display: flex;
+        align-items: center;
+        gap: 0.36rem;
+        flex-wrap: wrap;
+        min-width: 0;
+      }
+
+      .student-tutor-history-row {
+        width: 100%;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
+
+      .student-tutor-history-row:hover,
+      .student-tutor-history-row:focus-visible {
+        color: #effff8;
+        outline: 1px solid rgba(126,233,255,0.42);
+        outline-offset: 3px;
+      }
+
+      .student-tutor-history-caret {
+        color: #7ee9ff;
+        font-size: 0.78rem;
+        font-weight: 900;
+        line-height: 1;
+      }
+
+      .student-tutor-history-row strong,
+      .student-tutor-history-final strong {
+        color: #b9d8d1;
+        font-size: 0.72rem;
+        font-weight: 850;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .student-tutor-history-feedback {
+        color: #dffdf6;
+        font-size: 0.8rem;
+        font-weight: 850;
+      }
+
+      .student-tutor-history-prompt,
+      .student-tutor-history-answer,
+      .student-tutor-history-final span {
+        color: #effff8;
+        font-size: 0.82rem;
+        line-height: 1.25;
+        overflow-wrap: anywhere;
+      }
+
+      .student-tutor-history-answer {
+        color: #ffeeb9;
+      }
+
+      .student-tutor-history-final {
+        margin-top: 0.28rem;
+        padding-top: 0.3rem;
+        border-top: 1px solid rgba(102,247,209,0.18);
+      }
+
+      .student-tutor-history-expanded {
+        display: grid;
+        gap: 0.24rem;
+        margin-top: 0.34rem;
+        padding: 0.4rem 0.46rem;
+        border: 1px solid rgba(126,233,255,0.16);
+        border-radius: 7px;
+        background: rgba(2,8,10,0.38);
+      }
+
+      .student-tutor-history-detail {
+        display: grid;
+        grid-template-columns: minmax(5.8rem, 0.22fr) minmax(0, 1fr);
+        gap: 0.32rem;
+        align-items: baseline;
+      }
+
+      .student-tutor-history-detail strong {
+        color: #b9d8d1;
+        font-size: 0.66rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .student-tutor-history-detail span {
+        color: #effff8;
+        font-size: 0.82rem;
+        line-height: 1.25;
+        overflow-wrap: anywhere;
+        white-space: pre-wrap;
+      }
+
       .student-tutor-session-answer,
       .student-tutor-session-step-work {
         display: grid;

@@ -79,8 +79,11 @@ const collapsedPanelBlock = getCssBlock('.student-tutor-session.is-collapsed .st
 const sessionScrollBlock = getCssBlock('.student-tutor-session-scroll');
 const sessionStepBlock = getCssBlock('.student-tutor-session-step');
 const sessionSideAnswerStepBlock = getCssBlock('.student-tutor-session-step.has-side-answer');
+const sessionCompactStepBlock = getCssBlock('.student-tutor-session-step-compact');
 const tutorInstructionBlock = getCssBlock('.student-tutor-instruction');
 const tutorInstructionPromptBlock = getCssBlock('.student-tutor-instruction-prompt');
+const tutorHistoryRowBlock = getCssBlock('.student-tutor-history-row');
+const tutorHistoryExpandedBlock = getCssBlock('.student-tutor-history-expanded');
 const tutorBodyBlock = getCssBlock('.student-tutor-body');
 const tutorOriginalQuestionBlock = getCssBlock('.student-tutor-detail.student-tutor-original-question');
 const tutorOriginalQuestionTextBlock = getCssBlock('.student-tutor-detail.student-tutor-original-question p');
@@ -290,8 +293,68 @@ assert.doesNotMatch(
 );
 assert.match(
   studentUi,
-  /function renderTutorInstructionBlock\(\{ tutor, work, currentStep, responseText, stepStatus, isCurrentStep \}\)[\s\S]*formatTutorProgress\(tutor, work\)[\s\S]*getTutorFeedbackLine\(responseText, prompt\)[\s\S]*student-tutor-instruction-head[\s\S]*student-tutor-instruction-feedback[\s\S]*student-tutor-instruction-prompt[\s\S]*student-tutor-instruction-hint/,
+  /function renderTutorInstructionBlock\(\{ tutor, work, currentStep, responseText, stepStatus, isCurrentStep \}\)[\s\S]*formatTutorInstructionProgress\(tutor, work, stepStatus\)[\s\S]*getTutorFeedbackLine\(responseText, prompt\)[\s\S]*student-tutor-instruction-head[\s\S]*student-tutor-instruction-feedback[\s\S]*student-tutor-instruction-prompt[\s\S]*student-tutor-instruction-hint/,
   'Formula Tutor instruction block should own progress, compact feedback, current prompt, and hint display.'
+);
+assert.match(
+  studentUi,
+  /function renderTutorSessionStep\(turn, options = \{\}\)[\s\S]*if \(isFormulaTutor && !isCurrentStep\)[\s\S]*return renderCompactTutorSessionStep[\s\S]*isCurrentStep && isFormulaTutor \? renderFormulaVisualMetadata/,
+  'Saved Formula Tutor history steps should render compactly and only the active step should render the full visual workspace.'
+);
+assert.match(
+  studentUi,
+  /session\.turns\.map\(\(turn, index\) => renderTutorSessionStep\(turn,[\s\S]*previousTurn: index > 0 \? session\.turns\[index - 1\] : null/,
+  'Grouped Formula Tutor rendering should pass the prior turn so saved rows can label the step that was just answered.'
+);
+assert.match(
+  studentUi,
+  /function renderCompactTutorSessionStep\(turn, context = \{\}\)[\s\S]*const submitted = getTutorSubmittedMessage\(turn, context\.stepIndex\)[\s\S]*const answeredStep = getAnsweredTutorStepContext[\s\S]*formatTutorInstructionProgress\(answeredStep\.tutor, answeredStep\.work[\s\S]*summarizeTutorStepPrompt\(answeredStep\.currentStep\)[\s\S]*student-tutor-session-step-compact[\s\S]*student-tutor-history-answer[\s\S]*student-tutor-history-final/,
+  'Compact Formula Tutor history rows should pair student answers with the answered step, not the next prompt.'
+);
+assert.match(
+  studentUi,
+  /function getAnsweredTutorStepContext\(turn, context = \{\}\)[\s\S]*if \(!context\.submitted\) return fallback;[\s\S]*previousTurn\?\.tutor[\s\S]*return \{[\s\S]*tutor: previousTutor,[\s\S]*work: previousWork,[\s\S]*currentStep: getCurrentTutorPrompt\(previousTutor, previousWork\)/,
+  'Answered-step context should use the prior tutor turn for submitted answers and stay on the current step for unanswered/wrong-state rows.'
+);
+assert.match(
+  getFunctionBlock('summarizeTutorStepPrompt'),
+  /Method choice[\s\S]*Given number[\s\S]*Top number[\s\S]*Bottom number[\s\S]*Canceling unit[\s\S]*Final number/,
+  'Compact history labels should cover method choice, given number, top number, bottom number, canceling unit, and final number steps.'
+);
+assert.match(
+  studentUi,
+  /function renderCompactTutorSessionStep\(turn, context = \{\}\)[\s\S]*tutorStepExpandedState\.get\(turn\.id\)[\s\S]*data-toggle-tutor-step-id="\$\{escapeAttr\(turn\.id\)\}"[\s\S]*aria-expanded="\$\{expanded \? 'true' : 'false'\}"[\s\S]*renderTutorStepReviewDetails/,
+  'Compact saved Formula Tutor rows should be independently expandable by tutor turn id.'
+);
+assert.doesNotMatch(
+  getFunctionBlock('renderCompactTutorSessionStep'),
+  /renderFormulaVisualMetadata|picket-fence-visual|metric-stair-step-visual|renderTutorDetail\('Hint'|data-tutor-choice|data-tutor-answer-chip|data-calculator-key|data-tutor-action|data-picket-fence-cancel-answer|data-metric-stair-step-index/,
+  'Compact saved Formula Tutor rows should not render full visual workspaces or active command controls.'
+);
+assert.match(
+  studentUi,
+  /function renderTutorStepReviewDetails\(turn, context = \{\}\)[\s\S]*\['Prompt'[\s\S]*\['Feedback'[\s\S]*\['Student answer'[\s\S]*\['Hint'[\s\S]*\['Formula'[\s\S]*\['Known values'[\s\S]*\['Calculator check'[\s\S]*student-tutor-history-expanded[\s\S]*student-tutor-history-detail/,
+  'Expanded saved Formula Tutor rows should render review-only structured details.'
+);
+assert.doesNotMatch(
+  getFunctionBlock('renderTutorStepReviewDetails'),
+  /data-tutor-choice|data-tutor-answer-chip|data-calculator-key|data-tutor-action|data-picket-fence-cancel-answer|data-metric-stair-step-index|renderFormulaVisualMetadata/,
+  'Expanded saved Formula Tutor review details should not expose live tutor command controls.'
+);
+assert.match(
+  studentUi,
+  /function formatTutorInstructionProgress\(tutor, work = \{\}, stepStatus = ''\)[\s\S]*stepId === 'choose_method'[\s\S]*return 'Choose method'[\s\S]*formatTutorProgress/,
+  'Branch-selection steps should display as Choose method instead of a confusing Step 1 of 1 label.'
+);
+assert.match(
+  studentUi,
+  /const tutorStepExpandedState = new Map\(\);/,
+  'Saved Formula Tutor row expansion should use independent step-level state.'
+);
+assert.match(
+  studentUi,
+  /function toggleTutorStepReview\(turnId\)[\s\S]*tutorStepExpandedState\.set\(turnId, tutorStepExpandedState\.get\(turnId\) !== true\)[\s\S]*renderTimeline\(\)/,
+  'Saved Formula Tutor row toggles should be independent from whole-session collapse state.'
 );
 assert.match(
   studentUi,
@@ -589,8 +652,17 @@ assert.match(
   /function handleTimelineClick\(event\)[\s\S]*data-toggle-tutor-session-id[\s\S]*toggleTutorSession/,
   'Timeline click handling should support session-level toggles.'
 );
+assert.match(
+  studentUi,
+  /function handleTimelineClick\(event\)[\s\S]*data-toggle-tutor-step-id[\s\S]*toggleTutorStepReview[\s\S]*data-metric-stair-step-index/,
+  'Saved Formula Tutor row toggles should be handled before live workspace controls.'
+);
 
 assert.match(sessionQuestionBlock, /border:\s*1px solid rgba\(255,214,102,0\.3\);/, 'Formula tutor sessions should show one compact problem-level Original Question block.');
+assert.match(sessionCompactStepBlock, /padding:\s*0\.36rem 0\.44rem;/, 'Saved Formula Tutor steps should use compact history-row spacing.');
+assert.match(studentHtml, /\.student-tutor-history-row,\s*\.student-tutor-history-final\s*\{[\s\S]*flex-wrap:\s*wrap;/, 'Saved Formula Tutor history rows should keep progress, feedback, prompt, and answer compact.');
+assert.match(tutorHistoryRowBlock, /cursor:\s*pointer;/, 'Saved Formula Tutor history rows should look tappable/clickable.');
+assert.match(tutorHistoryExpandedBlock, /display:\s*grid;/, 'Expanded saved Formula Tutor review details should render in a structured panel.');
 assert.match(tutorInstructionBlock, /display:\s*grid;/, 'Formula Tutor instruction block should be a compact shared prompt region.');
 assert.match(tutorInstructionPromptBlock, /font-weight:\s*760;/, 'Formula Tutor active prompt should be prominent in the instruction block.');
 
