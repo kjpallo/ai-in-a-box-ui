@@ -64,6 +64,8 @@
   let activeCalculatorStepKey = '';
   const calculatorOpenTurnIds = new Set();
   const metricStairStepState = new Map();
+  const metricStairStepPreviewState = new Map();
+  const metricStairStepCompletionState = new Set();
   const picketFenceState = new Map();
   const scientificNotationState = new Map();
   const tutorSessionExpandedState = new Map();
@@ -90,6 +92,10 @@
     clearButton?.addEventListener('click', handleClearClick);
     composerTutorChoices?.addEventListener('click', handleComposerTutorChoiceClick);
     timeline.addEventListener('click', handleTimelineClick);
+    timeline.addEventListener('mouseover', handleTimelinePreview);
+    timeline.addEventListener('focusin', handleTimelinePreview);
+    timeline.addEventListener('mouseout', handleTimelinePreviewClear);
+    timeline.addEventListener('focusout', handleTimelinePreviewClear);
     installClassroomFrictionHandlers();
   }
 
@@ -556,7 +562,7 @@
     composerTutorChoices.innerHTML = choices.map((choice) => `
       <button
         type="button"
-        class="student-composer-choice-button"
+        class="student-composer-choice-button student-tutor-control student-tutor-control--choice"
         data-tutor-choice="${escapeAttr(choice.number)}"
       >${escapeHtml(`${choice.number}. ${choice.label}`)}</button>
     `).join('');
@@ -639,6 +645,16 @@
     const tutor = turn.tutor;
     const work = getTutorWork(tutor);
     if (!isStructuredFormulaTutor(tutor, work)) return '';
+
+    const tutorProblemId = normalizeTutorSessionPart(
+      work.tutorProblemId ||
+      tutor.tutorProblemId ||
+      tutor.problemInstanceId ||
+      work.problemInstanceId ||
+      tutor.sessionProblemId ||
+      work.sessionProblemId
+    );
+    if (tutorProblemId) return ['formula-session', tutorProblemId].join('|');
 
     const originalQuestion = normalizeTutorSessionPart(
       work.originalQuestion ||
@@ -854,6 +870,8 @@
     const answer = work.finalAnswer || work.answer || formatTutorAnswer(tutor.solveFor, tutor.finalAnswerDisplay);
     const calculatorCheck = formatTutorCalculatorCheck(work.calculatorCheck);
     const isFormulaTutor = isStructuredFormulaTutor(tutor, work);
+    const showFormulaDetails = isFormulaTutor && shouldShowFormulaStepDetails(work);
+    const showKnownValues = showFormulaDetails && shouldShowFormulaKnownValues(work, knownValues);
     const canUseCalculator = isCurrentStep && isFormulaTutor && tutor.active === true && !tutor.completed && !tutor.stopped;
     const showCalculator = canUseCalculator && shouldShowCalculator(turn.id, tutor, work, currentStep);
     const responseText = String(turn.response || '').trim();
@@ -873,16 +891,17 @@
           <div class="student-tutor-grid">
             ${isFormulaTutor ? renderTutorDetail('Original Question', originalQuestion, 'student-tutor-original-question is-wide', { showWaiting: true }) : ''}
             ${renderTutorDetail('Current Step', currentStep, 'student-tutor-current-step', { showWaiting: true })}
-            ${isFormulaTutor ? renderTutorDetail('Solving For', solveFor, '', { showWaiting: true }) : ''}
-            ${isFormulaTutor ? renderTutorDetail('Formula', work.formula || tutor.formula || '', 'student-tutor-formula', { showWaiting: true }) : ''}
-            ${isFormulaTutor ? renderKnownValuesDetail(knownValues) : ''}
+            ${showFormulaDetails ? renderTutorDetail('Solving For', solveFor, '', { showWaiting: true }) : ''}
+            ${showFormulaDetails ? renderTutorDetail('Formula', work.formula || tutor.formula || '', 'student-tutor-formula', { showWaiting: true }) : ''}
+            ${showKnownValues ? renderKnownValuesDetail(knownValues) : ''}
             ${isFormulaTutor && work.substitution ? renderTutorDetail('Substitution', work.substitution, 'student-tutor-substitution') : ''}
             ${calculatorCheck ? renderTutorDetail('Calculator check', calculatorCheck, 'student-tutor-check') : ''}
             ${answer ? renderTutorDetail('Final answer', answer, 'student-tutor-answer') : ''}
             ${tutor.currentHint ? renderTutorDetail('Hint', tutor.currentHint, 'is-wide') : ''}
           </div>
-          ${isFormulaTutor ? renderFormulaVisualMetadata(work.visualMetadata || tutor.visualMetadata, turn.id) : ''}
-          ${isCurrentStep ? renderTutorChoiceButtons(tutor, work) : ''}
+          ${isCurrentStep ? renderTutorAnswerChips(tutor, work) : ''}
+          ${isFormulaTutor ? renderFormulaVisualMetadata(work.visualMetadata || tutor.visualMetadata, turn.id, { tutor, work }) : ''}
+          ${isCurrentStep && shouldRenderInlineTutorChoices(tutor, work) ? renderTutorChoiceButtons(tutor, work) : ''}
           ${canUseCalculator ? renderCalculatorArea(turn.id, showCalculator) : ''}
           ${isCurrentStep ? renderTutorActions(turn, tutor, { hideCompletedAction: true }) : ''}
         </div>
@@ -1010,6 +1029,8 @@
     const answer = work.finalAnswer || work.answer || formatTutorAnswer(tutor.solveFor, tutor.finalAnswerDisplay);
     const calculatorCheck = work.calculatorCheck?.display || '';
     const isFormulaTutor = isStructuredFormulaTutor(tutor, work);
+    const showFormulaDetails = isFormulaTutor && shouldShowFormulaStepDetails(work);
+    const showKnownValues = showFormulaDetails && shouldShowFormulaKnownValues(work, knownValues);
     const solveFor = work.solveFor || work.solvingFor || tutor.solveFor || tutor.solvingFor || '';
     const originalQuestion = work.originalQuestion || tutor.originalQuestion || '';
     const currentStep = getCurrentTutorPrompt(tutor, work);
@@ -1027,16 +1048,17 @@
           <div class="student-tutor-grid">
             ${originalQuestion ? renderTutorDetail('Original Question', originalQuestion, 'student-tutor-original-question is-wide') : ''}
             ${renderTutorDetail('Current Step', currentStep, 'student-tutor-current-step', { showWaiting: true })}
-            ${isFormulaTutor ? renderTutorDetail('Solving For', solveFor, '', { showWaiting: true }) : ''}
-            ${isFormulaTutor ? renderTutorDetail('Formula', work.formula || tutor.formula || '', 'student-tutor-formula', { showWaiting: true }) : ''}
-            ${isFormulaTutor ? renderKnownValuesDetail(knownValues) : ''}
+            ${showFormulaDetails ? renderTutorDetail('Solving For', solveFor, '', { showWaiting: true }) : ''}
+            ${showFormulaDetails ? renderTutorDetail('Formula', work.formula || tutor.formula || '', 'student-tutor-formula', { showWaiting: true }) : ''}
+            ${showKnownValues ? renderKnownValuesDetail(knownValues) : ''}
             ${isFormulaTutor && work.substitution ? renderTutorDetail('Substitution', work.substitution, 'student-tutor-substitution') : ''}
             ${calculatorCheck ? renderTutorDetail('Calculator check', calculatorCheck, 'student-tutor-check') : ''}
             ${answer ? renderTutorDetail('Final answer', answer, 'student-tutor-answer') : ''}
             ${tutor.currentHint ? renderTutorDetail('Hint', tutor.currentHint, 'is-wide') : ''}
           </div>
-          ${isFormulaTutor ? renderFormulaVisualMetadata(work.visualMetadata || tutor.visualMetadata, turn.id) : ''}
-          ${renderTutorChoiceButtons(controlTutor, work)}
+          ${renderTutorAnswerChips(controlTutor, work)}
+          ${isFormulaTutor ? renderFormulaVisualMetadata(work.visualMetadata || tutor.visualMetadata, turn.id, { tutor, work }) : ''}
+          ${shouldRenderInlineTutorChoices(controlTutor, work) ? renderTutorChoiceButtons(controlTutor, work) : ''}
           ${canUseCalculator ? renderCalculatorArea(turn.id, showCalculator) : ''}
         </div>
         ${renderTutorActions(turn, controlTutor)}
@@ -1079,13 +1101,31 @@
     return renderTutorDetail('Known Values', content, 'student-tutor-known');
   }
 
-  function renderFormulaVisualMetadata(visual, turnId) {
+  function shouldShowFormulaStepDetails(work = {}) {
+    if (work?.isComplete === true && work?.selectedMethod === 'stair_step') return false;
+    if (work?.isComplete === true && isUnit1ConversionVisual(work?.visualMetadata)) return false;
+    return work?.currentStep?.suppressFormulaDetails !== true;
+  }
+
+  function shouldShowFormulaKnownValues(work = {}, knownValues = []) {
+    if (work?.currentStep?.suppressKnownValues === true) return false;
+    return Array.isArray(knownValues) && knownValues.length > 0;
+  }
+
+  function shouldRenderInlineTutorChoices(tutor = {}, work = {}) {
+    if (work?.currentStep?.suppressInlineChoices === true) return false;
+    return Array.isArray(tutor?.currentStep?.choices) && tutor.currentStep.choices.length > 0;
+  }
+
+  function renderFormulaVisualMetadata(visual, turnId, context = {}) {
     if (!visual || typeof visual !== 'object') return '';
+    if (context?.work?.currentStep?.id === 'choose_method' && Array.isArray(visual.methodChoices)) return '';
+    if (context?.work?.isComplete === true && context?.work?.selectedMethod === 'stair_step') return '';
     if (visual.visualType === 'metric_stair_step') {
-      return renderMetricStairStepVisual(visual, turnId);
+      return renderMetricStairStepVisual(visual, turnId, context);
     }
     if (visual.visualType === 'picket_fence') {
-      return renderPicketFenceVisual(visual, turnId);
+      return renderPicketFenceVisual(visual, turnId, context);
     }
     if (visual.visualType === 'scientific_notation_decimal_move') {
       return renderScientificNotationVisual(visual, turnId);
@@ -1093,7 +1133,7 @@
     return '';
   }
 
-  function renderMetricStairStepVisual(visual, turnId) {
+  function renderMetricStairStepVisual(visual, turnId, context = {}) {
     const steps = Array.isArray(visual.steps) ? visual.steps : [];
     const startUnit = String(visual.startUnit || '').trim();
     const targetUnit = String(visual.targetUnit || '').trim();
@@ -1103,16 +1143,22 @@
     const stateKey = metricStairStepKey(turnId);
     const savedIndex = metricStairStepState.has(stateKey) ? Number(metricStairStepState.get(stateKey)) : startIndex;
     const currentIndex = clampMetricStepIndex(Number.isFinite(savedIndex) ? savedIndex : startIndex, steps);
+    const savedPreviewIndex = metricStairStepPreviewState.has(stateKey) ? Number(metricStairStepPreviewState.get(stateKey)) : currentIndex;
+    const previewIndex = clampMetricStepIndex(Number.isFinite(savedPreviewIndex) ? savedPreviewIndex : currentIndex, steps);
     const currentStep = steps[currentIndex] || steps[startIndex] || {};
+    const displayStep = steps[previewIndex] || currentStep || {};
     const startStep = steps[startIndex] || {};
     const startExponent = Number(startStep.exponent) || 0;
-    const currentExponent = Number(currentStep.exponent) || 0;
+    const currentExponent = Number(displayStep.exponent) || 0;
     const startValue = Number(visual.startValue);
-    const currentValue = Number.isFinite(startValue)
+    const computedCurrentValue = Number.isFinite(startValue)
       ? startValue * (10 ** (startExponent - currentExponent))
       : visual.startValue;
-    const currentUnit = metricUnitForStep(currentStep, baseUnit);
+    const stepValue = getMetricStairStepValue(visual, displayStep, previewIndex);
+    const currentValue = stepValue?.value ?? computedCurrentValue;
+    const currentUnit = metricUnitForStep(displayStep, baseUnit);
     const finalDisplay = `${formatMetricVisualValue(visual.resultValue)} ${visual.resultUnit || targetUnit}`.trim();
+    const completed = context?.tutor?.completed === true || context?.work?.isComplete === true;
     const decimalMove = visual.decimalMove || {};
     const moveDirection = String(decimalMove.direction || '').trim();
     const places = Number(decimalMove.places);
@@ -1126,25 +1172,28 @@
           <strong>Metric stair-step</strong>
           <span>${escapeHtml(`${startUnit} to ${targetUnit}`)}</span>
         </div>
-        <div class="metric-stair-step-summary">
-          <span>Start: <strong>${escapeHtml(`${formatMetricVisualValue(visual.startValue)} ${startUnit}`)}</strong></span>
-          <span>Target: <strong>${escapeHtml(targetUnit)}</strong></span>
-          <span>Current: <strong>${escapeHtml(`${formatMetricVisualValue(currentValue)} ${currentUnit}`)}</strong></span>
+        <div class="metric-stair-step-status-panel" aria-live="polite">
+          <span class="metric-stair-step-current-display">Current <strong data-metric-stair-step-current-value>${escapeHtml(stepValue?.display || `${formatMetricVisualValue(currentValue)} ${currentUnit}`)}</strong></span>
+          <span>Start <strong>${escapeHtml(`${formatMetricVisualValue(visual.startValue)} ${startUnit}`)}</strong></span>
+          <span>Target <strong>${escapeHtml(targetUnit)}</strong></span>
         </div>
-        <div class="metric-stair-step-track" role="list" aria-label="Metric staircase">
+        <div class="metric-stair-step-track metric-stair-step-ladder" role="list" aria-label="Metric ladder">
           ${steps.map((step, index) => renderMetricStairStepButton(step, index, {
             baseUnit,
             currentIndex,
+            previewIndex,
             startIndex,
             targetIndex,
             stateKey
           })).join('')}
         </div>
         <div class="metric-stair-step-controls">
-          <button type="button" class="metric-stair-step-control" data-metric-stair-step-move="up" data-metric-stair-step-id="${escapeAttr(stateKey)}">Move up</button>
-          <button type="button" class="metric-stair-step-control" data-metric-stair-step-move="down" data-metric-stair-step-id="${escapeAttr(stateKey)}">Move down</button>
+          <button type="button" class="metric-stair-step-control student-tutor-control student-tutor-control--workspace" data-metric-stair-step-move="decimal-left" data-metric-stair-step-id="${escapeAttr(stateKey)}">Move decimal left</button>
+          <button type="button" class="metric-stair-step-control student-tutor-control student-tutor-control--workspace" data-metric-stair-step-move="decimal-right" data-metric-stair-step-id="${escapeAttr(stateKey)}">Move decimal right</button>
         </div>
-        <p class="metric-stair-step-note">${escapeHtml(moveMessage)} Final result: <strong>${escapeHtml(finalDisplay)}</strong></p>
+        <p class="metric-stair-step-preview-hint">Preview: hover over a step to see the value change. Click or tap the target unit to check it.</p>
+        <p class="metric-stair-step-helper">Moving down/right means multiply by 10 each step. Moving up/left means divide by 10 each step.</p>
+        <p class="metric-stair-step-note">${completed ? `${escapeHtml(moveMessage)} Answer: <strong>${escapeHtml(finalDisplay)}</strong>` : `${escapeHtml(moveMessage)} Answer appears when the marker reaches ${escapeHtml(targetUnit)}.`}</p>
       </section>
     `;
   }
@@ -1152,7 +1201,10 @@
   function renderMetricStairStepButton(step, index, context) {
     const classes = [
       'metric-stair-step-button',
+      'student-tutor-control',
+      'student-tutor-control--workspace',
       index === context.currentIndex ? 'is-current' : '',
+      index === context.previewIndex && index !== context.currentIndex ? 'is-preview' : '',
       index === context.startIndex ? 'is-start' : '',
       index === context.targetIndex ? 'is-target' : ''
     ].filter(Boolean).join(' ');
@@ -1168,6 +1220,7 @@
         class="${escapeAttr(classes)}"
         data-metric-stair-step-id="${escapeAttr(context.stateKey)}"
         data-metric-stair-step-index="${escapeAttr(index)}"
+        style="--metric-step-offset: ${escapeAttr(index)};"
         role="listitem"
       >
         <span class="metric-stair-step-dot" aria-hidden="true"></span>
@@ -1175,6 +1228,14 @@
         ${badges ? `<span class="metric-stair-step-badge">${escapeHtml(badges)}</span>` : ''}
       </button>
     `;
+  }
+
+  function getMetricStairStepValue(visual, step, index) {
+    const values = Array.isArray(visual?.stepValues) ? visual.stepValues : [];
+    const byIndex = values[index];
+    if (byIndex) return byIndex;
+    const label = String(step?.label || '').trim();
+    return values.find((item) => String(item?.label || '').trim() === label) || null;
   }
 
   function handleMetricStairStepClick(control) {
@@ -1193,12 +1254,96 @@
     const directIndex = Number(control.getAttribute('data-metric-stair-step-index'));
     const movement = control.getAttribute('data-metric-stair-step-move') || '';
     let nextIndex = Number.isFinite(directIndex) ? directIndex : currentIndex;
-    if (movement === 'up') nextIndex = currentIndex - 1;
-    if (movement === 'down') nextIndex = currentIndex + 1;
+    if (movement === 'up' || movement === 'decimal-left') nextIndex = currentIndex - 1;
+    if (movement === 'down' || movement === 'decimal-right') nextIndex = currentIndex + 1;
 
-    metricStairStepState.set(stateKey, clampMetricStepIndex(nextIndex, steps));
+    const clampedIndex = clampMetricStepIndex(nextIndex, steps);
+    const targetIndex = findMetricStepIndex(steps, visual.targetPrefix, visual.targetUnit, visual.baseUnit);
+    metricStairStepState.set(stateKey, clampedIndex);
+    metricStairStepPreviewState.set(stateKey, clampedIndex);
     renderTimeline();
+    if (shouldAutoCompleteMetricStairStep(control, visual, stateKey, clampedIndex, targetIndex)) {
+      metricStairStepCompletionState.add(stateKey);
+      window.setTimeout(() => {
+        sendTutorCommand(getMetricStairStepCompletionAnswer(visual));
+      }, 0);
+    }
     return true;
+  }
+
+  function handleTimelinePreview(event) {
+    const control = event.target.closest('[data-metric-stair-step-index]');
+    if (!control || !timeline?.contains(control)) return;
+    const stateKey = control.getAttribute('data-metric-stair-step-id') || '';
+    const index = Number(control.getAttribute('data-metric-stair-step-index'));
+    if (!stateKey || !Number.isFinite(index)) return;
+    const visual = findMetricStairStepVisualForStateKey(stateKey);
+    const steps = Array.isArray(visual?.steps) ? visual.steps : [];
+    if (steps.length === 0) return;
+    const previewIndex = clampMetricStepIndex(index, steps);
+    metricStairStepPreviewState.set(stateKey, previewIndex);
+    updateMetricStairStepPreviewInPlace(stateKey, visual, previewIndex);
+  }
+
+  function handleTimelinePreviewClear(event) {
+    const visualElement = event.target.closest('.metric-stair-step-visual');
+    if (!visualElement || !timeline?.contains(visualElement)) return;
+    const relatedTarget = event.relatedTarget;
+    if (relatedTarget && visualElement.contains(relatedTarget)) return;
+    const stateKey = visualElement.getAttribute('data-metric-stair-step-id') || '';
+    if (!stateKey || !metricStairStepPreviewState.has(stateKey)) return;
+    metricStairStepPreviewState.delete(stateKey);
+    const visual = findMetricStairStepVisualForStateKey(stateKey);
+    const steps = Array.isArray(visual?.steps) ? visual.steps : [];
+    const startIndex = findMetricStepIndex(steps, visual?.startPrefix, visual?.startUnit, visual?.baseUnit);
+    const currentIndex = metricStairStepState.has(stateKey) ? Number(metricStairStepState.get(stateKey)) : startIndex;
+    updateMetricStairStepPreviewInPlace(stateKey, visual, clampMetricStepIndex(currentIndex, steps));
+  }
+
+  function updateMetricStairStepPreviewInPlace(stateKey, visual, previewIndex) {
+    const visualElement = timeline?.querySelector(`.metric-stair-step-visual[data-metric-stair-step-id="${cssEscape(stateKey)}"]`);
+    if (!visualElement) return false;
+    const steps = Array.isArray(visual?.steps) ? visual.steps : [];
+    const index = clampMetricStepIndex(previewIndex, steps);
+    const displayStep = steps[index] || {};
+    const stepValue = getMetricStairStepValue(visual, displayStep, index);
+    const currentDisplay = visualElement.querySelector('[data-metric-stair-step-current-value]');
+    if (currentDisplay) {
+      currentDisplay.textContent = stepValue?.display || buildMetricStairStepDisplay(visual, displayStep, index);
+    }
+    visualElement.querySelectorAll('[data-metric-stair-step-index]').forEach((button) => {
+      const buttonIndex = Number(button.getAttribute('data-metric-stair-step-index'));
+      button.classList.toggle('is-preview', Number.isFinite(buttonIndex) && buttonIndex === index && !button.classList.contains('is-current'));
+    });
+    return true;
+  }
+
+  function buildMetricStairStepDisplay(visual, step, index) {
+    const steps = Array.isArray(visual?.steps) ? visual.steps : [];
+    const baseUnit = String(visual?.baseUnit || '').trim();
+    const startIndex = findMetricStepIndex(steps, visual?.startPrefix, visual?.startUnit, baseUnit);
+    const startStep = steps[startIndex] || {};
+    const startExponent = Number(startStep.exponent) || 0;
+    const currentExponent = Number(step?.exponent) || 0;
+    const startValue = Number(visual?.startValue);
+    const value = Number.isFinite(startValue)
+      ? startValue * (10 ** (startExponent - currentExponent))
+      : visual?.startValue;
+    return `${formatMetricVisualValue(value)} ${metricUnitForStep(step, baseUnit)}`.trim();
+  }
+
+  function shouldAutoCompleteMetricStairStep(control, visual, stateKey, currentIndex, targetIndex) {
+    if (currentIndex !== targetIndex) return false;
+    if (metricStairStepCompletionState.has(stateKey)) return false;
+    if (!isLiveTutorControl(control)) return false;
+    const activeTurn = getCurrentActiveTutorTurn();
+    const tutor = activeTurn?.tutor || {};
+    const work = getTutorWork(tutor);
+    return work?.selectedMethod === 'stair_step' && work?.currentStep?.id === 'move_marker_to_target';
+  }
+
+  function getMetricStairStepCompletionAnswer(visual) {
+    return String(visual?.autoCompleteAnswer || `${formatMetricVisualValue(visual?.resultValue)} ${visual?.resultUnit || visual?.targetUnit || ''}`).trim();
   }
 
   function findMetricStairStepVisualForStateKey(stateKey) {
@@ -1246,57 +1391,63 @@
     });
   }
 
-  function renderPicketFenceVisual(visual, turnId) {
+  function cssEscape(value) {
+    if (window.CSS && typeof window.CSS.escape === 'function') return window.CSS.escape(String(value || ''));
+    return String(value || '').replace(/["\\]/g, '\\$&');
+  }
+
+  function renderPicketFenceVisual(visual, turnId, context = {}) {
     const cells = Array.isArray(visual.cells) ? visual.cells : [];
     const cancellations = Array.isArray(visual.cancellationSteps) ? visual.cancellationSteps : [];
     const stateKey = picketFenceKey(turnId);
-    const progress = getPicketFenceProgress(stateKey, visual);
+    const progress = 0;
+    const fillContext = buildPicketFenceFillContext(visual, context, progress);
     const given = visual.given || {};
     const arithmetic = visual.arithmetic || {};
     const resultDisplay = `${formatPicketFenceNumber(arithmetic.resultValue)} ${arithmetic.resultUnit || visual.targetUnit || ''}`.trim();
+    const finalAnswerSection = getPicketFenceSection(visual, 'final_answer');
+    const finalAnswerFilled = isPicketFenceSectionFilled(finalAnswerSection, fillContext);
+    const finalAnswerDisplay = finalAnswerFilled ? escapeHtml(resultDisplay) : picketFencePlaceholder(finalAnswerSection, 'final answer');
 
     return `
       <section class="picket-fence-visual" data-picket-fence-id="${escapeAttr(stateKey)}" aria-label="Picket fence method visual">
         <div class="picket-fence-header">
           <strong>Picket fence method</strong>
-          <span>${escapeHtml(`${given.value || ''} ${given.unit || ''} to ${visual.targetUnit || ''}`.trim())}</span>
+          <span>${escapeHtml(`Target: ${visual.targetUnit || ''}`.trim())}</span>
         </div>
         <div class="picket-fence-summary">
-          <span>Given: <strong>${escapeHtml(`${formatPicketFenceNumber(given.value)} ${given.unit || ''}`.trim())}</strong></span>
-          <span>Target: <strong>${escapeHtml(visual.targetUnit || '')}</strong></span>
-          <span>Final result: <strong>${escapeHtml(resultDisplay)}</strong></span>
+          <span>Given: <strong>${renderPicketFenceSectionValue(visual, 'given_value', fillContext, `${formatPicketFenceNumber(given.value)} ${given.unit || ''}`.trim(), 'given value + unit')}</strong></span>
+          <span>Answer: <strong>${finalAnswerDisplay}</strong></span>
         </div>
         <div class="picket-fence-cells" aria-label="Conversion factor cells">
           ${cells.map((cell, index) => renderPicketFenceCell(cell, index, {
             stateKey,
             progress,
-            visual
+            visual,
+            fillContext
           })).join('')}
         </div>
         <div class="picket-fence-cancellations" aria-label="Unit cancellations">
           ${cancellations.map((step, index) => `
             <button
               type="button"
-              class="picket-fence-cancellation ${progress >= cells.length + index ? 'is-revealed' : ''}"
-              data-picket-fence-id="${escapeAttr(stateKey)}"
-              data-picket-fence-cancellation="${escapeAttr(index)}"
+              class="picket-fence-cancellation picket-fence-cancel-unit student-tutor-control student-tutor-control--workspace ${isPicketFenceSectionFilled(getPicketFenceSection(visual, 'canceled_units'), fillContext) ? 'is-revealed' : ''}"
+              data-picket-fence-cancel-answer="${escapeAttr(step.unit || '')}"
             >
-              ${escapeHtml(step.unit || '')} cancels
+              ${isPicketFenceSectionFilled(getPicketFenceSection(visual, 'canceled_units'), fillContext) ? `${escapeHtml(step.unit || '')} canceled` : `Cancel ${escapeHtml(step.unit || '')}`}
             </button>
           `).join('')}
         </div>
-        <div class="picket-fence-arithmetic">
-          <span>Top: <strong>${escapeHtml(formatPicketFenceNumber(arithmetic.multiplyNumerators))}</strong></span>
-          <span>Bottom: <strong>${escapeHtml(formatPicketFenceNumber(arithmetic.multiplyDenominators))}</strong></span>
-          <span>Divide: <strong>${escapeHtml(arithmetic.divide || '')}</strong></span>
-          <span>Final result: <strong>${escapeHtml(resultDisplay)}</strong></span>
-        </div>
-        <div class="picket-fence-controls">
-          <button type="button" class="picket-fence-control" data-picket-fence-action="next" data-picket-fence-id="${escapeAttr(stateKey)}">Show next step</button>
-          <button type="button" class="picket-fence-control" data-picket-fence-action="reset" data-picket-fence-id="${escapeAttr(stateKey)}">Reset</button>
-        </div>
       </section>
     `;
+  }
+
+  function isUnit1ConversionVisual(visual) {
+    const type = String(visual?.visualType || '');
+    return type === 'metric_stair_step' ||
+      type === 'picket_fence' ||
+      type === 'temperature_conversion' ||
+      type === 'scientific_notation_decimal_move';
   }
 
   function renderPicketFenceCell(cell, index, context) {
@@ -1305,26 +1456,30 @@
       index <= context.progress ? 'is-revealed' : 'is-pending',
       index === context.progress ? 'is-highlighted' : ''
     ].filter(Boolean).join(' ');
-    const numerator = renderPicketFenceTerm(cell?.numerator, context.visual);
-    const denominator = renderPicketFenceTerm(cell?.denominator, context.visual);
+    const numerator = renderPicketFenceTerm(cell?.numerator, context.visual, {
+      filled: isPicketFenceSectionFilled(getPicketFenceSection(context.visual, cell?.numeratorSectionId), context.fillContext),
+      placeholder: picketFencePlaceholder(getPicketFenceSection(context.visual, cell?.numeratorSectionId), 'top')
+    });
+    const denominator = renderPicketFenceTerm(cell?.denominator, context.visual, {
+      filled: !cell?.denominatorSectionId || isPicketFenceSectionFilled(getPicketFenceSection(context.visual, cell?.denominatorSectionId), context.fillContext),
+      placeholder: cell?.denominatorSectionId ? picketFencePlaceholder(getPicketFenceSection(context.visual, cell.denominatorSectionId), 'bottom') : ''
+    });
 
     return `
-      <button
-        type="button"
+      <div
         class="${escapeAttr(classes)}"
-        data-picket-fence-id="${escapeAttr(context.stateKey)}"
-        data-picket-fence-cell="${escapeAttr(index)}"
       >
         <span class="picket-fence-multiply">${index === 0 ? 'Given' : '&times;'}</span>
         <span class="picket-fence-fraction">
           <span class="picket-fence-numerator">${numerator || '&nbsp;'}</span>
           <span class="picket-fence-denominator">${denominator || '&nbsp;'}</span>
         </span>
-      </button>
+      </div>
     `;
   }
 
-  function renderPicketFenceTerm(value, visual) {
+  function renderPicketFenceTerm(value, visual, options = {}) {
+    if (options.filled === false) return options.placeholder || '<span class="picket-fence-placeholder">___</span>';
     const text = String(value || '').trim();
     if (!text) return '';
     const match = text.match(/^(.+?)\s+([A-Za-zµ]+)$/u);
@@ -1332,6 +1487,50 @@
     const [, amount, unit] = match;
     const unitClass = isPicketFenceCancelledUnit(unit, visual) ? 'picket-fence-cancelled' : 'picket-fence-final-unit';
     return `${escapeHtml(amount)} <span class="${unitClass}">${escapeHtml(unit)}</span>`;
+  }
+
+  function buildPicketFenceFillContext(visual, context = {}, progress = 0) {
+    const tutor = context.tutor || {};
+    const work = context.work || {};
+    const completedSteps = new Set([
+      ...(Array.isArray(work.completedSteps) ? work.completedSteps : []),
+      ...(Array.isArray(tutor.completedSteps) ? tutor.completedSteps : [])
+    ].map((step) => String(step || '').trim()).filter(Boolean));
+    const completed = tutor.completed === true || work.isComplete === true;
+    return {
+      completed,
+      completedSteps,
+      progress,
+      sections: Array.isArray(visual?.fillableSections) ? visual.fillableSections : []
+    };
+  }
+
+  function getPicketFenceSection(visual, sectionId) {
+    if (!sectionId) return null;
+    const sections = Array.isArray(visual?.fillableSections) ? visual.fillableSections : [];
+    return sections.find((section) => String(section?.id || '') === String(sectionId || '')) || null;
+  }
+
+  function isPicketFenceSectionFilled(section, fillContext = {}) {
+    if (!section) return true;
+    if (fillContext.completed) return true;
+    const completedSteps = fillContext.completedSteps instanceof Set ? fillContext.completedSteps : new Set();
+    const unlockSteps = Array.isArray(section.unlockAfterStepIds) ? section.unlockAfterStepIds : [];
+    if (unlockSteps.some((stepId) => completedSteps.has(String(stepId || '')))) return true;
+    return Number(fillContext.progress) > 0 && section.id === 'given_value';
+  }
+
+  function renderPicketFenceSectionValue(visual, sectionId, fillContext, fallbackValue, fallbackPlaceholder) {
+    const section = getPicketFenceSection(visual, sectionId);
+    if (isPicketFenceSectionFilled(section, fillContext)) {
+      return escapeHtml(section?.value || fallbackValue || '');
+    }
+    return picketFencePlaceholder(section, fallbackPlaceholder);
+  }
+
+  function picketFencePlaceholder(section, fallback = 'pending') {
+    const label = section?.placeholder || fallback || 'pending';
+    return `<span class="picket-fence-placeholder">${escapeHtml(label)}</span>`;
   }
 
   function handlePicketFenceClick(control) {
@@ -1444,10 +1643,10 @@
         </div>
         <p class="scientific-notation-rule">${escapeHtml(rule)}</p>
         <div class="scientific-notation-controls">
-          <button type="button" class="scientific-notation-control" data-scientific-notation-action="left" data-scientific-notation-id="${escapeAttr(stateKey)}">Move left</button>
-          <button type="button" class="scientific-notation-control" data-scientific-notation-action="right" data-scientific-notation-id="${escapeAttr(stateKey)}">Move right</button>
-          <button type="button" class="scientific-notation-control" data-scientific-notation-action="next" data-scientific-notation-id="${escapeAttr(stateKey)}">Show next move</button>
-          <button type="button" class="scientific-notation-control" data-scientific-notation-action="reset" data-scientific-notation-id="${escapeAttr(stateKey)}">Reset</button>
+          <button type="button" class="scientific-notation-control student-tutor-control student-tutor-control--workspace" data-scientific-notation-action="left" data-scientific-notation-id="${escapeAttr(stateKey)}">Move left</button>
+          <button type="button" class="scientific-notation-control student-tutor-control student-tutor-control--workspace" data-scientific-notation-action="right" data-scientific-notation-id="${escapeAttr(stateKey)}">Move right</button>
+          <button type="button" class="scientific-notation-control student-tutor-control student-tutor-control--workspace" data-scientific-notation-action="next" data-scientific-notation-id="${escapeAttr(stateKey)}">Show next move</button>
+          <button type="button" class="scientific-notation-control student-tutor-control student-tutor-control--workspace" data-scientific-notation-action="reset" data-scientific-notation-id="${escapeAttr(stateKey)}">Reset</button>
         </div>
       </section>
     `;
@@ -1594,16 +1793,16 @@
       if (options.hideCompletedAction) return '';
       return `
         <div class="student-tutor-actions">
-          <button type="button" class="panel-action-button" data-toggle-work-id="${escapeAttr(turn.id)}">Hide work</button>
+          <button type="button" class="panel-action-button student-tutor-control student-tutor-control--tool" data-toggle-work-id="${escapeAttr(turn.id)}">Hide work</button>
         </div>
       `;
     }
     if (tutor.active !== true) return '';
     return `
       <div class="student-tutor-actions">
-        <button type="button" class="panel-action-button" data-tutor-action="hint">Hint</button>
-        <button type="button" class="panel-action-button" data-tutor-action="restart">Restart</button>
-        <button type="button" class="panel-action-button" data-tutor-action="stop">Stop</button>
+        <button type="button" class="panel-action-button student-tutor-control student-tutor-control--tool" data-tutor-action="hint">Hint</button>
+        <button type="button" class="panel-action-button student-tutor-control student-tutor-control--tool" data-tutor-action="restart">Restart</button>
+        <button type="button" class="panel-action-button student-tutor-control student-tutor-control--tool student-tutor-control--danger" data-tutor-action="stop">Stop</button>
       </div>
     `;
   }
@@ -1619,12 +1818,42 @@
         ${choices.map((choice) => `
           <button
             type="button"
-            class="student-tutor-choice-button"
+            class="student-tutor-choice-button student-tutor-control student-tutor-control--choice"
             data-tutor-choice="${escapeAttr(choice.number)}"
           >${escapeHtml(`${choice.number}. ${choice.label}`)}</button>
         `).join('')}
       </div>
     `;
+  }
+
+  function renderTutorAnswerChips(tutor, work = {}) {
+    if (!tutor || tutor.active !== true || tutor.completed || tutor.stopped) return '';
+    const chips = getCurrentTutorAnswerChips(tutor, work);
+    if (chips.length === 0) return '';
+
+    return `
+      <div class="student-tutor-answer-chips" aria-label="Helpful answer options">
+        <span class="student-tutor-answer-chip-label">Quick choices:</span>
+        ${chips.map((chip) => `
+          <button
+            type="button"
+            class="student-tutor-answer-chip student-tutor-control student-tutor-control--helper"
+            data-tutor-answer-chip="${escapeAttr(chip.value)}"
+          >${escapeHtml(chip.label)}</button>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  function getCurrentTutorAnswerChips(tutor, work = {}) {
+    const step = work.currentStep || tutor.currentStep || {};
+    if (!Array.isArray(step.answerChips)) return [];
+    return step.answerChips
+      .map((chip) => ({
+        label: String(chip?.label || chip?.value || '').trim(),
+        value: String(chip?.value || chip?.label || '').trim()
+      }))
+      .filter((chip) => chip.label && chip.value);
   }
 
   function getCurrentTutorChoices(tutor, work = {}) {
@@ -1643,7 +1872,7 @@
       return `
         <button
           type="button"
-          class="panel-action-button student-calculator-toggle"
+          class="panel-action-button student-calculator-toggle student-tutor-control student-tutor-control--tool"
           data-calculator-toggle-id="${escapeAttr(turnId)}"
           aria-expanded="false"
         >Calculator</button>
@@ -1658,27 +1887,27 @@
       <div class="student-calculator" aria-label="Guided Formula Tutor calculator">
         <div class="student-calculator-display" role="status" aria-live="polite">${escapeHtml(formatCalculatorExpression(calculatorExpression) || '0')}</div>
         <div class="student-calculator-keys">
-          <button type="button" class="student-calculator-button" data-calculator-key="7">7</button>
-          <button type="button" class="student-calculator-button" data-calculator-key="8">8</button>
-          <button type="button" class="student-calculator-button" data-calculator-key="9">9</button>
-          <button type="button" class="student-calculator-button is-operator" data-calculator-key="/">÷</button>
-          <button type="button" class="student-calculator-button" data-calculator-key="4">4</button>
-          <button type="button" class="student-calculator-button" data-calculator-key="5">5</button>
-          <button type="button" class="student-calculator-button" data-calculator-key="6">6</button>
-          <button type="button" class="student-calculator-button is-operator" data-calculator-key="*">×</button>
-          <button type="button" class="student-calculator-button" data-calculator-key="1">1</button>
-          <button type="button" class="student-calculator-button" data-calculator-key="2">2</button>
-          <button type="button" class="student-calculator-button" data-calculator-key="3">3</button>
-          <button type="button" class="student-calculator-button is-operator" data-calculator-key="-">−</button>
-          <button type="button" class="student-calculator-button" data-calculator-key="0">0</button>
-          <button type="button" class="student-calculator-button" data-calculator-key=".">.</button>
-          <button type="button" class="student-calculator-button is-clear" data-calculator-key="clear">C</button>
-          <button type="button" class="student-calculator-button is-operator" data-calculator-key="+">+</button>
-          <button type="button" class="student-calculator-button is-backspace" data-calculator-key="backspace">⌫</button>
-          <button type="button" class="student-calculator-button is-sqrt" data-calculator-key="sqrt">√</button>
-          <button type="button" class="student-calculator-button is-equals" data-calculator-key="equals">=</button>
+          <button type="button" class="student-calculator-button student-tutor-control student-tutor-control--tool" data-calculator-key="7">7</button>
+          <button type="button" class="student-calculator-button student-tutor-control student-tutor-control--tool" data-calculator-key="8">8</button>
+          <button type="button" class="student-calculator-button student-tutor-control student-tutor-control--tool" data-calculator-key="9">9</button>
+          <button type="button" class="student-calculator-button student-tutor-control student-tutor-control--tool is-operator" data-calculator-key="/">÷</button>
+          <button type="button" class="student-calculator-button student-tutor-control student-tutor-control--tool" data-calculator-key="4">4</button>
+          <button type="button" class="student-calculator-button student-tutor-control student-tutor-control--tool" data-calculator-key="5">5</button>
+          <button type="button" class="student-calculator-button student-tutor-control student-tutor-control--tool" data-calculator-key="6">6</button>
+          <button type="button" class="student-calculator-button student-tutor-control student-tutor-control--tool is-operator" data-calculator-key="*">×</button>
+          <button type="button" class="student-calculator-button student-tutor-control student-tutor-control--tool" data-calculator-key="1">1</button>
+          <button type="button" class="student-calculator-button student-tutor-control student-tutor-control--tool" data-calculator-key="2">2</button>
+          <button type="button" class="student-calculator-button student-tutor-control student-tutor-control--tool" data-calculator-key="3">3</button>
+          <button type="button" class="student-calculator-button student-tutor-control student-tutor-control--tool is-operator" data-calculator-key="-">−</button>
+          <button type="button" class="student-calculator-button student-tutor-control student-tutor-control--tool" data-calculator-key="0">0</button>
+          <button type="button" class="student-calculator-button student-tutor-control student-tutor-control--tool" data-calculator-key=".">.</button>
+          <button type="button" class="student-calculator-button student-tutor-control student-tutor-control--tool is-clear" data-calculator-key="clear">C</button>
+          <button type="button" class="student-calculator-button student-tutor-control student-tutor-control--tool is-operator" data-calculator-key="+">+</button>
+          <button type="button" class="student-calculator-button student-tutor-control student-tutor-control--tool is-backspace" data-calculator-key="backspace">⌫</button>
+          <button type="button" class="student-calculator-button student-tutor-control student-tutor-control--tool is-sqrt" data-calculator-key="sqrt">√</button>
+          <button type="button" class="student-calculator-button student-tutor-control student-tutor-control--tool is-equals" data-calculator-key="equals">=</button>
         </div>
-        <button type="button" class="student-calculator-use-result" data-calculator-use-result>Use result</button>
+        <button type="button" class="student-calculator-use-result student-tutor-control student-tutor-control--tool" data-calculator-use-result>Use result</button>
       </div>
     `;
   }
@@ -1808,6 +2037,13 @@
       return;
     }
 
+    const picketFenceCancelAnswer = event.target.closest('[data-picket-fence-cancel-answer]');
+    if (picketFenceCancelAnswer && timeline.contains(picketFenceCancelAnswer)) {
+      if (!isLiveTutorControl(picketFenceCancelAnswer)) return;
+      sendTutorCommand(picketFenceCancelAnswer.getAttribute('data-picket-fence-cancel-answer') || '');
+      return;
+    }
+
     const picketFenceControl = event.target.closest('[data-picket-fence-action], [data-picket-fence-cell], [data-picket-fence-cancellation]');
     if (picketFenceControl && handlePicketFenceClick(picketFenceControl)) {
       return;
@@ -1829,6 +2065,13 @@
     if (tutorChoiceButton && timeline.contains(tutorChoiceButton)) {
       if (!isLiveTutorControl(tutorChoiceButton)) return;
       sendTutorCommand(tutorChoiceButton.getAttribute('data-tutor-choice') || '');
+      return;
+    }
+
+    const tutorAnswerChip = event.target.closest('[data-tutor-answer-chip]');
+    if (tutorAnswerChip && timeline.contains(tutorAnswerChip)) {
+      if (!isLiveTutorControl(tutorAnswerChip)) return;
+      sendTutorCommand(tutorAnswerChip.getAttribute('data-tutor-answer-chip') || '');
       return;
     }
 

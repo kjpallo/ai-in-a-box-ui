@@ -25,6 +25,13 @@ const getCssBlocks = (selector) => {
     .map((match) => match[1]);
 };
 
+const getFunctionBlock = (name) => {
+  const start = studentUi.indexOf(`function ${name}(`);
+  if (start < 0) return '';
+  const next = studentUi.indexOf('\n  function ', start + 1);
+  return next < 0 ? studentUi.slice(start) : studentUi.slice(start, next);
+};
+
 const statusIndex = studentHtml.indexOf('class="student-status-bar"');
 const timelineIndex = studentHtml.indexOf('id="studentTimeline"');
 const formIndex = studentHtml.indexOf('id="studentMessageForm"');
@@ -76,17 +83,28 @@ const tutorOriginalQuestionBlock = getCssBlock('.student-tutor-detail.student-tu
 const tutorOriginalQuestionTextBlock = getCssBlock('.student-tutor-detail.student-tutor-original-question p');
 const calculatorBlock = getCssBlock('.student-calculator');
 const calculatorKeysBlock = getCssBlock('.student-calculator-keys');
+const tutorControlBlock = getCssBlock('.student-tutor-control');
+const tutorControlChoiceBlock = getCssBlock('.student-tutor-control--choice');
+const tutorControlHelperBlock = getCssBlock('.student-tutor-control--helper');
+const tutorControlWorkspaceBlock = getCssBlock('.student-tutor-control--workspace');
+const tutorControlToolBlock = getCssBlock('.student-tutor-control--tool');
+const tutorControlDangerBlock = getCssBlock('.student-tutor-control--danger');
 const tutorChoicesBlock = getCssBlock('.student-tutor-choices');
 const tutorChoiceButtonBlock = getCssBlock('.student-tutor-choice-button');
+const tutorAnswerChipsBlock = getCssBlock('.student-tutor-answer-chips');
+const tutorAnswerChipBlock = getCssBlock('.student-tutor-answer-chip');
 const metricStairStepVisualBlock = getCssBlock('.metric-stair-step-visual');
 const metricStairStepTrackBlock = getCssBlock('.metric-stair-step-track');
 const metricStairStepButtonBlock = getCssBlock('.metric-stair-step-button');
 const metricStairStepCurrentButtonBlock = getCssBlock('.metric-stair-step-button.is-current');
+const metricStairStepPreviewButtonBlock = getCssBlock('.metric-stair-step-button.is-preview');
 const metricStairStepControlBlock = getCssBlock('.metric-stair-step-control');
+const metricStairStepCurrentDisplayBlock = getCssBlock('.metric-stair-step-current-display');
 const picketFenceVisualBlock = getCssBlock('.picket-fence-visual');
 const picketFenceCellBlock = getCssBlock('.picket-fence-cell');
 const picketFenceCancelledBlock = getCssBlock('.picket-fence-cancelled');
 const picketFenceControlBlock = getCssBlock('.picket-fence-control');
+const picketFencePlaceholderBlock = getCssBlock('.picket-fence-placeholder');
 const scientificNotationVisualBlock = getCssBlock('.scientific-notation-visual');
 const scientificNotationNumberBlock = getCssBlock('.scientific-notation-number');
 const scientificNotationDecimalBlock = getCssBlock('.scientific-notation-decimal');
@@ -113,20 +131,38 @@ assert.ok(studentHtml.indexOf('id="studentComposerTutorChoices"') > formIndex &&
 assert.match(composerTutorChoicesBlock, /grid-column:\s*1 \/ -1;/, 'Composer tutor choices should span the input row.');
 assert.match(composerTutorChoicesHiddenBlock, /display:\s*none;/, 'Composer tutor choices should hide when no choice step is active.');
 assert.match(composerChoiceButtonBlock, /min-height:\s*42px;/, 'Composer tutor choice buttons should be prominent tap targets.');
+assert.match(tutorControlBlock, /cursor:\s*pointer;/, 'Shared Formula Tutor controls should inherit a common interactive base.');
+assert.match(tutorControlChoiceBlock, /border-color:\s*rgba\(126,233,255,0\.52\);/, 'Choice controls should inherit the shared choice variant.');
+assert.match(tutorControlHelperBlock, /border-color:\s*rgba\(255,214,102,0\.62\);/, 'Helper chips should inherit the shared helper variant.');
+assert.match(tutorControlWorkspaceBlock, /border-color:\s*rgba\(126,233,255,0\.32\);/, 'Workspace controls should inherit the shared workspace variant.');
+assert.match(tutorControlToolBlock, /border-color:\s*rgba\(126,233,255,0\.42\);/, 'Tutor tools should inherit the shared tool variant.');
+assert.match(tutorControlDangerBlock, /border-color:\s*rgba\(255,150,126,0\.64\);/, 'Only truly destructive tutor tools should use the shared danger variant.');
 assert.match(tutorChoicesBlock, /align-items:\s*stretch;/, 'Formula Tutor choices inside work should render as primary controls.');
 assert.match(tutorChoiceButtonBlock, /min-height:\s*40px;/, 'Formula Tutor choice buttons should be prominent.');
+assert.match(tutorAnswerChipsBlock, /display:\s*flex;/, 'Formula Tutor answer chips should render as a compact chip row.');
+assert.match(tutorAnswerChipsBlock, /rgba\(255,214,102,0\.36\)/, 'Formula Tutor answer chips should use a distinct helper-chip theme.');
+assert.match(studentUi, /student-tutor-answer-chip-label[\s\S]*Quick choices:/, 'Formula Tutor answer chips should include a visible helper label.');
+assert.match(tutorAnswerChipBlock, /border-radius:\s*999px;/, 'Formula Tutor answer chips should use compact pill controls.');
+assert.match(tutorAnswerChipBlock, /linear-gradient\(180deg,\s*rgba\(109,72,8,0\.98\)/, 'Formula Tutor answer chips should not blend into normal tutor buttons.');
 assert.ok(metricStairStepVisualBlock, 'Metric stair-step tutor visual should have a card style.');
 assert.match(metricStairStepVisualBlock, /border-radius:\s*8px;/, 'Metric stair-step visual should stay compact inside Formula Tutor cards.');
-assert.match(metricStairStepTrackBlock, /grid-template-columns:\s*repeat\(10,\s*minmax\(3\.1rem,\s*1fr\)\);/, 'Metric stair-step visual should render ten stable stair positions.');
+assert.match(metricStairStepTrackBlock, /grid-template-columns:\s*repeat\(10,\s*minmax\(3rem,\s*1fr\)\);/, 'Metric stair-step visual should render ten stable stair positions.');
+assert.match(metricStairStepTrackBlock, /align-items:\s*start;/, 'Metric stair-step visual should support a ladder-style stepped layout.');
 assert.match(metricStairStepTrackBlock, /overflow-x:\s*auto;/, 'Metric stair-step visual should scroll horizontally on small screens.');
 assert.match(metricStairStepButtonBlock, /min-height:\s*68px;/, 'Metric stair-step buttons should keep stable dimensions.');
+assert.match(metricStairStepButtonBlock, /margin-top:\s*calc\(var\(--metric-step-offset,\s*0\) \* 0\.34rem\);/, 'Metric stair-step buttons should stagger into a staircase/ladder.');
 assert.match(metricStairStepCurrentButtonBlock, /box-shadow:\s*inset 0 0 0 1px rgba\(102,247,209,0\.42\);/, 'Current metric stair step should be visibly marked.');
+assert.match(metricStairStepPreviewButtonBlock, /box-shadow:\s*inset 0 0 0 1px rgba\(255,214,102,0\.34\);/, 'Previewed metric stair step should be visibly marked while hovering or focusing.');
 assert.match(metricStairStepControlBlock, /min-height:\s*34px;/, 'Metric stair-step controls should be usable tap targets.');
+assert.match(metricStairStepCurrentDisplayBlock, /background:\s*rgba\(255,214,102,0\.14\);/, 'Metric stair-step current value display should be visually separated from the ladder.');
 assert.ok(picketFenceVisualBlock, 'Picket fence tutor visual should have a card style.');
 assert.match(picketFenceVisualBlock, /border-radius:\s*8px;/, 'Picket fence visual should stay compact inside Formula Tutor cards.');
 assert.match(picketFenceCellBlock, /min-width:\s*6\.8rem;/, 'Picket fence cells should keep stable dimensions.');
 assert.match(picketFenceCancelledBlock, /text-decoration:\s*line-through;/, 'Picket fence visual should visibly mark cancelled units.');
-assert.match(picketFenceControlBlock, /min-height:\s*34px;/, 'Picket fence reveal controls should be usable tap targets.');
+assert.match(studentHtml, /\.picket-fence-cancel-unit\s*\{[\s\S]*text-decoration:\s*line-through;/, 'Picket fence cancellation buttons should use a distinct cross-out control style.');
+assert.doesNotMatch(getCssBlock('.picket-fence-cancel-unit'), /255,150,126|84,33,26|39,15,16/, 'Picket fence cancellation buttons should not use danger/destructive styling.');
+assert.match(picketFenceControlBlock, /min-height:\s*34px;/, 'Picket fence cancellation tap targets should be usable.');
+assert.match(picketFencePlaceholderBlock, /font-style:\s*italic;/, 'Picket fence pending sections should render as explicit placeholders.');
 assert.ok(scientificNotationVisualBlock, 'Scientific notation tutor visual should have a card style.');
 assert.match(scientificNotationVisualBlock, /border-radius:\s*8px;/, 'Scientific notation visual should stay compact inside Formula Tutor cards.');
 assert.match(scientificNotationNumberBlock, /font-family:\s*ui-monospace/, 'Scientific notation number should use a stable numeric font.');
@@ -246,23 +282,43 @@ assert.doesNotMatch(
 );
 assert.match(
   studentUi,
-  /function renderTutorSessionStep\(turn, options = \{\}\)[\s\S]*renderTutorDetail\('Original Question'[\s\S]*Current Step[\s\S]*Solving For[\s\S]*Formula[\s\S]*renderKnownValuesDetail[\s\S]*Calculator check[\s\S]*Final answer/,
-  'Each grouped tutor step should include original question context above the current step and formula work fields.'
+  /function renderTutorSessionStep\(turn, options = \{\}\)[\s\S]*shouldShowFormulaStepDetails\(work\)[\s\S]*shouldShowFormulaKnownValues\(work, knownValues\)[\s\S]*renderTutorDetail\('Original Question'[\s\S]*Current Step[\s\S]*showFormulaDetails[\s\S]*renderKnownValuesDetail[\s\S]*Calculator check[\s\S]*Final answer/,
+  'Each grouped tutor step should include original question context and suppress optional formula work fields when the current step requests it.'
 );
 assert.match(
   studentUi,
-  /function renderFormulaVisualMetadata\(visual, turnId\)[\s\S]*visual\.visualType === 'metric_stair_step'[\s\S]*renderMetricStairStepVisual\(visual, turnId\)[\s\S]*visual\.visualType === 'picket_fence'[\s\S]*renderPicketFenceVisual\(visual, turnId\)[\s\S]*visual\.visualType === 'scientific_notation_decimal_move'[\s\S]*renderScientificNotationVisual\(visual, turnId\)/,
-  'Formula Tutor visual metadata should route metric stair-step, picket-fence, and scientific-notation metadata to renderers.'
+  /function renderTutorSessionStep\(turn, options = \{\}\)[\s\S]*renderTutorAnswerChips\(tutor, work\)[\s\S]*renderFormulaVisualMetadata/,
+  'Tutor answer helper chips should render directly after the current step details and before the conversion visual.'
 );
 assert.match(
   studentUi,
-  /function renderMetricStairStepVisual\(visual, turnId\)[\s\S]*Metric stair-step[\s\S]*data-metric-stair-step-move="up"[\s\S]*data-metric-stair-step-move="down"[\s\S]*Final result:/,
-  'Metric stair-step renderer should show title, local movement controls, and final result.'
+  /function renderFormulaVisualMetadata\(visual, turnId, context = \{\}\)[\s\S]*currentStep\?\.id === 'choose_method'[\s\S]*return '';[\s\S]*isComplete === true[\s\S]*selectedMethod === 'stair_step'[\s\S]*return '';[\s\S]*visual\.visualType === 'metric_stair_step'[\s\S]*renderMetricStairStepVisual\(visual, turnId, context\)[\s\S]*visual\.visualType === 'picket_fence'[\s\S]*renderPicketFenceVisual\(visual, turnId, context\)[\s\S]*visual\.visualType === 'scientific_notation_decimal_move'[\s\S]*renderScientificNotationVisual\(visual, turnId\)/,
+  'Formula Tutor visual metadata should hide method visuals before method selection, keep completed stair-step turns compact, and route selected visuals to renderers.'
 );
 assert.match(
   studentUi,
-  /function renderMetricStairStepButton\(step, index, context\)[\s\S]*Start[\s\S]*Target[\s\S]*data-metric-stair-step-index="\$\{escapeAttr\(index\)\}"/,
-  'Metric stair-step buttons should expose clickable stair labels with start and target badges.'
+  /function shouldShowFormulaStepDetails\(work = \{\}\)[\s\S]*isComplete === true[\s\S]*selectedMethod === 'stair_step'[\s\S]*return false[\s\S]*isComplete === true[\s\S]*isUnit1ConversionVisual/,
+  'Completed Unit 1 conversion visual turns should suppress bulky formula detail rows.'
+);
+assert.match(
+  studentUi,
+  /function renderMetricStairStepVisual\(visual, turnId, context = \{\}\)[\s\S]*metricStairStepPreviewState[\s\S]*const previewIndex[\s\S]*getMetricStairStepValue\(visual, displayStep, previewIndex\)[\s\S]*const completed = context\?\.tutor\?\.completed[\s\S]*Metric stair-step[\s\S]*metric-stair-step-status-panel[\s\S]*metric-stair-step-current-display[\s\S]*Current[\s\S]*metric-stair-step-ladder[\s\S]*data-metric-stair-step-move="decimal-left"[\s\S]*Move decimal left[\s\S]*data-metric-stair-step-move="decimal-right"[\s\S]*Move decimal right[\s\S]*Preview: hover over a step to see the value change[\s\S]*Click or tap the target unit to check it[\s\S]*Answer appears when the marker reaches/,
+  'Metric stair-step renderer should show title, central live preview current value display, ladder structure, decimal movement controls, helper text, and hide the answer until target completion.'
+);
+assert.match(
+  studentUi,
+  /function renderMetricStairStepVisual\(visual, turnId, context = \{\}\)[\s\S]*metric-stair-step-control student-tutor-control student-tutor-control--workspace[\s\S]*data-metric-stair-step-move="decimal-left"[\s\S]*metric-stair-step-control student-tutor-control student-tutor-control--workspace[\s\S]*data-metric-stair-step-move="decimal-right"/,
+  'Metric stair-step movement controls should inherit shared workspace control styling.'
+);
+assert.match(
+  studentUi,
+  /function getMetricStairStepValue\(visual, step, index\)[\s\S]*visual\?\.stepValues[\s\S]*return values\.find/,
+  'Metric stair-step renderer should read current values from per-step visual metadata as the marker moves.'
+);
+assert.match(
+  studentUi,
+  /function renderMetricStairStepButton\(step, index, context\)[\s\S]*'metric-stair-step-button',[\s\S]*'student-tutor-control',[\s\S]*'student-tutor-control--workspace'[\s\S]*Start[\s\S]*Target[\s\S]*data-metric-stair-step-index="\$\{escapeAttr\(index\)\}"[\s\S]*--metric-step-offset:/,
+  'Metric stair-step buttons should expose clickable stair labels with start/target badges, stagger offsets, and shared workspace control styling.'
 );
 assert.match(
   studentUi,
@@ -271,8 +327,43 @@ assert.match(
 );
 assert.match(
   studentUi,
-  /function handleMetricStairStepClick\(control\)[\s\S]*metricStairStepState\.set\(stateKey, clampMetricStepIndex\(nextIndex, steps\)\)[\s\S]*renderTimeline\(\)/,
+  /function handleMetricStairStepClick\(control\)[\s\S]*const clampedIndex = clampMetricStepIndex\(nextIndex, steps\)[\s\S]*metricStairStepState\.set\(stateKey, clampedIndex\)[\s\S]*renderTimeline\(\)/,
   'Metric stair-step controls should update local marker state and rerender the visual.'
+);
+assert.match(
+  studentUi,
+  /function handleTimelinePreview\(event\)[\s\S]*data-metric-stair-step-index[\s\S]*metricStairStepPreviewState\.set\(stateKey, previewIndex\)[\s\S]*updateMetricStairStepPreviewInPlace\(stateKey, visual, previewIndex\)/,
+  'Metric stair-step hover/focus preview should update the stationary current value display in place.'
+);
+assert.match(
+  studentUi,
+  /function handleTimelinePreviewClear\(event\)[\s\S]*metric-stair-step-visual[\s\S]*metricStairStepPreviewState\.delete\(stateKey\)[\s\S]*updateMetricStairStepPreviewInPlace/,
+  'Metric stair-step preview should reset in place when leaving the ladder visual.'
+);
+assert.doesNotMatch(
+  getFunctionBlock('handleTimelinePreview'),
+  /renderTimeline\(\)/,
+  'Metric stair-step hover/focus preview should not rerender the whole timeline.'
+);
+assert.doesNotMatch(
+  getFunctionBlock('handleTimelinePreviewClear'),
+  /renderTimeline\(\)/,
+  'Metric stair-step preview clear should not rerender the whole timeline.'
+);
+assert.match(
+  studentUi,
+  /function updateMetricStairStepPreviewInPlace\(stateKey, visual, previewIndex\)[\s\S]*data-metric-stair-step-current-value[\s\S]*classList\.toggle\('is-preview'/,
+  'Metric stair-step in-place preview should update the Current display and marker preview class.'
+);
+assert.match(
+  studentUi,
+  /function shouldAutoCompleteMetricStairStep\(control, visual, stateKey, currentIndex, targetIndex\)[\s\S]*currentIndex !== targetIndex[\s\S]*selectedMethod === 'stair_step'[\s\S]*move_marker_to_target/,
+  'Metric stair-step visual should complete only when the live stair-step marker reaches the target unit.'
+);
+assert.match(
+  studentUi,
+  /sendTutorCommand\(getMetricStairStepCompletionAnswer\(visual\)\)/,
+  'Metric stair-step visual should submit the final answer through the normal tutor command path.'
 );
 assert.match(
   studentUi,
@@ -281,33 +372,53 @@ assert.match(
 );
 assert.match(
   studentUi,
-  /function renderPicketFenceVisual\(visual, turnId\)[\s\S]*Picket fence method[\s\S]*Final result:[\s\S]*data-picket-fence-action="next"[\s\S]*data-picket-fence-action="reset"/,
-  'Picket fence renderer should show title, local reveal controls, and final result.'
+  /function renderPicketFenceVisual\(visual, turnId, context = \{\}\)[\s\S]*const progress = 0;[\s\S]*buildPicketFenceFillContext\(visual, context, progress\)[\s\S]*Picket fence method[\s\S]*Target:[\s\S]*renderPicketFenceSectionValue\(visual, 'given_value'[\s\S]*Answer:[\s\S]*picket-fence-cancel-unit student-tutor-control student-tutor-control--workspace[\s\S]*data-picket-fence-cancel-answer="\$\{escapeAttr\(step\.unit \|\| ''\)\}"[\s\S]*Cancel \$\{escapeHtml\(step\.unit \|\| ''\)\}/,
+  'Picket fence renderer should show title, completed-step fill context, pending sections, distinct clickable cancellations, and an answer slot that stays hidden until completion.'
 );
 assert.match(
   studentUi,
-  /function renderPicketFenceCell\(cell, index, context\)[\s\S]*renderPicketFenceTerm\(cell\?\.numerator[\s\S]*data-picket-fence-cell="\$\{escapeAttr\(index\)\}"[\s\S]*picket-fence-fraction/,
-  'Picket fence cells should expose clickable conversion-factor cells.'
+  /function renderPicketFenceCell\(cell, index, context\)[\s\S]*renderPicketFenceTerm\(cell\?\.numerator[\s\S]*<div[\s\S]*picket-fence-fraction[\s\S]*<\/div>/,
+  'Picket fence cells should render as display cells, not separate clickable reveal controls.'
 );
 assert.match(
   studentUi,
-  /function renderPicketFenceTerm\(value, visual\)[\s\S]*picket-fence-cancelled[\s\S]*picket-fence-final-unit/,
-  'Picket fence terms should mark cancelled units and leave final units uncancelled.'
+  /function renderPicketFenceTerm\(value, visual, options = \{\}\)[\s\S]*picket-fence-placeholder[\s\S]*picket-fence-cancelled[\s\S]*picket-fence-final-unit/,
+  'Picket fence terms should show pending placeholders, mark cancelled units, and leave final units uncancelled.'
 );
 assert.match(
   studentUi,
-  /function handleTimelineClick\(event\)[\s\S]*data-picket-fence-action[\s\S]*handlePicketFenceClick\(picketFenceControl\)/,
-  'Picket fence controls should be handled by the timeline click pipeline.'
+  /function isPicketFenceSectionFilled\(section, fillContext = \{\}\)[\s\S]*completedSteps[\s\S]*unlockAfterStepIds/,
+  'Picket fence fillable sections should be tied to completed Formula Tutor steps.'
+);
+assert.doesNotMatch(
+  studentUi,
+  /data-picket-fence-action="next"|data-picket-fence-action="reset"|data-picket-fence-cell="\$\{escapeAttr\(index\)\}"/,
+  'Picket fence visual should fill from typed tutor answers instead of local reveal controls.'
 );
 assert.match(
   studentUi,
-  /function handlePicketFenceClick\(control\)[\s\S]*picketFenceState\.set\(stateKey, clampPicketFenceProgress\(nextProgress, visual\)\)[\s\S]*renderTimeline\(\)/,
-  'Picket fence controls should update local reveal state and rerender the visual.'
+  /function handleTimelineClick\(event\)[\s\S]*data-picket-fence-cancel-answer[\s\S]*sendTutorCommand\(picketFenceCancelAnswer\.getAttribute\('data-picket-fence-cancel-answer'\)/,
+  'Picket fence cancellation buttons should submit the known cancelling unit through the normal tutor command path.'
+);
+assert.match(
+  studentUi,
+  /function renderTutorAnswerChips\(tutor, work = \{\}\)[\s\S]*student-tutor-answer-chips[\s\S]*Quick choices:[\s\S]*student-tutor-answer-chip student-tutor-control student-tutor-control--helper[\s\S]*data-tutor-answer-chip/,
+  'Picket fence fill-in steps should render labeled bounded answer chips that submit through tutor commands.'
+);
+assert.match(
+  studentUi,
+  /function handleTimelineClick\(event\)[\s\S]*data-tutor-answer-chip[\s\S]*sendTutorCommand\(tutorAnswerChip\.getAttribute\('data-tutor-answer-chip'\)/,
+  'Answer chip clicks should use the same tutor command path as typed answers.'
 );
 assert.match(
   studentUi,
   /function renderScientificNotationVisual\(visual, turnId\)[\s\S]*visual\.decimalMove[\s\S]*Scientific notation decimal mover[\s\S]*Final result:[\s\S]*data-scientific-notation-action="left"[\s\S]*data-scientific-notation-action="right"[\s\S]*data-scientific-notation-action="next"[\s\S]*data-scientific-notation-action="reset"/,
   'Scientific notation renderer should show title, decimal move details, local controls, and final result.'
+);
+assert.match(
+  studentUi,
+  /function renderScientificNotationVisual\(visual, turnId\)[\s\S]*scientific-notation-control student-tutor-control student-tutor-control--workspace[\s\S]*data-scientific-notation-action="left"[\s\S]*scientific-notation-control student-tutor-control student-tutor-control--workspace[\s\S]*data-scientific-notation-action="reset"/,
+  'Scientific notation local controls should inherit shared workspace control styling.'
 );
 assert.match(
   studentUi,
@@ -346,13 +457,23 @@ assert.match(
 );
 assert.match(
   studentUi,
-  /function renderTutorActions\(turn, tutor, options = \{\}\)[\s\S]*options\.hideCompletedAction[\s\S]*data-tutor-action="hint"[\s\S]*data-tutor-action="restart"[\s\S]*data-tutor-action="stop"/,
-  'Hint, Restart, and Stop controls should remain available for the active step.'
+  /function renderTutorActions\(turn, tutor, options = \{\}\)[\s\S]*options\.hideCompletedAction[\s\S]*student-tutor-control--tool[\s\S]*data-tutor-action="hint"[\s\S]*student-tutor-control--tool[\s\S]*data-tutor-action="restart"[\s\S]*student-tutor-control--tool student-tutor-control--danger[\s\S]*data-tutor-action="stop"/,
+  'Hint, Restart, and Stop controls should remain available for the active step with Stop as the only danger-styled tutor action.'
 );
 assert.match(
   studentUi,
-  /function renderTutorChoiceButtons\(tutor, work = \{\}\)[\s\S]*data-tutor-choice="\$\{escapeAttr\(choice\.number\)\}"[\s\S]*\$\{escapeHtml\(`\$\{choice\.number\}\. \$\{choice\.label\}`\)\}/,
-  'Formula tutor choices should render as clickable numbered buttons.'
+  /function renderCalculatorArea\(turnId, showCalculator\)[\s\S]*student-calculator-toggle student-tutor-control student-tutor-control--tool[\s\S]*data-calculator-toggle-id/,
+  'Calculator toggle should inherit shared tool control styling.'
+);
+assert.match(
+  studentUi,
+  /function renderCalculatorHtml\(\)[\s\S]*student-calculator-button student-tutor-control student-tutor-control--tool[\s\S]*data-calculator-key="7"[\s\S]*student-calculator-use-result student-tutor-control student-tutor-control--tool/,
+  'Calculator keys and Use result should inherit shared tool control styling while preserving calculator data attributes.'
+);
+assert.match(
+  studentUi,
+  /function renderTutorChoiceButtons\(tutor, work = \{\}\)[\s\S]*student-tutor-choice-button student-tutor-control student-tutor-control--choice[\s\S]*data-tutor-choice="\$\{escapeAttr\(choice\.number\)\}"[\s\S]*\$\{escapeHtml\(`\$\{choice\.number\}\. \$\{choice\.label\}`\)\}/,
+  'Formula tutor choices should render as clickable numbered buttons with shared choice control styling.'
 );
 assert.match(
   studentUi,
@@ -366,8 +487,13 @@ assert.match(
 );
 assert.match(
   studentUi,
-  /function updateComposerTutorChoices\(\)[\s\S]*getActiveTutorChoiceState\(\)[\s\S]*class="student-composer-choice-button"[\s\S]*data-tutor-choice="\$\{escapeAttr\(choice\.number\)\}"/,
-  'Active Formula Tutor choices should render above the input.'
+  /function updateComposerTutorChoices\(\)[\s\S]*getActiveTutorChoiceState\(\)[\s\S]*class="student-composer-choice-button student-tutor-control student-tutor-control--choice"[\s\S]*data-tutor-choice="\$\{escapeAttr\(choice\.number\)\}"/,
+  'Active Formula Tutor choices should render above the input with shared choice control styling.'
+);
+assert.match(
+  studentUi,
+  /function shouldRenderInlineTutorChoices\(tutor = \{\}, work = \{\}\)[\s\S]*suppressInlineChoices[\s\S]*return Array\.isArray\(tutor\?\.currentStep\?\.choices\)/,
+  'Method-choice steps should be able to suppress duplicate inline tutor choice buttons while composer choices remain available.'
 );
 assert.match(
   studentUi,
@@ -475,6 +601,11 @@ assert.match(
   studentUi,
   /function scrollTimelineToBottom\(\)[\s\S]*student-tutor-session\.is-expanded\.is-active \.student-tutor-session-scroll[\s\S]*timeline\.scrollTop = timeline\.scrollHeight;/,
   'Newest active tutor work should stay visible in both the session scroller and timeline.'
+);
+assert.match(
+  studentUi,
+  /function getTutorSessionKey\(turn\)[\s\S]*tutorProblemId[\s\S]*if \(tutorProblemId\) return \['formula-session', tutorProblemId\]\.join\('\|'\);[\s\S]*originalQuestion[\s\S]*formulaId[\s\S]*solveFor[\s\S]*return \['formula-session', originalQuestion, formulaId, solveFor\]\.join\('\|'\)/,
+  'Formula tutor session grouping should prefer unique tutor problem ids and fall back to original question, formula, and solve-for target for old turns.'
 );
 
 assert.match(tutorBodyBlock, /grid-template-columns:\s*minmax\(0,\s*1fr\);/, 'Non-formula tutor cards should stay in one timeline column without reserving a blank side panel.');
@@ -1322,6 +1453,16 @@ async function testMetricStairStepFormulaTutorVisualMetadata() {
       decimalPlaces: 3
     },
     {
+      name: 'metric-stair-step-km-to-cm',
+      prompt: 'Convert 7.5 km to cm.',
+      startUnit: 'km',
+      targetUnit: 'cm',
+      resultUnit: 'cm',
+      resultValue: 750000,
+      decimalDirection: 'right',
+      decimalPlaces: 5
+    },
+    {
       name: 'metric-stair-step-mg-to-kg',
       prompt: 'Convert 45,456 mg to kilograms.',
       startUnit: 'mg',
@@ -1337,9 +1478,17 @@ async function testMetricStairStepFormulaTutorVisualMetadata() {
     const response = await sendHarnessMessage(harness, testCase.name, testCase.prompt);
     assert.equal(response.body.routeType, 'formula_tutor', `${testCase.name} should start Formula Tutor`);
     assert.equal(response.body.tutor?.formulaId, 'unit1_metric_stair_step_conversion', `${testCase.name} formula id`);
+    assert.match(response.body.response, /Stair-step conversion/i, `${testCase.name} should offer stair-step method`);
+    assert.match(response.body.response, /Picket fence|dimensional analysis/i, `${testCase.name} should offer picket fence method`);
+    assert.doesNotMatch(response.body.response, /Density formula/i, `${testCase.name} should not offer density formula`);
+    assert.doesNotMatch(response.body.response, /Metric stair-step|Picket fence method|Move decimal left|Move decimal right/i, `${testCase.name} should not render method visuals before method choice`);
+    assert.doesNotMatch(response.body.response, /\bdraw\b/i, `${testCase.name} should not ask students to draw a picket fence`);
+    assert.equal(response.body.tutor?.currentStep?.choices?.length, 2, `${testCase.name} should expose exactly two method choices`);
     assertMetricStairStepVisual(response.body.tutor?.work?.visualMetadata, testCase);
     assertMetricStairStepVisual(response.body.tutor?.visualMetadata, testCase);
   }
+
+  await assertMetricMethodBranchVisuals(harness);
 
   const boundaryCases = [
     {
@@ -1367,6 +1516,88 @@ async function testMetricStairStepFormulaTutorVisualMetadata() {
   }
 }
 
+async function assertMetricMethodBranchVisuals(harness) {
+  const stairStart = await sendHarnessMessage(harness, 'metric-method-branch-stair-ui', 'Convert 48 km to meters.');
+  assert.equal(stairStart.body.tutor?.currentStep?.choices?.length, 2, 'method choice should expose exactly two choices');
+  const stair = await sendHarnessMessage(harness, 'metric-method-branch-stair-ui', '1');
+  assert.equal(stair.body.tutor?.work?.selectedMethod, 'stair_step', 'stair-step branch selected method');
+  assert.equal(stair.body.tutor?.totalSteps, 2, 'stair-step branch total steps');
+  assert.match(stair.body.response, /Step 2 of 2/i, 'stair-step branch response step count');
+  assert.match(stair.body.response, /Move the marker to the target unit/i, 'stair-step branch should ask students to move the marker');
+  assert.doesNotMatch(stair.body.response, /What value and unit are we starting with|Which direction does the decimal move|How many metric steps|What is the final answer/i, 'stair-step branch should not ask extra text questions');
+  assert.equal(stair.body.tutor?.work?.currentStep?.suppressFormulaDetails, true, 'stair-step branch should suppress formula detail rows');
+  assert.equal(stair.body.tutor?.work?.currentStep?.suppressKnownValues, true, 'stair-step branch should suppress known values row');
+  assert.equal(stair.body.tutor?.work?.visualMetadata?.visualType, 'metric_stair_step', 'stair-step branch visual type');
+  assert.notEqual(stair.body.tutor?.work?.visualMetadata?.visualType, 'picket_fence', 'stair-step branch should not show picket-fence visual');
+  assert.equal(stair.body.tutor?.work?.visualMetadata?.autoCompleteAnswer, '48,000 m', 'stair-step branch auto-complete answer');
+  assertMetricStepValueDisplays(stair.body.tutor?.work?.visualMetadata, ['48 km', '480 hm', '4,800 dam', '48,000 m']);
+  const completedStair = await sendHarnessMessage(harness, 'metric-method-branch-stair-ui', '48,000 m');
+  assert.equal(completedStair.body.tutor?.completed, true, 'stair-step marker target answer should complete tutor');
+  assert.equal(completedStair.body.tutor?.active, false, 'stair-step marker target answer should deactivate tutor');
+  assert.match(completedStair.body.response, /Correct/i, 'stair-step marker target answer should be correct');
+  assert.match(completedStair.body.response, /48 km\s*=\s*48,?000 m/i, 'stair-step marker target answer should show clean equation final answer');
+
+  const picketStart = await sendHarnessMessage(harness, 'metric-method-branch-picket-ui', 'Convert 48 km to meters.');
+  assert.equal(picketStart.body.tutor?.currentStep?.choices?.length, 2, 'method choice should expose exactly two choices for picket path');
+  const picket = await sendHarnessMessage(harness, 'metric-method-branch-picket-ui', '2');
+  assert.equal(picket.body.tutor?.work?.selectedMethod, 'picket_fence', 'picket-fence branch selected method');
+  assert.equal(picket.body.tutor?.totalSteps, 6, 'picket-fence branch total steps');
+  assert.match(picket.body.response, /Step 2 of 6/i, 'picket-fence branch response step count');
+  assert.match(picket.body.response, /Type the given number/i, 'picket-fence branch short fill prompt');
+  assert.equal((picket.body.tutor?.currentStep?.choices || []).length, 0, 'picket-fence fill step should not use choices');
+  assert.deepEqual(
+    (picket.body.tutor?.currentStep?.answerChips || []).map((chip) => chip.value),
+    ['48'],
+    'picket-fence given number should expose a bounded answer chip'
+  );
+  assert.equal(picket.body.tutor?.work?.currentStep?.suppressFormulaDetails, true, 'picket-fence fill step should suppress formula detail rows');
+  assert.equal(picket.body.tutor?.work?.currentStep?.suppressKnownValues, true, 'picket-fence fill step should suppress known values row');
+  assert.equal(picket.body.tutor?.work?.visualMetadata?.visualType, 'picket_fence', 'picket-fence branch visual type');
+  assert.notEqual(picket.body.tutor?.work?.visualMetadata?.visualType, 'metric_stair_step', 'picket-fence branch should not show stair-step visual');
+  assertPicketFenceFillableSections(picket.body.tutor?.work?.visualMetadata, { name: 'metric-method-branch-picket-ui' });
+  assert.doesNotMatch(picket.body.response, /\bdraw\b/i, 'picket-fence branch should not use draw language');
+  assert.doesNotMatch(picket.body.response, /Which conversion factor belongs|Choose one|1\.\s*1,?000 m/i, 'picket-fence branch should not show multiple-choice fill options');
+  const given = await sendHarnessMessage(harness, 'metric-method-branch-picket-ui', '48');
+  assertCompletedStep(given.body, 'identify_given_quantity');
+  assert.match(given.body.response, /Choose or type the top number for the conversion factor/i, 'picket-fence branch should ask for the numerator number');
+  assert.equal((given.body.tutor?.currentStep?.choices || []).length, 0, 'picket-fence numerator should be typed');
+  assert.deepEqual(
+    (given.body.tutor?.currentStep?.answerChips || []).map((chip) => chip.value),
+    ['1,000', '1'],
+    'picket-fence top number should expose bounded chips'
+  );
+  const top = await sendHarnessMessage(harness, 'metric-method-branch-picket-ui', '1000');
+  assertCompletedStep(top.body, 'fill_conversion_factor_top');
+  assert.match(top.body.response, /Choose or type the bottom number for the conversion factor/i, 'picket-fence branch should ask for the denominator number');
+  assert.deepEqual(
+    (top.body.tutor?.currentStep?.answerChips || []).map((chip) => chip.value),
+    ['1,000', '1'],
+    'picket-fence bottom number should expose bounded chips'
+  );
+  const bottom = await sendHarnessMessage(harness, 'metric-method-branch-picket-ui', '1');
+  assertCompletedStep(bottom.body, 'fill_conversion_factor_bottom');
+  assert.match(bottom.body.response, /Click a unit that cancels, or type one/i, 'picket-fence branch should ask for clickable or typed cancellation');
+  const cancelled = await sendHarnessMessage(harness, 'metric-method-branch-picket-ui', 'km');
+  assertCompletedStep(cancelled.body, 'cancel_units');
+  assert.match(cancelled.body.response, /Type the final number only\. Do not include the unit/i, 'picket-fence branch should ask for the final number only');
+  assert.equal((cancelled.body.tutor?.currentStep?.answerChips || []).length, 0, 'final-number step should not expose the final answer as a chip');
+  const completedPicket = await sendHarnessMessage(harness, 'metric-method-branch-picket-ui', '48000');
+  assert.equal(completedPicket.body.tutor?.completed, true, 'picket-fence typed final answer should complete tutor');
+  assert.equal(completedPicket.body.tutor?.active, false, 'picket-fence typed final answer should deactivate tutor');
+}
+
+function assertMetricStepValueDisplays(visual, expectedDisplays) {
+  const displays = (visual?.stepValues || []).map((item) => item.display);
+  for (const expected of expectedDisplays) {
+    assert.ok(displays.includes(expected), `metric stair-step values should include ${expected}`);
+  }
+}
+
+function assertCompletedStep(body, stepId) {
+  const completedSteps = body.tutor?.work?.completedSteps || body.tutor?.completedSteps || [];
+  assert.ok(completedSteps.includes(stepId), `completed steps should include ${stepId}`);
+}
+
 function assertMetricStairStepVisual(visual, testCase) {
   assert.ok(visual, `${testCase.name} should expose visual metadata`);
   assert.equal(visual.visualType, 'metric_stair_step', `${testCase.name} visual type`);
@@ -1376,7 +1607,14 @@ function assertMetricStairStepVisual(visual, testCase) {
   assert.equal(visual.decimalMove?.direction, testCase.decimalDirection, `${testCase.name} decimal direction`);
   assert.equal(visual.decimalMove?.places, testCase.decimalPlaces, `${testCase.name} decimal places`);
   assert.ok(Array.isArray(visual.steps) && visual.steps.length === 10, `${testCase.name} should expose ten metric stair steps`);
+  assert.ok(Array.isArray(visual.stepValues) && visual.stepValues.length === 10, `${testCase.name} should expose live value displays for each metric stair step`);
+  assert.ok(visual.stepValues.some((item) => item.unit === testCase.startUnit), `${testCase.name} should include start-unit current value`);
+  assert.ok(visual.stepValues.some((item) => item.unit === testCase.targetUnit), `${testCase.name} should include target-unit current value`);
   assert.ok(Math.abs(Number(visual.resultValue) - testCase.resultValue) < 1e-9, `${testCase.name} result value`);
+  const methodLabels = (visual.methodChoices || []).map((choice) => choice.label || '').join(' ');
+  assert.match(methodLabels, /Stair-step conversion/i, `${testCase.name} should expose stair-step method choice`);
+  assert.match(methodLabels, /Picket fence|dimensional analysis/i, `${testCase.name} should expose picket-fence method choice`);
+  assertPicketFenceFillableSections(visual.methodVisuals?.picketFence, testCase);
 }
 
 async function testPicketFenceFormulaTutorVisualMetadata() {
@@ -1453,9 +1691,27 @@ function assertPicketFenceVisual(visual, testCase) {
   assert.ok(Array.isArray(visual.conversionFactors) && visual.conversionFactors.length >= testCase.minFactors, `${testCase.name} should include conversion factors`);
   assert.ok(Array.isArray(visual.cancellationSteps) && visual.cancellationSteps.length >= testCase.expectedCancelUnits.length, `${testCase.name} should include cancellation steps`);
   assert.ok(Array.isArray(visual.cells) && visual.cells.length >= testCase.minFactors + 1, `${testCase.name} should include fraction cells`);
+  assertPicketFenceFillableSections(visual, testCase);
   const cancellationUnits = visual.cancellationSteps.map((step) => String(step.unit || '').toLowerCase());
   for (const unit of testCase.expectedCancelUnits) {
     assert.ok(cancellationUnits.includes(unit.toLowerCase()), `${testCase.name} should cancel ${unit}`);
+  }
+}
+
+function assertPicketFenceFillableSections(visual, testCase) {
+  assert.ok(visual, `${testCase.name} should expose picket-fence metadata`);
+  assert.equal(visual.visualType, 'picket_fence', `${testCase.name} picket-fence visual type`);
+  const sectionIds = (visual.fillableSections || []).map((section) => section.id);
+  for (const id of [
+    'given_value',
+    'conversion_factor_0_numerator',
+    'conversion_factor_0_denominator',
+    'canceled_units',
+    'top_product',
+    'bottom_product',
+    'final_answer'
+  ]) {
+    assert.ok(sectionIds.includes(id), `${testCase.name} should expose fillable section ${id}`);
   }
 }
 

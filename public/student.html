@@ -288,6 +288,7 @@
 
       .student-inline-button,
       .student-tutor-session-toggle,
+      .student-tutor-control,
       .panel-action-button,
       .student-tutor-choice-button,
       .student-composer-choice-button,
@@ -316,6 +317,8 @@
       .student-inline-button:focus-visible,
       .student-tutor-session-toggle:hover,
       .student-tutor-session-toggle:focus-visible,
+      .student-tutor-control:hover,
+      .student-tutor-control:focus-visible,
       .panel-action-button:hover,
       .panel-action-button:focus-visible,
       .student-tutor-choice-button:hover,
@@ -336,6 +339,7 @@
 
       .student-inline-button:active,
       .student-tutor-session-toggle:active,
+      .student-tutor-control:active,
       .panel-action-button:active,
       .student-tutor-choice-button:active,
       .student-composer-choice-button:active,
@@ -349,6 +353,7 @@
 
       .student-inline-button:disabled,
       .student-tutor-session-toggle:disabled,
+      .student-tutor-control:disabled,
       .panel-action-button:disabled,
       .student-tutor-choice-button:disabled,
       .student-composer-choice-button:disabled,
@@ -359,6 +364,44 @@
         color: rgba(223,253,246,0.5);
         box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
         transform: none;
+      }
+
+      .student-tutor-control {
+        font-family: inherit;
+        cursor: pointer;
+      }
+
+      .student-tutor-control--choice {
+        border-color: rgba(126,233,255,0.52);
+      }
+
+      .student-tutor-control--helper {
+        border-color: rgba(255,214,102,0.62);
+      }
+
+      .student-tutor-control--workspace {
+        border-color: rgba(126,233,255,0.32);
+      }
+
+      .student-tutor-control--tool {
+        border-color: rgba(126,233,255,0.42);
+      }
+
+      .student-tutor-control--danger {
+        border-color: rgba(255,150,126,0.64);
+        background:
+          radial-gradient(circle at 50% 18%, rgba(255,255,255,0.16), transparent 22%),
+          linear-gradient(180deg, rgba(84,33,26,0.98), rgba(39,15,16,0.98));
+        color: #ffe4dc;
+      }
+
+      .student-tutor-control--danger:hover,
+      .student-tutor-control--danger:focus-visible {
+        border-color: rgba(255,190,170,0.84);
+        box-shadow:
+          0 3px 0 rgba(24,6,7,0.92),
+          0 0 22px rgba(255,150,126,0.22),
+          inset 0 1px 0 rgba(255,255,255,0.2);
       }
 
       .student-composer {
@@ -847,6 +890,7 @@
 
       .metric-stair-step-header,
       .metric-stair-step-summary,
+      .metric-stair-step-status-panel,
       .metric-stair-step-controls {
         display: flex;
         align-items: center;
@@ -866,6 +910,9 @@
 
       .metric-stair-step-header span,
       .metric-stair-step-summary span,
+      .metric-stair-step-status-panel span,
+      .metric-stair-step-helper,
+      .metric-stair-step-preview-hint,
       .metric-stair-step-note {
         color: #dffdf6;
         font-size: 0.8rem;
@@ -873,18 +920,54 @@
       }
 
       .metric-stair-step-summary strong,
+      .metric-stair-step-status-panel strong,
       .metric-stair-step-note strong {
         color: #fff2a8;
       }
 
+      .metric-stair-step-status-panel {
+        align-items: stretch;
+        padding: 0.44rem;
+        border: 1px solid rgba(126,233,255,0.18);
+        border-radius: 8px;
+        background: rgba(2,8,10,0.34);
+      }
+
+      .metric-stair-step-status-panel span {
+        display: grid;
+        align-content: center;
+        gap: 0.12rem;
+        min-width: 5.2rem;
+      }
+
+      .metric-stair-step-current-display {
+        flex: 1 1 11rem;
+        min-width: min(100%, 11rem);
+        padding: 0.5rem 0.62rem;
+        border: 1px solid rgba(255,214,102,0.5);
+        border-radius: 7px;
+        background: rgba(255,214,102,0.14);
+      }
+
+      .metric-stair-step-current-display strong {
+        display: block;
+        font-size: 1.22rem;
+        line-height: 1.05;
+      }
+
       .metric-stair-step-track {
         display: grid;
-        grid-template-columns: repeat(10, minmax(3.1rem, 1fr));
-        gap: 0.28rem;
+        grid-template-columns: repeat(10, minmax(3rem, 1fr));
+        align-items: start;
+        gap: 0.18rem;
         min-width: 0;
         overflow-x: auto;
-        padding-bottom: 0.08rem;
+        padding: 0.08rem 0.08rem 3.2rem;
         scrollbar-gutter: stable;
+      }
+
+      .metric-stair-step-ladder {
+        isolation: isolate;
       }
 
       .metric-stair-step-button {
@@ -894,12 +977,25 @@
         align-content: start;
         gap: 0.16rem;
         min-height: 68px;
-        min-width: 3.1rem;
+        min-width: 3rem;
+        margin-top: calc(var(--metric-step-offset, 0) * 0.34rem);
         padding: 0.36rem 0.2rem;
         border: 1px solid rgba(126,233,255,0.18);
         border-radius: 7px;
         background: rgba(2,8,10,0.42);
         color: #effff8;
+      }
+
+      .metric-stair-step-button::after {
+        content: "";
+        position: absolute;
+        right: -0.24rem;
+        bottom: -0.25rem;
+        z-index: -1;
+        width: 0.45rem;
+        height: 0.45rem;
+        border-right: 1px solid rgba(126,233,255,0.2);
+        border-bottom: 1px solid rgba(126,233,255,0.2);
       }
 
       .metric-stair-step-button.is-start {
@@ -915,6 +1011,11 @@
         box-shadow: inset 0 0 0 1px rgba(102,247,209,0.42);
       }
 
+      .metric-stair-step-button.is-preview {
+        background: rgba(255,214,102,0.1);
+        box-shadow: inset 0 0 0 1px rgba(255,214,102,0.34);
+      }
+
       .metric-stair-step-dot {
         width: 0.54rem;
         height: 0.54rem;
@@ -925,6 +1026,11 @@
       .metric-stair-step-button.is-current .metric-stair-step-dot {
         background: #66f7d1;
         box-shadow: 0 0 0 4px rgba(102,247,209,0.14);
+      }
+
+      .metric-stair-step-button.is-preview .metric-stair-step-dot {
+        background: #fff2a8;
+        box-shadow: 0 0 0 4px rgba(255,214,102,0.12);
       }
 
       .metric-stair-step-label {
@@ -960,6 +1066,16 @@
 
       .metric-stair-step-note {
         margin: 0;
+      }
+
+      .metric-stair-step-helper {
+        margin: 0;
+        color: rgba(223,253,246,0.82);
+      }
+
+      .metric-stair-step-preview-hint {
+        margin: 0;
+        color: rgba(255,242,168,0.92);
       }
 
       .picket-fence-visual {
@@ -1004,6 +1120,13 @@
       .picket-fence-summary strong,
       .picket-fence-arithmetic strong {
         color: #fff2a8;
+      }
+
+      .picket-fence-summary {
+        padding: 0.34rem 0.42rem;
+        border: 1px solid rgba(126,233,255,0.16);
+        border-radius: 7px;
+        background: rgba(2,8,10,0.28);
       }
 
       .picket-fence-cells {
@@ -1077,6 +1200,11 @@
         color: #66f7d1;
       }
 
+      .picket-fence-placeholder {
+        color: rgba(226,232,240,0.78);
+        font-style: italic;
+      }
+
       .picket-fence-cancellation,
       .picket-fence-control {
         min-height: 34px;
@@ -1086,6 +1214,17 @@
         background: rgba(4,20,20,0.74);
         color: #effff8;
         font-weight: 800;
+      }
+
+      .picket-fence-cancel-unit {
+        border-color: rgba(255,214,102,0.58);
+        background:
+          radial-gradient(circle at 50% 18%, rgba(255,255,255,0.14), transparent 24%),
+          linear-gradient(180deg, rgba(72,58,14,0.96), rgba(31,28,8,0.96));
+        color: #fff2a8;
+        text-decoration: line-through;
+        text-decoration-thickness: 0.12em;
+        text-decoration-color: rgba(102,247,209,0.9);
       }
 
       .picket-fence-cancellation.is-revealed {
@@ -1241,6 +1380,26 @@
         background: rgba(3,22,25,0.68);
       }
 
+      .student-tutor-answer-chips {
+        display: flex;
+        gap: 0.36rem;
+        flex-wrap: wrap;
+        align-items: center;
+        min-width: 0;
+        padding: 0.42rem 0.5rem;
+        border: 1px solid rgba(255,214,102,0.36);
+        border-radius: 10px;
+        background: rgba(52,37,8,0.5);
+      }
+
+      .student-tutor-answer-chip-label {
+        flex: 0 0 auto;
+        color: #ffeeb9;
+        font-size: 0.78rem;
+        font-weight: 850;
+        letter-spacing: 0;
+      }
+
       .student-tutor-choice-button {
         flex: 1 1 150px;
         min-height: 40px;
@@ -1249,6 +1408,30 @@
         text-align: left;
         line-height: 1.18;
         white-space: normal;
+      }
+
+      .student-tutor-answer-chip {
+        min-height: 34px;
+        padding: 0.36rem 0.62rem;
+        border: 1px solid rgba(255,214,102,0.62);
+        border-radius: 999px;
+        background:
+          radial-gradient(circle at 50% 18%, rgba(255,255,255,0.18), transparent 25%),
+          linear-gradient(180deg, rgba(109,72,8,0.98), rgba(57,35,4,0.98));
+        color: #fff7d3;
+        font-size: 0.82rem;
+        font-weight: 850;
+        letter-spacing: 0;
+        box-shadow:
+          0 2px 0 rgba(39,25,3,0.92),
+          inset 0 1px 0 rgba(255,255,255,0.18);
+      }
+
+      .student-tutor-answer-chip:hover,
+      .student-tutor-answer-chip:focus-visible {
+        border-color: rgba(255,238,185,0.9);
+        box-shadow: 0 0 18px rgba(255,214,102,0.28), inset 0 1px 0 rgba(255,255,255,0.22);
+        outline: none;
       }
 
       .student-calculator {
