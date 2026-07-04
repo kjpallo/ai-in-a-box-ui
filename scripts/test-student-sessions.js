@@ -213,6 +213,7 @@ async function main() {
   await testExpandedFormulaTutorFlows();
   await testGuidedFormulaTutorUnitConversionAndCorrections();
   await testFormulaTutorNewProblemDetectionFromConvertedTimeSteps();
+  await testUnit1ConversionTutorStartsNewProblemDuringActiveTutor();
   await testGuidedNetForceTutorFlows();
   await testPhase9CNetForceTutorRegression();
   await testExpandedFormulaTutorIsolation();
@@ -1029,6 +1030,182 @@ async function testCarAdvertisementSecondsToHoursTutor() {
 async function testFormulaTutorNewProblemDetectionFromConvertedTimeSteps() {
   await testOstrichTimeStepStartsSupersonicTutor();
   await testCarAdvertisementTimeStepStartsCyclistTutor();
+}
+
+async function testUnit1ConversionTutorStartsNewProblemDuringActiveTutor() {
+  const harness = createRouteHarness({ studentGuidedFormulaTutoringEnabled: true });
+  const create = await harness.request('POST', '/api/profile/create-student-session');
+  assert.equal(create.statusCode, 201);
+  const classSessionId = create.body.sessionId;
+
+  await runUnit1ConversionRepeatedSameQuestionGetsNewProblemId(harness, classSessionId);
+  await runUnit1ConversionNewProblemDuringStairStep(harness, classSessionId);
+  await runUnit1ConversionNewProblemDuringMethodChoice(harness, classSessionId);
+  await runUnit1ConversionNormalMethodChoiceStillWorks(harness, classSessionId);
+  await runUnit1ConversionPicketFenceTypedAnswersStillWork(harness, classSessionId);
+}
+
+async function runUnit1ConversionRepeatedSameQuestionGetsNewProblemId(harness, classSessionId) {
+  const studentHubId = 'unit1-conversion-repeat-same-question';
+  const question = 'Convert 48 km to meters.';
+
+  const first = await harness.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId,
+    message: question
+  });
+  assert.equal(first.statusCode, 200);
+  assert.equal(first.body.routeType, 'formula_tutor');
+  const firstProblemId = first.body.tutor.tutorProblemId;
+  assert.ok(firstProblemId, 'first repeated conversion should expose tutor problem id');
+
+  const second = await harness.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId,
+    message: question
+  });
+  assert.equal(second.statusCode, 200);
+  assert.equal(second.body.routeType, 'formula_tutor');
+  assert.doesNotMatch(second.body.response, /Not quite yet/i);
+  assert.doesNotMatch(second.body.response, /Choose Stair-step conversion/i);
+  assert.equal(second.body.tutor.work.originalQuestion, question);
+  const secondProblemId = second.body.tutor.tutorProblemId;
+  assert.ok(secondProblemId, 'second repeated conversion should expose tutor problem id');
+  assert.notEqual(secondProblemId, firstProblemId, 'same full question asked again should create a distinct tutor problem id');
+}
+
+async function runUnit1ConversionNewProblemDuringStairStep(harness, classSessionId) {
+  const studentHubId = 'unit1-conversion-new-during-stair';
+  const firstQuestion = 'Convert 48 km to meters.';
+  const secondQuestion = 'Convert 48 cm to meters.';
+
+  const start = await harness.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId,
+    message: firstQuestion
+  });
+  assert.equal(start.statusCode, 200);
+  assert.equal(start.body.routeType, 'formula_tutor');
+  assert.equal(start.body.tutor.work.originalQuestion, firstQuestion);
+  const oldProblemId = start.body.tutor.tutorProblemId;
+  assert.ok(oldProblemId, 'first stair-step conversion should expose tutor problem id');
+
+  const stair = await harness.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId,
+    message: '1'
+  });
+  assert.equal(stair.statusCode, 200);
+  assert.equal(stair.body.tutor.tutorProblemId, oldProblemId, 'method answer should stay in the same tutor problem');
+  assert.equal(stair.body.tutor.work.selectedMethod, 'stair_step');
+  assert.equal(stair.body.tutor.totalSteps, 2);
+  assert.match(stair.body.response, /Step 2 of 2/i);
+
+  const next = await harness.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId,
+    message: secondQuestion
+  });
+  assert.equal(next.statusCode, 200);
+  assert.equal(next.body.routeType, 'formula_tutor');
+  assert.doesNotMatch(next.body.response, /Not quite yet/i);
+  assert.doesNotMatch(next.body.response, /Use the visual controls/i);
+  assert.equal(next.body.tutor.work.originalQuestion, secondQuestion);
+  assert.ok(next.body.tutor.tutorProblemId, 'new conversion should expose tutor problem id');
+  assert.notEqual(next.body.tutor.tutorProblemId, oldProblemId, 'new full question during active stair-step should create a new tutor problem id');
+  assert.equal(next.body.tutor.currentStep.id, 'choose_method');
+  assert.match(next.body.response, /Which method do you want to use/i);
+  assert.equal(
+    harness.studentSessions[classSessionId].anonymousHubs[studentHubId].currentTutorProblem.originalQuestion,
+    secondQuestion
+  );
+}
+
+async function runUnit1ConversionNewProblemDuringMethodChoice(harness, classSessionId) {
+  const studentHubId = 'unit1-conversion-new-during-method';
+  const firstQuestion = 'Convert 48 km to meters.';
+  const secondQuestion = 'Convert 48 cm to meters.';
+
+  const start = await harness.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId,
+    message: firstQuestion
+  });
+  assert.equal(start.statusCode, 200);
+  assert.equal(start.body.routeType, 'formula_tutor');
+  assert.equal(start.body.tutor.currentStep.id, 'choose_method');
+  const oldProblemId = start.body.tutor.tutorProblemId;
+  assert.ok(oldProblemId, 'method-choice conversion should expose tutor problem id');
+
+  const next = await harness.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId,
+    message: secondQuestion
+  });
+  assert.equal(next.statusCode, 200);
+  assert.equal(next.body.routeType, 'formula_tutor');
+  assert.doesNotMatch(next.body.response, /Not quite yet/i);
+  assert.doesNotMatch(next.body.response, /Choose Stair-step conversion/i);
+  assert.equal(next.body.tutor.work.originalQuestion, secondQuestion);
+  assert.ok(next.body.tutor.tutorProblemId, 'new method-choice conversion should expose tutor problem id');
+  assert.notEqual(next.body.tutor.tutorProblemId, oldProblemId, 'new full question during method choice should create a new tutor problem id');
+  assert.equal(next.body.tutor.currentStep.id, 'choose_method');
+}
+
+async function runUnit1ConversionNormalMethodChoiceStillWorks(harness, classSessionId) {
+  const studentHubId = 'unit1-conversion-normal-method-answer';
+  const question = 'Convert 48 km to meters.';
+
+  const start = await harness.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId,
+    message: question
+  });
+  assert.equal(start.statusCode, 200);
+  assert.equal(start.body.routeType, 'formula_tutor');
+  const problemId = start.body.tutor.tutorProblemId;
+  assert.ok(problemId, 'normal method conversion should expose tutor problem id');
+
+  const stair = await harness.request('POST', '/api/student/message', {
+    sessionId: classSessionId,
+    studentHubId,
+    message: '1'
+  });
+  assert.equal(stair.statusCode, 200);
+  assert.equal(stair.body.routeType, 'formula_tutor');
+  assert.equal(stair.body.tutor.tutorProblemId, problemId, 'short method answer should stay in the same tutor problem id');
+  assert.equal(stair.body.tutor.work.originalQuestion, question);
+  assert.equal(stair.body.tutor.work.selectedMethod, 'stair_step');
+  assert.equal(stair.body.tutor.currentStep.id, 'move_marker_to_target');
+}
+
+async function runUnit1ConversionPicketFenceTypedAnswersStillWork(harness, classSessionId) {
+  const studentHubId = 'unit1-conversion-picket-typed';
+  const question = 'Convert 48 km to meters.';
+
+  const start = await harness.request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: question });
+  assert.equal(start.statusCode, 200);
+  const problemId = start.body.tutor.tutorProblemId;
+  assert.ok(problemId, 'picket conversion should expose tutor problem id');
+  const picket = await harness.request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: '2' });
+  assert.equal(picket.statusCode, 200);
+  assert.equal(picket.body.tutor.tutorProblemId, problemId, 'picket method choice should stay in same tutor problem id');
+  assert.equal(picket.body.tutor.work.selectedMethod, 'picket_fence');
+
+  const given = await harness.request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: '48' });
+  assert.equal(given.body.tutor.tutorProblemId, problemId, 'given number should stay in same tutor problem id');
+  const top = await harness.request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: '1000' });
+  assert.equal(top.body.tutor.tutorProblemId, problemId, 'top number should stay in same tutor problem id');
+  const bottom = await harness.request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: '1' });
+  assert.equal(bottom.body.tutor.tutorProblemId, problemId, 'bottom number should stay in same tutor problem id');
+  const cancel = await harness.request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: 'km' });
+  assert.equal(cancel.body.tutor.tutorProblemId, problemId, 'cancellation answer should stay in same tutor problem id');
+  const completed = await harness.request('POST', '/api/student/message', { sessionId: classSessionId, studentHubId, message: '48000' });
+  assert.equal(completed.statusCode, 200);
+  assert.equal(completed.body.tutor.tutorProblemId, problemId, 'completed picket answer should keep same tutor problem id');
+  assert.equal(completed.body.tutor.completed, true);
+  assert.equal(completed.body.tutor.active, false);
+  assert.match(completed.body.response, /48 km\s*=\s*48,?000 m|48,?000 m/i);
 }
 
 async function testOstrichTimeStepStartsSupersonicTutor() {

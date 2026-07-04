@@ -392,6 +392,62 @@ function registerStudentRoutes(app, {
             });
           }
 
+          const conceptPattern = buildStudentConceptTutorPattern(message);
+          const conceptTutorProblem = shouldStartConceptTutorPattern(conceptPattern, result)
+            ? startConceptTutor(conceptPattern, message)
+            : null;
+          if (conceptTutorProblem) {
+            hub.currentTutorProblem = conceptTutorProblem;
+            hub.pendingClarification = null;
+            const response = buildConceptTutorPrompt(hub.currentTutorProblem);
+            const tutorMetadata = buildConceptTutorMetadata(hub.currentTutorProblem, {
+              latestStudentReply: message
+            });
+            const entry = appendStudentHubEntry({
+              session,
+              hub,
+              message,
+              response,
+              routeType: 'concept_tutor',
+              confidence: 'strong',
+              standardId: result.standardId || result.questionRoute?.standardId || result.questionRoute?.public?.standardId || '',
+              isStandardsFollowUp: Boolean(result.isStandardsFollowUp),
+              reportableForStandards: false
+            });
+
+            logCompletedInteraction({
+              message,
+              questionRoute: makeConceptTutorRoute(hub.currentTutorProblem, entry),
+              answerGiven: response,
+              source: 'student',
+              sessionId,
+              reportableForStandards: false,
+              debug: {
+                className: session.className || '',
+                studentHubId,
+                conceptTutor: {
+                  active: true,
+                  restartedWithNewQuestion: true,
+                  previousQuestion: previousTutorProblem.originalQuestion || '',
+                  patternId: hub.currentTutorProblem.id,
+                  originalQuestion: hub.currentTutorProblem.originalQuestion || ''
+                },
+                formulaTutorDecision: maybeFormulaTutorDecisionDebug(formulaTutorDecision),
+                previousTutorType: previousTutorIsConcept
+                  ? 'concept'
+                  : previousTutorIsMotionForceKnowledge ? 'motion_force_knowledge' : 'formula'
+              }
+            });
+
+            return res.json({
+              response,
+              routeType: 'concept_tutor',
+              confidence: 'strong',
+              rateLimit: rateLimitInfo,
+              tutor: tutorMetadata
+            });
+          }
+
           hub.currentTutorProblem = null;
           hub.pendingClarification = result.pendingClarification || null;
           logFormulaTutorDecisionDebug('student_message_new_tutor_question_bypassed', formulaTutorDecision);
@@ -662,27 +718,7 @@ function registerStudentRoutes(app, {
 
       logFormulaTutorDecisionDebug('student_message_bypassed', formulaTutorDecision);
 
-      const conceptPattern = buildElementCompoundMixtureConceptTutorPattern(message) ||
-        buildMixtureConceptTutorPattern(message) ||
-        buildPhysicalChemicalChangeConceptTutorPattern(message) ||
-        buildBalancedUnbalancedForcesConceptTutorPattern(message) ||
-        buildNewtonsLawsConceptTutorPattern(message) ||
-        buildReferencePointConceptTutorPattern(message) ||
-        buildDistanceDisplacementConceptTutorPattern(message) ||
-        buildSpeedVelocityConceptTutorPattern(message) ||
-        buildAccelerationConceptTutorPattern(message) ||
-        buildTransverseLongitudinalWavesConceptTutorPattern(message) ||
-        buildMechanicalElectromagneticWavesConceptTutorPattern(message) ||
-        buildEnergyTransferConceptTutorPattern(message) ||
-        buildEndothermicExothermicConceptTutorPattern(message) ||
-        buildMechanicalEnergyTypesConceptTutorPattern(message) ||
-        buildUnit1VariablesConceptTutorPattern(message) ||
-        buildUnit1GraphingAxisConceptTutorPattern(message) ||
-        buildReflectionRefractionAbsorptionConceptTutorPattern(message) ||
-        buildWavePropertiesConceptTutorPattern(message) ||
-        buildOpenClosedCircuitsConceptTutorPattern(message) ||
-        buildSeriesParallelCircuitsConceptTutorPattern(message) ||
-        buildAcidsBasesConceptTutorPattern(message);
+      const conceptPattern = buildStudentConceptTutorPattern(message);
       const conceptTutorProblem = shouldStartConceptTutorPattern(conceptPattern, result)
         ? startConceptTutor(conceptPattern, message)
         : null;
@@ -945,12 +981,13 @@ function isLikelyNewQuestionDuringTutor(message) {
   if (/^(speed|mass|resisting|increasing|decreasing|faster|slower|stopped|friction|inertia)$/.test(text)) return false;
 
   const asksQuestion = /\?/.test(raw) || /^(what|why|which|how|when|where|does|do|is|are|can)\b/.test(text);
-  const hasConceptTerm = /\b(?:reference point|inertia|friction|motion|force|speed|velocity|acceleration|distance|displacement|graph|slope|balanced force|unbalanced force|air resistance|terminal velocity)\b/.test(text);
+  const hasConceptTerm = /\b(?:reference point|inertia|friction|motion|force|speed|velocity|acceleration|distance|displacement|graph|slope|balanced force|unbalanced force|air resistance|terminal velocity|accuracy|precision|meniscus|measurement|si system|standard units?|scientific method|hypothesis|independent variable|dependent variable|control group|experimental group|qualitative|quantitative|law|theory|endothermic|exothermic|freezing|melting|circuit|series|parallel|matter|conservation of mass|homogeneous|heterogeneous)\b/.test(text);
   const asksForDefinitionOrExplanation =
     /^(?:what\s+is|what\s+are|whats|define|explain|summarize|describe)\b/.test(text) ||
     /^what\s+does\b.*\bmean\b/.test(text) ||
     /^what\s+do\b.*\bmean\b/.test(text);
   if (hasConceptTerm && asksForDefinitionOrExplanation) return true;
+  if (/^(?:is|are)\b/.test(text) && /\b(?:endothermic|exothermic|freezing|melting|series|parallel|homogeneous|heterogeneous|kinetic|potential|conduction|convection|radiation)\b/.test(text)) return true;
   if (!asksQuestion) return false;
 
   if (/^(?:what|which)\s+law\s+is\s+this$/.test(text)) return true;
@@ -959,6 +996,30 @@ function isLikelyNewQuestionDuringTutor(message) {
   }
 
   return false;
+}
+
+function buildStudentConceptTutorPattern(message) {
+  return buildElementCompoundMixtureConceptTutorPattern(message) ||
+    buildMixtureConceptTutorPattern(message) ||
+    buildPhysicalChemicalChangeConceptTutorPattern(message) ||
+    buildBalancedUnbalancedForcesConceptTutorPattern(message) ||
+    buildNewtonsLawsConceptTutorPattern(message) ||
+    buildReferencePointConceptTutorPattern(message) ||
+    buildDistanceDisplacementConceptTutorPattern(message) ||
+    buildSpeedVelocityConceptTutorPattern(message) ||
+    buildAccelerationConceptTutorPattern(message) ||
+    buildTransverseLongitudinalWavesConceptTutorPattern(message) ||
+    buildMechanicalElectromagneticWavesConceptTutorPattern(message) ||
+    buildEnergyTransferConceptTutorPattern(message) ||
+    buildEndothermicExothermicConceptTutorPattern(message) ||
+    buildMechanicalEnergyTypesConceptTutorPattern(message) ||
+    buildUnit1VariablesConceptTutorPattern(message) ||
+    buildUnit1GraphingAxisConceptTutorPattern(message) ||
+    buildReflectionRefractionAbsorptionConceptTutorPattern(message) ||
+    buildWavePropertiesConceptTutorPattern(message) ||
+    buildOpenClosedCircuitsConceptTutorPattern(message) ||
+    buildSeriesParallelCircuitsConceptTutorPattern(message) ||
+    buildAcidsBasesConceptTutorPattern(message);
 }
 
 function isTutorCorrectionDuringTutor(message, currentTutorProblem) {

@@ -153,7 +153,19 @@ const FORMULA_CASES = [
     formulaId: 'unit1_metric_stair_step_conversion',
     includes: [/48,?000 m/i],
     visualType: 'metric_stair_step',
+    methodChoices: [/Stair-step conversion/i, /Picket fence|dimensional analysis/i],
+    noDrawLanguage: true,
     visual: { startUnit: 'km', targetUnit: 'm', resultUnit: 'm', resultValue: 48000, direction: 'right', places: 3 }
+  },
+  {
+    name: 'metric-km-to-cm',
+    prompt: 'Convert 7.5 km to cm.',
+    formulaId: 'unit1_metric_stair_step_conversion',
+    includes: [/750,?000 cm/i],
+    visualType: 'metric_stair_step',
+    methodChoices: [/Stair-step conversion/i, /Picket fence|dimensional analysis/i],
+    noDrawLanguage: true,
+    visual: { startUnit: 'km', targetUnit: 'cm', resultUnit: 'cm', resultValue: 750000, direction: 'right', places: 5 }
   },
   {
     name: 'metric-ks-to-s',
@@ -310,7 +322,16 @@ async function main() {
     assert.equal(response.routeType, 'formula_tutor', `${testCase.name} should start Formula Tutor`);
     assert.equal(response.tutor?.formulaId, testCase.formulaId, `${testCase.name} tutor formulaId`);
     assert.match(response.response, /Step 1 of/i, `${testCase.name} should show guided steps`);
+    if (testCase.methodChoices) {
+      assertCleanMetricMethodChoice(response, testCase);
+    }
+    if (testCase.noDrawLanguage) {
+      assert.doesNotMatch(response.response, /\bdraw\b/i, `${testCase.name} should not ask the student to draw the picket fence`);
+    }
   }
+
+  await assertMetricMethodBranches(request, sessionId);
+  await assertMixedUnitPicketFenceTypedFlow(request, sessionId);
 
   for (const prompt of FORMULA_BOUNDARY_CASES) {
     const response = await ask(request, sessionId, `unit1-conversions-formula-boundary-${slug(prompt)}`, prompt);
@@ -332,6 +353,257 @@ async function main() {
   }
 
   console.log('PASS Unit 1 conversions/notation regressions: direct answers, formula tutor coverage, visual metadata, and route boundaries');
+}
+
+function assertCleanMetricMethodChoice(response, testCase) {
+  assert.match(response.response, /Stair-step conversion/i, `${testCase.name} should offer stair-step method`);
+  assert.match(response.response, /Picket fence|dimensional analysis/i, `${testCase.name} should offer picket fence method`);
+  assert.doesNotMatch(response.response, /Density formula/i, `${testCase.name} should not offer density formula`);
+  assert.doesNotMatch(response.response, /Metric stair-step/i, `${testCase.name} should not render stair-step visual before method choice`);
+  assert.doesNotMatch(response.response, /Picket fence method/i, `${testCase.name} should not render picket-fence visual before method choice`);
+  assert.doesNotMatch(response.response, /Move decimal left|Move decimal right/i, `${testCase.name} should not render movement controls before method choice`);
+  const choices = response.tutor?.currentStep?.choices || [];
+  assert.equal(choices.length, 2, `${testCase.name} should expose exactly two method choices`);
+  assert.deepEqual(
+    choices.map((choice) => choice.label),
+    ['Stair-step conversion', 'Picket fence / dimensional analysis'],
+    `${testCase.name} method choices`
+  );
+}
+
+async function assertMetricMethodBranches(request, sessionId) {
+  const stairStart = await ask(request, sessionId, 'unit1-conversions-method-branch-stair-start', 'Convert 48 km to meters.');
+  assertCleanMetricMethodChoice(stairStart, { name: 'metric-method-branch-stair' });
+  const stair = await ask(request, sessionId, 'unit1-conversions-method-branch-stair-start', '1');
+  assert.equal(stair.routeType, 'formula_tutor', 'stair-step method choice should stay in Formula Tutor');
+  assert.equal(stair.tutor?.work?.selectedMethod, 'stair_step', 'stair-step method should be selected');
+  assert.equal(stair.tutor?.totalSteps, 2, 'stair-step branch should have two total steps');
+  assert.match(stair.response, /Step 2 of 2/i, 'stair-step branch should show Step 2 of 2');
+  assert.match(stair.response, /Move the marker to the target unit/i, 'stair-step branch should tell students to move the marker');
+  assert.doesNotMatch(stair.response, /What value and unit are we starting with|Which direction does the decimal move|How many metric steps|What is the final answer/i, 'stair-step branch should not ask extra text questions');
+  assert.equal(stair.tutor?.work?.visualMetadata?.visualType, 'metric_stair_step', 'stair-step branch should show metric stair-step visual metadata');
+  assert.notEqual(stair.tutor?.work?.visualMetadata?.visualType, 'picket_fence', 'stair-step branch should not show picket-fence visual metadata');
+  assert.equal(stair.tutor?.work?.visualMetadata?.startUnit, 'km', 'stair-step branch should expose start unit');
+  assert.equal(stair.tutor?.work?.visualMetadata?.targetUnit, 'm', 'stair-step branch should expose target unit');
+  assertNearly(stair.tutor?.work?.visualMetadata?.resultValue, 48000, 'stair-step branch result value');
+  assert.equal(stair.tutor?.work?.visualMetadata?.autoCompleteAnswer, '48,000 m', 'stair-step branch should expose auto-complete answer');
+  assertMetricStepValueDisplays(stair.tutor?.work?.visualMetadata, ['48 km', '480 hm', '4,800 dam', '48,000 m']);
+  assert.equal(stair.tutor?.work?.currentStep?.suppressFormulaDetails, true, 'stair-step visual step should suppress formula detail rows');
+  assert.equal(stair.tutor?.work?.currentStep?.suppressKnownValues, true, 'stair-step visual step should suppress known values');
+  assert.doesNotMatch(stair.response, /\bdraw\b/i, 'stair-step branch should not use draw language');
+  const completedStair = await ask(request, sessionId, 'unit1-conversions-method-branch-stair-start', '48,000 m');
+  assert.equal(completedStair.routeType, 'formula_tutor', 'stair-step completion should stay Formula Tutor');
+  assert.equal(completedStair.tutor?.completed, true, 'stair-step final marker answer should complete the tutor');
+  assert.equal(completedStair.tutor?.active, false, 'stair-step final marker answer should deactivate the tutor');
+  assert.match(completedStair.response, /Correct/i, 'stair-step final marker answer should be marked correct');
+  assert.match(completedStair.response, /48 km\s*=\s*48,?000 m/i, 'stair-step final marker answer should show clean equation final answer');
+
+  const picketStart = await ask(request, sessionId, 'unit1-conversions-method-branch-picket-start', 'Convert 48 km to meters.');
+  assertCleanMetricMethodChoice(picketStart, { name: 'metric-method-branch-picket' });
+  const picket = await ask(request, sessionId, 'unit1-conversions-method-branch-picket-start', '2');
+  assert.equal(picket.routeType, 'formula_tutor', 'picket-fence method choice should stay in Formula Tutor');
+  assert.equal(picket.tutor?.work?.selectedMethod, 'picket_fence', 'picket-fence method should be selected');
+  assert.equal(picket.tutor?.totalSteps, 6, 'picket-fence branch should have six total steps');
+  assert.match(picket.response, /Step 2 of 6/i, 'picket-fence branch should show Step 2 of 6');
+  assert.match(picket.response, /Type the given number/i, 'picket-fence branch should use a short fill-in prompt');
+  assert.equal((picket.tutor?.currentStep?.choices || []).length, 0, 'picket-fence fill step should not use multiple-choice options');
+  assert.equal(picket.tutor?.work?.currentStep?.suppressFormulaDetails, true, 'picket-fence fill step should suppress formula detail rows');
+  assert.equal(picket.tutor?.work?.currentStep?.suppressKnownValues, true, 'picket-fence fill step should suppress known values');
+  assert.equal(picket.tutor?.work?.visualMetadata?.visualType, 'picket_fence', 'picket-fence branch should show picket-fence visual metadata');
+  assert.notEqual(picket.tutor?.work?.visualMetadata?.visualType, 'metric_stair_step', 'picket-fence branch should not show stair-step visual metadata');
+  assertPicketFenceFillableSections(picket.tutor?.work?.visualMetadata, { name: 'metric-method-branch-picket' });
+  assert.doesNotMatch(picket.response, /\bdraw\b/i, 'picket-fence branch should not use draw language');
+  assert.doesNotMatch(picket.response, /Which conversion factor belongs|Choose one|1\.\s*1,?000 m/i, 'picket-fence branch should not show multiple-choice conversion-factor clutter');
+
+  const given = await ask(request, sessionId, 'unit1-conversions-method-branch-picket-start', '48');
+  assertCompletedStep(given, 'identify_given_quantity');
+  assert.match(given.response, /Choose or type the top number for the conversion factor/i, 'picket-fence branch should ask for the factor top number');
+  assert.equal((given.tutor?.currentStep?.choices || []).length, 0, 'factor top should be typed, not multiple choice');
+  assert.deepEqual(
+    (given.tutor?.currentStep?.answerChips || []).map((chip) => chip.value),
+    ['1,000', '1'],
+    'factor top should expose bounded answer chips'
+  );
+
+  const top = await ask(request, sessionId, 'unit1-conversions-method-branch-picket-start', '1000');
+  assertCompletedStep(top, 'fill_conversion_factor_top');
+  assert.match(top.response, /Choose or type the bottom number for the conversion factor/i, 'picket-fence branch should ask for the factor bottom number');
+  assert.equal((top.tutor?.currentStep?.choices || []).length, 0, 'factor bottom should be typed, not multiple choice');
+  assert.deepEqual(
+    (top.tutor?.currentStep?.answerChips || []).map((chip) => chip.value),
+    ['1,000', '1'],
+    'factor bottom should expose bounded answer chips'
+  );
+
+  const bottom = await ask(request, sessionId, 'unit1-conversions-method-branch-picket-start', '1');
+  assertCompletedStep(bottom, 'fill_conversion_factor_bottom');
+  assert.match(bottom.response, /Click a unit that cancels, or type one/i, 'picket-fence branch should ask for clickable or typed cancellation');
+  assert.equal((bottom.tutor?.currentStep?.choices || []).length, 0, 'cancellation should be typed, not multiple choice');
+
+  const cancelled = await ask(request, sessionId, 'unit1-conversions-method-branch-picket-start', 'km');
+  assertCompletedStep(cancelled, 'cancel_units');
+  assert.match(cancelled.response, /Type the final number only\. Do not include the unit/i, 'picket-fence branch should ask for final number only');
+  assert.equal((cancelled.tutor?.currentStep?.answerChips || []).length, 0, 'final number should not be exposed as a chip');
+
+  const completedPicket = await ask(request, sessionId, 'unit1-conversions-method-branch-picket-start', '48000');
+  assert.equal(completedPicket.tutor?.completed, true, 'picket-fence final answer should complete the tutor');
+  assert.equal(completedPicket.tutor?.active, false, 'picket-fence final answer should deactivate the tutor');
+  assert.match(completedPicket.response, /48 km\s*=\s*48,?000 m|48,?000 m/i, 'picket-fence final answer should show the final result');
+
+  await assertMetricPicketFinalAnswerAccepted(request, sessionId, '48000 m');
+  await assertMetricPicketFinalAnswerAccepted(request, sessionId, '48,000 m');
+}
+
+async function assertMetricPicketFinalAnswerAccepted(request, sessionId, finalAnswer) {
+  const studentHubId = `unit1-conversions-metric-picket-final-${finalAnswer.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`;
+  const start = await ask(request, sessionId, studentHubId, 'Convert 48 km to meters.');
+  const problemId = start.tutor?.tutorProblemId;
+  assert.ok(problemId, `${finalAnswer} final-answer check should expose tutorProblemId`);
+  await ask(request, sessionId, studentHubId, '2');
+  await ask(request, sessionId, studentHubId, '48');
+  await ask(request, sessionId, studentHubId, '1000');
+  await ask(request, sessionId, studentHubId, '1');
+  const readyForFinal = await ask(request, sessionId, studentHubId, 'km');
+  assert.equal(readyForFinal.tutor?.tutorProblemId, problemId, `${finalAnswer} final-answer check should preserve tutorProblemId before final`);
+  assert.equal(readyForFinal.tutor?.currentStep?.id, 'calculate_result', `${finalAnswer} final-answer check should reach final-number step`);
+  assert.match(readyForFinal.response, /Type the final number only\. Do not include the unit/i, `${finalAnswer} final-answer prompt should still ask for number only`);
+
+  const completed = await ask(request, sessionId, studentHubId, finalAnswer);
+  assert.equal(completed.routeType, 'formula_tutor', `${finalAnswer} should stay Formula Tutor`);
+  assert.equal(completed.tutor?.tutorProblemId, problemId, `${finalAnswer} should preserve tutorProblemId`);
+  assert.equal(completed.tutor?.completed, true, `${finalAnswer} should complete the tutor`);
+  assert.match(completed.response, /48,?000 m/i, `${finalAnswer} should produce final answer with unit`);
+}
+
+async function assertMixedUnitPicketFenceTypedFlow(request, sessionId) {
+  const studentHubId = 'unit1-conversions-mixed-picket-typed';
+  const start = await ask(request, sessionId, studentHubId, 'Convert 250.4 cm to feet.');
+  assert.equal(start.routeType, 'formula_tutor', 'mixed-unit conversion should start Formula Tutor');
+  assert.equal(start.tutor?.formulaId, 'unit1_picket_fence_conversion', 'mixed-unit conversion should use picket-fence formula id');
+  assert.ok(start.tutor?.tutorProblemId, 'mixed-unit picket fence should expose tutorProblemId');
+  assert.equal(start.tutor?.currentStep?.id, 'identify_given_quantity', 'mixed-unit picket fence should start with typed given number');
+  assert.match(start.response, /Type the given number/i, 'mixed-unit picket fence should use a short typed prompt');
+  assertNoMixedPicketClutter(start, 'mixed-unit start');
+  assert.equal((start.tutor?.currentStep?.choices || []).length, 0, 'mixed-unit given number should not use multiple choice');
+  assert.equal(start.tutor?.work?.currentStep?.suppressFormulaDetails, true, 'mixed-unit given step should suppress formula detail rows');
+  assert.equal(start.tutor?.work?.currentStep?.suppressKnownValues, true, 'mixed-unit given step should suppress known values');
+  assert.equal(start.tutor?.work?.visualMetadata?.visualType, 'picket_fence', 'mixed-unit conversion should expose picket-fence visual metadata');
+  assert.equal(start.tutor?.work?.visualMetadata?.given?.unit, 'cm', 'mixed-unit visual should supply starting unit');
+  assert.equal(start.tutor?.work?.visualMetadata?.targetUnit, 'ft', 'mixed-unit visual should supply target unit');
+  assertPicketFenceFillableSections(start.tutor?.work?.visualMetadata, { name: 'mixed-unit-picket' });
+
+  const problemId = start.tutor.tutorProblemId;
+  const given = await ask(request, sessionId, studentHubId, '250.4');
+  assertSameMixedPicketProblem(given, problemId, 'given number');
+  assertCompletedStep(given, 'identify_given_quantity');
+  assert.match(given.response, /Choose or type the top number for the conversion factor/i, 'mixed-unit picket should ask for first top number');
+  assert.deepEqual(
+    (given.tutor?.currentStep?.answerChips || []).map((chip) => chip.value),
+    ['1', '2.54', '12'],
+    'mixed-unit factor step should expose bounded conversion-factor number chips'
+  );
+
+  const firstTop = await ask(request, sessionId, studentHubId, '1');
+  assertSameMixedPicketProblem(firstTop, problemId, 'first top number');
+  assertCompletedStep(firstTop, 'fill_conversion_factor_0_top');
+  assert.match(firstTop.response, /Choose or type the bottom number for the conversion factor/i, 'mixed-unit picket should ask for first bottom number');
+
+  const firstBottom = await ask(request, sessionId, studentHubId, '2.54');
+  assertSameMixedPicketProblem(firstBottom, problemId, 'first bottom number');
+  assertCompletedStep(firstBottom, 'fill_conversion_factor_0_bottom');
+  assert.match(firstBottom.response, /Choose or type the top number for the conversion factor/i, 'mixed-unit picket should ask for second top number');
+
+  const secondTop = await ask(request, sessionId, studentHubId, '1');
+  assertSameMixedPicketProblem(secondTop, problemId, 'second top number');
+  assertCompletedStep(secondTop, 'fill_conversion_factor_1_top');
+  assert.match(secondTop.response, /Choose or type the bottom number for the conversion factor/i, 'mixed-unit picket should ask for second bottom number');
+
+  const secondBottom = await ask(request, sessionId, studentHubId, '12');
+  assertSameMixedPicketProblem(secondBottom, problemId, 'second bottom number');
+  assertCompletedStep(secondBottom, 'fill_conversion_factor_1_bottom');
+  assert.match(secondBottom.response, /Click a unit that cancels, or type one/i, 'mixed-unit picket should allow cancellation click or typing fallback');
+  const visibleCancellationUnits = (secondBottom.tutor?.work?.visualMetadata?.cancellationSteps || [])
+    .map((step) => String(step.unit || '').toLowerCase())
+    .filter(Boolean);
+  assert.ok(
+    visibleCancellationUnits.includes('cm'),
+    'mixed-unit visual should expose cm cancellation unit for click/tap fallback'
+  );
+  assert.ok(
+    visibleCancellationUnits.includes('in'),
+    'mixed-unit visual should expose in cancellation unit for click/tap fallback'
+  );
+
+  const cancelled = await ask(request, sessionId, studentHubId, 'cm');
+  assertSameMixedPicketProblem(cancelled, problemId, 'typed cancellation fallback');
+  assertCompletedStep(cancelled, 'cancel_units');
+  assert.match(cancelled.response, /Type the final number only\. Do not include the unit/i, 'mixed-unit picket should ask for final number only');
+  assert.equal((cancelled.tutor?.currentStep?.answerChips || []).length, 0, 'mixed-unit final number should not be exposed as a chip');
+
+  const completed = await ask(request, sessionId, studentHubId, '8.22');
+  assert.equal(completed.routeType, 'formula_tutor', 'mixed-unit final answer should stay Formula Tutor');
+  assert.equal(completed.tutor?.tutorProblemId, problemId, 'mixed-unit final answer should preserve tutorProblemId');
+  assert.equal(completed.tutor?.completed, true, 'mixed-unit final answer should complete tutor');
+  assert.equal(completed.tutor?.active, false, 'mixed-unit final answer should deactivate tutor');
+  assert.match(completed.response, /8\.22 ft/i, 'mixed-unit final answer should include final units');
+
+  const fresh = await ask(request, sessionId, studentHubId, 'Convert 48 cm to meters.');
+  assert.equal(fresh.routeType, 'formula_tutor', 'new full question after mixed-unit completion should start Formula Tutor');
+  assert.notEqual(fresh.tutor?.tutorProblemId, problemId, 'new full conversion should get a separate tutorProblemId');
+
+  await assertMixedUnitCancellationUnitAccepted(request, sessionId, 'cm');
+  await assertMixedUnitCancellationUnitAccepted(request, sessionId, 'in');
+}
+
+async function assertMixedUnitCancellationUnitAccepted(request, sessionId, cancellationUnit) {
+  const studentHubId = `unit1-conversions-mixed-picket-cancel-${cancellationUnit}`;
+  const start = await ask(request, sessionId, studentHubId, 'Convert 250.4 cm to feet.');
+  const problemId = start.tutor?.tutorProblemId;
+  assert.ok(problemId, `${cancellationUnit} cancellation check should expose tutorProblemId`);
+
+  await ask(request, sessionId, studentHubId, '250.4');
+  await ask(request, sessionId, studentHubId, '1');
+  await ask(request, sessionId, studentHubId, '2.54');
+  await ask(request, sessionId, studentHubId, '1');
+  const readyToCancel = await ask(request, sessionId, studentHubId, '12');
+  assertSameMixedPicketProblem(readyToCancel, problemId, `${cancellationUnit} ready-to-cancel step`);
+  assert.equal(readyToCancel.tutor?.currentStep?.id, 'cancel_units', `${cancellationUnit} check should reach cancellation step`);
+  assert.ok(
+    (readyToCancel.tutor?.work?.visualMetadata?.cancellationSteps || [])
+      .some((step) => String(step.unit || '').toLowerCase() === cancellationUnit),
+    `${cancellationUnit} should be visible as a cancellation button`
+  );
+
+  const cancelled = await ask(request, sessionId, studentHubId, cancellationUnit);
+  assertSameMixedPicketProblem(cancelled, problemId, `${cancellationUnit} cancellation answer`);
+  assertCompletedStep(cancelled, 'cancel_units');
+  assert.equal(cancelled.tutor?.currentStep?.id, 'calculate_result', `${cancellationUnit} cancellation should advance to final-number step`);
+}
+
+function assertNoMixedPicketClutter(response, label) {
+  assert.doesNotMatch(response.response, /density formula/i, `${label} should not offer density formula`);
+  assert.doesNotMatch(response.response, /metric stair-step/i, `${label} should not offer metric stair-step for mixed-unit picket fence`);
+  assert.doesNotMatch(response.response, /\bdraw\b/i, `${label} should not use draw language`);
+  assert.doesNotMatch(response.response, /Choose one:/i, `${label} should not use multiple-choice fill values`);
+}
+
+function assertSameMixedPicketProblem(response, problemId, label) {
+  assert.equal(response.routeType, 'formula_tutor', `${label} should stay in Formula Tutor`);
+  assert.equal(response.tutor?.tutorProblemId, problemId, `${label} should stay in same tutorProblemId`);
+  assert.equal((response.tutor?.currentStep?.choices || []).length, 0, `${label} should not use multiple-choice fill values`);
+  assertNoMixedPicketClutter(response, label);
+}
+
+function assertMetricStepValueDisplays(visual, expectedDisplays) {
+  const displays = (visual?.stepValues || []).map((item) => item.display);
+  for (const expected of expectedDisplays) {
+    assert.ok(displays.includes(expected), `metric stair-step values should include ${expected}`);
+  }
+}
+
+function assertCompletedStep(response, stepId) {
+  const completedSteps = response.tutor?.work?.completedSteps || response.tutor?.completedSteps || [];
+  assert.ok(completedSteps.includes(stepId), `completed steps should include ${stepId}`);
 }
 
 async function ask(request, sessionId, studentHubId, message) {
@@ -369,6 +641,11 @@ function assertVisualMetadata(visual, testCase) {
     assert.equal(visual.decimalMove?.direction, testCase.visual.direction, `${testCase.name} decimal direction`);
     assert.equal(visual.decimalMove?.places, testCase.visual.places, `${testCase.name} decimal places`);
     assert.ok(Array.isArray(visual.steps) && visual.steps.length >= 10, `${testCase.name} should include metric staircase steps`);
+    assert.ok(Array.isArray(visual.stepValues) && visual.stepValues.length >= 10, `${testCase.name} should include live value displays for each metric step`);
+    assert.ok(visual.stepValues.some((item) => item.unit === testCase.visual.startUnit), `${testCase.name} should include start unit value display`);
+    assert.ok(visual.stepValues.some((item) => item.unit === testCase.visual.targetUnit), `${testCase.name} should include target unit value display`);
+    assertMethodChoices(visual, testCase);
+    assertPicketFenceFillableSections(visual.methodVisuals?.picketFence, testCase);
   }
   if (testCase.visualType === 'picket_fence') {
     assert.equal(visual.given?.unit, testCase.visual.givenUnit, `${testCase.name} given unit`);
@@ -377,6 +654,7 @@ function assertVisualMetadata(visual, testCase) {
     assertNearly(visual.arithmetic?.resultValue, testCase.visual.resultValue, `${testCase.name} resultValue`);
     assert.ok(Array.isArray(visual.conversionFactors) && visual.conversionFactors.length > 0, `${testCase.name} should include conversion factors`);
     assert.ok(Array.isArray(visual.cancellationSteps) && visual.cancellationSteps.length > 0, `${testCase.name} should include cancellation steps`);
+    assertPicketFenceFillableSections(visual, testCase);
   }
   if (testCase.visualType === 'temperature_conversion') {
     assert.equal(visual.resultUnit, testCase.visual.resultUnit, `${testCase.name} resultUnit`);
@@ -389,6 +667,31 @@ function assertVisualMetadata(visual, testCase) {
     if (testCase.visual.resultValue != null) assertNearly(visual.resultValue, testCase.visual.resultValue, `${testCase.name} resultValue`);
     assert.equal(visual.decimalMove?.direction, testCase.visual.direction, `${testCase.name} decimal direction`);
     assert.equal(visual.decimalMove?.places, testCase.visual.places, `${testCase.name} decimal places`);
+  }
+}
+
+function assertMethodChoices(visual, testCase) {
+  if (!testCase.methodChoices) return;
+  const methodLabels = (visual.methodChoices || []).map((choice) => choice.label || '').join(' ');
+  for (const expected of testCase.methodChoices) {
+    assert.match(methodLabels, expected, `${testCase.name} method choices should include ${expected}`);
+  }
+}
+
+function assertPicketFenceFillableSections(visual, testCase) {
+  assert.ok(visual, `${testCase.name} should include picket fence visual metadata`);
+  assert.equal(visual.visualType, 'picket_fence', `${testCase.name} picket fence visual type`);
+  const sectionIds = (visual.fillableSections || []).map((section) => section.id);
+  for (const id of [
+    'given_value',
+    'conversion_factor_0_numerator',
+    'conversion_factor_0_denominator',
+    'canceled_units',
+    'top_product',
+    'bottom_product',
+    'final_answer'
+  ]) {
+    assert.ok(sectionIds.includes(id), `${testCase.name} fillable sections should include ${id}`);
   }
 }
 
