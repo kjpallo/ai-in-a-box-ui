@@ -621,6 +621,32 @@
         transition: max-height 220ms ease, opacity 180ms ease, visibility 180ms ease;
       }
 
+      .student-tutor-session-question {
+        display: grid;
+        gap: 0.16rem;
+        margin: 0.44rem 0.5rem 0;
+        padding: 0.38rem 0.48rem;
+        border: 1px solid rgba(255,214,102,0.3);
+        border-radius: 8px;
+        background: rgba(42,28,8,0.24);
+      }
+
+      .student-tutor-session-question strong {
+        color: #ffeeb9;
+        font-size: 0.68rem;
+        font-weight: 850;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .student-tutor-session-question p {
+        margin: 0;
+        color: #effff8;
+        font-size: 0.84rem;
+        line-height: 1.3;
+        overflow-wrap: anywhere;
+      }
+
       .student-tutor-session.is-collapsed .student-tutor-session-panel {
         max-height: 0;
         opacity: 0;
@@ -729,6 +755,71 @@
         border-radius: 7px;
         background: rgba(4,20,20,0.42);
         color: #dffdf6;
+      }
+
+      .student-tutor-instruction {
+        display: grid;
+        gap: 0.24rem;
+        padding: 0.46rem 0.52rem;
+        border: 1px solid rgba(126,233,255,0.32);
+        border-radius: 8px;
+        background:
+          linear-gradient(180deg, rgba(126,233,255,0.1), rgba(102,247,209,0.05)),
+          rgba(2,8,10,0.48);
+      }
+
+      .student-tutor-instruction.is-current {
+        border-color: rgba(126,233,255,0.52);
+      }
+
+      .student-tutor-instruction.is-complete {
+        border-color: rgba(102,247,209,0.46);
+      }
+
+      .student-tutor-instruction-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+      }
+
+      .student-tutor-instruction-head strong {
+        color: #7ee9ff;
+        font-size: 0.76rem;
+        font-weight: 850;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .student-tutor-instruction-head span {
+        color: #b9d8d1;
+        font-size: 0.74rem;
+        font-weight: 800;
+      }
+
+      .student-tutor-instruction-prompt,
+      .student-tutor-instruction-feedback,
+      .student-tutor-instruction-hint {
+        margin: 0;
+        color: #effff8;
+        line-height: 1.3;
+        overflow-wrap: anywhere;
+      }
+
+      .student-tutor-instruction-prompt {
+        font-size: 0.94rem;
+        font-weight: 760;
+      }
+
+      .student-tutor-instruction-feedback {
+        color: #dffdf6;
+        font-size: 0.86rem;
+      }
+
+      .student-tutor-instruction-hint {
+        color: #ffeeb9;
+        font-size: 0.84rem;
       }
 
       .student-tutor-card {

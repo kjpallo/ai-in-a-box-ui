@@ -845,6 +845,12 @@
           </div>
         </div>
         <div class="student-tutor-session-panel" aria-hidden="${expanded ? 'false' : 'true'}">
+          ${question ? `
+            <div class="student-tutor-session-question">
+              <strong>Original Question</strong>
+              <p>${escapeHtml(question)}</p>
+            </div>
+          ` : ''}
           <div class="student-tutor-session-scroll">
             <div class="student-tutor-session-steps">
               ${session.turns.map((turn, index) => renderTutorSessionStep(turn, {
@@ -878,19 +884,30 @@
     const stepStatus = getTutorStepStatus(tutor, isCurrentStep);
     const answerHtml = renderTutorSessionAnswer(turn, options.stepIndex);
     const sideAnswerClass = answerHtml ? 'has-side-answer' : 'has-no-side-answer';
+    const instructionHtml = isFormulaTutor
+      ? renderTutorInstructionBlock({
+        tutor,
+        work,
+        currentStep,
+        responseText,
+        stepStatus,
+        isCurrentStep
+      })
+      : '';
 
     return `
       <section class="student-tutor-session-step ${stateClass} ${sideAnswerClass}" data-tutor-turn-id="${escapeAttr(turn.id)}">
         ${answerHtml}
         <div class="student-tutor-session-step-work">
-          <div class="student-tutor-session-step-head">
-            <strong>${escapeHtml(formatTutorProgress(tutor, work) || stepStatus)}</strong>
-            <span>${escapeHtml(stepStatus)}</span>
-          </div>
-          ${responseText ? `<p class="student-tutor-session-response">${escapeHtml(responseText)}</p>` : ''}
+          ${instructionHtml || `
+            <div class="student-tutor-session-step-head">
+              <strong>${escapeHtml(formatTutorProgress(tutor, work) || stepStatus)}</strong>
+              <span>${escapeHtml(stepStatus)}</span>
+            </div>
+            ${responseText ? `<p class="student-tutor-session-response">${escapeHtml(responseText)}</p>` : ''}
+          `}
           <div class="student-tutor-grid">
-            ${isFormulaTutor ? renderTutorDetail('Original Question', originalQuestion, 'student-tutor-original-question is-wide', { showWaiting: true }) : ''}
-            ${renderTutorDetail('Current Step', currentStep, 'student-tutor-current-step', { showWaiting: true })}
+            ${!isFormulaTutor ? renderTutorDetail('Current Step', currentStep, 'student-tutor-current-step', { showWaiting: true }) : ''}
             ${showFormulaDetails ? renderTutorDetail('Solving For', solveFor, '', { showWaiting: true }) : ''}
             ${showFormulaDetails ? renderTutorDetail('Formula', work.formula || tutor.formula || '', 'student-tutor-formula', { showWaiting: true }) : ''}
             ${showKnownValues ? renderKnownValuesDetail(knownValues) : ''}
@@ -906,6 +923,31 @@
           ${isCurrentStep ? renderTutorActions(turn, tutor, { hideCompletedAction: true }) : ''}
         </div>
       </section>
+    `;
+  }
+
+  function renderTutorInstructionBlock({ tutor, work, currentStep, responseText, stepStatus, isCurrentStep }) {
+    const progress = formatTutorProgress(tutor, work) || stepStatus || '';
+    const prompt = String(currentStep || '').trim();
+    const feedback = getTutorFeedbackLine(responseText, prompt);
+    const hint = String(tutor?.currentHint || '').trim();
+    const classes = [
+      'student-tutor-instruction',
+      isCurrentStep ? 'is-current' : 'is-saved',
+      tutor?.completed ? 'is-complete' : '',
+      tutor?.stopped ? 'is-stopped' : ''
+    ].filter(Boolean).join(' ');
+
+    return `
+      <div class="${escapeAttr(classes)}">
+        <div class="student-tutor-instruction-head">
+          <strong>${escapeHtml(progress)}</strong>
+          <span>${escapeHtml(stepStatus || '')}</span>
+        </div>
+        ${feedback ? `<p class="student-tutor-instruction-feedback">${escapeHtml(feedback)}</p>` : ''}
+        ${prompt ? `<p class="student-tutor-instruction-prompt">${escapeHtml(prompt)}</p>` : '<p class="student-tutor-instruction-prompt student-tutor-pending">Waiting...</p>'}
+        ${hint ? `<p class="student-tutor-instruction-hint">Hint: ${escapeHtml(hint)}</p>` : ''}
+      </div>
     `;
   }
 
@@ -994,16 +1036,32 @@
     return 'Saved';
   }
 
-  function getTutorFeedbackLine(response) {
+  function getTutorFeedbackLine(response, currentPrompt = '') {
     const text = String(response || '').replace(/\r/g, '').trim();
     if (!text) return '';
 
     if (/^correct\b/i.test(text)) return 'Correct.';
-    if (/^not quite yet\b/i.test(text)) return 'Not quite yet.';
+    if (/^not quite yet\b/i.test(text)) {
+      return compactTutorFeedback(text, currentPrompt) || 'Not quite yet.';
+    }
     if (/^guided formula tutor stopped\b/i.test(text)) return 'Guided Formula Tutor stopped.';
     if (/^no problem\b/i.test(text)) return firstSentence(text);
     if (/^okay\b/i.test(text)) return firstSentence(text);
     return '';
+  }
+
+  function compactTutorFeedback(response, currentPrompt = '') {
+    const prompt = String(currentPrompt || '').replace(/\s+/g, ' ').trim();
+    const lines = String(response || '')
+      .replace(/\r/g, '')
+      .split(/\n+/)
+      .map((line) => line.replace(/\s+/g, ' ').trim())
+      .filter(Boolean)
+      .filter((line) => !/^step\s+\d+\s+of\s+\d+:?$/i.test(line))
+      .filter((line) => !/^choose one:?$/i.test(line))
+      .filter((line) => !/^click a choice or type only the number\.?$/i.test(line))
+      .filter((line) => !prompt || line !== prompt);
+    return lines.slice(0, 2).join(' ');
   }
 
   function firstSentence(value) {

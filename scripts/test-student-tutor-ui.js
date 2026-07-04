@@ -74,10 +74,13 @@ const composerBlock = getCssBlocks('.student-composer').find((block) => /grid-te
 const sessionBlock = getCssBlock('.student-tutor-session');
 const sessionHeaderBlock = getCssBlock('.student-tutor-session-header');
 const sessionPanelBlock = getCssBlock('.student-tutor-session-panel');
+const sessionQuestionBlock = getCssBlock('.student-tutor-session-question');
 const collapsedPanelBlock = getCssBlock('.student-tutor-session.is-collapsed .student-tutor-session-panel');
 const sessionScrollBlock = getCssBlock('.student-tutor-session-scroll');
 const sessionStepBlock = getCssBlock('.student-tutor-session-step');
 const sessionSideAnswerStepBlock = getCssBlock('.student-tutor-session-step.has-side-answer');
+const tutorInstructionBlock = getCssBlock('.student-tutor-instruction');
+const tutorInstructionPromptBlock = getCssBlock('.student-tutor-instruction-prompt');
 const tutorBodyBlock = getCssBlock('.student-tutor-body');
 const tutorOriginalQuestionBlock = getCssBlock('.student-tutor-detail.student-tutor-original-question');
 const tutorOriginalQuestionTextBlock = getCssBlock('.student-tutor-detail.student-tutor-original-question p');
@@ -272,18 +275,28 @@ assert.match(
 );
 assert.match(
   studentUi,
-  /function renderTutorSession\(session, copyableTurnId\)[\s\S]*student-tutor-session-scroll[\s\S]*student-tutor-session-steps/,
-  'Expanded formula sessions should render chronological steps inside the bounded scroll area.'
-);
-assert.doesNotMatch(
-  studentUi,
-  /student-tutor-session-question/,
-  'Expanded formula sessions should not render a duplicate pinned Original Question block.'
+  /function renderTutorSession\(session, copyableTurnId\)[\s\S]*student-tutor-session-question[\s\S]*Original Question[\s\S]*student-tutor-session-scroll[\s\S]*student-tutor-session-steps/,
+  'Expanded formula sessions should show the original question once at the problem level and render chronological steps inside the bounded scroll area.'
 );
 assert.match(
   studentUi,
-  /function renderTutorSessionStep\(turn, options = \{\}\)[\s\S]*shouldShowFormulaStepDetails\(work\)[\s\S]*shouldShowFormulaKnownValues\(work, knownValues\)[\s\S]*renderTutorDetail\('Original Question'[\s\S]*Current Step[\s\S]*showFormulaDetails[\s\S]*renderKnownValuesDetail[\s\S]*Calculator check[\s\S]*Final answer/,
-  'Each grouped tutor step should include original question context and suppress optional formula work fields when the current step requests it.'
+  /function renderTutorSessionStep\(turn, options = \{\}\)[\s\S]*const instructionHtml = isFormulaTutor[\s\S]*renderTutorInstructionBlock[\s\S]*student-tutor-grid[\s\S]*!\s*isFormulaTutor \? renderTutorDetail\('Current Step'[\s\S]*showFormulaDetails[\s\S]*renderKnownValuesDetail[\s\S]*Calculator check[\s\S]*Final answer/,
+  'Grouped Formula Tutor steps should use one instruction block and suppress duplicate Current Step detail rows while preserving optional formula work fields.'
+);
+assert.doesNotMatch(
+  getFunctionBlock('renderTutorSessionStep'),
+  /renderTutorDetail\('Original Question'/,
+  'Grouped Formula Tutor steps should not repeat Original Question inside every step.'
+);
+assert.match(
+  studentUi,
+  /function renderTutorInstructionBlock\(\{ tutor, work, currentStep, responseText, stepStatus, isCurrentStep \}\)[\s\S]*formatTutorProgress\(tutor, work\)[\s\S]*getTutorFeedbackLine\(responseText, prompt\)[\s\S]*student-tutor-instruction-head[\s\S]*student-tutor-instruction-feedback[\s\S]*student-tutor-instruction-prompt[\s\S]*student-tutor-instruction-hint/,
+  'Formula Tutor instruction block should own progress, compact feedback, current prompt, and hint display.'
+);
+assert.match(
+  studentUi,
+  /function compactTutorFeedback\(response, currentPrompt = ''\)[\s\S]*step\\s\+\\d\+\\s\+of\\s\+\\d\+[\s\S]*line !== prompt[\s\S]*lines\.slice\(0, 2\)\.join\(' '\)/,
+  'Wrong-answer feedback should remove repeated Step X of Y and current prompt text before display.'
 );
 assert.match(
   studentUi,
@@ -576,6 +589,10 @@ assert.match(
   /function handleTimelineClick\(event\)[\s\S]*data-toggle-tutor-session-id[\s\S]*toggleTutorSession/,
   'Timeline click handling should support session-level toggles.'
 );
+
+assert.match(sessionQuestionBlock, /border:\s*1px solid rgba\(255,214,102,0\.3\);/, 'Formula tutor sessions should show one compact problem-level Original Question block.');
+assert.match(tutorInstructionBlock, /display:\s*grid;/, 'Formula Tutor instruction block should be a compact shared prompt region.');
+assert.match(tutorInstructionPromptBlock, /font-weight:\s*760;/, 'Formula Tutor active prompt should be prominent in the instruction block.');
 
 assert.match(
   studentUi,
