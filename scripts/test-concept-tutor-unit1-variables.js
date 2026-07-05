@@ -115,6 +115,65 @@ const VARIABLE_SCENARIO_CASES = [
   }
 ];
 
+const MULTI_TARGET_SCENARIO_CASES = [
+  {
+    prompt: 'A student tests how fertilizer affects plant height. What are the independent and dependent variables?',
+    choices: ['1', '2'],
+    clues: [
+      /What did the experimenter change on purpose\?/i,
+      /What is being measured or observed\?/i
+    ],
+    finalAnswer: /The independent variable is the type of fertilizer because it is what the scientist changes on purpose\. The dependent variable is plant height or growth because it is what the scientist measures as the result\./i
+  },
+  {
+    prompt: 'A class tests if water temperature changes how fast sugar dissolves. Identify the independent variable, dependent variable, and constants.',
+    choices: ['1', '2', '3'],
+    clues: [
+      /What did the experimenter change on purpose\?/i,
+      /What is being measured or observed\?/i,
+      /What stayed the same for all groups\?/i
+    ],
+    finalAnswer: /The independent variable is temperature because it is what the scientist changes on purpose\. The dependent variable is how fast or how much dissolves because it is what the scientist measures as the result\. A constant is the amount of solute and water because it should be kept the same to make the test fair\./i
+  },
+  {
+    prompt: 'A student tests a new fertilizer on plants. One group gets fertilizer and one group gets no fertilizer. What are the control and experimental groups?',
+    choices: ['1', '2'],
+    clues: [
+      /Which group did not receive the treatment or change\?/i,
+      /Which group received the treatment or change\?/i
+    ],
+    finalAnswer: /The control group is the group with no fertilizer because it did not receive the treatment or change\. The experimental group is the group that gets fertilizer because it received the treatment or change\./i
+  },
+  {
+    prompt: 'Students test whether ramp height affects how far a toy car rolls. Identify the independent variable, dependent variable, and constants.',
+    choices: ['1', '2', '3'],
+    clues: [
+      /What did the experimenter change on purpose\?/i,
+      /What is being measured or observed\?/i,
+      /What stayed the same for all groups\?/i
+    ],
+    finalAnswer: /The independent variable is ramp height because it is what the scientist changes on purpose\. The dependent variable is how far the toy car rolls because it is what the scientist measures as the result\. A constant is the same toy car and surface because it should be kept the same to make the test fair\./i
+  },
+  {
+    prompt: 'A medicine test has one group take the medicine and another group take a sugar pill. What are the control and experimental groups?',
+    choices: ['2', '1'],
+    clues: [
+      /Which group did not receive the treatment or change\?/i,
+      /Which group received the treatment or change\?/i
+    ],
+    finalAnswer: /The control group is the group that takes the sugar pill because it did not receive the medicine treatment\. The experimental group is the group that takes the medicine because it received the treatment or change\./i
+  },
+  {
+    prompt: 'A class tests music on studying. One group studies with music and one group studies with no music. What are the control and experimental groups?',
+    choices: ['1', '2'],
+    clues: [
+      /Which group did not receive the treatment or change\?/i,
+      /Which group received the treatment or change\?/i
+    ],
+    finalAnswer: /The control group is the group studying with no music because it did not receive the treatment or change\. The experimental group is the group studying with music because it received the treatment or change\./i
+  }
+];
+
 const DIRECT_ANSWER_BOUNDARIES = [
   {
     prompt: 'What is an independent variable?',
@@ -187,6 +246,12 @@ async function main() {
     null,
     'formula prompts should not build the Unit 1 variables Concept Tutor pattern'
   );
+  const multiTargetPattern = buildUnit1VariablesConceptTutorPattern('A student tests how fertilizer affects plant height. What are the independent and dependent variables?');
+  assert.equal(
+    multiTargetPattern?.steps?.length,
+    2,
+    'multi-target variable prompts should build a multi-step Unit 1 variables Concept Tutor pattern'
+  );
 
   const { request, studentSessions } = createStudentRouteHarness();
   const create = await request('POST', '/api/profile/create-student-session');
@@ -194,6 +259,11 @@ async function main() {
   const classSessionId = create.body.sessionId;
 
   await assertVariableScenariosStartRetryAndComplete({
+    request,
+    studentSessions,
+    classSessionId
+  });
+  await assertMultiTargetScenariosAdvanceAndComplete({
     request,
     studentSessions,
     classSessionId
@@ -266,6 +336,62 @@ async function assertVariableScenariosStartRetryAndComplete({
     assert.match(complete.body.response, testCase.finalAnswer);
     assert.match(complete.body.tutor.finalAnswer, testCase.finalAnswer);
     assert.equal(studentSessions[classSessionId].anonymousHubs[studentHubId].currentTutorProblem, null);
+  }
+}
+
+async function assertMultiTargetScenariosAdvanceAndComplete({
+  request,
+  studentSessions,
+  classSessionId
+}) {
+  for (const testCase of MULTI_TARGET_SCENARIO_CASES) {
+    const studentHubId = `unit1-variables-multi-${slug(testCase.prompt)}`;
+    const start = await request('POST', '/api/student/message', {
+      sessionId: classSessionId,
+      studentHubId,
+      message: testCase.prompt
+    });
+
+    assert.equal(start.statusCode, 200);
+    assert.equal(start.body.routeType, 'concept_tutor', `${testCase.prompt} should start Concept Tutor`);
+    assert.equal(start.body.tutor.id, TUTOR_ID);
+    assert.equal(start.body.tutor.active, true);
+    assert.equal(start.body.tutor.totalSteps, testCase.choices.length);
+    assert.match(start.body.response, testCase.clues[0], `${testCase.prompt} should start with the first requested clue`);
+    assert.doesNotMatch(start.body.response, testCase.finalAnswer);
+
+    let current = start;
+    for (let index = 0; index < testCase.choices.length; index += 1) {
+      const answer = await request('POST', '/api/student/message', {
+        sessionId: classSessionId,
+        studentHubId,
+        message: testCase.choices[index]
+      });
+
+      assert.equal(answer.statusCode, 200);
+      assert.equal(answer.body.routeType, 'concept_tutor');
+      assert.equal(answer.body.tutor.id, TUTOR_ID);
+
+      const isLast = index === testCase.choices.length - 1;
+      if (isLast) {
+        assert.equal(answer.body.tutor.completed, true, `${testCase.prompt} should complete after the final requested target`);
+        assert.equal(answer.body.tutor.active, false);
+        assert.match(answer.body.response, testCase.finalAnswer);
+        assert.match(answer.body.tutor.finalAnswer, testCase.finalAnswer);
+        assert.equal(studentSessions[classSessionId].anonymousHubs[studentHubId].currentTutorProblem, null);
+      } else {
+        assert.equal(answer.body.tutor.active, true, `${testCase.prompt} should advance instead of stopping after step ${index + 1}`);
+        assert.equal(answer.body.tutor.completed, false);
+        assert.equal(answer.body.tutor.currentStepIndex, index + 1);
+        assert.match(answer.body.response, /Correct/i);
+        assert.match(answer.body.response, testCase.clues[index + 1], `${testCase.prompt} should ask the next requested clue`);
+        assert.doesNotMatch(answer.body.response, testCase.finalAnswer);
+      }
+
+      current = answer;
+    }
+
+    assert.ok(current, `${testCase.prompt} should produce tutor responses`);
   }
 }
 
