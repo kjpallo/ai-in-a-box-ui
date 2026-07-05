@@ -1,7 +1,12 @@
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 
 const { routeStudentQuestion } = require('../lib/router/questionRouter');
 const { createStudentRouteHarness } = require('./test-helpers/studentRouteHarness');
+const { projectRoot } = require('./test-helpers/fileSystem');
+
+const unit1ConversionsSource = fs.readFileSync(path.join(projectRoot, 'lib', 'formulas', 'unit1Conversions.js'), 'utf8');
 
 const DIRECT_CASES = [
   {
@@ -437,8 +442,13 @@ async function assertMetricMethodBranches(request, sessionId) {
 
   const bottom = await ask(request, sessionId, 'unit1-conversions-method-branch-picket-start', '1');
   assertCompletedStep(bottom, 'fill_conversion_factor_bottom');
-  assert.match(bottom.response, /Click a unit that cancels, or type one/i, 'picket-fence branch should ask for clickable or typed cancellation');
+  assert.match(bottom.response, /Click each km unit in the fence to cross it out/i, 'picket-fence branch should ask for click-first unit cancellation');
+  assert.doesNotMatch(bottom.response, /Click a unit that cancels, or type one|Type km/i, 'picket-fence branch should not present cancellation as type-first');
   assert.equal((bottom.tutor?.currentStep?.choices || []).length, 0, 'cancellation should be typed, not multiple choice');
+
+  const wrongCancellation = await ask(request, sessionId, 'unit1-conversions-method-branch-picket-start', '48000');
+  assert.match(wrongCancellation.response, /First click each km unit in the fence to cross it out/i, 'wrong final-number answer during cancellation should redirect to clicking units');
+  assert.doesNotMatch(wrongCancellation.response, /Not quite yet\. Type km/i, 'wrong cancellation feedback should not say Type km');
 
   const cancelled = await ask(request, sessionId, 'unit1-conversions-method-branch-picket-start', 'km');
   assertCompletedStep(cancelled, 'cancel_units');
@@ -476,6 +486,11 @@ async function assertMetricPicketFinalAnswerAccepted(request, sessionId, finalAn
 }
 
 async function assertMixedUnitPicketFenceTypedFlow(request, sessionId) {
+  assert.match(
+    unit1ConversionsSource,
+    /function picketFenceCancellationStep\(id, unit\)[\s\S]*Click each \$\{unit\} unit in the fence to cross it out[\s\S]*Keyboard fallback: type \$\{unit\}[\s\S]*compactTextStep/,
+    'picket-fence cancellation steps should be click-first while preserving typed fallback'
+  );
   const studentHubId = 'unit1-conversions-mixed-picket-typed';
   const start = await ask(request, sessionId, studentHubId, 'Convert 250.4 cm to feet.');
   assert.equal(start.routeType, 'formula_tutor', 'mixed-unit conversion should start Formula Tutor');
@@ -521,7 +536,9 @@ async function assertMixedUnitPicketFenceTypedFlow(request, sessionId) {
   const secondBottom = await ask(request, sessionId, studentHubId, '12');
   assertSameMixedPicketProblem(secondBottom, problemId, 'second bottom number');
   assertCompletedStep(secondBottom, 'fill_conversion_factor_1_bottom');
-  assert.match(secondBottom.response, /Click a unit that cancels, or type one/i, 'mixed-unit picket should allow cancellation click or typing fallback');
+  assert.equal(secondBottom.tutor?.currentStep?.id, 'cancel_units_cm', 'mixed-unit first cancellation step should target cm');
+  assert.match(secondBottom.response, /Click each cm unit in the fence to cross it out/i, 'mixed-unit picket should use click-first cm cancellation wording');
+  assert.doesNotMatch(secondBottom.response, /Click a unit that cancels, or type one|Type cm/i, 'mixed-unit cm cancellation should not be type-first');
   const visibleCancellationUnits = (secondBottom.tutor?.work?.visualMetadata?.cancellationSteps || [])
     .map((step) => String(step.unit || '').toLowerCase())
     .filter(Boolean);
@@ -534,11 +551,19 @@ async function assertMixedUnitPicketFenceTypedFlow(request, sessionId) {
     'mixed-unit visual should expose in cancellation unit for click/tap fallback'
   );
 
-  const cancelled = await ask(request, sessionId, studentHubId, 'cm');
-  assertSameMixedPicketProblem(cancelled, problemId, 'typed cancellation fallback');
-  assertCompletedStep(cancelled, 'cancel_units');
-  assert.match(cancelled.response, /Type the final number only\. Do not include the unit/i, 'mixed-unit picket should ask for final number only');
-  assert.equal((cancelled.tutor?.currentStep?.answerChips || []).length, 0, 'mixed-unit final number should not be exposed as a chip');
+  const cmCancelled = await ask(request, sessionId, studentHubId, 'cm');
+  assertSameMixedPicketProblem(cmCancelled, problemId, 'typed cm cancellation fallback');
+  assertCompletedStep(cmCancelled, 'cancel_units_cm');
+  assert.equal(cmCancelled.tutor?.currentStep?.id, 'cancel_units_in', 'mixed-unit cm cancellation should advance to in cancellation step');
+  assert.match(cmCancelled.response, /Click each in unit in the fence to cross it out/i, 'mixed-unit picket should use click-first in cancellation wording');
+  assert.doesNotMatch(cmCancelled.response, /Click a unit that cancels, or type one|Type in/i, 'mixed-unit in cancellation should not be type-first');
+  assert.doesNotMatch(cmCancelled.response, /Type the final number only\. Do not include the unit/i, 'mixed-unit cm cancellation should not skip in cancellation');
+
+  const inCancelled = await ask(request, sessionId, studentHubId, 'in');
+  assertSameMixedPicketProblem(inCancelled, problemId, 'typed in cancellation fallback');
+  assertCompletedStep(inCancelled, 'cancel_units_in');
+  assert.match(inCancelled.response, /Type the final number only\. Do not include the unit/i, 'mixed-unit picket should ask for final number only after both units cancel');
+  assert.equal((inCancelled.tutor?.currentStep?.answerChips || []).length, 0, 'mixed-unit final number should not be exposed as a chip');
 
   const completed = await ask(request, sessionId, studentHubId, '8.22');
   assert.equal(completed.routeType, 'formula_tutor', 'mixed-unit final answer should stay Formula Tutor');
@@ -551,33 +576,42 @@ async function assertMixedUnitPicketFenceTypedFlow(request, sessionId) {
   assert.equal(fresh.routeType, 'formula_tutor', 'new full question after mixed-unit completion should start Formula Tutor');
   assert.notEqual(fresh.tutor?.tutorProblemId, problemId, 'new full conversion should get a separate tutorProblemId');
 
-  await assertMixedUnitCancellationUnitAccepted(request, sessionId, 'cm');
-  await assertMixedUnitCancellationUnitAccepted(request, sessionId, 'in');
+  await assertMixedUnitCancellationOrder(request, sessionId);
 }
 
-async function assertMixedUnitCancellationUnitAccepted(request, sessionId, cancellationUnit) {
-  const studentHubId = `unit1-conversions-mixed-picket-cancel-${cancellationUnit}`;
+async function assertMixedUnitCancellationOrder(request, sessionId) {
+  const studentHubId = 'unit1-conversions-mixed-picket-cancel-order';
   const start = await ask(request, sessionId, studentHubId, 'Convert 250.4 cm to feet.');
   const problemId = start.tutor?.tutorProblemId;
-  assert.ok(problemId, `${cancellationUnit} cancellation check should expose tutorProblemId`);
+  assert.ok(problemId, 'mixed-unit cancellation order check should expose tutorProblemId');
 
   await ask(request, sessionId, studentHubId, '250.4');
   await ask(request, sessionId, studentHubId, '1');
   await ask(request, sessionId, studentHubId, '2.54');
   await ask(request, sessionId, studentHubId, '1');
   const readyToCancel = await ask(request, sessionId, studentHubId, '12');
-  assertSameMixedPicketProblem(readyToCancel, problemId, `${cancellationUnit} ready-to-cancel step`);
-  assert.equal(readyToCancel.tutor?.currentStep?.id, 'cancel_units', `${cancellationUnit} check should reach cancellation step`);
+  assertSameMixedPicketProblem(readyToCancel, problemId, 'ready-to-cancel step');
+  assert.equal(readyToCancel.tutor?.currentStep?.id, 'cancel_units_cm', 'mixed-unit cancellation should start with cm');
   assert.ok(
     (readyToCancel.tutor?.work?.visualMetadata?.cancellationSteps || [])
-      .some((step) => String(step.unit || '').toLowerCase() === cancellationUnit),
-    `${cancellationUnit} should be visible as a cancellation button`
+      .some((step) => String(step.unit || '').toLowerCase() === 'in'),
+    'in should be visible in visual metadata but should not be the first active cancellation step'
   );
 
-  const cancelled = await ask(request, sessionId, studentHubId, cancellationUnit);
-  assertSameMixedPicketProblem(cancelled, problemId, `${cancellationUnit} cancellation answer`);
-  assertCompletedStep(cancelled, 'cancel_units');
-  assert.equal(cancelled.tutor?.currentStep?.id, 'calculate_result', `${cancellationUnit} cancellation should advance to final-number step`);
+  const wrongOrder = await ask(request, sessionId, studentHubId, 'in');
+  assertSameMixedPicketProblem(wrongOrder, problemId, 'wrong-order in cancellation answer');
+  assert.equal(wrongOrder.tutor?.currentStep?.id, 'cancel_units_cm', 'typing in before cm should stay on cm cancellation step');
+  assert.doesNotMatch(wrongOrder.response, /Type the final number only/i, 'typing in before cm should not advance to final-number step');
+
+  const cmCancelled = await ask(request, sessionId, studentHubId, 'cm');
+  assertSameMixedPicketProblem(cmCancelled, problemId, 'cm cancellation answer');
+  assertCompletedStep(cmCancelled, 'cancel_units_cm');
+  assert.equal(cmCancelled.tutor?.currentStep?.id, 'cancel_units_in', 'cm cancellation should advance to in cancellation');
+
+  const inCancelled = await ask(request, sessionId, studentHubId, 'in');
+  assertSameMixedPicketProblem(inCancelled, problemId, 'in cancellation answer');
+  assertCompletedStep(inCancelled, 'cancel_units_in');
+  assert.equal(inCancelled.tutor?.currentStep?.id, 'calculate_result', 'in cancellation should advance to final-number step');
 }
 
 function assertNoMixedPicketClutter(response, label) {

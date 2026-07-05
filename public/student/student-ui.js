@@ -1706,11 +1706,14 @@
     const cancellationSection = getPicketFenceSection(visual, 'canceled_units');
     const cancellationFilled = isPicketFenceSectionFilled(cancellationSection, fillContext);
     const cancellationStepActive = isPicketFenceCancellationStep(context);
+    const currentCancellationUnit = getPicketFenceCurrentCancellationUnit(context, visual);
+    const completedCancellationUnits = getPicketFenceCompletedCancellationUnits(visual, fillContext);
     const givenPlacementStepActive = isPicketFenceGivenValuePlacementStep(context.tutor, context.work);
     const activeDropSectionId = getPicketFenceActiveDropSectionId(visual, context, fillContext);
     const helperText = getPicketFenceHelperText(visual, {
       cancellationStepActive,
       cancellationFilled,
+      currentCancellationUnit,
       givenPlacementStepActive,
       activeDropSectionId
     });
@@ -1737,6 +1740,8 @@
             fillContext,
             cancellationFilled,
             cancellationStepActive,
+            currentCancellationUnit,
+            completedCancellationUnits,
             activeDropSectionId
           })).join('')}
         </div>
@@ -1766,6 +1771,38 @@
     const stepId = String(step?.id || context?.work?.stepId || context?.tutor?.stepId || '').toLowerCase();
     const prompt = String(step?.prompt || context?.work?.currentStepPrompt || context?.tutor?.currentStepPrompt || '').toLowerCase();
     return stepId.includes('cancel') || /\b(click|tap)\b[\s\S]*\b(unit|units)\b[\s\S]*\bcancel/.test(prompt);
+  }
+
+  function getPicketFenceCurrentCancellationUnit(context = {}, visual = null) {
+    const step = context?.work?.currentStep || context?.tutor?.currentStep || {};
+    if (!isPicketFenceCancellationStep(context)) return '';
+    const expected = String(step?.expectedAnswer || step?.expected || step?.expectedDisplay || step?.answer || '').trim();
+    if (expected) return expected;
+    const accepted = Array.isArray(step?.acceptedAnswers) ? step.acceptedAnswers : [];
+    if (accepted[0]) return String(accepted[0] || '').trim();
+    const prompt = String(step?.prompt || context?.work?.currentStepPrompt || context?.tutor?.currentStepPrompt || '').trim();
+    const promptUnit = prompt.match(/\bclick\s+each\s+(.+?)\s+unit\b/i)?.[1]?.trim();
+    if (promptUnit) return promptUnit;
+    const stepId = String(step?.id || context?.work?.stepId || context?.tutor?.stepId || '').trim();
+    const suffix = stepId.match(/^cancel_units_(.+)$/i)?.[1]?.replace(/_/g, ' ').trim();
+    if (suffix) return suffix;
+    const cancellationSteps = Array.isArray(visual?.cancellationSteps) ? visual.cancellationSteps : [];
+    return cancellationSteps.length === 1 ? String(cancellationSteps[0]?.unit || '').trim() : '';
+  }
+
+  function getPicketFenceCompletedCancellationUnits(visual, fillContext = {}) {
+    const completedSteps = fillContext.completedSteps instanceof Set ? fillContext.completedSteps : new Set();
+    const units = Array.isArray(visual?.cancellationSteps) ? visual.cancellationSteps : [];
+    return new Set(units
+      .filter((step) => isPicketFenceCancellationStepCompleted(step?.unit, completedSteps))
+      .map((step) => normalizePicketFenceUnit(step?.unit))
+      .filter(Boolean));
+  }
+
+  function isPicketFenceCancellationStepCompleted(unit, completedSteps) {
+    const normalizedUnit = normalizePicketFenceUnit(unit);
+    if (!normalizedUnit) return false;
+    return completedSteps.has('cancel_units') || completedSteps.has(`cancel_units_${normalizedUnit.replace(/[^a-z0-9]+/g, '_')}`);
   }
 
   function getPicketFenceActiveDropSectionId(visual, context = {}, fillContext = {}) {
@@ -1800,6 +1837,7 @@
       .filter(Boolean);
     const targetUnit = String(visual?.targetUnit || visual?.arithmetic?.resultUnit || '').trim();
     if (state.cancellationStepActive) {
+      if (state.currentCancellationUnit) return `Click the matching ${state.currentCancellationUnit} units to cancel them.`;
       if (cancellationUnits.length === 1) return `Click the matching ${cancellationUnits[0]} units to cancel them.`;
       return 'Click a matching unit to cancel it.';
     }
@@ -1857,6 +1895,8 @@
       placeholder: picketFencePlaceholder(getPicketFenceSection(context.visual, cell?.numeratorSectionId), numeratorDropActive ? numeratorDropLabel : isGivenCell ? 'enter given value' : 'top number'),
       cancelledUnitsRevealed: context.cancellationFilled,
       cancellationStepActive: context.cancellationStepActive,
+      currentCancellationUnit: context.currentCancellationUnit,
+      completedCancellationUnits: context.completedCancellationUnits,
       cancelInstanceId: `cell-${index}-numerator`
     });
     const denominator = renderPicketFenceTerm(denominatorValue, context.visual, {
@@ -1864,6 +1904,8 @@
       placeholder: cell?.denominatorSectionId ? picketFencePlaceholder(getPicketFenceSection(context.visual, cell.denominatorSectionId), denominatorDropActive ? denominatorDropLabel : 'bottom number') : '',
       cancelledUnitsRevealed: context.cancellationFilled,
       cancellationStepActive: context.cancellationStepActive,
+      currentCancellationUnit: context.currentCancellationUnit,
+      completedCancellationUnits: context.completedCancellationUnits,
       cancelInstanceId: `cell-${index}-denominator`
     });
     const numeratorAttributes = numeratorDropActive
@@ -1894,11 +1936,16 @@
     if (!match) return escapeHtml(text);
     const [, amount, unit] = match;
     const isCancelledUnit = isPicketFenceCancelledUnit(unit, visual);
-    if (options.cancellationStepActive && isCancelledUnit && !options.cancelledUnitsRevealed) {
+    const normalizedUnit = normalizePicketFenceUnit(unit);
+    const completedCancellationUnits = options.completedCancellationUnits instanceof Set ? options.completedCancellationUnits : new Set();
+    const unitCancellationCompleted = options.cancelledUnitsRevealed || completedCancellationUnits.has(normalizedUnit);
+    const currentCancellationUnit = normalizePicketFenceUnit(options.currentCancellationUnit);
+    const unitIsCurrentCancellationTarget = options.cancellationStepActive && currentCancellationUnit && normalizedUnit === currentCancellationUnit;
+    if (unitIsCurrentCancellationTarget && isCancelledUnit && !unitCancellationCompleted) {
       const instanceId = `${options.cancelInstanceId || 'unit'}-${normalizePicketFenceUnit(unit) || unit}`;
       return `${escapeHtml(amount)} <button type="button" class="picket-fence-cancelable-unit" data-picket-fence-cancel-answer="${escapeAttr(unit)}" data-picket-fence-cancel-instance="${escapeAttr(instanceId)}" aria-pressed="false" aria-label="Cancel matching ${escapeAttr(unit)}">${escapeHtml(unit)}</button>`;
     }
-    const unitClass = options.cancelledUnitsRevealed && isCancelledUnit ? 'picket-fence-cancelled' : 'picket-fence-final-unit';
+    const unitClass = unitCancellationCompleted && isCancelledUnit ? 'picket-fence-cancelled' : 'picket-fence-final-unit';
     return `${escapeHtml(amount)} <span class="${unitClass}">${escapeHtml(unit)}</span>`;
   }
 
@@ -1929,6 +1976,9 @@
     if (fillContext.completed) return true;
     const completedSteps = fillContext.completedSteps instanceof Set ? fillContext.completedSteps : new Set();
     const unlockSteps = Array.isArray(section.unlockAfterStepIds) ? section.unlockAfterStepIds : [];
+    if (section.requireAllUnlockSteps === true && unlockSteps.length > 0) {
+      return unlockSteps.every((stepId) => completedSteps.has(String(stepId || '')));
+    }
     if (unlockSteps.some((stepId) => completedSteps.has(String(stepId || '')))) return true;
     return Number(fillContext.progress) > 0 && section.id === 'given_value';
   }
@@ -3518,6 +3568,12 @@
 
   function escapeAttr(value) {
     return escapeHtml(value);
+  }
+
+  if (window.__CHARLEMAGNE_ENABLE_STUDENT_UI_TEST_HOOKS__ === true) {
+    window.CharlemagneStudentUiTestHooks = {
+      renderPicketFenceVisual
+    };
   }
 
   if (document.readyState === 'loading') {

@@ -1,6 +1,7 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const vm = require('node:vm');
 const { createStudentRouteHarness } = require('./test-helpers/studentRouteHarness');
 const {
   buildMotionForceKnowledgeTutorMetadata,
@@ -31,6 +32,148 @@ const getFunctionBlock = (name) => {
   const next = studentUi.indexOf('\n  function ', start + 1);
   return next < 0 ? studentUi.slice(start) : studentUi.slice(start, next);
 };
+
+function getStudentUiRenderTestHooks() {
+  const sandbox = {
+    console,
+    URLSearchParams,
+    window: {
+      __CHARLEMAGNE_ENABLE_STUDENT_UI_TEST_HOOKS__: true,
+      location: { search: '' },
+      CSS: {
+        escape(value) {
+          return String(value || '').replace(/["\\]/g, '\\$&');
+        }
+      },
+      setInterval() {},
+      clearInterval() {}
+    },
+    document: {
+      readyState: 'loading',
+      addEventListener() {},
+      getElementById() {
+        return null;
+      }
+    }
+  };
+  vm.runInNewContext(studentUi, sandbox, { filename: 'student-ui.js' });
+  return sandbox.window.CharlemagneStudentUiTestHooks || {};
+}
+
+function assertPicketFenceCancellationRenderOutput(renderPicketFenceVisual) {
+  const metricVisual = buildPicketFenceRenderFixture({
+    given: { value: 48, unit: 'km' },
+    targetUnit: 'm',
+    factors: [
+      { numeratorValue: 1000, numeratorUnit: 'm', denominatorValue: 1, denominatorUnit: 'km', cancelsUnit: 'km' }
+    ],
+    resultValue: 48000,
+    resultUnit: 'm',
+    cancellationUnlockSteps: ['cancel_units']
+  });
+  const metricHtml = renderPicketFenceVisual(metricVisual, 'metric-cancel-render', {
+    tutor: {
+      currentStep: { id: 'cancel_units', prompt: 'Click each km unit in the fence to cross it out.' },
+      completedSteps: ['choose_method', 'identify_given_quantity', 'fill_conversion_factor_top', 'fill_conversion_factor_bottom']
+    },
+    work: {
+      currentStep: { id: 'cancel_units', prompt: 'Click each km unit in the fence to cross it out.' },
+      completedSteps: ['choose_method', 'identify_given_quantity', 'fill_conversion_factor_top', 'fill_conversion_factor_bottom']
+    }
+  });
+  assert.equal(countMatches(metricHtml, /data-picket-fence-cancel-answer="km"/g), 2, 'Metric Step 5 should render both km labels as cancelable controls.');
+  assert.equal(countMatches(metricHtml, /data-picket-fence-cancel-answer="m"/g), 0, 'Metric Step 5 should not make the target unit m clickable.');
+  assert.match(metricHtml, /<button[^>]+class="picket-fence-cancelable-unit"[^>]+data-picket-fence-cancel-answer="km"/, 'Cancelable km labels should render as real buttons inside the visual.');
+
+  const mixedVisual = buildPicketFenceRenderFixture({
+    given: { value: 250.4, unit: 'cm' },
+    targetUnit: 'ft',
+    factors: [
+      { numeratorValue: 1, numeratorUnit: 'in', denominatorValue: 2.54, denominatorUnit: 'cm', cancelsUnit: 'cm' },
+      { numeratorValue: 1, numeratorUnit: 'ft', denominatorValue: 12, denominatorUnit: 'in', cancelsUnit: 'in' }
+    ],
+    resultValue: 8.22,
+    resultUnit: 'ft',
+    cancellationUnlockSteps: ['cancel_units_cm', 'cancel_units_in']
+  });
+  const mixedCmHtml = renderPicketFenceVisual(mixedVisual, 'mixed-cm-cancel-render', {
+    tutor: {
+      currentStep: { id: 'cancel_units_cm', prompt: 'Click each cm unit in the fence to cross it out.' },
+      completedSteps: ['identify_given_quantity', 'fill_conversion_factor_0_top', 'fill_conversion_factor_0_bottom', 'fill_conversion_factor_1_top', 'fill_conversion_factor_1_bottom']
+    },
+    work: {
+      currentStep: { id: 'cancel_units_cm', prompt: 'Click each cm unit in the fence to cross it out.' },
+      completedSteps: ['identify_given_quantity', 'fill_conversion_factor_0_top', 'fill_conversion_factor_0_bottom', 'fill_conversion_factor_1_top', 'fill_conversion_factor_1_bottom']
+    }
+  });
+  assert.equal(countMatches(mixedCmHtml, /data-picket-fence-cancel-answer="cm"/g), 2, 'Mixed-unit cm step should render only cm labels as cancelable controls.');
+  assert.equal(countMatches(mixedCmHtml, /data-picket-fence-cancel-answer="in"/g), 0, 'Mixed-unit cm step should not make future in labels clickable yet.');
+
+  const mixedInHtml = renderPicketFenceVisual(mixedVisual, 'mixed-in-cancel-render', {
+    tutor: {
+      currentStep: { id: 'cancel_units_in', prompt: 'Click each in unit in the fence to cross it out.' },
+      completedSteps: ['identify_given_quantity', 'fill_conversion_factor_0_top', 'fill_conversion_factor_0_bottom', 'fill_conversion_factor_1_top', 'fill_conversion_factor_1_bottom', 'cancel_units_cm']
+    },
+    work: {
+      currentStep: { id: 'cancel_units_in', prompt: 'Click each in unit in the fence to cross it out.' },
+      completedSteps: ['identify_given_quantity', 'fill_conversion_factor_0_top', 'fill_conversion_factor_0_bottom', 'fill_conversion_factor_1_top', 'fill_conversion_factor_1_bottom', 'cancel_units_cm']
+    }
+  });
+  assert.equal(countMatches(mixedInHtml, /data-picket-fence-cancel-answer="in"/g), 2, 'Mixed-unit in step should render in labels as cancelable controls after cm is complete.');
+  assert.equal(countMatches(mixedInHtml, /data-picket-fence-cancel-answer="cm"/g), 0, 'Mixed-unit in step should keep previously canceled cm labels read-only.');
+  assert.match(mixedInHtml, /picket-fence-cancelled[^>]*>cm</, 'Previously canceled cm units should remain crossed out/read-only on the in step.');
+}
+
+function buildPicketFenceRenderFixture({ given, targetUnit, factors, resultValue, resultUnit, cancellationUnlockSteps }) {
+  const cells = [
+    {
+      position: 0,
+      numerator: `${formatFixtureNumber(given.value)} ${given.unit}`,
+      denominator: '',
+      numeratorSectionId: 'given_value'
+    },
+    ...factors.map((factor, index) => ({
+      position: index + 1,
+      numerator: `${formatFixtureNumber(factor.numeratorValue)} ${factor.numeratorUnit}`,
+      denominator: `${formatFixtureNumber(factor.denominatorValue)} ${factor.denominatorUnit}`,
+      numeratorSectionId: `conversion_factor_${index}_numerator`,
+      denominatorSectionId: `conversion_factor_${index}_denominator`
+    }))
+  ];
+  return {
+    visualType: 'picket_fence',
+    given,
+    targetUnit,
+    conversionFactors: factors,
+    cells,
+    fillableSections: [
+      { id: 'given_value', value: `${formatFixtureNumber(given.value)} ${given.unit}`, unlockAfterStepIds: ['identify_given_quantity'] },
+      ...factors.flatMap((factor, index) => [
+        { id: `conversion_factor_${index}_numerator`, value: `${formatFixtureNumber(factor.numeratorValue)} ${factor.numeratorUnit}`, unlockAfterStepIds: [`fill_conversion_factor_${index}_top`, 'fill_conversion_factor_top'] },
+        { id: `conversion_factor_${index}_denominator`, value: `${formatFixtureNumber(factor.denominatorValue)} ${factor.denominatorUnit}`, unlockAfterStepIds: [`fill_conversion_factor_${index}_bottom`, 'fill_conversion_factor_bottom'] }
+      ]),
+      { id: 'canceled_units', value: factors.map((factor) => factor.cancelsUnit).join(', '), unlockAfterStepIds: cancellationUnlockSteps, requireAllUnlockSteps: true },
+      { id: 'final_answer', value: `${formatFixtureNumber(resultValue)} ${resultUnit}`, unlockAfterStepIds: ['calculate_result'] }
+    ],
+    cancellationSteps: factors.map((factor) => ({ unit: factor.cancelsUnit })),
+    arithmetic: {
+      resultValue,
+      resultUnit
+    }
+  };
+}
+
+function formatFixtureNumber(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return String(value || '').trim();
+  if (Math.abs(number) >= 1000) return number.toLocaleString('en-US', { maximumFractionDigits: 12 });
+  if (Number.isInteger(number)) return String(number);
+  return number.toLocaleString('en-US', { maximumFractionDigits: 12, useGrouping: false });
+}
+
+function countMatches(text, pattern) {
+  return (String(text || '').match(pattern) || []).length;
+}
 
 const statusIndex = studentHtml.indexOf('class="student-status-bar"');
 const timelineIndex = studentHtml.indexOf('id="studentTimeline"');
@@ -171,7 +314,8 @@ assert.ok(picketFenceVisualBlock, 'Picket fence tutor visual should have a card 
 assert.match(picketFenceVisualBlock, /border-radius:\s*8px;/, 'Picket fence visual should stay compact inside Formula Tutor cards.');
 assert.match(picketFenceCellBlock, /min-width:\s*6\.8rem;/, 'Picket fence cells should keep stable dimensions.');
 assert.match(picketFenceCancelledBlock, /text-decoration:\s*line-through;/, 'Picket fence visual should visibly mark cancelled units.');
-assert.match(picketFenceCancelableUnitBlock, /border:\s*1px dashed rgba\(255,214,102,0\.7\);/, 'Clickable picket-fence unit labels should have a clear cancel affordance during the cancellation step.');
+assert.match(picketFenceCancelableUnitBlock, /border:\s*1px dashed rgba\(255,214,102,0\.92\);/, 'Clickable picket-fence unit labels should have a clear cancel affordance during the cancellation step.');
+assert.match(picketFenceCancelableUnitBlock, /box-shadow:\s*0 0 0 2px rgba\(255,214,102,0\.12\)/, 'Clickable picket-fence unit labels should visually read as active cross-out targets.');
 assert.match(picketFenceCancelableUnitBlock, /cursor:\s*pointer;/, 'Clickable picket-fence unit labels should read as interactive only during the cancellation step.');
 assert.match(studentHtml, /\.picket-fence-cancelable-unit\.is-locally-cancelled\s*\{[\s\S]*text-decoration:\s*line-through;/, 'Clicked picket-fence unit labels should cross out locally before backend completion.');
 assert.match(picketFenceDropZoneBlock, /border:\s*1px dashed rgba\(255,214,102,0\.62\);/, 'Picket fence factor slots should have a clear active drop-zone style.');
@@ -189,6 +333,10 @@ assert.match(scientificNotationDecimalBlock, /box-shadow:\s*0 0 0 3px rgba\(102,
 assert.match(scientificNotationControlBlock, /min-height:\s*34px;/, 'Scientific notation controls should be usable tap targets.');
 assert.match(scientificNotationMoveBlock, /flex-wrap:\s*wrap;/, 'Scientific notation move summary should wrap on small screens.');
 assert.ok(flashcardCardBlock, 'Interactive flashcards should have a compact card style.');
+
+const studentUiRenderHooks = getStudentUiRenderTestHooks();
+assert.equal(typeof studentUiRenderHooks.renderPicketFenceVisual, 'function', 'Student UI should expose a test-only picket-fence renderer hook.');
+assertPicketFenceCancellationRenderOutput(studentUiRenderHooks.renderPicketFenceVisual);
 assert.match(flashcardCardBlock, /border-radius:\s*8px;/, 'Flashcard cards should stay compact in the chat timeline.');
 assert.match(flashcardTitleBlock, /font-weight:\s*850;/, 'Flashcard card titles should be visually prominent.');
 assert.match(flashcardProgressBlock, /text-transform:\s*uppercase;/, 'Flashcard card progress should scan like session metadata.');
@@ -507,13 +655,13 @@ assert.match(
 );
 assert.match(
   studentUi,
-  /function renderPicketFenceTerm\(value, visual, options = \{\}\)[\s\S]*picket-fence-placeholder[\s\S]*options\.cancellationStepActive && isCancelledUnit[\s\S]*picket-fence-cancelable-unit[\s\S]*data-picket-fence-cancel-answer="\$\{escapeAttr\(unit\)\}"[\s\S]*data-picket-fence-cancel-instance="\$\{escapeAttr\(instanceId\)\}"[\s\S]*aria-pressed="false"[\s\S]*options\.cancelledUnitsRevealed[\s\S]*picket-fence-cancelled[\s\S]*picket-fence-final-unit/,
-  'Picket fence terms should make actual cancelable unit labels clickable with unique instances on Step 5, then mark cancelled units after cancellation.'
+  /function renderPicketFenceTerm\(value, visual, options = \{\}\)[\s\S]*picket-fence-placeholder[\s\S]*completedCancellationUnits[\s\S]*unitCancellationCompleted[\s\S]*currentCancellationUnit[\s\S]*unitIsCurrentCancellationTarget[\s\S]*picket-fence-cancelable-unit[\s\S]*data-picket-fence-cancel-answer="\$\{escapeAttr\(unit\)\}"[\s\S]*data-picket-fence-cancel-instance="\$\{escapeAttr\(instanceId\)\}"[\s\S]*aria-pressed="false"[\s\S]*picket-fence-cancelled[\s\S]*picket-fence-final-unit/,
+  'Picket fence terms should make only the current cancellation target clickable, keep prior canceled units crossed out, then mark all cancelled units after cancellation.'
 );
 assert.match(
   studentUi,
-  /function isPicketFenceSectionFilled\(section, fillContext = \{\}\)[\s\S]*completedSteps[\s\S]*unlockAfterStepIds/,
-  'Picket fence fillable sections should be tied to completed Formula Tutor steps.'
+  /function isPicketFenceSectionFilled\(section, fillContext = \{\}\)[\s\S]*completedSteps[\s\S]*unlockAfterStepIds[\s\S]*requireAllUnlockSteps[\s\S]*unlockSteps\.every/,
+  'Picket fence fillable sections should support all-required completed Formula Tutor steps for multi-unit cancellation.'
 );
 assert.doesNotMatch(
   studentUi,
@@ -1813,7 +1961,11 @@ async function assertMetricMethodBranchVisuals(harness) {
   );
   const bottom = await sendHarnessMessage(harness, 'metric-method-branch-picket-ui', '1');
   assertCompletedStep(bottom.body, 'fill_conversion_factor_bottom');
-  assert.match(bottom.body.response, /Click a unit that cancels, or type one/i, 'picket-fence branch should ask for clickable or typed cancellation');
+  assert.match(bottom.body.response, /Click each km unit in the fence to cross it out/i, 'picket-fence branch should use click-first cancellation wording');
+  assert.doesNotMatch(bottom.body.response, /Click a unit that cancels, or type one|Type km/i, 'picket-fence branch should not present cancellation as a type-first task');
+  const wrongCancellation = await sendHarnessMessage(harness, 'metric-method-branch-picket-ui', '48000');
+  assert.match(wrongCancellation.body.response, /First click each km unit in the fence to cross it out/i, 'wrong final-number answer on cancellation step should redirect to clicking units');
+  assert.doesNotMatch(wrongCancellation.body.response, /Not quite yet\. Type km/i, 'wrong cancellation feedback should not say Type km');
   const cancelled = await sendHarnessMessage(harness, 'metric-method-branch-picket-ui', 'km');
   assertCompletedStep(cancelled.body, 'cancel_units');
   assert.match(cancelled.body.response, /Type the final number only\. Do not include the unit/i, 'picket-fence branch should ask for the final number only');
@@ -1821,6 +1973,44 @@ async function assertMetricMethodBranchVisuals(harness) {
   const completedPicket = await sendHarnessMessage(harness, 'metric-method-branch-picket-ui', '48000');
   assert.equal(completedPicket.body.tutor?.completed, true, 'picket-fence typed final answer should complete tutor');
   assert.equal(completedPicket.body.tutor?.active, false, 'picket-fence typed final answer should deactivate tutor');
+
+  await assertMixedUnitPicketFenceCancellationSequence(harness);
+}
+
+async function assertMixedUnitPicketFenceCancellationSequence(harness) {
+  const hubId = 'mixed-unit-picket-cancellation-sequence';
+  const start = await sendHarnessMessage(harness, hubId, 'Convert 250.4 cm to feet.');
+  assert.equal(start.body.routeType, 'formula_tutor', 'mixed-unit picket fence should start Formula Tutor');
+  assert.equal(start.body.tutor?.formulaId, 'unit1_picket_fence_conversion', 'mixed-unit formula id');
+  assertPicketFenceVisual(start.body.tutor?.work?.visualMetadata, {
+    name: 'mixed-unit-picket-cancellation-sequence',
+    givenUnit: 'cm',
+    targetUnit: 'ft',
+    resultUnit: 'ft',
+    resultValue: 8.22,
+    minFactors: 2,
+    expectedCancelUnits: ['cm', 'in']
+  });
+  await sendHarnessMessage(harness, hubId, '250.4');
+  await sendHarnessMessage(harness, hubId, '1');
+  await sendHarnessMessage(harness, hubId, '2.54');
+  await sendHarnessMessage(harness, hubId, '1');
+  const factorComplete = await sendHarnessMessage(harness, hubId, '12');
+  assert.match(factorComplete.body.response, /Click each cm unit in the fence to cross it out/i, 'mixed-unit first cancellation step should be click-first for cm');
+  assert.doesNotMatch(factorComplete.body.response, /Click a unit that cancels, or type one|Type cm/i, 'mixed-unit first cancellation step should not be type-first');
+  assert.equal(factorComplete.body.tutor?.currentStep?.id, 'cancel_units_cm', 'mixed-unit first cancellation step id');
+  const cmCancelled = await sendHarnessMessage(harness, hubId, 'cm');
+  assertCompletedStep(cmCancelled.body, 'cancel_units_cm');
+  assert.equal(cmCancelled.body.tutor?.currentStep?.id, 'cancel_units_in', 'mixed-unit cm cancellation should advance to in cancellation step, not final number');
+  assert.match(cmCancelled.body.response, /Click each in unit in the fence to cross it out/i, 'mixed-unit second cancellation step should be click-first for in');
+  assert.doesNotMatch(cmCancelled.body.response, /Click a unit that cancels, or type one|Type in/i, 'mixed-unit second cancellation step should not be type-first');
+  assert.doesNotMatch(cmCancelled.body.response, /Type the final number only/i, 'mixed-unit cm cancellation should not jump directly to final number');
+  const inchCancelled = await sendHarnessMessage(harness, hubId, 'in');
+  assertCompletedStep(inchCancelled.body, 'cancel_units_in');
+  assert.match(inchCancelled.body.response, /Type the final number only/i, 'mixed-unit in cancellation should then advance to final number');
+  const completed = await sendHarnessMessage(harness, hubId, '8.22');
+  assert.equal(completed.body.tutor?.completed, true, 'mixed-unit final answer should complete after both cancellation steps');
+  assert.match(completed.body.response, /8\.22 ft/i, 'mixed-unit final response should include the final answer');
 }
 
 function assertMetricStepValueDisplays(visual, expectedDisplays) {

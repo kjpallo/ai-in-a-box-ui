@@ -1423,20 +1423,24 @@
         min-height: 1.28rem;
         margin-left: 0.08rem;
         padding: 0.02rem 0.22rem;
-        border: 1px dashed rgba(255,214,102,0.7);
+        border: 1px dashed rgba(255,214,102,0.92);
         border-radius: 999px;
-        background: rgba(255,214,102,0.12);
+        background: rgba(255,214,102,0.18);
         color: #fff2a8;
+        box-shadow: 0 0 0 2px rgba(255,214,102,0.12), 0 0 16px rgba(255,214,102,0.18);
         font: inherit;
         font-weight: 900;
         cursor: pointer;
+        transition: border-color 140ms ease, background 140ms ease, box-shadow 140ms ease, transform 140ms ease;
       }
 
       .picket-fence-cancelable-unit:hover,
       .picket-fence-cancelable-unit:focus-visible {
         border-color: rgba(102,247,209,0.86);
-        background: rgba(102,247,209,0.14);
+        background: rgba(102,247,209,0.18);
+        box-shadow: 0 0 0 3px rgba(102,247,209,0.16), 0 0 18px rgba(102,247,209,0.2);
         outline: none;
+        transform: translateY(-1px);
       }
 
       .picket-fence-cancelable-unit.is-locally-cancelled {
