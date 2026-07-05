@@ -1373,6 +1373,10 @@
         opacity: 0.84;
       }
 
+      .picket-fence-cell.has-active-drop-zone {
+        border-color: rgba(255,214,102,0.34);
+      }
+
       .picket-fence-multiply {
         color: #fff2a8;
         font-size: 0.72rem;
@@ -1412,9 +1416,57 @@
         color: #66f7d1;
       }
 
+      .picket-fence-cancelable-unit {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 1.28rem;
+        margin-left: 0.08rem;
+        padding: 0.02rem 0.22rem;
+        border: 1px dashed rgba(255,214,102,0.7);
+        border-radius: 999px;
+        background: rgba(255,214,102,0.12);
+        color: #fff2a8;
+        font: inherit;
+        font-weight: 900;
+        cursor: pointer;
+      }
+
+      .picket-fence-cancelable-unit:hover,
+      .picket-fence-cancelable-unit:focus-visible {
+        border-color: rgba(102,247,209,0.86);
+        background: rgba(102,247,209,0.14);
+        outline: none;
+      }
+
+      .picket-fence-cancelable-unit.is-locally-cancelled {
+        border-color: rgba(255,214,102,0.82);
+        background: rgba(255,214,102,0.18);
+        color: rgba(255,242,168,0.88);
+        text-decoration: line-through;
+        text-decoration-color: rgba(255,214,102,0.96);
+        text-decoration-thickness: 0.14rem;
+      }
+
       .picket-fence-placeholder {
         color: rgba(226,232,240,0.78);
         font-style: italic;
+      }
+
+      .picket-fence-drop-zone {
+        min-height: 1.62rem;
+        padding: 0.18rem 0.24rem;
+        border: 1px dashed rgba(255,214,102,0.62);
+        border-radius: 6px;
+        background: rgba(255,214,102,0.1);
+        color: #fff2a8;
+        transition: border-color 140ms ease, background 140ms ease, box-shadow 140ms ease;
+      }
+
+      .picket-fence-drop-zone.is-drag-over {
+        border-color: rgba(102,247,209,0.86);
+        background: rgba(102,247,209,0.14);
+        box-shadow: inset 0 0 0 1px rgba(102,247,209,0.32);
       }
 
       .picket-fence-cancellation,
@@ -1666,6 +1718,15 @@
         border-color: rgba(255,238,185,0.9);
         box-shadow: 0 0 18px rgba(255,214,102,0.28), inset 0 1px 0 rgba(255,255,255,0.22);
         outline: none;
+      }
+
+      .student-tutor-answer-chip[draggable="true"] {
+        cursor: grab;
+      }
+
+      .student-tutor-answer-chip.is-dragging {
+        opacity: 0.72;
+        cursor: grabbing;
       }
 
       .student-calculator {

@@ -112,8 +112,10 @@ const metricStairStepCurrentDisplayBlock = getCssBlock('.metric-stair-step-curre
 const picketFenceVisualBlock = getCssBlock('.picket-fence-visual');
 const picketFenceCellBlock = getCssBlock('.picket-fence-cell');
 const picketFenceCancelledBlock = getCssBlock('.picket-fence-cancelled');
+const picketFenceCancelableUnitBlock = getCssBlock('.picket-fence-cancelable-unit');
 const picketFenceControlBlock = getCssBlock('.picket-fence-control');
 const picketFencePlaceholderBlock = getCssBlock('.picket-fence-placeholder');
+const picketFenceDropZoneBlock = getCssBlock('.picket-fence-drop-zone');
 const scientificNotationVisualBlock = getCssBlock('.scientific-notation-visual');
 const scientificNotationNumberBlock = getCssBlock('.scientific-notation-number');
 const scientificNotationDecimalBlock = getCssBlock('.scientific-notation-decimal');
@@ -169,6 +171,12 @@ assert.ok(picketFenceVisualBlock, 'Picket fence tutor visual should have a card 
 assert.match(picketFenceVisualBlock, /border-radius:\s*8px;/, 'Picket fence visual should stay compact inside Formula Tutor cards.');
 assert.match(picketFenceCellBlock, /min-width:\s*6\.8rem;/, 'Picket fence cells should keep stable dimensions.');
 assert.match(picketFenceCancelledBlock, /text-decoration:\s*line-through;/, 'Picket fence visual should visibly mark cancelled units.');
+assert.match(picketFenceCancelableUnitBlock, /border:\s*1px dashed rgba\(255,214,102,0\.7\);/, 'Clickable picket-fence unit labels should have a clear cancel affordance during the cancellation step.');
+assert.match(picketFenceCancelableUnitBlock, /cursor:\s*pointer;/, 'Clickable picket-fence unit labels should read as interactive only during the cancellation step.');
+assert.match(studentHtml, /\.picket-fence-cancelable-unit\.is-locally-cancelled\s*\{[\s\S]*text-decoration:\s*line-through;/, 'Clicked picket-fence unit labels should cross out locally before backend completion.');
+assert.match(picketFenceDropZoneBlock, /border:\s*1px dashed rgba\(255,214,102,0\.62\);/, 'Picket fence factor slots should have a clear active drop-zone style.');
+assert.match(picketFenceDropZoneBlock, /background:\s*rgba\(255,214,102,0\.1\);/, 'Picket fence drop zones should read as instructional workspace targets.');
+assert.match(studentHtml, /\.student-tutor-answer-chip\[draggable="true"\]\s*\{[\s\S]*cursor:\s*grab;/, 'Draggable picket-fence answer chips should visually indicate they can be dragged.');
 assert.doesNotMatch(getCssBlock('.picket-fence-cancel-unit'), /text-decoration:\s*line-through/, 'Active picket-fence cancellation buttons should not look crossed out before the student clicks them.');
 assert.match(getCssBlock('.picket-fence-cancellation-state'), /text-decoration:\s*line-through;/, 'Read-only canceled picket-fence state should use crossed-out styling after cancellation.');
 assert.doesNotMatch(getCssBlock('.picket-fence-cancel-unit'), /255,150,126|84,33,26|39,15,16/, 'Picket fence cancellation buttons should not use danger/destructive styling.');
@@ -459,13 +467,13 @@ assert.match(
 );
 assert.match(
   studentUi,
-  /function renderPicketFenceVisual\(visual, turnId, context = \{\}\)[\s\S]*buildPicketFenceFillContext\(visual, context, progress\)[\s\S]*cancellationStepActive = isPicketFenceCancellationStep\(context\)[\s\S]*getPicketFenceHelperText\(visual[\s\S]*Picket fence method[\s\S]*Target:[\s\S]*Start:[\s\S]*Goal:[\s\S]*Answer:[\s\S]*renderPicketFenceCancellations\(cancellations/,
-  'Picket fence renderer should show title, Start/Goal/Answer summary, gated helper text, gated cancellations, and an answer slot that stays hidden until completion.'
+  /function renderPicketFenceVisual\(visual, turnId, context = \{\}\)[\s\S]*buildPicketFenceFillContext\(visual, context, progress\)[\s\S]*cancellationStepActive = isPicketFenceCancellationStep\(context\)[\s\S]*activeDropSectionId = getPicketFenceActiveDropSectionId\(visual, context, fillContext\)[\s\S]*getPicketFenceHelperText\(visual[\s\S]*Picket fence method[\s\S]*Target:[\s\S]*Start:[\s\S]*Goal:[\s\S]*Answer:[\s\S]*renderPicketFenceCancellations\(cancellations/,
+  'Picket fence renderer should show title, Start/Goal/Answer summary, gated helper text, gated cancellations, active drop-zone metadata, and an answer slot that stays hidden until completion.'
 );
 assert.match(
   studentUi,
-  /function renderPicketFenceCancellations\(cancellations, state = \{\}\)[\s\S]*if \(state\.cancellationStepActive\)[\s\S]*picket-fence-cancel-unit student-tutor-control student-tutor-control--workspace[\s\S]*data-picket-fence-cancel-answer="\$\{escapeAttr\(step\.unit \|\| ''\)\}"[\s\S]*Cancel matching \$\{escapeHtml\(step\.unit \|\| ''\)\}[\s\S]*if \(state\.cancellationFilled\)[\s\S]*picket-fence-cancellation-state[\s\S]*canceled[\s\S]*return '';/,
-  'Picket fence cancellation controls should render only on the cancellation step, then become read-only canceled state.'
+  /function renderPicketFenceCancellations\(cancellations, state = \{\}\)[\s\S]*if \(state\.cancellationFilled\)[\s\S]*picket-fence-cancellation-state[\s\S]*canceled[\s\S]*return '';/,
+  'Picket fence cancellation summary should render only as read-only canceled state after the visual unit labels have been clicked.'
 );
 assert.match(
   studentUi,
@@ -474,8 +482,13 @@ assert.match(
 );
 assert.match(
   studentUi,
-  /function getPicketFenceHelperText\(visual, state = \{\}\)[\s\S]*Click the matching[\s\S]*units to cancel them[\s\S]*cancels with[\s\S]*remains[\s\S]*Fill the fence from left to right/,
-  'Picket fence helper text should only mention cancellation during or after the cancellation step.'
+  /function getPicketFenceHelperText\(visual, state = \{\}\)[\s\S]*Click the matching[\s\S]*units to cancel them[\s\S]*cancels with[\s\S]*remains[\s\S]*Starting measurements are written over 1[\s\S]*The target unit goes on top[\s\S]*The starting unit must cancel[\s\S]*Fill the fence from left to right/,
+  'Picket fence helper text should explain starting measurements over 1, factor placement, and cancellation only on the matching active steps.'
+);
+assert.match(
+  studentUi,
+  /function getPicketFenceActiveDropSectionId\(visual, context = \{\}, fillContext = \{\}\)[\s\S]*identify_given_quantity[\s\S]*given_value[\s\S]*top number[\s\S]*numerator[\s\S]*bottom number[\s\S]*denominator[\s\S]*conversion factor[\s\S]*isPicketFenceSectionFilled\(section, fillContext\)[\s\S]*unlockAfterStepIds/,
+  'Picket fence drag/drop should activate the Step 2 given-value slot and the current conversion-factor numerator or denominator slot.'
 );
 assert.doesNotMatch(
   getFunctionBlock('renderPicketFenceVisual'),
@@ -484,8 +497,8 @@ assert.doesNotMatch(
 );
 assert.match(
   studentUi,
-  /function renderPicketFenceCell\(cell, index, context\)[\s\S]*isGivenCell \? 'enter given value' : 'top number'[\s\S]*'bottom number'[\s\S]*isGivenCell \? 'Start' : '&times;'/,
-  'Picket fence cells should use clearer Start, top number, and bottom number wording.'
+  /function renderPicketFenceCell\(cell, index, context\)[\s\S]*givenMeasurementDisplay[\s\S]*Drop \$\{givenMeasurementDisplay \|\| 'starting value'\} here[\s\S]*Drop top number here[\s\S]*Starting denominator: 1[\s\S]*Drop bottom number here[\s\S]*denominatorValue[\s\S]*data-picket-fence-drop-section[\s\S]*isGivenCell \? 'Start' : '&times;'/,
+  'Picket fence cells should use clearer Start wording, show the given value over 1, and mark only the active placement slot as a drop zone.'
 );
 assert.match(
   studentUi,
@@ -494,8 +507,8 @@ assert.match(
 );
 assert.match(
   studentUi,
-  /function renderPicketFenceTerm\(value, visual, options = \{\}\)[\s\S]*picket-fence-placeholder[\s\S]*options\.cancelledUnitsRevealed[\s\S]*picket-fence-cancelled[\s\S]*picket-fence-final-unit/,
-  'Picket fence terms should show pending placeholders, mark cancelled units only after cancellation, and leave final units uncancelled.'
+  /function renderPicketFenceTerm\(value, visual, options = \{\}\)[\s\S]*picket-fence-placeholder[\s\S]*options\.cancellationStepActive && isCancelledUnit[\s\S]*picket-fence-cancelable-unit[\s\S]*data-picket-fence-cancel-answer="\$\{escapeAttr\(unit\)\}"[\s\S]*data-picket-fence-cancel-instance="\$\{escapeAttr\(instanceId\)\}"[\s\S]*aria-pressed="false"[\s\S]*options\.cancelledUnitsRevealed[\s\S]*picket-fence-cancelled[\s\S]*picket-fence-final-unit/,
+  'Picket fence terms should make actual cancelable unit labels clickable with unique instances on Step 5, then mark cancelled units after cancellation.'
 );
 assert.match(
   studentUi,
@@ -509,8 +522,23 @@ assert.doesNotMatch(
 );
 assert.match(
   studentUi,
-  /function handleTimelineClick\(event\)[\s\S]*data-picket-fence-cancel-answer[\s\S]*sendTutorCommand\(picketFenceCancelAnswer\.getAttribute\('data-picket-fence-cancel-answer'\)/,
-  'Picket fence cancellation buttons should submit the known cancelling unit through the normal tutor command path.'
+  /function handleTimelineClick\(event\)[\s\S]*data-picket-fence-cancel-answer[\s\S]*handlePicketFenceCancelUnitClick\(picketFenceCancelAnswer\)/,
+  'Picket fence cancelable unit labels should route through the visual cancellation handler.'
+);
+assert.match(
+  studentUi,
+  /function handlePicketFenceCancelUnitClick\(control\)[\s\S]*data-picket-fence-cancel-instance[\s\S]*matchingControls[\s\S]*picketFenceCancellationClickState[\s\S]*is-locally-cancelled[\s\S]*aria-pressed', 'true'[\s\S]*playPicketFencePopSound\(\)[\s\S]*matchingControls\.every[\s\S]*sendTutorCommand\(answer\)/,
+  'Picket fence Step 5 should cross out each clicked unit locally and submit only after all matching visible units are clicked.'
+);
+assert.match(
+  studentUi,
+  /function playPicketFencePopSound\(\)[\s\S]*AudioContext[\s\S]*oscillator[\s\S]*gain[\s\S]*catch \(error\)[\s\S]*Audio is a progressive enhancement/,
+  'Picket fence cancellation should use a short generated pop sound and ignore audio failures safely.'
+);
+assert.doesNotMatch(
+  getFunctionBlock('renderPicketFenceCancellations'),
+  /data-picket-fence-cancel-answer|picket-fence-cancel-unit|Cancel matching/,
+  'Picket fence Step 5 should not rely on separate standalone cancellation buttons.'
 );
 assert.match(
   studentUi,
@@ -519,8 +547,33 @@ assert.match(
 );
 assert.match(
   studentUi,
-  /function renderTutorAnswerChips\(tutor, work = \{\}\)[\s\S]*singleChip[\s\S]*getSingleAnswerChipLabel[\s\S]*student-tutor-answer-chips[\s\S]*student-tutor-answer-chip student-tutor-control student-tutor-control--helper[\s\S]*data-tutor-answer-chip/,
-  'Picket fence fill-in steps should render labeled bounded answer chips that submit through tutor commands.'
+  /function renderTutorAnswerChips\(tutor, work = \{\}\)[\s\S]*singleChip[\s\S]*getSingleAnswerChipLabel[\s\S]*draggable = isPicketFenceDraggablePlacementStep\(tutor, work\)[\s\S]*student-tutor-answer-chips[\s\S]*student-tutor-answer-chip student-tutor-control student-tutor-control--helper[\s\S]*data-tutor-answer-chip[\s\S]*draggable="true" data-picket-fence-drag-answer/,
+  'Picket fence fill-in steps should render labeled bounded answer chips that still click-submit and become draggable on given-value and factor-placement steps.'
+);
+assert.match(
+  studentUi,
+  /function renderTutorAnswerChips\(tutor, work = \{\}\)[\s\S]*const displayLabel = getTutorAnswerChipDisplayLabel\(chip, tutor, work\)[\s\S]*data-tutor-answer-chip="\$\{escapeAttr\(chip\.value\)\}"[\s\S]*data-picket-fence-drag-answer="\$\{escapeAttr\(chip\.value\)\}"[\s\S]*>\$\{escapeHtml\(displayLabel\)\}<\/button>/,
+  'Step 2 picket-fence chips should be able to display the full starting measurement while submitting the original numeric answer.'
+);
+assert.match(
+  studentUi,
+  /function getTutorAnswerChipDisplayLabel\(chip = \{\}, tutor = \{\}, work = \{\}\)[\s\S]*isPicketFenceFactorPlacementStep\(tutor, work\)[\s\S]*getPicketFenceFactorChipDisplayLabel\(chip, tutor, work, visual\)[\s\S]*isPicketFenceGivenValuePlacementStep\(tutor, work\)[\s\S]*visual\?\.given[\s\S]*unit[\s\S]*return `\$\{value\} \$\{unit\}`\.trim\(\)/,
+  'Step 2 picket-fence chip display should use the visual starting unit, and Step 3/4 should use full conversion-factor terms when available.'
+);
+assert.match(
+  studentUi,
+  /function getPicketFenceFactorChipDisplayLabel\(chip = \{\}, tutor = \{\}, work = \{\}, visual = \{\}\)[\s\S]*top number[\s\S]*numerator[\s\S]*bottom number[\s\S]*denominator[\s\S]*fill_conversion_factor_\(\\d\+\)_\(top\|bottom\)[\s\S]*preferredCell[\s\S]*parsePicketFenceTerm\(term\)[\s\S]*return term \? String\(term\)\.trim\(\) : '';/,
+  'Step 3/4 picket-fence chips should display the full matching conversion-factor term while keeping numeric chip values.'
+);
+assert.match(
+  studentUi,
+  /function getPicketFenceTermForSectionId\(visual, sectionId\)[\s\S]*numeratorSectionId[\s\S]*denominatorSectionId[\s\S]*return String\(match\.numerator[\s\S]*return String\(match\.denominator/,
+  'Picket fence helper text should read the active drop-zone term from visual metadata.'
+);
+assert.match(
+  studentUi,
+  /function isPicketFenceDraggablePlacementStep\(tutor = \{\}, work = \{\}\)[\s\S]*isPicketFenceGivenValuePlacementStep\(tutor, work\)[\s\S]*isPicketFenceFactorPlacementStep\(tutor, work\)[\s\S]*function isPicketFenceGivenValuePlacementStep[\s\S]*identify_given_quantity[\s\S]*given number[\s\S]*function isPicketFenceFactorPlacementStep[\s\S]*\^fill_conversion_factor[\s\S]*top\|bottom[\s\S]*number/,
+  'Picket fence answer chips should be draggable during Step 2 given-value placement and Step 3/4 factor-placement steps.'
 );
 assert.match(
   studentUi,
@@ -531,6 +584,21 @@ assert.match(
   studentUi,
   /function handleTimelineClick\(event\)[\s\S]*data-tutor-answer-chip[\s\S]*sendTutorCommand\(tutorAnswerChip\.getAttribute\('data-tutor-answer-chip'\)/,
   'Answer chip clicks should use the same tutor command path as typed answers.'
+);
+assert.match(
+  studentUi,
+  /timeline\.addEventListener\('dragstart', handleTimelineDragStart\)[\s\S]*timeline\.addEventListener\('drop', handleTimelineDrop\)/,
+  'Picket fence drag/drop should be wired as timeline progressive enhancement events.'
+);
+assert.match(
+  studentUi,
+  /function handleTimelineDragStart\(event\)[\s\S]*data-picket-fence-drag-answer[\s\S]*isLiveTutorControl\(chip\)[\s\S]*event\.dataTransfer\.setData\('text\/plain', answer\)/,
+  'Dragging a picket-fence answer chip should carry the same answer value used by chip clicks.'
+);
+assert.match(
+  studentUi,
+  /function handleTimelineDrop\(event\)[\s\S]*data-picket-fence-drop-section[\s\S]*isLiveTutorControl\(dropZone\)[\s\S]*event\.dataTransfer\?\.getData\('text\/plain'\)[\s\S]*sendTutorCommand\(answer\)/,
+  'Dropping onto an active picket-fence slot should submit through the normal tutor command path.'
 );
 assert.match(
   studentUi,

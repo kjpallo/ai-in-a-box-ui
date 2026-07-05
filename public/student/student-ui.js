@@ -67,6 +67,7 @@
   const metricStairStepPreviewState = new Map();
   const metricStairStepCompletionState = new Set();
   const picketFenceState = new Map();
+  const picketFenceCancellationClickState = new Map();
   const scientificNotationState = new Map();
   const tutorSessionExpandedState = new Map();
   const tutorStepExpandedState = new Map();
@@ -97,6 +98,11 @@
     timeline.addEventListener('focusin', handleTimelinePreview);
     timeline.addEventListener('mouseout', handleTimelinePreviewClear);
     timeline.addEventListener('focusout', handleTimelinePreviewClear);
+    timeline.addEventListener('dragstart', handleTimelineDragStart);
+    timeline.addEventListener('dragend', handleTimelineDragEnd);
+    timeline.addEventListener('dragover', handleTimelineDragOver);
+    timeline.addEventListener('dragleave', handleTimelineDragLeave);
+    timeline.addEventListener('drop', handleTimelineDrop);
     installClassroomFrictionHandlers();
   }
 
@@ -1700,9 +1706,13 @@
     const cancellationSection = getPicketFenceSection(visual, 'canceled_units');
     const cancellationFilled = isPicketFenceSectionFilled(cancellationSection, fillContext);
     const cancellationStepActive = isPicketFenceCancellationStep(context);
+    const givenPlacementStepActive = isPicketFenceGivenValuePlacementStep(context.tutor, context.work);
+    const activeDropSectionId = getPicketFenceActiveDropSectionId(visual, context, fillContext);
     const helperText = getPicketFenceHelperText(visual, {
       cancellationStepActive,
-      cancellationFilled
+      cancellationFilled,
+      givenPlacementStepActive,
+      activeDropSectionId
     });
     const startDisplay = renderPicketFenceSectionValue(visual, 'given_value', fillContext, `${formatPicketFenceNumber(given.value)} ${given.unit || ''}`.trim(), 'enter given value');
     const finalAnswerDisplay = finalAnswerFilled ? escapeHtml(resultDisplay) : picketFencePlaceholder(finalAnswerSection, 'waiting');
@@ -1725,11 +1735,12 @@
             progress,
             visual,
             fillContext,
-            cancellationFilled
+            cancellationFilled,
+            cancellationStepActive,
+            activeDropSectionId
           })).join('')}
         </div>
         ${renderPicketFenceCancellations(cancellations, {
-          cancellationStepActive,
           cancellationFilled
         })}
       </section>
@@ -1738,21 +1749,6 @@
 
   function renderPicketFenceCancellations(cancellations, state = {}) {
     if (!Array.isArray(cancellations) || cancellations.length === 0) return '';
-    if (state.cancellationStepActive) {
-      return `
-        <div class="picket-fence-cancellations is-active" aria-label="Unit cancellations">
-          ${cancellations.map((step) => `
-            <button
-              type="button"
-              class="picket-fence-cancellation picket-fence-cancel-unit student-tutor-control student-tutor-control--workspace"
-              data-picket-fence-cancel-answer="${escapeAttr(step.unit || '')}"
-            >
-              Cancel matching ${escapeHtml(step.unit || '')}
-            </button>
-          `).join('')}
-        </div>
-      `;
-    }
     if (state.cancellationFilled) {
       return `
         <div class="picket-fence-cancellations is-revealed" aria-label="Unit cancellations">
@@ -1772,6 +1768,32 @@
     return stepId.includes('cancel') || /\b(click|tap)\b[\s\S]*\b(unit|units)\b[\s\S]*\bcancel/.test(prompt);
   }
 
+  function getPicketFenceActiveDropSectionId(visual, context = {}, fillContext = {}) {
+    const step = context?.work?.currentStep || context?.tutor?.currentStep || {};
+    const stepId = String(step?.id || '').trim();
+    const prompt = String(step?.prompt || '').toLowerCase();
+    if (!stepId && !prompt) return '';
+    const isGivenPlacement = stepId === 'identify_given_quantity' || /\bgiven number\b/.test(prompt);
+    if (isGivenPlacement) {
+      const givenSection = getPicketFenceSection(visual, 'given_value');
+      return isPicketFenceSectionFilled(givenSection, fillContext) ? '' : 'given_value';
+    }
+    const targetPart = /\btop number\b/.test(prompt) || /_top$/.test(stepId) || stepId === 'fill_conversion_factor_top'
+      ? 'numerator'
+      : /\bbottom number\b/.test(prompt) || /_bottom$/.test(stepId) || stepId === 'fill_conversion_factor_bottom'
+        ? 'denominator'
+        : '';
+    if (!targetPart || !/\bconversion factor\b/.test(prompt) && !/^fill_conversion_factor/.test(stepId)) return '';
+    const sections = Array.isArray(visual?.fillableSections) ? visual.fillableSections : [];
+    return sections.find((section) => {
+      const sectionId = String(section?.id || '');
+      if (!sectionId.includes(targetPart)) return false;
+      if (isPicketFenceSectionFilled(section, fillContext)) return false;
+      const unlockSteps = Array.isArray(section.unlockAfterStepIds) ? section.unlockAfterStepIds : [];
+      return unlockSteps.some((unlockStepId) => String(unlockStepId || '') === stepId);
+    })?.id || '';
+  }
+
   function getPicketFenceHelperText(visual, state = {}) {
     const cancellationUnits = (Array.isArray(visual?.cancellationSteps) ? visual.cancellationSteps : [])
       .map((step) => String(step?.unit || '').trim())
@@ -1786,7 +1808,26 @@
       if (targetUnit) return `Canceled units are crossed out, so ${targetUnit} remains.`;
       return 'Canceled units are crossed out.';
     }
+    if (state.givenPlacementStepActive) return 'Starting measurements are written over 1.';
+    if (String(state.activeDropSectionId || '').includes('conversion_factor') && String(state.activeDropSectionId || '').includes('numerator')) {
+      const term = getPicketFenceTermForSectionId(visual, state.activeDropSectionId);
+      return `The target unit goes on top. Place ${term || 'the top term'} on top.`;
+    }
+    if (String(state.activeDropSectionId || '').includes('conversion_factor') && String(state.activeDropSectionId || '').includes('denominator')) {
+      const term = getPicketFenceTermForSectionId(visual, state.activeDropSectionId);
+      const parsed = parsePicketFenceTerm(term);
+      return `The starting unit must cancel, so ${parsed?.unit || 'the starting unit'} goes on bottom. Place ${term || 'the bottom term'} on bottom.`;
+    }
     return 'Fill the fence from left to right. The remaining unit should match the target.';
+  }
+
+  function getPicketFenceTermForSectionId(visual, sectionId) {
+    const cells = Array.isArray(visual?.cells) ? visual.cells : [];
+    const match = cells.find((cell) => cell?.numeratorSectionId === sectionId || cell?.denominatorSectionId === sectionId);
+    if (!match) return '';
+    if (match.numeratorSectionId === sectionId) return String(match.numerator || '').trim();
+    if (match.denominatorSectionId === sectionId) return String(match.denominator || '').trim();
+    return '';
   }
 
   function isUnit1ConversionVisual(visual) {
@@ -1798,22 +1839,39 @@
   }
 
   function renderPicketFenceCell(cell, index, context) {
+    const numeratorDropActive = context.activeDropSectionId && context.activeDropSectionId === cell?.numeratorSectionId;
+    const denominatorDropActive = context.activeDropSectionId && context.activeDropSectionId === cell?.denominatorSectionId;
     const classes = [
       'picket-fence-cell',
       index <= context.progress ? 'is-revealed' : 'is-pending',
-      index === context.progress ? 'is-highlighted' : ''
+      index === context.progress ? 'is-highlighted' : '',
+      numeratorDropActive || denominatorDropActive ? 'has-active-drop-zone' : ''
     ].filter(Boolean).join(' ');
     const isGivenCell = index === 0;
+    const givenMeasurementDisplay = `${formatPicketFenceNumber(context.visual?.given?.value)} ${context.visual?.given?.unit || ''}`.trim();
+    const numeratorDropLabel = isGivenCell ? `Drop ${givenMeasurementDisplay || 'starting value'} here` : 'Drop top number here';
+    const denominatorDropLabel = isGivenCell ? 'Starting denominator: 1' : 'Drop bottom number here';
+    const denominatorValue = isGivenCell && !cell?.denominator ? '1' : cell?.denominator;
     const numerator = renderPicketFenceTerm(cell?.numerator, context.visual, {
       filled: isPicketFenceSectionFilled(getPicketFenceSection(context.visual, cell?.numeratorSectionId), context.fillContext),
-      placeholder: picketFencePlaceholder(getPicketFenceSection(context.visual, cell?.numeratorSectionId), isGivenCell ? 'enter given value' : 'top number'),
-      cancelledUnitsRevealed: context.cancellationFilled
+      placeholder: picketFencePlaceholder(getPicketFenceSection(context.visual, cell?.numeratorSectionId), numeratorDropActive ? numeratorDropLabel : isGivenCell ? 'enter given value' : 'top number'),
+      cancelledUnitsRevealed: context.cancellationFilled,
+      cancellationStepActive: context.cancellationStepActive,
+      cancelInstanceId: `cell-${index}-numerator`
     });
-    const denominator = renderPicketFenceTerm(cell?.denominator, context.visual, {
+    const denominator = renderPicketFenceTerm(denominatorValue, context.visual, {
       filled: !cell?.denominatorSectionId || isPicketFenceSectionFilled(getPicketFenceSection(context.visual, cell?.denominatorSectionId), context.fillContext),
-      placeholder: cell?.denominatorSectionId ? picketFencePlaceholder(getPicketFenceSection(context.visual, cell.denominatorSectionId), 'bottom number') : '',
-      cancelledUnitsRevealed: context.cancellationFilled
+      placeholder: cell?.denominatorSectionId ? picketFencePlaceholder(getPicketFenceSection(context.visual, cell.denominatorSectionId), denominatorDropActive ? denominatorDropLabel : 'bottom number') : '',
+      cancelledUnitsRevealed: context.cancellationFilled,
+      cancellationStepActive: context.cancellationStepActive,
+      cancelInstanceId: `cell-${index}-denominator`
     });
+    const numeratorAttributes = numeratorDropActive
+      ? ` data-picket-fence-drop-section="${escapeAttr(cell.numeratorSectionId)}" aria-label="${escapeAttr(numeratorDropLabel)}"`
+      : '';
+    const denominatorAttributes = denominatorDropActive
+      ? ` data-picket-fence-drop-section="${escapeAttr(cell.denominatorSectionId)}" aria-label="${escapeAttr(denominatorDropLabel)}"`
+      : '';
 
     return `
       <div
@@ -1821,8 +1879,8 @@
       >
         <span class="picket-fence-multiply">${isGivenCell ? 'Start' : '&times;'}</span>
         <span class="picket-fence-fraction">
-          <span class="picket-fence-numerator">${numerator || '&nbsp;'}</span>
-          <span class="picket-fence-denominator">${denominator || '&nbsp;'}</span>
+          <span class="picket-fence-numerator ${numeratorDropActive ? 'picket-fence-drop-zone' : ''}"${numeratorAttributes}>${numerator || '&nbsp;'}</span>
+          <span class="picket-fence-denominator ${denominatorDropActive ? 'picket-fence-drop-zone' : ''}"${denominatorAttributes}>${denominator || '&nbsp;'}</span>
         </span>
       </div>
     `;
@@ -1835,7 +1893,12 @@
     const match = text.match(/^(.+?)\s+([A-Za-zµ]+)$/u);
     if (!match) return escapeHtml(text);
     const [, amount, unit] = match;
-    const unitClass = options.cancelledUnitsRevealed && isPicketFenceCancelledUnit(unit, visual) ? 'picket-fence-cancelled' : 'picket-fence-final-unit';
+    const isCancelledUnit = isPicketFenceCancelledUnit(unit, visual);
+    if (options.cancellationStepActive && isCancelledUnit && !options.cancelledUnitsRevealed) {
+      const instanceId = `${options.cancelInstanceId || 'unit'}-${normalizePicketFenceUnit(unit) || unit}`;
+      return `${escapeHtml(amount)} <button type="button" class="picket-fence-cancelable-unit" data-picket-fence-cancel-answer="${escapeAttr(unit)}" data-picket-fence-cancel-instance="${escapeAttr(instanceId)}" aria-pressed="false" aria-label="Cancel matching ${escapeAttr(unit)}">${escapeHtml(unit)}</button>`;
+    }
+    const unitClass = options.cancelledUnitsRevealed && isCancelledUnit ? 'picket-fence-cancelled' : 'picket-fence-final-unit';
     return `${escapeHtml(amount)} <span class="${unitClass}">${escapeHtml(unit)}</span>`;
   }
 
@@ -2195,19 +2258,79 @@
     if (chips.length === 0) return '';
     const singleChip = chips.length === 1;
     const label = singleChip ? getSingleAnswerChipLabel(work, chips[0]) : 'Choose or type:';
+    const draggable = isPicketFenceDraggablePlacementStep(tutor, work);
 
     return `
       <div class="student-tutor-answer-chips ${singleChip ? 'has-single-chip' : 'has-multiple-chips'}" aria-label="Helpful answer options">
         <span class="student-tutor-answer-chip-label">${escapeHtml(label)}</span>
-        ${chips.map((chip) => `
+        ${chips.map((chip) => {
+          const displayLabel = getTutorAnswerChipDisplayLabel(chip, tutor, work);
+          return `
           <button
             type="button"
             class="student-tutor-answer-chip student-tutor-control student-tutor-control--helper"
             data-tutor-answer-chip="${escapeAttr(chip.value)}"
-          >${escapeHtml(chip.label)}</button>
-        `).join('')}
+            ${draggable ? `draggable="true" data-picket-fence-drag-answer="${escapeAttr(chip.value)}" aria-label="Drag or use ${escapeAttr(displayLabel)}"` : ''}
+          >${escapeHtml(displayLabel)}</button>
+        `;
+        }).join('')}
       </div>
     `;
+  }
+
+  function getTutorAnswerChipDisplayLabel(chip = {}, tutor = {}, work = {}) {
+    const visual = work.visualMetadata || tutor.visualMetadata || {};
+    if (isPicketFenceFactorPlacementStep(tutor, work)) {
+      const factorLabel = getPicketFenceFactorChipDisplayLabel(chip, tutor, work, visual);
+      if (factorLabel) return factorLabel;
+    }
+    if (!isPicketFenceGivenValuePlacementStep(tutor, work)) return chip.label;
+    const given = visual?.given || {};
+    const unit = String(given.unit || '').trim();
+    if (!unit) return chip.label;
+    const value = String(chip.value || chip.label || '').trim();
+    return `${value} ${unit}`.trim();
+  }
+
+  function getPicketFenceFactorChipDisplayLabel(chip = {}, tutor = {}, work = {}, visual = {}) {
+    const step = work.currentStep || tutor.currentStep || {};
+    const stepId = String(step?.id || '').trim();
+    const prompt = String(step?.prompt || '').toLowerCase();
+    const targetPart = /\btop number\b/.test(prompt) || /_top$/.test(stepId)
+      ? 'numerator'
+      : /\bbottom number\b/.test(prompt) || /_bottom$/.test(stepId)
+        ? 'denominator'
+        : '';
+    if (!targetPart) return '';
+    const expectedValue = normalizeTutorAnswerForDisplay(chip.value || chip.label);
+    const cells = Array.isArray(visual?.cells) ? visual.cells : [];
+    const factorIndexMatch = stepId.match(/^fill_conversion_factor_(\d+)_(top|bottom)$/);
+    const preferredCell = factorIndexMatch ? cells[Number(factorIndexMatch[1]) + 1] : null;
+    const candidates = preferredCell
+      ? [preferredCell, ...cells.slice(1).filter((cell) => cell !== preferredCell)]
+      : cells.slice(1);
+    const matchingCell = candidates.find((cell) => {
+      if (!cell) return false;
+      const term = targetPart === 'numerator' ? cell?.numerator : cell?.denominator;
+      const parsed = parsePicketFenceTerm(term);
+      return parsed && normalizeTutorAnswerForDisplay(parsed.amount) === expectedValue;
+    });
+    const term = targetPart === 'numerator' ? matchingCell?.numerator : matchingCell?.denominator;
+    return term ? String(term).trim() : '';
+  }
+
+  function parsePicketFenceTerm(value) {
+    const text = String(value || '').trim();
+    const match = text.match(/^(.+?)\s+([A-Za-zµ]+)$/u);
+    if (!match) return null;
+    return {
+      amount: match[1],
+      unit: match[2]
+    };
+  }
+
+  function normalizeTutorAnswerForDisplay(value) {
+    return String(value || '').replace(/,/g, '').trim().toLowerCase();
   }
 
   function getSingleAnswerChipLabel(work = {}, chip = {}) {
@@ -2227,6 +2350,24 @@
         value: String(chip?.value || chip?.label || '').trim()
       }))
       .filter((chip) => chip.label && chip.value);
+  }
+
+  function isPicketFenceDraggablePlacementStep(tutor = {}, work = {}) {
+    return isPicketFenceGivenValuePlacementStep(tutor, work) || isPicketFenceFactorPlacementStep(tutor, work);
+  }
+
+  function isPicketFenceGivenValuePlacementStep(tutor = {}, work = {}) {
+    const step = work.currentStep || tutor.currentStep || {};
+    const stepId = String(step?.id || '').trim();
+    const prompt = String(step?.prompt || '').toLowerCase();
+    return stepId === 'identify_given_quantity' && /\bgiven number\b/.test(prompt);
+  }
+
+  function isPicketFenceFactorPlacementStep(tutor = {}, work = {}) {
+    const step = work.currentStep || tutor.currentStep || {};
+    const stepId = String(step?.id || '').trim();
+    const prompt = String(step?.prompt || '').toLowerCase();
+    return /^fill_conversion_factor/.test(stepId) && /\b(top|bottom) number\b/.test(prompt);
   }
 
   function getCurrentTutorChoices(tutor, work = {}) {
@@ -2381,6 +2522,123 @@
     return answer;
   }
 
+  function handleTimelineDragStart(event) {
+    const chip = event.target.closest('[data-picket-fence-drag-answer]');
+    if (!chip || !timeline.contains(chip)) return;
+    if (!isLiveTutorControl(chip)) return;
+    const answer = chip.getAttribute('data-picket-fence-drag-answer') || '';
+    if (!answer || !event.dataTransfer) return;
+    event.dataTransfer.effectAllowed = 'copy';
+    event.dataTransfer.setData('text/plain', answer);
+    chip.classList.add('is-dragging');
+  }
+
+  function handleTimelineDragEnd() {
+    clearPicketFenceDragState();
+  }
+
+  function handleTimelineDragOver(event) {
+    const dropZone = event.target.closest('[data-picket-fence-drop-section]');
+    if (!dropZone || !timeline.contains(dropZone)) return;
+    if (!isLiveTutorControl(dropZone)) return;
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
+    setActivePicketFenceDropZone(dropZone);
+  }
+
+  function handleTimelineDragLeave(event) {
+    const dropZone = event.target.closest('[data-picket-fence-drop-section]');
+    if (!dropZone || !timeline.contains(dropZone)) return;
+    const relatedTarget = event.relatedTarget;
+    if (relatedTarget && dropZone.contains(relatedTarget)) return;
+    dropZone.classList.remove('is-drag-over');
+  }
+
+  function handleTimelineDrop(event) {
+    const dropZone = event.target.closest('[data-picket-fence-drop-section]');
+    if (!dropZone || !timeline.contains(dropZone)) return;
+    if (!isLiveTutorControl(dropZone)) return;
+    event.preventDefault();
+    const answer = event.dataTransfer?.getData('text/plain') || '';
+    clearPicketFenceDragState();
+    if (answer) sendTutorCommand(answer);
+  }
+
+  function setActivePicketFenceDropZone(dropZone) {
+    timeline.querySelectorAll('.picket-fence-drop-zone.is-drag-over').forEach((zone) => {
+      if (zone !== dropZone) zone.classList.remove('is-drag-over');
+    });
+    dropZone.classList.add('is-drag-over');
+  }
+
+  function clearPicketFenceDragState() {
+    timeline?.querySelectorAll('.student-tutor-answer-chip.is-dragging, .picket-fence-drop-zone.is-drag-over').forEach((element) => {
+      element.classList.remove('is-dragging', 'is-drag-over');
+    });
+  }
+
+  function handlePicketFenceCancelUnitClick(control) {
+    if (!control || !timeline?.contains(control)) return false;
+    if (!isLiveTutorControl(control)) return true;
+    const answer = control.getAttribute('data-picket-fence-cancel-answer') || '';
+    const instanceId = control.getAttribute('data-picket-fence-cancel-instance') || '';
+    if (!answer) return true;
+
+    const visual = control.closest('.picket-fence-visual');
+    const matchingControls = Array.from(visual?.querySelectorAll(
+      `[data-picket-fence-cancel-answer="${cssEscape(answer)}"][data-picket-fence-cancel-instance]`
+    ) || []);
+    if (!instanceId || matchingControls.length <= 1) {
+      playPicketFencePopSound();
+      sendTutorCommand(answer);
+      return true;
+    }
+
+    const stateKey = `${visual?.getAttribute('data-picket-fence-id') || ''}:cancel:${answer}`;
+    const clicked = picketFenceCancellationClickState.get(stateKey) || new Set();
+    const wasAlreadyClicked = clicked.has(instanceId);
+    clicked.add(instanceId);
+    picketFenceCancellationClickState.set(stateKey, clicked);
+    control.classList.add('is-locally-cancelled');
+    control.setAttribute('aria-pressed', 'true');
+    if (!wasAlreadyClicked) playPicketFencePopSound();
+
+    const allClicked = matchingControls.every((item) => {
+      const matchingInstanceId = item.getAttribute('data-picket-fence-cancel-instance') || '';
+      return matchingInstanceId && clicked.has(matchingInstanceId);
+    });
+    if (allClicked) {
+      picketFenceCancellationClickState.delete(stateKey);
+      sendTutorCommand(answer);
+    }
+    return true;
+  }
+
+  function playPicketFencePopSound() {
+    try {
+      const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextConstructor) return;
+      const audioContext = new AudioContextConstructor();
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      const now = audioContext.currentTime;
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(520, now);
+      oscillator.frequency.exponentialRampToValueAtTime(170, now + 0.08);
+      gain.gain.setValueAtTime(0.045, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+      oscillator.connect(gain);
+      gain.connect(audioContext.destination);
+      oscillator.start(now);
+      oscillator.stop(now + 0.09);
+      oscillator.addEventListener('ended', () => {
+        if (typeof audioContext.close === 'function') audioContext.close().catch(() => {});
+      });
+    } catch (error) {
+      // Audio is a progressive enhancement; cancellation should never depend on it.
+    }
+  }
+
   function handleTimelineClick(event) {
     const sessionToggleButton = event.target.closest('[data-toggle-tutor-session-id]');
     if (sessionToggleButton && timeline.contains(sessionToggleButton)) {
@@ -2419,8 +2677,7 @@
 
     const picketFenceCancelAnswer = event.target.closest('[data-picket-fence-cancel-answer]');
     if (picketFenceCancelAnswer && timeline.contains(picketFenceCancelAnswer)) {
-      if (!isLiveTutorControl(picketFenceCancelAnswer)) return;
-      sendTutorCommand(picketFenceCancelAnswer.getAttribute('data-picket-fence-cancel-answer') || '');
+      handlePicketFenceCancelUnitClick(picketFenceCancelAnswer);
       return;
     }
 
