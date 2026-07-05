@@ -2274,8 +2274,9 @@
           <button type="button" class="student-calculator-button student-tutor-control student-tutor-control--tool is-operator" data-calculator-key="-">−</button>
           <button type="button" class="student-calculator-button student-tutor-control student-tutor-control--tool" data-calculator-key="0">0</button>
           <button type="button" class="student-calculator-button student-tutor-control student-tutor-control--tool" data-calculator-key=".">.</button>
-          <button type="button" class="student-calculator-button student-tutor-control student-tutor-control--tool is-clear" data-calculator-key="clear">C</button>
+          <button type="button" class="student-calculator-button student-tutor-control student-tutor-control--tool is-fraction" data-calculator-key="/" aria-label="Fraction slash">a/b</button>
           <button type="button" class="student-calculator-button student-tutor-control student-tutor-control--tool is-operator" data-calculator-key="+">+</button>
+          <button type="button" class="student-calculator-button student-tutor-control student-tutor-control--tool is-clear" data-calculator-key="clear">C</button>
           <button type="button" class="student-calculator-button student-tutor-control student-tutor-control--tool is-backspace" data-calculator-key="backspace">⌫</button>
           <button type="button" class="student-calculator-button student-tutor-control student-tutor-control--tool is-sqrt" data-calculator-key="sqrt">√</button>
           <button type="button" class="student-calculator-button student-tutor-control student-tutor-control--tool is-equals" data-calculator-key="equals">=</button>

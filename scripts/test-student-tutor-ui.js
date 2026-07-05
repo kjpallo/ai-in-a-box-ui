@@ -90,6 +90,7 @@ const tutorOriginalQuestionBlock = getCssBlock('.student-tutor-detail.student-tu
 const tutorOriginalQuestionTextBlock = getCssBlock('.student-tutor-detail.student-tutor-original-question p');
 const calculatorBlock = getCssBlock('.student-calculator');
 const calculatorKeysBlock = getCssBlock('.student-calculator-keys');
+const calculatorFractionButtonBlock = getCssBlock('.student-calculator-button.is-fraction');
 const tutorControlBlock = getCssBlock('.student-tutor-control');
 const tutorControlChoiceBlock = getCssBlock('.student-tutor-control--choice');
 const tutorControlHelperBlock = getCssBlock('.student-tutor-control--helper');
@@ -603,7 +604,7 @@ assert.match(
 );
 assert.match(
   studentUi,
-  /function renderCalculatorHtml\(\)[\s\S]*student-calculator-button student-tutor-control student-tutor-control--tool[\s\S]*data-calculator-key="7"[\s\S]*student-calculator-use-result student-tutor-control student-tutor-control--tool/,
+  /function renderCalculatorHtml\(\)[\s\S]*data-calculator-key="7"[\s\S]*data-calculator-key="8"[\s\S]*data-calculator-key="9"[\s\S]*data-calculator-key="\/">÷[\s\S]*data-calculator-key="4"[\s\S]*data-calculator-key="5"[\s\S]*data-calculator-key="6"[\s\S]*data-calculator-key="\*"[\s\S]*data-calculator-key="1"[\s\S]*data-calculator-key="2"[\s\S]*data-calculator-key="3"[\s\S]*data-calculator-key="-"[\s\S]*data-calculator-key="0"[\s\S]*data-calculator-key="\."[\s\S]*student-calculator-button student-tutor-control student-tutor-control--tool is-fraction[\s\S]*data-calculator-key="\/"[\s\S]*a\/b[\s\S]*data-calculator-key="\+"[\s\S]*data-calculator-key="clear"[\s\S]*data-calculator-key="backspace"[\s\S]*data-calculator-key="sqrt"[\s\S]*data-calculator-key="equals"[\s\S]*<\/div>[\s\S]*student-calculator-use-result student-tutor-control student-tutor-control--tool/,
   'Calculator keys and Use result should inherit shared tool control styling while preserving calculator data attributes.'
 );
 assert.match(
@@ -673,8 +674,8 @@ assert.match(
 );
 assert.match(
   studentUi,
-  /data-calculator-key="7"[\s\S]*data-calculator-key="sqrt"[\s\S]*data-calculator-key="equals"/,
-  'The tutor calculator should remain available inside active tutor work.'
+  /data-calculator-key="7"[\s\S]*data-calculator-key="\/"[\s\S]*data-calculator-key="sqrt"[\s\S]*data-calculator-key="equals"/,
+  'The tutor calculator should remain available inside active tutor work with slash/fraction entry.'
 );
 assert.match(
   studentUi,
@@ -691,6 +692,16 @@ assert.match(
   /if \(key === 'equals'\)[\s\S]*calculateExpression\(\)[\s\S]*function calculateExpression\(\)[\s\S]*useCalculatorResult\(\)[\s\S]*updateCalculatorDisplay\(\)/,
   'Calculator equals should place the result in the answer input without auto-submitting.'
 );
+const evaluateCalculatorExpressionForTest = new Function(`
+  ${getFunctionBlock('readCalculatorNumber')}
+  ${getFunctionBlock('tokenizeCalculatorExpression')}
+  ${getFunctionBlock('evaluateCalculatorExpression')}
+  return evaluateCalculatorExpression;
+`)();
+assert.equal(evaluateCalculatorExpressionForTest('1/2'), 0.5, 'Calculator should support simple fraction expression 1/2.');
+assert.equal(evaluateCalculatorExpressionForTest('3/4'), 0.75, 'Calculator should support simple fraction expression 3/4.');
+assert.equal(evaluateCalculatorExpressionForTest('48*1000/1'), 48000, 'Calculator should support chained multiplication and slash division.');
+assert.equal(evaluateCalculatorExpressionForTest('6/2'), 3, 'Calculator should preserve normal slash division behavior.');
 
 assert.match(
   studentUi,
@@ -769,8 +780,11 @@ assert.match(tutorOriginalQuestionTextBlock, /max-height:\s*4\.8rem;/, 'Original
 assert.match(tutorOriginalQuestionTextBlock, /overflow-y:\s*auto;/, 'Original Question text should scroll internally instead of stretching the tutor card.');
 assert.match(tutorOriginalQuestionTextBlock, /overscroll-behavior:\s*contain;/, 'Original Question scrolling should not fight the main timeline scroll.');
 assert.match(calculatorBlock, /min-width:\s*0;/, 'Calculator should shrink within its timeline card.');
-assert.match(calculatorBlock, /width:\s*min\(100%,\s*320px\);/, 'Calculator should remain compact inside active tutor work.');
-assert.match(calculatorKeysBlock, /grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\);/, 'Calculator keys should fit inside the tutor card.');
+assert.match(calculatorBlock, /width:\s*min\(100%,\s*340px\);/, 'Calculator should remain compact inside active tutor work.');
+assert.match(calculatorBlock, /padding:\s*0\.38rem;/, 'Calculator should use compact internal spacing.');
+assert.match(calculatorKeysBlock, /grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\);/, 'Calculator keys should keep a normal four-column keypad layout inside the tutor card.');
+assert.match(calculatorKeysBlock, /gap:\s*0\.22rem;/, 'Calculator key gaps should stay compact.');
+assert.match(calculatorFractionButtonBlock, /border-color:\s*rgba\(157,255,129,0\.4\);/, 'Fraction calculator key should have a distinct compact style.');
 
 assert.ok(studentHtml.includes('id="studentTutorFireworks" class="student-fireworks" aria-hidden="true" hidden'), 'Tutor completion fireworks overlay should stay hidden until completion.');
 assert.match(fireworksBlock, /pointer-events:\s*none;/, 'Tutor completion fireworks should not block student input.');
