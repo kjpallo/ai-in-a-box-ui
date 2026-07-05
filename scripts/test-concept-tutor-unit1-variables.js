@@ -9,40 +9,109 @@ const TUTOR_ID = 'unit1.scientific_method.variables.identification';
 
 const VARIABLE_SCENARIO_CASES = [
   {
-    prompt: 'In an experiment testing how sunlight affects plant growth, what is the independent variable?',
+    prompt: 'A student tests how fertilizer affects plant height. What is the independent variable?',
     choice: '1',
-    correctLabel: /Amount of sunlight/i,
-    finalAnswer: /The independent variable is the amount of sunlight because it is what the scientist changes on purpose\./i
-  },
-  {
-    prompt: 'In an experiment testing how sunlight affects plant growth, what is the dependent variable?',
-    choice: '2',
-    correctLabel: /Plant growth/i,
-    finalAnswer: /The dependent variable is plant growth because it is what the scientist measures as the result\./i
-  },
-  {
-    prompt: 'In an experiment testing which fertilizer makes plants grow taller, what is the independent variable?',
-    choice: '1',
+    promptClue: /What did the experimenter change on purpose\?/i,
     correctLabel: /Type of fertilizer/i,
     finalAnswer: /The independent variable is the type of fertilizer because it is what the scientist changes on purpose\./i
   },
   {
-    prompt: 'In an experiment testing which fertilizer makes plants grow taller, what is the dependent variable?',
-    choice: '2',
-    correctLabel: /Plant height or growth/i,
-    finalAnswer: /The dependent variable is plant height or growth because it is what the scientist measures as the result\./i
-  },
-  {
-    prompt: 'In an experiment testing how temperature affects dissolving, what is the independent variable?',
+    prompt: 'A class tests if water temperature changes how fast sugar dissolves. What is the independent variable?',
     choice: '1',
+    promptClue: /What did the experimenter change on purpose\?/i,
     correctLabel: /Temperature/i,
     finalAnswer: /The independent variable is temperature because it is what the scientist changes on purpose\./i
   },
   {
-    prompt: 'In an experiment testing how temperature affects dissolving, what is the dependent variable?',
+    prompt: 'Students test whether ramp height affects how far a toy car rolls. What is the independent variable?',
+    choice: '1',
+    promptClue: /What did the experimenter change on purpose\?/i,
+    correctLabel: /Ramp height/i,
+    finalAnswer: /The independent variable is ramp height because it is what the scientist changes on purpose\./i
+  },
+  {
+    prompt: 'A student tests how fertilizer affects plant height. What is the dependent variable?',
     choice: '2',
+    promptClue: /What is being measured or observed\?/i,
+    correctLabel: /Plant height or growth/i,
+    finalAnswer: /The dependent variable is plant height or growth because it is what the scientist measures as the result\./i
+  },
+  {
+    prompt: 'A class tests if water temperature changes how fast sugar dissolves. What is the dependent variable?',
+    choice: '2',
+    promptClue: /What is being measured or observed\?/i,
     correctLabel: /How fast or how much dissolves/i,
     finalAnswer: /The dependent variable is how fast or how much dissolves because it is what the scientist measures as the result\./i
+  },
+  {
+    prompt: 'Students test whether ramp height affects how far a toy car rolls. What is the dependent variable?',
+    choice: '2',
+    promptClue: /What is being measured or observed\?/i,
+    correctLabel: /How far the toy car rolls/i,
+    finalAnswer: /The dependent variable is how far the toy car rolls because it is what the scientist measures as the result\./i
+  },
+  {
+    prompt: 'A student tests how fertilizer affects plant height. What should be constant?',
+    choice: '3',
+    promptClue: /What stayed the same for all groups\?/i,
+    correctLabel: /Amount of water/i,
+    finalAnswer: /A constant is the amount of water because it should be kept the same to make the test fair\./i
+  },
+  {
+    prompt: 'A class tests if water temperature changes how fast sugar dissolves. What are the constants?',
+    choice: '3',
+    promptClue: /What stayed the same for all groups\?/i,
+    correctLabel: /Amount of solute and water/i,
+    finalAnswer: /A constant is the amount of solute and water because it should be kept the same to make the test fair\./i
+  },
+  {
+    prompt: 'Students test whether ramp height affects how far a toy car rolls. What should stay the same?',
+    choice: '3',
+    promptClue: /What stayed the same for all groups\?/i,
+    correctLabel: /same toy car and surface/i,
+    finalAnswer: /A constant is the same toy car and surface because it should be kept the same to make the test fair\./i
+  },
+  {
+    prompt: 'A student tests a new fertilizer on plants. One group gets no fertilizer. What is the control group?',
+    choice: '1',
+    promptClue: /Which group did not receive the treatment or change\?/i,
+    correctLabel: /group with no fertilizer/i,
+    finalAnswer: /The control group is the group with no fertilizer because it did not receive the treatment or change\./i
+  },
+  {
+    prompt: 'A medicine test has one group take the medicine and another group take a sugar pill. What is the control group?',
+    choice: '2',
+    promptClue: /Which group did not receive the treatment or change\?/i,
+    correctLabel: /group that takes the sugar pill/i,
+    finalAnswer: /The control group is the group that takes the sugar pill because it did not receive the medicine treatment\./i
+  },
+  {
+    prompt: 'A class tests music on studying. One group studies with no music. What is the control group?',
+    choice: '1',
+    promptClue: /Which group did not receive the treatment or change\?/i,
+    correctLabel: /group studying with no music/i,
+    finalAnswer: /The control group is the group studying with no music because it did not receive the treatment or change\./i
+  },
+  {
+    prompt: 'A student tests a new fertilizer on plants. One group gets fertilizer. What is the experimental group?',
+    choice: '2',
+    promptClue: /Which group received the treatment or change\?/i,
+    correctLabel: /group that gets fertilizer/i,
+    finalAnswer: /The experimental group is the group that gets fertilizer because it received the treatment or change\./i
+  },
+  {
+    prompt: 'A medicine test has one group take the medicine and another group take a sugar pill. What is the experimental group?',
+    choice: '1',
+    promptClue: /Which group received the treatment or change\?/i,
+    correctLabel: /group that takes the medicine/i,
+    finalAnswer: /The experimental group is the group that takes the medicine because it received the treatment or change\./i
+  },
+  {
+    prompt: 'A class tests music on studying. One group studies with music. What is the experimental group?',
+    choice: '2',
+    promptClue: /Which group received the treatment or change\?/i,
+    correctLabel: /group studying with music/i,
+    finalAnswer: /The experimental group is the group studying with music because it received the treatment or change\./i
   }
 ];
 
@@ -157,6 +226,7 @@ async function assertVariableScenariosStartRetryAndComplete({
     assert.equal(start.body.tutor.finalAnswer, undefined, 'active tutor metadata should hide final answer');
     assert.equal(start.body.tutor.work.finalAnswer, '', 'active tutor work should hide final answer');
     assert.match(start.body.response, /Topic: identifying variables/i);
+    assert.match(start.body.response, testCase.promptClue, `${testCase.prompt} should ask the scenario clue question`);
     assert.match(start.body.response, /Choose one:/i);
     assert.match(start.body.response, /type only the number/i);
     assert.match(start.body.response, testCase.correctLabel);
