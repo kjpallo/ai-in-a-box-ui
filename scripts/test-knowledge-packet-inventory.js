@@ -28,6 +28,8 @@ function main() {
     assert.ok(item.presence && typeof item.presence === 'object', `${item.id} should include detected presence flags`);
     assert.ok(item.coverage && typeof item.coverage === 'object', `${item.id} should include detected test coverage`);
     assert.ok(Array.isArray(item.coverage.testFiles), `${item.id} coverage should include a testFiles array`);
+    assert.ok(item.touchpoints && typeof item.touchpoints === 'object', `${item.id} should include detected code touchpoints`);
+    assert.ok(Array.isArray(item.touchpoints.touchpointFiles), `${item.id} touchpoints should include a touchpointFiles array`);
     assert.ok(Array.isArray(item.notes), `${item.id} should include notes`);
   }
 
@@ -48,10 +50,20 @@ function main() {
   assert.ok(byId.get('motion-force').presence.formulas, 'Motion-force modular packet should expose formulas');
   assert.ok(byId.get('motion-force').presence.smokeTests, 'Motion-force modular packet should expose smoke tests');
   assert.ok(byId.get('motion-force').coverage.testFiles.length > 0, 'Motion-force should still report related test files');
+  assert.ok(
+    byId.get('motion-force').touchpoints.routerReferences.length > 0 ||
+      byId.get('motion-force').touchpoints.conceptTutorReferences.length > 0,
+    'Motion-force should report router or Concept Tutor touchpoints'
+  );
   assert.ok(byId.get('unit7-atomic-structure').presence.comparisons, 'Unit 7 should expose comparison metadata');
   assert.ok(byId.get('unit7-atomic-structure').presence.relationships, 'Unit 7 should expose relationship metadata');
   assert.ok(byId.get('unit7-atomic-structure').sourceMetadataPresent, 'Unit 7 should expose source metadata');
   assert.ok(byId.get('unit7-atomic-structure').coverage.testFiles.length >= 4, 'Unit 7 should report multiple related test files');
+  assert.ok(
+    byId.get('unit7-atomic-structure').touchpoints.routerReferences.length > 0 ||
+      byId.get('unit7-atomic-structure').touchpoints.directImportReferences.length > 0,
+    'Unit 7 should report a router/direct knowledge touchpoint'
+  );
   assert.ok(
     byId.get('unit1-conversions-notation').coverage.testFiles.some((filePath) => filePath.includes('unit1-conversions-notation')),
     'Unit 1 conversions/notation should report its focused regression test file'
@@ -59,6 +71,11 @@ function main() {
   assert.ok(
     byId.get('unit1-conversions-notation').coverage.uiTestsPresent,
     'Unit 1 conversions/notation should report related student tutor UI tests'
+  );
+  assert.ok(
+    byId.get('unit1-conversions-notation').touchpoints.formulaReferences.length > 0 ||
+      byId.get('unit1-conversions-notation').touchpoints.studentRouteReferences.length > 0,
+    'Unit 1 conversions/notation should report formula or student tutor related touchpoints'
   );
 
   printSummary(inventory);
@@ -81,7 +98,8 @@ function printSummary(inventory) {
     const source = item.sourceMetadataPresent ? 'source=yes' : 'source=no';
     const matcher = item.directKnowledgeFunctionName ? `matcher=${item.directKnowledgeFunctionName}` : 'matcher=none';
     const coverage = summarizeCoverage(item.coverage);
-    console.log(`- ${item.id}: ${item.style}; ${source}; ${matcher}; ${summary}; tests=${coverage}`);
+    const touchpoints = summarizeTouchpoints(item.touchpoints);
+    console.log(`- ${item.id}: ${item.style}; ${source}; ${matcher}; ${summary}; tests=${coverage}; touchpoints=${touchpoints}`);
   }
 }
 
@@ -95,6 +113,17 @@ function summarizeCoverage(coverage = {}) {
   if (coverage.uiTestsPresent) labels.push('ui');
   if (coverage.representativeAuditPresent) labels.push('audit');
   labels.push(`files=${(coverage.testFiles || []).length}`);
+  return labels.join('/');
+}
+
+function summarizeTouchpoints(touchpoints = {}) {
+  const labels = [];
+  if ((touchpoints.routerReferences || []).length > 0) labels.push(`router=${touchpoints.routerReferences.length}`);
+  if ((touchpoints.studentRouteReferences || []).length > 0) labels.push(`student=${touchpoints.studentRouteReferences.length}`);
+  if ((touchpoints.formulaReferences || []).length > 0) labels.push(`formula=${touchpoints.formulaReferences.length}`);
+  if ((touchpoints.conceptTutorReferences || []).length > 0) labels.push(`concept=${touchpoints.conceptTutorReferences.length}`);
+  if ((touchpoints.directImportReferences || []).length > 0) labels.push(`imports=${touchpoints.directImportReferences.length}`);
+  labels.push(`files=${(touchpoints.touchpointFiles || []).length}`);
   return labels.join('/');
 }
 
