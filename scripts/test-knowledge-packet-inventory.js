@@ -26,6 +26,8 @@ function main() {
     assert.equal(typeof item.exists, 'boolean', `${item.id} should report whether the file exists`);
     assert.ok(item.counts && typeof item.counts === 'object', `${item.id} should include counts`);
     assert.ok(item.presence && typeof item.presence === 'object', `${item.id} should include detected presence flags`);
+    assert.ok(item.coverage && typeof item.coverage === 'object', `${item.id} should include detected test coverage`);
+    assert.ok(Array.isArray(item.coverage.testFiles), `${item.id} coverage should include a testFiles array`);
     assert.ok(Array.isArray(item.notes), `${item.id} should include notes`);
   }
 
@@ -45,9 +47,19 @@ function main() {
   assert.ok(byId.get('motion-force').presence.vocabulary, 'Motion-force modular packet should expose vocabulary');
   assert.ok(byId.get('motion-force').presence.formulas, 'Motion-force modular packet should expose formulas');
   assert.ok(byId.get('motion-force').presence.smokeTests, 'Motion-force modular packet should expose smoke tests');
+  assert.ok(byId.get('motion-force').coverage.testFiles.length > 0, 'Motion-force should still report related test files');
   assert.ok(byId.get('unit7-atomic-structure').presence.comparisons, 'Unit 7 should expose comparison metadata');
   assert.ok(byId.get('unit7-atomic-structure').presence.relationships, 'Unit 7 should expose relationship metadata');
   assert.ok(byId.get('unit7-atomic-structure').sourceMetadataPresent, 'Unit 7 should expose source metadata');
+  assert.ok(byId.get('unit7-atomic-structure').coverage.testFiles.length >= 4, 'Unit 7 should report multiple related test files');
+  assert.ok(
+    byId.get('unit1-conversions-notation').coverage.testFiles.some((filePath) => filePath.includes('unit1-conversions-notation')),
+    'Unit 1 conversions/notation should report its focused regression test file'
+  );
+  assert.ok(
+    byId.get('unit1-conversions-notation').coverage.uiTestsPresent,
+    'Unit 1 conversions/notation should report related student tutor UI tests'
+  );
 
   printSummary(inventory);
   console.log(`PASS knowledge packet inventory: ${inventory.length} packet/module shapes inspected`);
@@ -68,8 +80,22 @@ function printSummary(inventory) {
     ].join(', ');
     const source = item.sourceMetadataPresent ? 'source=yes' : 'source=no';
     const matcher = item.directKnowledgeFunctionName ? `matcher=${item.directKnowledgeFunctionName}` : 'matcher=none';
-    console.log(`- ${item.id}: ${item.style}; ${source}; ${matcher}; ${summary}`);
+    const coverage = summarizeCoverage(item.coverage);
+    console.log(`- ${item.id}: ${item.style}; ${source}; ${matcher}; ${summary}; tests=${coverage}`);
   }
+}
+
+function summarizeCoverage(coverage = {}) {
+  const labels = [];
+  if (coverage.directAnswerTestsPresent) labels.push('direct');
+  if (coverage.formulaTutorTestsPresent) labels.push('formula');
+  if (coverage.conceptTutorTestsPresent) labels.push('concept');
+  if (coverage.wholeUnitSmokeTestsPresent) labels.push('whole-smoke');
+  if (coverage.boundaryTestsPresent) labels.push('boundary');
+  if (coverage.uiTestsPresent) labels.push('ui');
+  if (coverage.representativeAuditPresent) labels.push('audit');
+  labels.push(`files=${(coverage.testFiles || []).length}`);
+  return labels.join('/');
 }
 
 main();
