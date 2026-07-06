@@ -14,6 +14,22 @@ const REQUIRED_IDS = [
   'unit6-matter',
   'unit7-atomic-structure'
 ];
+const SCHEMA_GAP_FIELDS = [
+  'unitTitle',
+  'sourceMetadata',
+  'vocabulary',
+  'facts',
+  'comparisons',
+  'relationships',
+  'formulas',
+  'conceptTutors',
+  'examples',
+  'smokeTests',
+  'directKnowledgeMatcher',
+  'testCoverage',
+  'routerTouchpoints'
+];
+const GAP_STATUSES = new Set(['present', 'missing', 'unknown']);
 
 function main() {
   const inventory = getUnitPacketInventory();
@@ -31,6 +47,13 @@ function main() {
     assert.ok(item.touchpoints && typeof item.touchpoints === 'object', `${item.id} should include detected code touchpoints`);
     assert.ok(Array.isArray(item.touchpoints.touchpointFiles), `${item.id} touchpoints should include a touchpointFiles array`);
     assert.ok(Array.isArray(item.notes), `${item.id} should include notes`);
+    assert.ok(item.schemaGaps && typeof item.schemaGaps === 'object', `${item.id} should include schemaGaps`);
+    assert.ok(Array.isArray(item.schemaGaps.missingFields), `${item.id} schemaGaps should include a missingFields array`);
+    assert.ok(Array.isArray(item.schemaGaps.presentFields), `${item.id} schemaGaps should include a presentFields array`);
+    assert.ok(Array.isArray(item.schemaGaps.migrationNotes), `${item.id} schemaGaps should include migrationNotes array`);
+    for (const field of SCHEMA_GAP_FIELDS) {
+      assert.ok(GAP_STATUSES.has(item.schemaGaps[field]), `${item.id} schemaGaps.${field} should be present, missing, or unknown`);
+    }
   }
 
   const byId = new Map(inventory.map((item) => [item.id, item]));
@@ -49,6 +72,9 @@ function main() {
   assert.ok(byId.get('motion-force').presence.vocabulary, 'Motion-force modular packet should expose vocabulary');
   assert.ok(byId.get('motion-force').presence.formulas, 'Motion-force modular packet should expose formulas');
   assert.ok(byId.get('motion-force').presence.smokeTests, 'Motion-force modular packet should expose smoke tests');
+  assert.equal(byId.get('motion-force').schemaGaps.vocabulary, 'present', 'Motion-force schema gaps should show vocabulary present');
+  assert.equal(byId.get('motion-force').schemaGaps.formulas, 'present', 'Motion-force schema gaps should show formulas present');
+  assert.equal(byId.get('motion-force').schemaGaps.smokeTests, 'present', 'Motion-force schema gaps should show smoke tests present');
   assert.ok(byId.get('motion-force').coverage.testFiles.length > 0, 'Motion-force should still report related test files');
   assert.ok(
     byId.get('motion-force').touchpoints.routerReferences.length > 0 ||
@@ -58,6 +84,10 @@ function main() {
   assert.ok(byId.get('unit7-atomic-structure').presence.comparisons, 'Unit 7 should expose comparison metadata');
   assert.ok(byId.get('unit7-atomic-structure').presence.relationships, 'Unit 7 should expose relationship metadata');
   assert.ok(byId.get('unit7-atomic-structure').sourceMetadataPresent, 'Unit 7 should expose source metadata');
+  assert.equal(byId.get('unit7-atomic-structure').schemaGaps.sourceMetadata, 'present', 'Unit 7 schema gaps should show source metadata present');
+  assert.equal(byId.get('unit7-atomic-structure').schemaGaps.comparisons, 'present', 'Unit 7 schema gaps should show comparisons present');
+  assert.equal(byId.get('unit7-atomic-structure').schemaGaps.relationships, 'present', 'Unit 7 schema gaps should show relationships present');
+  assert.equal(byId.get('unit7-atomic-structure').schemaGaps.directKnowledgeMatcher, 'present', 'Unit 7 schema gaps should show direct matcher present');
   assert.ok(byId.get('unit7-atomic-structure').coverage.testFiles.length >= 4, 'Unit 7 should report multiple related test files');
   assert.ok(
     byId.get('unit7-atomic-structure').touchpoints.routerReferences.length > 0 ||
@@ -77,6 +107,9 @@ function main() {
       byId.get('unit1-conversions-notation').touchpoints.studentRouteReferences.length > 0,
     'Unit 1 conversions/notation should report formula or student tutor related touchpoints'
   );
+  for (const id of ['unit3-energy', 'unit5-waves', 'unit6-matter']) {
+    assert.equal(byId.get(id).schemaGaps.directKnowledgeMatcher, 'present', `${id} schema gaps should show direct matcher present`);
+  }
 
   printSummary(inventory);
   console.log(`PASS knowledge packet inventory: ${inventory.length} packet/module shapes inspected`);
@@ -99,7 +132,8 @@ function printSummary(inventory) {
     const matcher = item.directKnowledgeFunctionName ? `matcher=${item.directKnowledgeFunctionName}` : 'matcher=none';
     const coverage = summarizeCoverage(item.coverage);
     const touchpoints = summarizeTouchpoints(item.touchpoints);
-    console.log(`- ${item.id}: ${item.style}; ${source}; ${matcher}; ${summary}; tests=${coverage}; touchpoints=${touchpoints}`);
+    const gaps = summarizeSchemaGaps(item.schemaGaps);
+    console.log(`- ${item.id}: ${item.style}; ${source}; ${matcher}; ${summary}; tests=${coverage}; touchpoints=${touchpoints}; schema=${gaps}`);
   }
 }
 
@@ -125,6 +159,13 @@ function summarizeTouchpoints(touchpoints = {}) {
   if ((touchpoints.directImportReferences || []).length > 0) labels.push(`imports=${touchpoints.directImportReferences.length}`);
   labels.push(`files=${(touchpoints.touchpointFiles || []).length}`);
   return labels.join('/');
+}
+
+function summarizeSchemaGaps(schemaGaps = {}) {
+  const presentCount = (schemaGaps.presentFields || []).length;
+  const missingFields = schemaGaps.missingFields || [];
+  const missing = missingFields.length > 0 ? missingFields.join('|') : 'none';
+  return `present=${presentCount}/${SCHEMA_GAP_FIELDS.length}; missing=${missing}`;
 }
 
 main();
