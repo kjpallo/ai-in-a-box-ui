@@ -27,6 +27,7 @@ const {
   buildTransverseLongitudinalWavesConceptTutorPattern,
   buildUnit1GraphingAxisConceptTutorPattern,
   buildUnit1VariablesConceptTutorPattern,
+  buildUnit7AtomicStructureConceptTutorPattern,
   buildWavePropertiesConceptTutorPattern
 } = require('../lib/tutor/conceptTutor/conceptTutorPatterns');
 const {
@@ -999,7 +1000,8 @@ function isLikelyNewQuestionDuringTutor(message) {
 }
 
 function buildStudentConceptTutorPattern(message) {
-  return buildElementCompoundMixtureConceptTutorPattern(message) ||
+  return buildUnit7AtomicStructureConceptTutorPattern(message) ||
+    buildElementCompoundMixtureConceptTutorPattern(message) ||
     buildMixtureConceptTutorPattern(message) ||
     buildPhysicalChemicalChangeConceptTutorPattern(message) ||
     buildBalancedUnbalancedForcesConceptTutorPattern(message) ||
