@@ -1,6 +1,13 @@
 const assert = require('node:assert/strict');
 
 const { createStudentRouteHarness } = require('./test-helpers/studentRouteHarness');
+const {
+  UNIT3_DIRECT_ANSWER_FACTS,
+  ENERGY_TYPE_FACTS,
+  ENERGY_EXAMPLE_FACTS,
+  ENERGY_TRANSFORMATION_FACTS,
+  UNIT3_ENERGY_PACKET
+} = require('../lib/knowledge/physics/energy/unit3EnergyKnowledge');
 
 const DIRECT_CASES = [
   {
@@ -323,6 +330,8 @@ const FORMULA_BOUNDARY_CASES = [
 ];
 
 async function main() {
+  assertUnit3EnergyPacket();
+
   const { request } = createStudentRouteHarness();
   const create = await request('POST', '/api/profile/create-student-session');
   assert.equal(create.statusCode, 201);
@@ -347,6 +356,32 @@ async function main() {
   }
 
   console.log('PASS Unit 3 broad energy type direct answers: definitions, examples, transformations, typos, and route boundaries');
+}
+
+function assertUnit3EnergyPacket() {
+  assert.ok(UNIT3_ENERGY_PACKET, 'UNIT3_ENERGY_PACKET should exist');
+  assert.equal(UNIT3_ENERGY_PACKET.packetId, 'unit3-energy');
+  assert.equal(UNIT3_ENERGY_PACKET.unit, 3);
+  assert.equal(UNIT3_ENERGY_PACKET.title, 'Energy');
+  assert.equal(UNIT3_ENERGY_PACKET.unitTitle, 'Energy');
+
+  const expectedCanonicalFacts = UNIT3_DIRECT_ANSWER_FACTS.length +
+    ENERGY_TYPE_FACTS.length +
+    ENERGY_EXAMPLE_FACTS.length +
+    ENERGY_TRANSFORMATION_FACTS.length;
+  assert.equal(UNIT3_ENERGY_PACKET.canonicalFacts.length, expectedCanonicalFacts);
+  assert.equal(UNIT3_ENERGY_PACKET.counts.canonicalFacts, expectedCanonicalFacts);
+  assert.equal(UNIT3_ENERGY_PACKET.vocabulary.length, ENERGY_TYPE_FACTS.length);
+  assert.ok(UNIT3_ENERGY_PACKET.vocabulary.length > 0, 'vocabulary should come from existing energy type facts');
+  assert.ok(UNIT3_ENERGY_PACKET.concepts.length > 0, 'concept groups should reflect existing Unit 3 fact arrays');
+  assert.ok(UNIT3_ENERGY_PACKET.formulas.length > 0, 'formula hooks should reflect existing Unit 3 formula routes');
+  assert.ok(UNIT3_ENERGY_PACKET.formulaTutorHooks.some((hook) => hook.exports.includes('tryKineticEnergy')));
+  assert.ok(UNIT3_ENERGY_PACKET.conceptTutorHooks.some((hook) => hook.id === 'energy.mechanical-types.kinetic-gpe-elastic.identification'));
+  assert.equal(UNIT3_ENERGY_PACKET.legacyExports.matcher, 'tryUnit3EnergyKnowledge');
+  assert.equal(UNIT3_ENERGY_PACKET.legacyExports.packet, 'UNIT3_ENERGY_PACKET');
+  assert.equal(UNIT3_ENERGY_PACKET.metadata.generatedFromExistingUnit3EnergyContentOnly, true);
+  assert.equal(UNIT3_ENERGY_PACKET.metadata.sourceBacked, false);
+  assert.deepEqual(UNIT3_ENERGY_PACKET.metadata.sourceReferences, []);
 }
 
 async function ask(request, sessionId, studentHubId, message) {
