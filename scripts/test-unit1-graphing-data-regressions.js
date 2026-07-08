@@ -1,6 +1,11 @@
 const assert = require('node:assert/strict');
 
 const { createStudentRouteHarness } = require('./test-helpers/studentRouteHarness');
+const {
+  ALL_UNIT1_GRAPHING_DATA_FACTS,
+  UNIT1_GRAPHING_DATA_PACKET,
+  tryUnit1GraphingDataKnowledge
+} = require('../lib/knowledge/science/unit1/unit1GraphingDataKnowledge');
 
 const UNIT1_GRAPHING_AXIS_TUTOR_ID = 'unit1.graphing.axes.identification';
 
@@ -366,6 +371,8 @@ const DIRECT_BOUNDARY_CASES = [
 ];
 
 async function main() {
+  assertUnit1GraphingDataPacketShape();
+
   const { request } = createStudentRouteHarness();
   const create = await request('POST', '/api/profile/create-student-session');
   assert.equal(create.statusCode, 201);
@@ -422,6 +429,32 @@ async function main() {
   }
 
   console.log('PASS Unit 1 graphing/data regressions: direct answers, typo handling, graph-axis tutor starts, and route boundaries');
+}
+
+function assertUnit1GraphingDataPacketShape() {
+  assert.ok(UNIT1_GRAPHING_DATA_PACKET, 'Unit 1 graphing/data packet should be exported');
+  assert.equal(UNIT1_GRAPHING_DATA_PACKET.packetId, 'unit1-graphing-data');
+  assert.equal(UNIT1_GRAPHING_DATA_PACKET.unit, 1);
+  assert.equal(UNIT1_GRAPHING_DATA_PACKET.unitTitle, 'Science Practices');
+  assert.equal(UNIT1_GRAPHING_DATA_PACKET.title, 'Graphing and Data Analysis');
+  assert.ok(Array.isArray(UNIT1_GRAPHING_DATA_PACKET.sourceFiles), 'Unit 1 graphing/data packet should expose source refs');
+  assert.ok(Array.isArray(UNIT1_GRAPHING_DATA_PACKET.topics), 'Unit 1 graphing/data packet should expose topics');
+  assert.ok(Array.isArray(UNIT1_GRAPHING_DATA_PACKET.vocabulary), 'Unit 1 graphing/data packet should expose vocabulary');
+  assert.ok(Array.isArray(UNIT1_GRAPHING_DATA_PACKET.concepts), 'Unit 1 graphing/data packet should expose concept groups');
+  assert.ok(Array.isArray(UNIT1_GRAPHING_DATA_PACKET.canonicalFacts), 'Unit 1 graphing/data packet should expose canonical facts');
+  assert.ok(Array.isArray(UNIT1_GRAPHING_DATA_PACKET.examples), 'Unit 1 graphing/data packet should expose existing examples');
+  assert.ok(Array.isArray(UNIT1_GRAPHING_DATA_PACKET.relationships), 'Unit 1 graphing/data packet should expose existing related-term edges');
+  assert.equal(UNIT1_GRAPHING_DATA_PACKET.legacyExports.facts, 'ALL_UNIT1_GRAPHING_DATA_FACTS');
+  assert.equal(UNIT1_GRAPHING_DATA_PACKET.legacyExports.matcher, 'tryUnit1GraphingDataKnowledge');
+  assert.equal(UNIT1_GRAPHING_DATA_PACKET.counts.canonicalFacts, ALL_UNIT1_GRAPHING_DATA_FACTS.length);
+  assert.ok(UNIT1_GRAPHING_DATA_PACKET.sourceFiles.includes('unit1.corpus.0153'), 'Unit 1 graphing/data packet should represent existing source refs');
+  assert.ok(UNIT1_GRAPHING_DATA_PACKET.counts.relationships > 0, 'Unit 1 graphing/data packet should count existing relationships');
+  assert.ok(UNIT1_GRAPHING_DATA_PACKET.metadata.generatedFromExistingFactsOnly);
+
+  const directResult = tryUnit1GraphingDataKnowledge('what is a graph');
+  assert.ok(directResult, 'Legacy Unit 1 graphing/data matcher should still return a direct result');
+  assert.match(directResult.directAnswer, /visual/i);
+  assert.match(directResult.directAnswer, /data/i);
 }
 
 async function ask(request, sessionId, studentHubId, message) {
