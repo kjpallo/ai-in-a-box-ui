@@ -5,6 +5,11 @@ const path = require('node:path');
 const { routeStudentQuestion } = require('../lib/router/questionRouter');
 const { createStudentRouteHarness } = require('./test-helpers/studentRouteHarness');
 const { projectRoot } = require('./test-helpers/fileSystem');
+const {
+  ALL_UNIT1_CONVERSIONS_NOTATION_FACTS,
+  UNIT1_CONVERSIONS_NOTATION_PACKET,
+  tryUnit1ConversionsNotationKnowledge
+} = require('../lib/knowledge/science/unit1/unit1ConversionsNotationKnowledge');
 
 const unit1ConversionsSource = fs.readFileSync(path.join(projectRoot, 'lib', 'formulas', 'unit1Conversions.js'), 'utf8');
 
@@ -304,6 +309,8 @@ const CONCEPT_BOUNDARY_CASES = [
 ];
 
 async function main() {
+  assertUnit1ConversionsNotationPacketShape();
+
   const { request } = createStudentRouteHarness();
   const create = await request('POST', '/api/profile/create-student-session');
   assert.equal(create.statusCode, 201);
@@ -358,6 +365,46 @@ async function main() {
   }
 
   console.log('PASS Unit 1 conversions/notation regressions: direct answers, formula tutor coverage, visual metadata, and route boundaries');
+}
+
+function assertUnit1ConversionsNotationPacketShape() {
+  assert.ok(UNIT1_CONVERSIONS_NOTATION_PACKET, 'Unit 1 conversions/notation packet should be exported');
+  assert.equal(UNIT1_CONVERSIONS_NOTATION_PACKET.packetId, 'unit1-conversions-notation');
+  assert.equal(UNIT1_CONVERSIONS_NOTATION_PACKET.unit, 1);
+  assert.equal(UNIT1_CONVERSIONS_NOTATION_PACKET.unitTitle, 'Science Practices');
+  assert.equal(UNIT1_CONVERSIONS_NOTATION_PACKET.title, 'Conversions and Notation');
+  assert.equal(UNIT1_CONVERSIONS_NOTATION_PACKET.subject, 'science');
+  assert.equal(UNIT1_CONVERSIONS_NOTATION_PACKET.gradeLevel, '8th / physical science');
+  assert.ok(Array.isArray(UNIT1_CONVERSIONS_NOTATION_PACKET.sourceFiles), 'Unit 1 conversions/notation packet should expose source refs');
+  assert.ok(UNIT1_CONVERSIONS_NOTATION_PACKET.sourceFiles.includes('unit1.corpus.0033'), 'Unit 1 conversions/notation packet should represent existing dimensional-analysis source refs');
+  assert.ok(UNIT1_CONVERSIONS_NOTATION_PACKET.sourceFiles.includes('unit1.corpus.0068'), 'Unit 1 conversions/notation packet should represent existing notation source refs');
+  assert.ok(Array.isArray(UNIT1_CONVERSIONS_NOTATION_PACKET.topics), 'Unit 1 conversions/notation packet should expose topics');
+  assert.ok(Array.isArray(UNIT1_CONVERSIONS_NOTATION_PACKET.vocabulary), 'Unit 1 conversions/notation packet should expose vocabulary');
+  assert.ok(Array.isArray(UNIT1_CONVERSIONS_NOTATION_PACKET.concepts), 'Unit 1 conversions/notation packet should expose concept groups');
+  assert.ok(Array.isArray(UNIT1_CONVERSIONS_NOTATION_PACKET.canonicalFacts), 'Unit 1 conversions/notation packet should expose canonical facts');
+  assert.ok(Array.isArray(UNIT1_CONVERSIONS_NOTATION_PACKET.examples), 'Unit 1 conversions/notation packet should expose existing examples');
+  assert.ok(Array.isArray(UNIT1_CONVERSIONS_NOTATION_PACKET.relationships), 'Unit 1 conversions/notation packet should expose existing related-term edges');
+  assert.ok(Array.isArray(UNIT1_CONVERSIONS_NOTATION_PACKET.referenceFormulas), 'Unit 1 conversions/notation packet should expose existing formula lookups');
+  assert.ok(Array.isArray(UNIT1_CONVERSIONS_NOTATION_PACKET.conversionRules), 'Unit 1 conversions/notation packet should expose existing conversion rules');
+  assert.ok(Array.isArray(UNIT1_CONVERSIONS_NOTATION_PACKET.notationRules), 'Unit 1 conversions/notation packet should expose existing notation rules');
+  assert.ok(Array.isArray(UNIT1_CONVERSIONS_NOTATION_PACKET.formulaTutorHooks), 'Unit 1 conversions/notation packet should expose existing Formula Tutor route notes');
+  assert.ok(Array.isArray(UNIT1_CONVERSIONS_NOTATION_PACKET.conceptTutorHooks), 'Unit 1 conversions/notation packet should expose Concept Tutor hooks');
+  assert.ok(UNIT1_CONVERSIONS_NOTATION_PACKET.formulaTutorHooks.some((hook) => hook.formulaId === 'unit1_metric_stair_step_conversion'), 'Unit 1 conversions/notation packet should represent the existing metric conversion formula route');
+  assert.ok(UNIT1_CONVERSIONS_NOTATION_PACKET.formulaTutorHooks.some((hook) => hook.formulaId === 'unit1_scientific_notation'), 'Unit 1 conversions/notation packet should represent the existing scientific notation formula route');
+  assert.equal(UNIT1_CONVERSIONS_NOTATION_PACKET.legacyExports.facts, 'ALL_UNIT1_CONVERSIONS_NOTATION_FACTS');
+  assert.equal(UNIT1_CONVERSIONS_NOTATION_PACKET.legacyExports.matcher, 'tryUnit1ConversionsNotationKnowledge');
+  assert.equal(UNIT1_CONVERSIONS_NOTATION_PACKET.legacyExports.formulaMatcher, 'tryUnit1ConversionsNotation');
+  assert.equal(UNIT1_CONVERSIONS_NOTATION_PACKET.counts.canonicalFacts, ALL_UNIT1_CONVERSIONS_NOTATION_FACTS.length);
+  assert.ok(UNIT1_CONVERSIONS_NOTATION_PACKET.counts.relationships > 0, 'Unit 1 conversions/notation packet should count existing relationships');
+  assert.ok(UNIT1_CONVERSIONS_NOTATION_PACKET.counts.examples > 0, 'Unit 1 conversions/notation packet should count existing examples');
+  assert.ok(UNIT1_CONVERSIONS_NOTATION_PACKET.counts.referenceFormulas > 0, 'Unit 1 conversions/notation packet should count existing formula lookups');
+  assert.ok(UNIT1_CONVERSIONS_NOTATION_PACKET.counts.conversionRules > 0, 'Unit 1 conversions/notation packet should count existing conversion rules');
+  assert.ok(UNIT1_CONVERSIONS_NOTATION_PACKET.counts.notationRules > 0, 'Unit 1 conversions/notation packet should count existing notation rules');
+  assert.ok(UNIT1_CONVERSIONS_NOTATION_PACKET.metadata.generatedFromExistingFactsOnly);
+
+  const direct = tryUnit1ConversionsNotationKnowledge('what is dimensional analysis');
+  assert.ok(direct, 'Existing Unit 1 conversions/notation matcher should still answer direct prompts');
+  assert.equal(direct.directAnswer, 'Dimensional analysis is a method for converting numbers into different units without changing their value.');
 }
 
 function assertCleanMetricMethodChoice(response, testCase) {
