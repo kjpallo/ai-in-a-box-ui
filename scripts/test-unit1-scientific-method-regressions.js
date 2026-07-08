@@ -1,6 +1,11 @@
 const assert = require('node:assert/strict');
 
 const { createStudentRouteHarness } = require('./test-helpers/studentRouteHarness');
+const {
+  ALL_UNIT1_SCIENTIFIC_METHOD_FACTS,
+  UNIT1_SCIENTIFIC_METHOD_PACKET,
+  tryUnit1ScientificMethodKnowledge
+} = require('../lib/knowledge/science/unit1/unit1ScientificMethodKnowledge');
 
 const UNIT1_VARIABLES_TUTOR_ID = 'unit1.scientific_method.variables.identification';
 
@@ -333,6 +338,8 @@ const DIRECT_BOUNDARY_CASES = [
 ];
 
 async function main() {
+  assertUnit1ScientificMethodPacketShape();
+
   const { request } = createStudentRouteHarness();
   const create = await request('POST', '/api/profile/create-student-session');
   assert.equal(create.statusCode, 201);
@@ -389,6 +396,29 @@ async function main() {
   }
 
   console.log('PASS Unit 1 scientific method regressions: direct answers, typo handling, variable scenario tutor starts, and route boundaries');
+}
+
+function assertUnit1ScientificMethodPacketShape() {
+  assert.equal(UNIT1_SCIENTIFIC_METHOD_PACKET.packetId, 'unit1-scientific-method');
+  assert.equal(UNIT1_SCIENTIFIC_METHOD_PACKET.unit, 1);
+  assert.equal(UNIT1_SCIENTIFIC_METHOD_PACKET.unitTitle, 'Science Practices');
+  assert.equal(UNIT1_SCIENTIFIC_METHOD_PACKET.title, 'Scientific Method and Variables');
+  assert.ok(Array.isArray(UNIT1_SCIENTIFIC_METHOD_PACKET.sourceFiles), 'Unit 1 scientific method packet should expose source refs');
+  assert.ok(Array.isArray(UNIT1_SCIENTIFIC_METHOD_PACKET.vocabulary), 'Unit 1 scientific method packet should expose vocabulary');
+  assert.ok(Array.isArray(UNIT1_SCIENTIFIC_METHOD_PACKET.concepts), 'Unit 1 scientific method packet should expose concept groups');
+  assert.ok(Array.isArray(UNIT1_SCIENTIFIC_METHOD_PACKET.canonicalFacts), 'Unit 1 scientific method packet should expose canonical facts');
+  assert.ok(Array.isArray(UNIT1_SCIENTIFIC_METHOD_PACKET.examples), 'Unit 1 scientific method packet should expose existing examples');
+  assert.ok(Array.isArray(UNIT1_SCIENTIFIC_METHOD_PACKET.relationships), 'Unit 1 scientific method packet should expose existing related-term edges');
+  assert.equal(UNIT1_SCIENTIFIC_METHOD_PACKET.legacyExports.facts, 'ALL_UNIT1_SCIENTIFIC_METHOD_FACTS');
+  assert.equal(UNIT1_SCIENTIFIC_METHOD_PACKET.legacyExports.matcher, 'tryUnit1ScientificMethodKnowledge');
+  assert.equal(UNIT1_SCIENTIFIC_METHOD_PACKET.counts.canonicalFacts, ALL_UNIT1_SCIENTIFIC_METHOD_FACTS.length);
+  assert.ok(UNIT1_SCIENTIFIC_METHOD_PACKET.counts.conceptTutorHooks >= 5);
+  assert.ok(UNIT1_SCIENTIFIC_METHOD_PACKET.metadata.generatedFromExistingFactsOnly);
+
+  const directResult = tryUnit1ScientificMethodKnowledge('what is the scientific method');
+  assert.ok(directResult, 'Legacy Unit 1 scientific method matcher should still return a direct result');
+  assert.match(directResult.directAnswer, /ask questions/i);
+  assert.match(directResult.directAnswer, /collect data/i);
 }
 
 async function ask(request, sessionId, studentHubId, message) {
