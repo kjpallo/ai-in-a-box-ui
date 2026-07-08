@@ -12,7 +12,8 @@ const REQUIRED_IDS = [
   'motion-force',
   'unit5-waves',
   'unit6-matter',
-  'unit7-atomic-structure'
+  'unit7-atomic-structure',
+  'electricity-magnetism'
 ];
 const SCHEMA_GAP_FIELDS = [
   'unitTitle',
@@ -34,7 +35,7 @@ const GAP_STATUSES = new Set(['present', 'missing', 'unknown']);
 function main() {
   const inventory = getUnitPacketInventory();
   assert.ok(Array.isArray(inventory), 'Inventory helper should return an array');
-  assert.ok(inventory.length >= REQUIRED_IDS.length, 'Inventory should include known local knowledge packets');
+  assert.equal(inventory.length, REQUIRED_IDS.length, 'Inventory should report exactly the intentional built-in packet/module shapes');
 
   for (const item of inventory) {
     assert.ok(item.id || item.moduleName, 'Inventory item should include an id or module name');
@@ -69,11 +70,13 @@ function main() {
   assert.equal(byId.get('unit5-waves').unit, 5, 'Unit 5 waves should be identified as Unit 5');
   assert.equal(byId.get('unit6-matter').unit, 6, 'Unit 6 matter should be identified as Unit 6');
   assert.equal(byId.get('unit7-atomic-structure').unit, 7, 'Unit 7 atomic structure should be identified as Unit 7');
+  assert.equal(byId.get('electricity-magnetism').unit, null, 'Electricity/magnetism should remain a cross-unit built-in packet module');
   assert.equal(byId.get('unit1-measurement').packetExport, 'UNIT1_MEASUREMENT_PACKET', 'Unit 1 measurement should prefer the packet export');
   assert.equal(byId.get('unit1-scientific-method').packetExport, 'UNIT1_SCIENTIFIC_METHOD_PACKET', 'Unit 1 scientific method should prefer the packet export');
   assert.equal(byId.get('unit3-energy').packetExport, 'UNIT3_ENERGY_PACKET', 'Unit 3 energy should prefer the packet export');
   assert.equal(byId.get('motion-force').packetExport, 'MOTION_FORCE_PACKET', 'Motion-force should prefer the packet export');
   assert.equal(byId.get('unit7-atomic-structure').packetExport, 'UNIT7_ATOMIC_STRUCTURE_PACKET', 'Unit 7 atomic structure should prefer the packet export');
+  assert.equal(byId.get('electricity-magnetism').style, 'legacy built-in packet module', 'Electricity/magnetism should remain marked as a legacy built-in packet module');
 
   assert.ok(byId.get('motion-force').presence.vocabulary, 'Motion-force modular packet should expose vocabulary');
   assert.ok(byId.get('motion-force').presence.formulas, 'Motion-force modular packet should expose formulas');
