@@ -4,6 +4,7 @@ const { routeStudentQuestion } = require('../lib/router/questionRouter');
 const { createStudentRouteHarness } = require('./test-helpers/studentRouteHarness');
 const {
   UNIT7_ATOMIC_STRUCTURE_METADATA,
+  UNIT7_ATOMIC_STRUCTURE_PACKET,
   UNIT7_FACTS
 } = require('../lib/knowledge/chemistry/atomicStructure/unit7AtomicStructureKnowledge');
 
@@ -62,6 +63,7 @@ async function main() {
   assert.equal(UNIT7_ATOMIC_STRUCTURE_METADATA.unit, 7);
   assert.equal(UNIT7_ATOMIC_STRUCTURE_METADATA.unitTitle, 'Atomic Structure');
   assert.ok(UNIT7_FACTS.length >= 30, 'Unit 7 knowledge pack should expose organized metadata-backed facts');
+  assertUnit7PacketShape();
 
   const { request } = createStudentRouteHarness();
   const create = await request('POST', '/api/profile/create-student-session');
@@ -95,6 +97,25 @@ async function main() {
   }
 
   console.log(`PASS Unit 7 Atomic Structure direct answers: ${DIRECT_CASES.length} source-backed representative prompts`);
+}
+
+function assertUnit7PacketShape() {
+  assert.equal(UNIT7_ATOMIC_STRUCTURE_PACKET.packetId, 'unit7-atomic-structure');
+  assert.equal(UNIT7_ATOMIC_STRUCTURE_PACKET.unit, 7);
+  assert.equal(UNIT7_ATOMIC_STRUCTURE_PACKET.title, 'Atomic Structure');
+  assert.ok(Array.isArray(UNIT7_ATOMIC_STRUCTURE_PACKET.sourceFiles), 'Unit 7 packet should expose source files');
+  assert.ok(Array.isArray(UNIT7_ATOMIC_STRUCTURE_PACKET.vocabulary), 'Unit 7 packet should expose vocabulary');
+  assert.ok(Array.isArray(UNIT7_ATOMIC_STRUCTURE_PACKET.concepts), 'Unit 7 packet should expose concept groups');
+  assert.ok(Array.isArray(UNIT7_ATOMIC_STRUCTURE_PACKET.canonicalFacts), 'Unit 7 packet should expose canonical facts');
+  assert.ok(Array.isArray(UNIT7_ATOMIC_STRUCTURE_PACKET.comparisons), 'Unit 7 packet should expose comparisons');
+  assert.ok(Array.isArray(UNIT7_ATOMIC_STRUCTURE_PACKET.relationships), 'Unit 7 packet should expose relationships');
+  assert.ok(Array.isArray(UNIT7_ATOMIC_STRUCTURE_PACKET.referenceFormulas), 'Unit 7 packet should expose formulas/rules');
+  assert.equal(UNIT7_ATOMIC_STRUCTURE_PACKET.legacyExports.facts, 'UNIT7_FACTS');
+  assert.equal(UNIT7_ATOMIC_STRUCTURE_PACKET.legacyExports.matcher, 'tryUnit7AtomicStructureKnowledge');
+  assert.equal(UNIT7_ATOMIC_STRUCTURE_PACKET.counts.canonicalFacts, UNIT7_FACTS.length);
+  assert.ok(UNIT7_ATOMIC_STRUCTURE_PACKET.counts.comparisons >= 20);
+  assert.ok(UNIT7_ATOMIC_STRUCTURE_PACKET.counts.relationships >= 14);
+  assert.ok(UNIT7_ATOMIC_STRUCTURE_PACKET.metadata.sourceBacked);
 }
 
 function slug(value) {
