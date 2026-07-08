@@ -239,6 +239,7 @@ function stripTutorTimestamps(problem) {
   const clone = JSON.parse(JSON.stringify(problem));
   delete clone.startedAt;
   delete clone.updatedAt;
+  delete clone.tutorProblemId;
   return clone;
 }
 

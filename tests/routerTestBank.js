@@ -4453,9 +4453,9 @@ const routerTestBank = [
     "category": "should_reject",
     "name": "reject unsupported or unsafe 18",
     "question": "What is density?",
-    "type": "no_match",
+    "type": "definition",
     "includes": [
-      "I do not have a trusted local"
+      "Density is mass per unit volume"
     ],
     "aiAllowed": false
   },
@@ -4553,9 +4553,9 @@ const routerTestBank = [
     "category": "should_reject",
     "name": "reject unsupported or unsafe 28",
     "question": "What is heat?",
-    "type": "no_match",
+    "type": "definition",
     "includes": [
-      "I do not have a trusted local"
+      "Heat is the transfer of energy"
     ],
     "aiAllowed": false
   },
@@ -4563,9 +4563,9 @@ const routerTestBank = [
     "category": "should_reject",
     "name": "reject unsupported or unsafe 29",
     "question": "What is energy?",
-    "type": "no_match",
+    "type": "definition",
     "includes": [
-      "I do not have a trusted local"
+      "Energy is the ability to cause change"
     ],
     "aiAllowed": false
   },
@@ -4645,7 +4645,7 @@ const routerTestBank = [
     "question": "What is density if I only know volume?",
     "type": "no_match",
     "includes": [
-      "I do not have a trusted local"
+      "I do not have enough values to find density"
     ],
     "aiAllowed": false
   },
@@ -4665,7 +4665,7 @@ const routerTestBank = [
     "question": "What is wave speed if I only know frequency?",
     "type": "no_match",
     "includes": [
-      "I do not have a trusted local"
+      "I do not have enough values to find wave speed"
     ],
     "aiAllowed": false
   },
@@ -4683,9 +4683,9 @@ const routerTestBank = [
     "category": "should_reject",
     "name": "reject unsupported or unsafe 41",
     "question": "A rock is heavy. What is density?",
-    "type": "no_match",
+    "type": "definition",
     "includes": [
-      "I do not have a trusted local"
+      "Density is mass per unit volume"
     ],
     "aiAllowed": false
   },
@@ -4693,9 +4693,9 @@ const routerTestBank = [
     "category": "should_reject",
     "name": "reject unsupported or unsafe 42",
     "question": "A student pushes a box. What is work?",
-    "type": "no_match",
+    "type": "definition",
     "includes": [
-      "I do not have a trusted local"
+      "work is the transfer of energy"
     ],
     "aiAllowed": false
   },
@@ -4703,9 +4703,9 @@ const routerTestBank = [
     "category": "should_reject",
     "name": "reject unsupported or unsafe 43",
     "question": "A wave is blue. What is wavelength?",
-    "type": "no_match",
+    "type": "definition",
     "includes": [
-      "I do not have a trusted local"
+      "Wavelength is the distance"
     ],
     "aiAllowed": false
   },
