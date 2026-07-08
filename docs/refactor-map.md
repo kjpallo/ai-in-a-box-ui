@@ -30,11 +30,11 @@ This map is for cleanup/refactor prep. It documents current structure only; it i
 
 - `lib/router/questionRouter.js` is the active local question router. The root `lib/questionRouter.js` file is a compatibility wrapper.
 - `lib/formulas/` contains the active formula parser, registry, formatter, and formula-family modules. The root `lib/scienceFormulaTools.js` file is a compatibility wrapper.
-- `lib/knowledge/teacherKnowledge.js`, `loadEnabledApprovedKnowledgeItems.js`, `loadApprovedKnowledgePacks.js`, `loadDraftKnowledgePacks.js`, `promoteDraftKnowledgePack.js`, `reviewDraftKnowledgePack.js`, `validateKnowledgePack.js`, and related helpers are active pack/review modules.
+- `lib/knowledge/teacherKnowledge.js`, `loadEnabledApprovedKnowledgeItems.js`, `loadApprovedKnowledgePacks.js`, `loadDraftKnowledgePacks.js`, `promoteDraftKnowledgePack.js`, `reviewDraftKnowledgePack.js`, `validateKnowledgePack.js`, and related helpers are legacy teacher upload / approved-pack modules. They are parked and out of scope for built-in curriculum packet unification.
 - `lib/knowledge/chemistryTools.js` and `lib/knowledge/periodicTableTools.js` are active chemistry/periodic table tools. The root `lib/chemistryTools.js` and `lib/periodicTableTools.js` files are compatibility wrappers.
 - `lib/uploads/` owns upload type detection, text extraction, draft pack generation, import reports, source manifests, and teacher content adapters.
-- `knowledge/approved-packs/`, `knowledge/draft-packs/_example/`, `knowledge/packs/`, `knowledge/schema/`, `knowledge/standards/`, and `knowledge/standards-banks/` are review-safe knowledge definition areas.
-- `knowledge/uploads/`, `knowledge/deleted-approved-packs/`, `knowledge/draft-packs/_accepted/`, and `knowledge/draft-packs/_removed/` are local artifact/archive areas and should not be shared as source.
+- `knowledge/packs/`, `knowledge/schema/`, `knowledge/standards/`, and `knowledge/standards-banks/` are review-safe knowledge definition areas.
+- `knowledge/approved-packs/`, `knowledge/deleted-approved-packs/`, `knowledge/draft-packs/`, and `knowledge/uploads/` are legacy teacher upload / approved-pack leftovers. They are parked, out of scope for built-in curriculum packet unification, and should not be counted as packet completeness sources.
 
 ## Known large files for later splitting
 
@@ -58,14 +58,14 @@ These files are intentionally documented instead of split during final audit cle
 - `lib/chemistryTools.js` -> `lib/knowledge/chemistryTools.js`
 - `lib/periodicTableTools.js` -> `lib/knowledge/periodicTableTools.js`
 - `public/voice-input.js` is a compatibility loader for the canonical `public/voice/voice-input.js`; the active teacher page loads `/voice/voice-input.js`.
-- `knowledge/approved-packs/_example/knowledge_pack.json` and `knowledge/draft-packs/_example/knowledge_pack.json` share a basename but represent different example states.
+- `knowledge/approved-packs/_example/knowledge_pack.json` and `knowledge/draft-packs/_example/knowledge_pack.json` share a basename but represent legacy teacher upload / approved-pack example states.
 - `lib/server/utils.js` and `public/teacher-content/utils.js` share a basename but live on opposite sides of the app boundary.
 
 ## Protected areas
 
 - Router behavior: `lib/router/`, `lib/formulas/`, `routes/questionRoutes.js`, and router tests.
-- Teacher content behavior: `routes/teacherContentRoutes.js`, `public/teacher-content-ui.js`, `public/teacher-content/`, `lib/uploads/`, and knowledge pack review/promote modules.
+- Teacher content behavior: `routes/teacherContentRoutes.js`, `public/teacher-content-ui.js`, `public/teacher-content/`, `lib/uploads/`, and knowledge pack review/promote modules. Teacher upload / approved-pack flows are parked legacy behavior for packet unification work.
 - Voice behavior: `public/voice/`, `routes/voiceRoutes.js`, `routes/whisperRoutes.js`, `lib/tts/piper.js`, and `lib/whisper/transcribe.js`.
 - Standards behavior: `lib/standards/`, `knowledge/standards/`, `knowledge/standards-banks/`, and standards logging/reporting modules.
-- Knowledge pack behavior: `lib/knowledge/`, `knowledge/schema/`, `knowledge/packs/`, `knowledge/approved-packs/`, and draft/approval activation flows.
+- Built-in curriculum packet behavior: built-in modules under `lib/knowledge/`, plus `knowledge/schema/` and `knowledge/packs/` where they describe repo-owned curriculum data. Legacy `knowledge/approved-packs/`, draft, upload, and activation flows are out of scope for packet unification work.
 - Auth and local state: `lib/auth/teacherAuth.js`, `routes/authRoutes.js`, `routes/profileRoutes.js`, `logs/`, `.env*`, upload artifacts, and OAuth/Gmail files.

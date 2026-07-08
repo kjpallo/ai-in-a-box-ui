@@ -57,6 +57,7 @@ function main() {
   }
 
   const byId = new Map(inventory.map((item) => [item.id, item]));
+  assert.equal(byId.has('approved-pack-schema'), false, 'Inventory should not count legacy approved-pack schema as curriculum packet completeness');
   for (const id of REQUIRED_IDS) {
     const item = byId.get(id);
     assert.ok(item, `${id} should be represented in packet inventory`);
@@ -68,6 +69,11 @@ function main() {
   assert.equal(byId.get('unit5-waves').unit, 5, 'Unit 5 waves should be identified as Unit 5');
   assert.equal(byId.get('unit6-matter').unit, 6, 'Unit 6 matter should be identified as Unit 6');
   assert.equal(byId.get('unit7-atomic-structure').unit, 7, 'Unit 7 atomic structure should be identified as Unit 7');
+  assert.equal(byId.get('unit1-measurement').packetExport, 'UNIT1_MEASUREMENT_PACKET', 'Unit 1 measurement should prefer the packet export');
+  assert.equal(byId.get('unit1-scientific-method').packetExport, 'UNIT1_SCIENTIFIC_METHOD_PACKET', 'Unit 1 scientific method should prefer the packet export');
+  assert.equal(byId.get('unit3-energy').packetExport, 'UNIT3_ENERGY_PACKET', 'Unit 3 energy should prefer the packet export');
+  assert.equal(byId.get('motion-force').packetExport, 'MOTION_FORCE_PACKET', 'Motion-force should prefer the packet export');
+  assert.equal(byId.get('unit7-atomic-structure').packetExport, 'UNIT7_ATOMIC_STRUCTURE_PACKET', 'Unit 7 atomic structure should prefer the packet export');
 
   assert.ok(byId.get('motion-force').presence.vocabulary, 'Motion-force modular packet should expose vocabulary');
   assert.ok(byId.get('motion-force').presence.formulas, 'Motion-force modular packet should expose formulas');
