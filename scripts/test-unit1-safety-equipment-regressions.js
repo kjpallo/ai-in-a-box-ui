@@ -1,6 +1,11 @@
 const assert = require('node:assert/strict');
 
 const { createStudentRouteHarness } = require('./test-helpers/studentRouteHarness');
+const {
+  ALL_UNIT1_SAFETY_EQUIPMENT_FACTS,
+  UNIT1_SAFETY_EQUIPMENT_PACKET,
+  tryUnit1SafetyEquipmentKnowledge
+} = require('../lib/knowledge/science/unit1/unit1SafetyEquipmentKnowledge');
 
 const DIRECT_CASES = [
   {
@@ -232,6 +237,8 @@ const NON_UNIT1_BOUNDARY_CASES = [
 ];
 
 async function main() {
+  assertPacketShape();
+
   const { request } = createStudentRouteHarness();
   const create = await request('POST', '/api/profile/create-student-session');
   assert.equal(create.statusCode, 201);
@@ -267,6 +274,34 @@ async function main() {
   }
 
   console.log('PASS Unit 1 safety/equipment regressions: direct answers, typo handling, and route boundaries');
+}
+
+function assertPacketShape() {
+  assert.ok(UNIT1_SAFETY_EQUIPMENT_PACKET, 'Unit 1 safety/equipment packet should be exported');
+  assert.equal(UNIT1_SAFETY_EQUIPMENT_PACKET.packetId, 'unit1-safety-equipment');
+  assert.equal(UNIT1_SAFETY_EQUIPMENT_PACKET.unit, 1);
+  assert.equal(UNIT1_SAFETY_EQUIPMENT_PACKET.unitTitle, 'Science Practices');
+  assert.equal(UNIT1_SAFETY_EQUIPMENT_PACKET.title, 'Lab Safety and Equipment');
+  assert.ok(Array.isArray(UNIT1_SAFETY_EQUIPMENT_PACKET.sourceFiles), 'Unit 1 safety/equipment packet should expose source refs');
+  assert.ok(Array.isArray(UNIT1_SAFETY_EQUIPMENT_PACKET.topics), 'Unit 1 safety/equipment packet should expose topics');
+  assert.ok(Array.isArray(UNIT1_SAFETY_EQUIPMENT_PACKET.vocabulary), 'Unit 1 safety/equipment packet should expose vocabulary');
+  assert.ok(Array.isArray(UNIT1_SAFETY_EQUIPMENT_PACKET.concepts), 'Unit 1 safety/equipment packet should expose concept groups');
+  assert.ok(Array.isArray(UNIT1_SAFETY_EQUIPMENT_PACKET.canonicalFacts), 'Unit 1 safety/equipment packet should expose canonical facts');
+  assert.ok(Array.isArray(UNIT1_SAFETY_EQUIPMENT_PACKET.examples), 'Unit 1 safety/equipment packet should expose existing examples');
+  assert.ok(Array.isArray(UNIT1_SAFETY_EQUIPMENT_PACKET.relationships), 'Unit 1 safety/equipment packet should expose existing related-term edges');
+  assert.ok(Array.isArray(UNIT1_SAFETY_EQUIPMENT_PACKET.safetyRules), 'Unit 1 safety/equipment packet should expose existing safety rules');
+  assert.equal(UNIT1_SAFETY_EQUIPMENT_PACKET.legacyExports.facts, 'ALL_UNIT1_SAFETY_EQUIPMENT_FACTS');
+  assert.equal(UNIT1_SAFETY_EQUIPMENT_PACKET.legacyExports.matcher, 'tryUnit1SafetyEquipmentKnowledge');
+  assert.equal(UNIT1_SAFETY_EQUIPMENT_PACKET.counts.canonicalFacts, ALL_UNIT1_SAFETY_EQUIPMENT_FACTS.length);
+  assert.ok(UNIT1_SAFETY_EQUIPMENT_PACKET.sourceFiles.includes('unit1.corpus.0001'), 'Unit 1 safety/equipment packet should represent existing safety source refs');
+  assert.ok(UNIT1_SAFETY_EQUIPMENT_PACKET.sourceFiles.includes('unit1.corpus.0012'), 'Unit 1 safety/equipment packet should represent existing equipment source refs');
+  assert.ok(UNIT1_SAFETY_EQUIPMENT_PACKET.counts.relationships > 0, 'Unit 1 safety/equipment packet should count existing relationships');
+  assert.ok(UNIT1_SAFETY_EQUIPMENT_PACKET.counts.safetyRules > 0, 'Unit 1 safety/equipment packet should count existing safety rules');
+  assert.ok(UNIT1_SAFETY_EQUIPMENT_PACKET.metadata.generatedFromExistingFactsOnly);
+
+  const direct = tryUnit1SafetyEquipmentKnowledge('what are safety goggles for');
+  assert.ok(direct, 'Unit 1 safety/equipment matcher should still answer a direct safety prompt');
+  assert.equal(direct.directAnswer, 'Safety goggles protect your eyes when using chemicals, fire, glassware, or anything that could splash or break.');
 }
 
 async function ask(request, sessionId, studentHubId, message) {
