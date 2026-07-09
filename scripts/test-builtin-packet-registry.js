@@ -58,6 +58,7 @@ function main() {
     assertLegacyEntriesAreExplicit(entry);
     assertMatcherResolvesWhenDeclared(entry);
   }
+  assertPacketReadinessCheckpoint(registry);
 
   for (const packetId of KEY_PACKET_IDS) {
     const entry = getBuiltinPacketRegistryEntry(packetId);
@@ -71,6 +72,23 @@ function main() {
   assert.equal(getBuiltinPacketRegistryEntry('draft-pack'), null, 'Draft packs should not be registered as built-in curriculum');
 
   console.log(`PASS built-in packet registry: ${registry.length} entries inspected`);
+}
+
+function assertPacketReadinessCheckpoint(registry) {
+  const packetEntries = registry.filter((entry) => entry.status === 'packet');
+  const legacyEntries = registry.filter((entry) => entry.status === 'legacy');
+
+  assert.equal(packetEntries.length, 10, 'Registry should currently have 10 packet-shaped built-in curriculum entries');
+  assert.deepEqual(
+    packetEntries.map((entry) => entry.packetId),
+    EXPECTED_PACKET_IDS.filter((packetId) => packetId !== 'electricity-magnetism'),
+    'Only electricity/magnetism should remain outside the packet-shaped built-in curriculum set'
+  );
+  assert.deepEqual(
+    legacyEntries.map((entry) => entry.packetId),
+    ['electricity-magnetism'],
+    'Electricity/magnetism should be the only intentional legacy/support-only registry entry'
+  );
 }
 
 function assertRegistryEntryShape(entry) {
