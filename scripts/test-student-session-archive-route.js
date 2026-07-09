@@ -187,6 +187,102 @@ async function main() {
   assert.equal(missingConfirm.body.error, 'confirm true is required.');
   assert.equal(fs.readFileSync(logFilePath, 'utf8'), originalLogContents, 'unconfirmed archive should not change raw records');
 
+  const emptyCreateResponse = await request(
+    handlers,
+    'POST',
+    '/api/profile/create-student-session',
+    { className: 'Empty Session' },
+    {},
+    {},
+    authorizedExtras
+  );
+  assert.equal(emptyCreateResponse.statusCode, 201, 'fixture should create an empty live student session');
+  const emptySessionId = emptyCreateResponse.body.sessionId;
+  assert.ok(studentSessions[emptySessionId], 'empty fixture session should be actively running before end/archive');
+
+  const emptyLiveBeforeArchive = await request(
+    handlers,
+    'GET',
+    '/api/profile/live-student-activity',
+    {},
+    {},
+    {},
+    authorizedExtras
+  );
+  assert.equal(emptyLiveBeforeArchive.statusCode, 200);
+  assert.equal(
+    emptyLiveBeforeArchive.body.sessions.some((session) => session.classSessionId === emptySessionId),
+    true,
+    'empty live session should appear in Live Activity before end/archive'
+  );
+  const emptyJoinBeforeArchive = await request(
+    handlers,
+    'POST',
+    '/api/student/join',
+    { sessionId: emptySessionId, studentHubId: 'empty-session-student' }
+  );
+  assert.equal(emptyJoinBeforeArchive.statusCode, 200, 'empty live session should be joinable before end/archive');
+
+  const emptyArchiveResponse = await request(
+    handlers,
+    'POST',
+    '/api/profile/student-sessions/:sessionId/archive',
+    { confirm: true, className: 'Empty Session' },
+    { sessionId: emptySessionId },
+    {},
+    authorizedExtras
+  );
+  assert.equal(emptyArchiveResponse.statusCode, 200, 'confirmed empty session end/archive should succeed');
+  assert.equal(emptyArchiveResponse.body.ok, true);
+  assert.equal(emptyArchiveResponse.body.archived, false);
+  assert.equal(emptyArchiveResponse.body.status, 'no_records');
+  assert.equal(emptyArchiveResponse.body.sessionEnded, true);
+  assert.equal(emptyArchiveResponse.body.rowCount, 0);
+  assert.equal(emptyArchiveResponse.body.deletedRecordCount, 0);
+  assert.equal(emptyArchiveResponse.body.rawRecordsDeleted, false);
+  assert.equal(
+    emptyArchiveResponse.body.message,
+    'Session ended. No question history was archived.'
+  );
+  assert.equal(fs.readFileSync(logFilePath, 'utf8'), originalLogContents, 'empty session end/archive should not change raw records');
+  assert.equal(studentSessions[emptySessionId], undefined, 'empty runtime session should be ended even without archived records');
+
+  const emptyLiveAfterArchive = await request(
+    handlers,
+    'GET',
+    '/api/profile/live-student-activity',
+    {},
+    {},
+    {},
+    authorizedExtras
+  );
+  assert.equal(emptyLiveAfterArchive.statusCode, 200);
+  assert.equal(
+    emptyLiveAfterArchive.body.sessions.some((session) => session.classSessionId === emptySessionId),
+    false,
+    'empty ended session should disappear from Live Activity'
+  );
+  const emptyJoinAfterArchive = await request(
+    handlers,
+    'POST',
+    '/api/student/join',
+    { sessionId: emptySessionId, studentHubId: 'empty-session-student' }
+  );
+  assert.equal(emptyJoinAfterArchive.statusCode, 404, 'old empty student link should not join after end/archive');
+  assert.equal(emptyJoinAfterArchive.body.error, 'Student session not found.');
+  const emptyMessageAfterArchive = await request(
+    handlers,
+    'POST',
+    '/api/student/message',
+    {
+      sessionId: emptySessionId,
+      studentHubId: 'empty-session-student',
+      message: 'Can I still ask after the session ended?'
+    }
+  );
+  assert.equal(emptyMessageAfterArchive.statusCode, 404, 'old empty student link should not ask after end/archive');
+  assert.equal(emptyMessageAfterArchive.body.error, 'Student session not found.');
+
   const archiveResponse = await request(
     handlers,
     'POST',
@@ -553,6 +649,16 @@ async function assertArchiveFailureDoesNotDeleteRawRecords() {
   const failingApp = createApp(failingHandlers);
   fs.writeFileSync(failingLogFilePath, originalLogContents, 'utf8');
   fs.writeFileSync(failingArchivePath, 'not a directory', 'utf8');
+  const failingStudentSessions = {
+    'session-a': {
+      sessionId: 'session-a',
+      className: 'Science A',
+      createdAt: '2026-05-05T13:55:00.000Z',
+      studentUrl: '/student.html?sessionId=session-a',
+      messages: [],
+      anonymousHubs: {}
+    }
+  };
 
   registerProfileRoutes(failingApp, {
     clearGoogleIdentity: async () => null,
@@ -570,7 +676,7 @@ async function assertArchiveFailureDoesNotDeleteRawRecords() {
     requireTeacherAuth: requireTeacherAuth(sessionStore),
     sendDailySummaryEmail: async () => ({ ok: true }),
     studentInteractionsFile: failingLogFilePath,
-    studentSessions: {},
+    studentSessions: failingStudentSessions,
     questionsStandardsArchiveDir: failingArchivePath,
     questionsStandardsExportManifestDir: path.join(failingTmpDir, 'manifests')
   });
@@ -589,6 +695,10 @@ async function assertArchiveFailureDoesNotDeleteRawRecords() {
     fs.readFileSync(failingLogFilePath, 'utf8'),
     originalLogContents,
     'raw records should only be deleted after archive succeeds'
+  );
+  assert.ok(
+    failingStudentSessions['session-a'],
+    'runtime session should remain active when archive fails before verification/deletion'
   );
 }
 

@@ -102,17 +102,25 @@ function registerProfileRoutes(app, {
           archiveDir: questionsStandardsArchiveDir
         });
         const sessionId = result.sessionId || req.params?.sessionId || '';
+        const shouldEndRuntimeSession = studentSessions && sessionId && studentSessions[sessionId] && (
+          result.archived === true ||
+          result.status === 'no_records'
+        );
         const message = result.archived
           ? 'Session archived. The CSV was verified, raw JSON history for this session was deleted, and the session remains available in Questions & Standards.'
+          : result.status === 'no_records' && shouldEndRuntimeSession
+            ? 'Session ended. No question history was archived.'
           : result.message || 'No question history records matched this session.';
 
-        if (result.archived && studentSessions && sessionId && studentSessions[sessionId]) {
+        if (shouldEndRuntimeSession) {
           delete studentSessions[sessionId];
         }
 
         res.json({
           ok: true,
           archived: result.archived === true,
+          status: result.status || '',
+          sessionEnded: shouldEndRuntimeSession === true,
           archiveId: result.archiveId || '',
           exportId: result.exportId || result.archiveId || '',
           sessionId,
