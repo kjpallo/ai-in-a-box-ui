@@ -4541,11 +4541,11 @@ const routerTestBank = [
   },
   {
     "category": "should_reject",
-    "name": "reject unsupported or unsafe 27",
+    "name": "unit9 chemical reaction definition",
     "question": "What is a chemical reaction?",
-    "type": "no_match",
+    "type": "definition",
     "includes": [
-      "I do not have a trusted local"
+      "A chemical reaction is a process where substances change into new substances"
     ],
     "aiAllowed": false
   },

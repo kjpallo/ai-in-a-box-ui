@@ -479,7 +479,7 @@ const tests = [
     name: 'knowledge pack temperature units answers directly',
     question: 'what are the units for temperature',
     matchedKnowledge: matchedKnowledgeFor('what are the units for temperature'),
-    type: 'definition',
+    type: 'units_only',
     includes: ['degrees Celsius', '°C', 'Kelvin', 'K'],
     aiAllowed: false
   },
@@ -2181,10 +2181,10 @@ const tests = [
     aiAllowed: false
   },
   {
-    name: 'periodic table isotope neutrons',
+    name: 'unit7 isotope neutrons formula',
     question: 'How many neutrons does Carbon-14 have?',
-    type: 'periodic_table',
-    includes: ['Mass number = 14', 'Neutrons = 14 - 6', 'Neutrons = 8'],
+    type: 'science_formula',
+    includes: ['Use the neutron rule', 'Neutrons = 14 - 6', 'Neutrons = 8'],
     aiAllowed: false
   },
   {
