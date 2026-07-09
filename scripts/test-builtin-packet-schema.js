@@ -6,7 +6,7 @@ const {
   validateBuiltinPacketEntry
 } = require('../lib/knowledge/builtinPacketSchema');
 
-const EXPECTED_PACKET_COUNT = 12;
+const EXPECTED_PACKET_COUNT = 13;
 const FORBIDDEN_PATH_PARTS = [
   'knowledge/approved-packs',
   'knowledge/deleted-approved-packs',
@@ -19,7 +19,7 @@ const FORBIDDEN_PATH_PARTS = [
 
 function main() {
   const registry = getBuiltinPacketRegistry();
-  assert.equal(registry.length, EXPECTED_PACKET_COUNT, 'Registry should still contain exactly 11 built-in curriculum entries');
+  assert.equal(registry.length, EXPECTED_PACKET_COUNT, 'Registry should still contain exactly 13 built-in curriculum entries');
 
   const report = getBuiltinPacketSchemaReport();
   assert.equal(report.length, EXPECTED_PACKET_COUNT, 'Schema report should include every built-in curriculum registry entry');
@@ -55,6 +55,7 @@ function main() {
   assertUnit6Matter(byId.get('unit6-matter'));
   assertUnit7AtomicStructure(byId.get('unit7-atomic-structure'));
   assertUnit8Bonding(byId.get('unit8-bonding'));
+  assertUnit9Reactions(byId.get('unit9-reactions'));
   assertMotionForce(byId.get('motion-force'), registry.find((entry) => entry.packetId === 'motion-force'));
 
   printSchemaSummary(report);
@@ -113,6 +114,19 @@ function assertUnit8Bonding(unit8) {
   assert.ok(unit8.bodyCounts.formulas > 0, 'Unit 8 bonding should count formulas/rules');
   assert.ok(unit8.bodyCounts.concepts > 0, 'Unit 8 bonding should count concepts');
   assert.ok(unit8.bodyCounts.smokeTests > 0, 'Unit 8 bonding should count smoke tests');
+}
+
+function assertUnit9Reactions(unit9) {
+  assert.ok(unit9, 'Unit 9 reactions should appear in the schema report');
+  assert.equal(unit9.isPacketShaped, true, 'Unit 9 reactions should be packet-shaped');
+  assert.equal(unit9.validationStatus, 'valid', 'Unit 9 reactions should validate as packet-shaped');
+  assert.ok(unit9.bodyCounts.facts > 0, 'Unit 9 reactions should count canonical facts');
+  assert.ok(unit9.bodyCounts.vocabulary > 0, 'Unit 9 reactions should count vocabulary');
+  assert.ok(unit9.bodyCounts.comparisons > 0, 'Unit 9 reactions should count comparisons');
+  assert.ok(unit9.bodyCounts.relationships > 0, 'Unit 9 reactions should count relationships');
+  assert.ok(unit9.bodyCounts.formulas > 0, 'Unit 9 reactions should count formulas/rules');
+  assert.ok(unit9.bodyCounts.concepts > 0, 'Unit 9 reactions should count concepts');
+  assert.ok(unit9.bodyCounts.smokeTests > 0, 'Unit 9 reactions should count smoke tests');
 }
 
 function assertMotionForce(motionForce, registryEntry) {

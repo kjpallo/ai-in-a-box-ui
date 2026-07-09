@@ -14,6 +14,7 @@ const REQUIRED_IDS = [
   'unit6-matter',
   'unit7-atomic-structure',
   'unit8-bonding',
+  'unit9-reactions',
   'electricity-magnetism'
 ];
 const SCHEMA_GAP_FIELDS = [
@@ -72,6 +73,7 @@ function main() {
   assert.equal(byId.get('unit6-matter').unit, 6, 'Unit 6 matter should be identified as Unit 6');
   assert.equal(byId.get('unit7-atomic-structure').unit, 7, 'Unit 7 atomic structure should be identified as Unit 7');
   assert.equal(byId.get('unit8-bonding').unit, 8, 'Unit 8 bonding should be identified as Unit 8');
+  assert.equal(byId.get('unit9-reactions').unit, 9, 'Unit 9 reactions should be identified as Unit 9');
   assert.equal(byId.get('electricity-magnetism').unit, null, 'Electricity/magnetism should remain a cross-unit built-in packet module');
   assert.equal(byId.get('unit1-measurement').packetExport, 'UNIT1_MEASUREMENT_PACKET', 'Unit 1 measurement should prefer the packet export');
   assert.equal(byId.get('unit1-safety-equipment').packetExport, 'UNIT1_SAFETY_EQUIPMENT_PACKET', 'Unit 1 safety/equipment should prefer the packet export');
@@ -82,6 +84,7 @@ function main() {
   assert.equal(byId.get('unit6-matter').packetExport, 'UNIT6_MATTER_PACKET', 'Unit 6 matter should prefer the packet export');
   assert.equal(byId.get('unit7-atomic-structure').packetExport, 'UNIT7_ATOMIC_STRUCTURE_PACKET', 'Unit 7 atomic structure should prefer the packet export');
   assert.equal(byId.get('unit8-bonding').packetExport, 'UNIT8_BONDING_PACKET', 'Unit 8 bonding should prefer the packet export');
+  assert.equal(byId.get('unit9-reactions').packetExport, 'UNIT9_REACTIONS_PACKET', 'Unit 9 reactions should prefer the packet export');
   assert.equal(byId.get('electricity-magnetism').style, 'legacy built-in packet module', 'Electricity/magnetism should remain marked as a legacy built-in packet module');
 
   assert.ok(byId.get('motion-force').presence.vocabulary, 'Motion-force modular packet should expose vocabulary');
@@ -113,6 +116,7 @@ function main() {
     'Unit 7 should report a router/direct knowledge touchpoint'
   );
   assertUnit8BondingInventory(byId.get('unit8-bonding'));
+  assertUnit9ReactionsInventory(byId.get('unit9-reactions'));
   assert.ok(
     byId.get('unit1-conversions-notation').coverage.testFiles.some((filePath) => filePath.includes('unit1-conversions-notation')),
     'Unit 1 conversions/notation should report its focused regression test file'
@@ -126,7 +130,7 @@ function main() {
       byId.get('unit1-conversions-notation').touchpoints.studentRouteReferences.length > 0,
     'Unit 1 conversions/notation should report formula or student tutor related touchpoints'
   );
-  for (const id of ['unit3-energy', 'unit5-waves', 'unit6-matter', 'unit8-bonding']) {
+  for (const id of ['unit3-energy', 'unit5-waves', 'unit6-matter', 'unit8-bonding', 'unit9-reactions']) {
     assert.equal(byId.get(id).schemaGaps.directKnowledgeMatcher, 'present', `${id} schema gaps should show direct matcher present`);
   }
 
@@ -236,6 +240,30 @@ function assertUnit8BondingInventory(item) {
     item.touchpoints.routerReferences.length > 0 ||
       item.touchpoints.directImportReferences.length > 0,
     'Unit 8 bonding should report a router/direct knowledge touchpoint'
+  );
+}
+
+function assertUnit9ReactionsInventory(item) {
+  assert.equal(item.style, 'built-in curriculum packet', 'Unit 9 reactions should be marked as a built-in curriculum packet');
+  assert.ok(item.presence.vocabulary, 'Unit 9 reactions should expose vocabulary');
+  assert.ok(item.presence.facts, 'Unit 9 reactions should expose canonical facts');
+  assert.ok(item.presence.comparisons, 'Unit 9 reactions should expose comparisons');
+  assert.ok(item.presence.relationships, 'Unit 9 reactions should expose relationships');
+  assert.ok(item.presence.formulas, 'Unit 9 reactions should expose formula/rule metadata');
+  assert.ok(item.presence.conceptTutors, 'Unit 9 reactions should expose concept groups or tutor hooks');
+  assert.ok(item.presence.examples, 'Unit 9 reactions should expose grounded examples');
+  assert.ok(item.presence.smokeTests, 'Unit 9 reactions should expose smoke tests');
+  assert.ok(item.sourceMetadataPresent, 'Unit 9 reactions should expose source metadata');
+  assert.deepEqual(
+    item.schemaGaps.missingFields,
+    [],
+    'Unit 9 reactions should expose the packet fields needed by inventory'
+  );
+  assert.ok(item.coverage.testFiles.some((filePath) => filePath.includes('unit9-reactions')), 'Unit 9 reactions should report its focused regression test file');
+  assert.ok(
+    item.touchpoints.routerReferences.length > 0 ||
+      item.touchpoints.directImportReferences.length > 0,
+    'Unit 9 reactions should report a router/direct knowledge touchpoint'
   );
 }
 

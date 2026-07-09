@@ -46,10 +46,11 @@ As of the Bonding packet addition checkpoint, these entries are registered as pa
 - Unit 6 Matter
 - Unit 7 Atomic Structure
 - Unit 8 Bonding
+- Unit 9 Reactions
 
 `electricity-magnetism` remains intentionally registered as a legacy built-in packet module. It is still active curriculum support data, but it is not yet a direct-matcher packet and should stay a graph-normalizer skip until a focused conversion patch gives it the standard packet export.
 
-The final new units should copy the Unit 5, Unit 6, or Unit 8 pattern: one checked-in knowledge module, one packet export registered in `builtinPacketRegistry.js`, route behavior preserved through the existing matcher/tutor paths, and focused unit regression tests. They should not copy teacher upload, draft-pack, approved-pack, or import-pipeline code.
+New packet-style units should copy the Unit 5, Unit 6, Unit 8, or Unit 9 pattern: one checked-in knowledge module, one packet export registered in `builtinPacketRegistry.js`, route behavior preserved through the existing matcher/tutor paths, and focused unit regression tests. They should not copy teacher upload, draft-pack, approved-pack, or import-pipeline code.
 
 Out of scope for packet normalization:
 

@@ -16,7 +16,7 @@ const {
   normalizeVocabularyNodes
 } = require('../lib/knowledge/builtinPacketGraphNormalizer');
 
-const EXPECTED_REGISTRY_COUNT = 12;
+const EXPECTED_REGISTRY_COUNT = 13;
 const EXPECTED_NORMALIZED_PACKET_IDS = [
   'unit1-measurement',
   'unit1-safety-equipment',
@@ -28,7 +28,8 @@ const EXPECTED_NORMALIZED_PACKET_IDS = [
   'unit5-waves',
   'unit6-matter',
   'unit7-atomic-structure',
-  'unit8-bonding'
+  'unit8-bonding',
+  'unit9-reactions'
 ];
 const EXPECTED_SKIPPED_IDS = [
   'electricity-magnetism'
@@ -47,7 +48,7 @@ function main() {
   const normalized = normalizeBuiltinPacketsForGraph();
   assert.equal(normalized.source, 'built-in curriculum packet', 'Normalizer should identify built-in curriculum as the source');
   assert.equal(normalized.purpose, 'graph-support', 'Normalizer should mark output as graph-support data');
-  assert.equal(normalized.counts.registryEntries, EXPECTED_REGISTRY_COUNT, 'Normalizer should inspect the same 11 registry entries');
+  assert.equal(normalized.counts.registryEntries, EXPECTED_REGISTRY_COUNT, 'Normalizer should inspect the same 13 registry entries');
   assert.deepEqual(
     normalized.packets.map((packet) => packet.packetId),
     EXPECTED_NORMALIZED_PACKET_IDS,
@@ -81,6 +82,7 @@ function main() {
   assertUnit6Matter(normalized.packets.find((packet) => packet.packetId === 'unit6-matter'));
   assertUnit7AtomicStructure(normalized.packets.find((packet) => packet.packetId === 'unit7-atomic-structure'));
   assertUnit8Bonding(normalized.packets.find((packet) => packet.packetId === 'unit8-bonding'));
+  assertUnit9Reactions(normalized.packets.find((packet) => packet.packetId === 'unit9-reactions'));
   assertMotionForce(normalized.packets.find((packet) => packet.packetId === 'motion-force'));
   assertIndividualNormalizers();
   assertReport(normalized);
@@ -213,6 +215,27 @@ function assertUnit8Bonding(packet) {
     edge.toTerm === 'covalent bond'
   );
   assert.ok(bondComparison, 'Unit 8 bonding should normalize ionic/covalent comparison edges');
+}
+
+function assertUnit9Reactions(packet) {
+  assert.ok(packet, 'Unit 9 reactions should be normalized');
+  assert.ok(packet.nodeCounts.vocabulary > 0, 'Unit 9 reactions should include vocabulary nodes');
+  assert.ok(packet.nodeCounts.fact > 0, 'Unit 9 reactions should include fact nodes');
+  assert.ok(packet.nodeCounts.concept > 0, 'Unit 9 reactions should include concept nodes');
+  assert.ok(packet.nodeCounts.formula > 0, 'Unit 9 reactions should include formula/rule nodes');
+  assert.ok(packet.edgeCounts.relationship > 0, 'Unit 9 reactions should include relationship edges');
+  assert.ok(packet.edgeCounts.comparison > 0, 'Unit 9 reactions should include comparison edges');
+
+  const aqueous = packet.nodes.find((node) => node.id === 'unit9-reactions:vocabulary:aqueous');
+  assert.ok(aqueous, 'Unit 9 reactions should normalize aqueous vocabulary to a stable graph-support node id');
+  assert.equal(aqueous.unit, 'Unit 9', 'Unit 9 vocabulary node should keep formatted unit label');
+
+  const fissionFusion = packet.edges.find((edge) =>
+    edge.type === 'comparison' &&
+    edge.fromTerm === 'nuclear fission' &&
+    edge.toTerm === 'nuclear fusion'
+  );
+  assert.ok(fissionFusion, 'Unit 9 reactions should normalize fission/fusion comparison edges');
 }
 
 function assertMotionForce(packet) {
