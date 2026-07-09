@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict');
 
+const { UNIT6_MATTER_PACKET } = require('../lib/knowledge/physics/matter/unit6MatterKnowledge');
 const { findRelevantKnowledge, loadTeacherKnowledge } = require('../lib/knowledge/teacherKnowledge');
 const { routeStudentQuestion } = require('../lib/router/questionRouter');
 const {
@@ -63,6 +64,10 @@ const CATEGORIES = [
   {
     name: 'concept tutor audit shape',
     run: () => assertConceptTutorCases(conceptTutorCases())
+  },
+  {
+    name: 'built-in packet completeness',
+    run: () => assertUnit6MatterPacketCompleteness()
   }
 ];
 
@@ -232,6 +237,115 @@ async function assertConceptTutorCases(cases) {
   }
 
   return results;
+}
+
+async function assertUnit6MatterPacketCompleteness() {
+  const category = 'built-in packet completeness';
+  const cases = [
+    {
+      category,
+      name: 'packet-basic-shape',
+      prompt: 'UNIT6_MATTER_PACKET',
+      expectedIdea: 'Unit 6 Matter packet exposes the standard built-in packet shape.',
+      run: () => {
+        assert.equal(UNIT6_MATTER_PACKET.packetId, 'unit6-matter');
+        assert.equal(UNIT6_MATTER_PACKET.unit, 6);
+        assert.equal(UNIT6_MATTER_PACKET.unitTitle, 'Matter');
+        assert.equal(UNIT6_MATTER_PACKET.topic, 'Matter');
+        assert.ok(UNIT6_MATTER_PACKET.sourceMetadata, 'packet should expose source metadata status');
+        assert.equal(UNIT6_MATTER_PACKET.directKnowledgeMatcher, 'tryUnit6MatterKnowledge');
+      }
+    },
+    {
+      category,
+      name: 'packet-content-fields',
+      prompt: 'Unit 6 packet content fields',
+      expectedIdea: 'Packet exposes vocabulary, facts, concepts, comparisons, relationships, formulas, hooks, examples, and smoke tests.',
+      run: () => {
+        assertNonEmptyArray(UNIT6_MATTER_PACKET.vocabulary, 'vocabulary');
+        assertNonEmptyArray(UNIT6_MATTER_PACKET.concepts, 'concepts');
+        assertNonEmptyArray(UNIT6_MATTER_PACKET.canonicalFacts, 'canonicalFacts');
+        assertNonEmptyArray(UNIT6_MATTER_PACKET.comparisons, 'comparisons');
+        assertNonEmptyArray(UNIT6_MATTER_PACKET.relationships, 'relationships');
+        assertNonEmptyArray(UNIT6_MATTER_PACKET.referenceFormulas, 'referenceFormulas');
+        assertNonEmptyArray(UNIT6_MATTER_PACKET.conceptTutorHooks, 'conceptTutorHooks');
+        assertNonEmptyArray(UNIT6_MATTER_PACKET.formulaTutorHooks, 'formulaTutorHooks');
+        assertNonEmptyArray(UNIT6_MATTER_PACKET.examples, 'examples');
+        assertNonEmptyArray(UNIT6_MATTER_PACKET.smokeTests, 'smokeTests');
+        assertNonEmptyArray(UNIT6_MATTER_PACKET.routeHints, 'routeHints');
+      }
+    },
+    {
+      category,
+      name: 'packet-required-matter-terms',
+      prompt: 'Required matter terms',
+      expectedIdea: 'Required Unit 6 matter vocabulary terms are present.',
+      run: () => {
+        const vocabularyTerms = new Set(UNIT6_MATTER_PACKET.vocabulary.map((entry) => normalizeTerm(entry.term)));
+        [
+          'matter',
+          'mass',
+          'volume',
+          'density',
+          'physical property',
+          'chemical property',
+          'physical change',
+          'chemical change',
+          'solid',
+          'liquid',
+          'gas',
+          'plasma',
+          'element',
+          'compound',
+          'mixture',
+          'pure substance',
+          'atom',
+          'molecule'
+        ].forEach((term) => {
+          assert.ok(vocabularyTerms.has(term), `packet vocabulary should include ${term}`);
+        });
+      }
+    },
+    {
+      category,
+      name: 'packet-density-formula',
+      prompt: 'Density formulas',
+      expectedIdea: 'Density formulas are represented for graph and formula-tutor support.',
+      run: () => {
+        const formulas = UNIT6_MATTER_PACKET.referenceFormulas.map((formula) => `${formula.id} ${formula.formula}`);
+        assert.ok(formulas.some((formula) => /D = m \/ V|density/i.test(formula)), 'packet should expose D = m / V density formula');
+        assert.ok(UNIT6_MATTER_PACKET.formulaTutorHooks.some((hook) => hook.module === 'lib/formulas/density.js'), 'packet should point formula tutor hooks at density.js');
+      }
+    },
+    {
+      category,
+      name: 'packet-boundary-hints',
+      prompt: 'Unit 6 boundary route hints',
+      expectedIdea: 'Unit 6 owns matter but avoids Unit 1 measurement/safety and Unit 7 atomic calculations.',
+      run: () => {
+        const routeHints = JSON.stringify(UNIT6_MATTER_PACKET.routeHints);
+        assert.match(routeHints, /density/i);
+        assert.match(routeHints, /Unit 1 measurement/i);
+        assert.match(routeHints, /Unit 1 safety/i);
+        assert.match(routeHints, /Unit 7 atomic/i);
+      }
+    }
+  ];
+
+  const results = [];
+  for (const testCase of cases) {
+    await record(results, testCase, async () => testCase.run());
+  }
+  return results;
+}
+
+function assertNonEmptyArray(value, label) {
+  assert.ok(Array.isArray(value), `${label} should be an array`);
+  assert.ok(value.length > 0, `${label} should not be empty`);
+}
+
+function normalizeTerm(value) {
+  return String(value || '').toLowerCase().replace(/\s+/g, ' ').trim();
 }
 
 async function record(results, testCase, fn) {

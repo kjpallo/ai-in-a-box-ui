@@ -40,7 +40,7 @@ function main() {
     assert.ok(Object.values(schemaEntry.bodyCounts).some((count) => count > 0), `${schemaEntry.packetId} should include body counts`);
   }
 
-  for (const legacyId of ['unit6-matter', 'electricity-magnetism']) {
+  for (const legacyId of ['electricity-magnetism']) {
     const legacy = byId.get(legacyId);
     assert.ok(legacy, `${legacyId} should be represented in the schema report`);
     assert.equal(legacy.isLegacy, true, `${legacyId} should be reported as legacy`);
@@ -52,6 +52,7 @@ function main() {
 
   assertNoForbiddenPaths(report);
   assertUnit5Waves(byId.get('unit5-waves'));
+  assertUnit6Matter(byId.get('unit6-matter'));
   assertUnit7AtomicStructure(byId.get('unit7-atomic-structure'));
   assertMotionForce(byId.get('motion-force'), registry.find((entry) => entry.packetId === 'motion-force'));
 
@@ -71,6 +72,21 @@ function assertUnit5Waves(unit5) {
   assert.ok(unit5.bodyCounts.conceptTutorHooks > 0, 'Unit 5 waves should count concept tutor hooks');
   assert.ok(unit5.bodyCounts.formulaTutorHooks > 0, 'Unit 5 waves should count formula tutor hooks');
   assert.ok(unit5.bodyCounts.smokeTests > 0, 'Unit 5 waves should count smoke tests');
+}
+
+function assertUnit6Matter(unit6) {
+  assert.ok(unit6, 'Unit 6 matter should appear in the schema report');
+  assert.equal(unit6.isPacketShaped, true, 'Unit 6 matter should be packet-shaped');
+  assert.equal(unit6.validationStatus, 'valid', 'Unit 6 matter should validate as packet-shaped');
+  assert.ok(unit6.bodyCounts.facts > 0, 'Unit 6 matter should count canonical facts');
+  assert.ok(unit6.bodyCounts.vocabulary > 0, 'Unit 6 matter should count vocabulary');
+  assert.ok(unit6.bodyCounts.comparisons > 0, 'Unit 6 matter should count comparison metadata');
+  assert.ok(unit6.bodyCounts.relationships > 0, 'Unit 6 matter should count relationships');
+  assert.ok(unit6.bodyCounts.formulas > 0, 'Unit 6 matter should count density formulas');
+  assert.ok(unit6.bodyCounts.concepts > 0, 'Unit 6 matter should count concepts');
+  assert.ok(unit6.bodyCounts.conceptTutorHooks > 0, 'Unit 6 matter should count concept tutor hooks');
+  assert.ok(unit6.bodyCounts.formulaTutorHooks > 0, 'Unit 6 matter should count formula tutor hooks');
+  assert.ok(unit6.bodyCounts.smokeTests > 0, 'Unit 6 matter should count smoke tests');
 }
 
 function assertUnit7AtomicStructure(unit7) {

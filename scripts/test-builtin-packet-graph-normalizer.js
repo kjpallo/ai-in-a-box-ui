@@ -26,10 +26,10 @@ const EXPECTED_NORMALIZED_PACKET_IDS = [
   'unit3-energy',
   'motion-force',
   'unit5-waves',
+  'unit6-matter',
   'unit7-atomic-structure'
 ];
 const EXPECTED_SKIPPED_IDS = [
-  'unit6-matter',
   'electricity-magnetism'
 ];
 const FORBIDDEN_PATH_PARTS = [
@@ -77,6 +77,7 @@ function main() {
   }
 
   assertUnit5Waves(normalized.packets.find((packet) => packet.packetId === 'unit5-waves'));
+  assertUnit6Matter(normalized.packets.find((packet) => packet.packetId === 'unit6-matter'));
   assertUnit7AtomicStructure(normalized.packets.find((packet) => packet.packetId === 'unit7-atomic-structure'));
   assertMotionForce(normalized.packets.find((packet) => packet.packetId === 'motion-force'));
   assertIndividualNormalizers();
@@ -142,6 +143,28 @@ function assertUnit5Waves(packet) {
     edge.toTerm === 'frequency'
   );
   assert.ok(relationship, 'Unit 5 waves should normalize wavelength/frequency relationship edges');
+}
+
+function assertUnit6Matter(packet) {
+  assert.ok(packet, 'Unit 6 matter should be normalized');
+  assert.ok(packet.nodeCounts.vocabulary > 0, 'Unit 6 matter should include vocabulary nodes');
+  assert.ok(packet.nodeCounts.fact > 0, 'Unit 6 matter should include fact nodes');
+  assert.ok(packet.nodeCounts.concept > 0, 'Unit 6 matter should include concept nodes');
+  assert.ok(packet.nodeCounts.formula > 0, 'Unit 6 matter should include formula nodes');
+  assert.ok(packet.edgeCounts.relationship > 0, 'Unit 6 matter should include relationship edges');
+  assert.ok(packet.edgeCounts.comparison > 0, 'Unit 6 matter should include comparison edges');
+
+  const density = packet.nodes.find((node) => node.id === 'unit6-matter:vocabulary:density');
+  assert.ok(density, 'Unit 6 matter should normalize density vocabulary to a stable graph-support node id');
+  assert.equal(density.unit, 'Unit 6', 'Unit 6 vocabulary node should keep formatted unit label');
+  assert.ok(density.aliases.includes('D = m / V'), 'Density node should preserve formula alias');
+
+  const changeComparison = packet.edges.find((edge) =>
+    edge.type === 'comparison' &&
+    edge.fromTerm === 'physical change' &&
+    edge.toTerm === 'chemical change'
+  );
+  assert.ok(changeComparison, 'Unit 6 matter should normalize physical/chemical change comparison edges');
 }
 
 function assertUnit7AtomicStructure(packet) {

@@ -77,6 +77,7 @@ function main() {
   assert.equal(byId.get('unit3-energy').packetExport, 'UNIT3_ENERGY_PACKET', 'Unit 3 energy should prefer the packet export');
   assert.equal(byId.get('motion-force').packetExport, 'MOTION_FORCE_PACKET', 'Motion-force should prefer the packet export');
   assert.equal(byId.get('unit5-waves').packetExport, 'UNIT5_WAVES_PACKET', 'Unit 5 waves should prefer the packet export');
+  assert.equal(byId.get('unit6-matter').packetExport, 'UNIT6_MATTER_PACKET', 'Unit 6 matter should prefer the packet export');
   assert.equal(byId.get('unit7-atomic-structure').packetExport, 'UNIT7_ATOMIC_STRUCTURE_PACKET', 'Unit 7 atomic structure should prefer the packet export');
   assert.equal(byId.get('electricity-magnetism').style, 'legacy built-in packet module', 'Electricity/magnetism should remain marked as a legacy built-in packet module');
 
@@ -94,6 +95,7 @@ function main() {
   );
   assertUnit1SafetyEquipmentInventory(byId.get('unit1-safety-equipment'));
   assertUnit5WavesInventory(byId.get('unit5-waves'));
+  assertUnit6MatterInventory(byId.get('unit6-matter'));
   assert.ok(byId.get('unit7-atomic-structure').presence.comparisons, 'Unit 7 should expose comparison metadata');
   assert.ok(byId.get('unit7-atomic-structure').presence.relationships, 'Unit 7 should expose relationship metadata');
   assert.ok(byId.get('unit7-atomic-structure').sourceMetadataPresent, 'Unit 7 should expose source metadata');
@@ -170,6 +172,33 @@ function assertUnit5WavesInventory(item) {
     item.schemaGaps.missingFields,
     ['comparisons'],
     'Unit 5 waves should only omit comparisons intentionally'
+  );
+}
+
+function assertUnit6MatterInventory(item) {
+  assert.equal(item.style, 'built-in curriculum packet', 'Unit 6 matter should be marked as a built-in curriculum packet');
+  assert.ok(item.presence.vocabulary, 'Unit 6 matter should expose vocabulary');
+  assert.ok(item.presence.facts, 'Unit 6 matter should expose canonical facts');
+  assert.ok(item.presence.comparisons, 'Unit 6 matter should expose natural comparisons');
+  assert.ok(item.presence.relationships, 'Unit 6 matter should expose natural relationships');
+  assert.ok(item.presence.formulas, 'Unit 6 matter should expose density formulas');
+  assert.ok(item.presence.conceptTutors, 'Unit 6 matter should expose concept groups or tutor hooks');
+  assert.ok(item.presence.examples, 'Unit 6 matter should expose existing examples');
+  assert.ok(item.presence.smokeTests, 'Unit 6 matter should expose smoke tests');
+  assert.ok(item.sourceMetadataPresent, 'Unit 6 matter should expose source metadata status');
+  assert.equal(item.schemaGaps.sourceMetadata, 'present', 'Unit 6 matter schema gaps should show source metadata present');
+  assert.equal(item.schemaGaps.vocabulary, 'present', 'Unit 6 matter schema gaps should show vocabulary present');
+  assert.equal(item.schemaGaps.facts, 'present', 'Unit 6 matter schema gaps should show facts present');
+  assert.equal(item.schemaGaps.comparisons, 'present', 'Unit 6 matter schema gaps should show comparisons present');
+  assert.equal(item.schemaGaps.relationships, 'present', 'Unit 6 matter schema gaps should show relationships present');
+  assert.equal(item.schemaGaps.formulas, 'present', 'Unit 6 matter schema gaps should show formulas present');
+  assert.equal(item.schemaGaps.conceptTutors, 'present', 'Unit 6 matter schema gaps should show concept tutors present');
+  assert.equal(item.schemaGaps.examples, 'present', 'Unit 6 matter schema gaps should show examples present');
+  assert.equal(item.schemaGaps.smokeTests, 'present', 'Unit 6 matter schema gaps should show smoke tests present');
+  assert.deepEqual(
+    item.schemaGaps.missingFields,
+    [],
+    'Unit 6 matter should expose the packet fields needed by inventory after normalization'
   );
 }
 
