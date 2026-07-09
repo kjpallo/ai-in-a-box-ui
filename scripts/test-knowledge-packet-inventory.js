@@ -13,6 +13,7 @@ const REQUIRED_IDS = [
   'unit5-waves',
   'unit6-matter',
   'unit7-atomic-structure',
+  'unit8-bonding',
   'electricity-magnetism'
 ];
 const SCHEMA_GAP_FIELDS = [
@@ -70,6 +71,7 @@ function main() {
   assert.equal(byId.get('unit5-waves').unit, 5, 'Unit 5 waves should be identified as Unit 5');
   assert.equal(byId.get('unit6-matter').unit, 6, 'Unit 6 matter should be identified as Unit 6');
   assert.equal(byId.get('unit7-atomic-structure').unit, 7, 'Unit 7 atomic structure should be identified as Unit 7');
+  assert.equal(byId.get('unit8-bonding').unit, 8, 'Unit 8 bonding should be identified as Unit 8');
   assert.equal(byId.get('electricity-magnetism').unit, null, 'Electricity/magnetism should remain a cross-unit built-in packet module');
   assert.equal(byId.get('unit1-measurement').packetExport, 'UNIT1_MEASUREMENT_PACKET', 'Unit 1 measurement should prefer the packet export');
   assert.equal(byId.get('unit1-safety-equipment').packetExport, 'UNIT1_SAFETY_EQUIPMENT_PACKET', 'Unit 1 safety/equipment should prefer the packet export');
@@ -79,6 +81,7 @@ function main() {
   assert.equal(byId.get('unit5-waves').packetExport, 'UNIT5_WAVES_PACKET', 'Unit 5 waves should prefer the packet export');
   assert.equal(byId.get('unit6-matter').packetExport, 'UNIT6_MATTER_PACKET', 'Unit 6 matter should prefer the packet export');
   assert.equal(byId.get('unit7-atomic-structure').packetExport, 'UNIT7_ATOMIC_STRUCTURE_PACKET', 'Unit 7 atomic structure should prefer the packet export');
+  assert.equal(byId.get('unit8-bonding').packetExport, 'UNIT8_BONDING_PACKET', 'Unit 8 bonding should prefer the packet export');
   assert.equal(byId.get('electricity-magnetism').style, 'legacy built-in packet module', 'Electricity/magnetism should remain marked as a legacy built-in packet module');
 
   assert.ok(byId.get('motion-force').presence.vocabulary, 'Motion-force modular packet should expose vocabulary');
@@ -109,6 +112,7 @@ function main() {
       byId.get('unit7-atomic-structure').touchpoints.directImportReferences.length > 0,
     'Unit 7 should report a router/direct knowledge touchpoint'
   );
+  assertUnit8BondingInventory(byId.get('unit8-bonding'));
   assert.ok(
     byId.get('unit1-conversions-notation').coverage.testFiles.some((filePath) => filePath.includes('unit1-conversions-notation')),
     'Unit 1 conversions/notation should report its focused regression test file'
@@ -122,7 +126,7 @@ function main() {
       byId.get('unit1-conversions-notation').touchpoints.studentRouteReferences.length > 0,
     'Unit 1 conversions/notation should report formula or student tutor related touchpoints'
   );
-  for (const id of ['unit3-energy', 'unit5-waves', 'unit6-matter']) {
+  for (const id of ['unit3-energy', 'unit5-waves', 'unit6-matter', 'unit8-bonding']) {
     assert.equal(byId.get(id).schemaGaps.directKnowledgeMatcher, 'present', `${id} schema gaps should show direct matcher present`);
   }
 
@@ -199,6 +203,39 @@ function assertUnit6MatterInventory(item) {
     item.schemaGaps.missingFields,
     [],
     'Unit 6 matter should expose the packet fields needed by inventory after normalization'
+  );
+}
+
+function assertUnit8BondingInventory(item) {
+  assert.equal(item.style, 'built-in curriculum packet', 'Unit 8 bonding should be marked as a built-in curriculum packet');
+  assert.ok(item.presence.vocabulary, 'Unit 8 bonding should expose vocabulary');
+  assert.ok(item.presence.facts, 'Unit 8 bonding should expose canonical facts');
+  assert.ok(item.presence.comparisons, 'Unit 8 bonding should expose comparisons');
+  assert.ok(item.presence.relationships, 'Unit 8 bonding should expose relationships');
+  assert.ok(item.presence.formulas, 'Unit 8 bonding should expose formula/rule metadata');
+  assert.ok(item.presence.conceptTutors, 'Unit 8 bonding should expose concept groups or tutor hooks');
+  assert.ok(item.presence.examples, 'Unit 8 bonding should expose grounded examples');
+  assert.ok(item.presence.smokeTests, 'Unit 8 bonding should expose smoke tests');
+  assert.ok(item.sourceMetadataPresent, 'Unit 8 bonding should expose source metadata');
+  assert.equal(item.schemaGaps.sourceMetadata, 'present', 'Unit 8 bonding schema gaps should show source metadata present');
+  assert.equal(item.schemaGaps.vocabulary, 'present', 'Unit 8 bonding schema gaps should show vocabulary present');
+  assert.equal(item.schemaGaps.facts, 'present', 'Unit 8 bonding schema gaps should show facts present');
+  assert.equal(item.schemaGaps.comparisons, 'present', 'Unit 8 bonding schema gaps should show comparisons present');
+  assert.equal(item.schemaGaps.relationships, 'present', 'Unit 8 bonding schema gaps should show relationships present');
+  assert.equal(item.schemaGaps.formulas, 'present', 'Unit 8 bonding schema gaps should show formulas present');
+  assert.equal(item.schemaGaps.conceptTutors, 'present', 'Unit 8 bonding schema gaps should show concept tutors present');
+  assert.equal(item.schemaGaps.examples, 'present', 'Unit 8 bonding schema gaps should show examples present');
+  assert.equal(item.schemaGaps.smokeTests, 'present', 'Unit 8 bonding schema gaps should show smoke tests present');
+  assert.deepEqual(
+    item.schemaGaps.missingFields,
+    [],
+    'Unit 8 bonding should expose the packet fields needed by inventory after normalization'
+  );
+  assert.ok(item.coverage.testFiles.some((filePath) => filePath.includes('unit8-bonding')), 'Unit 8 bonding should report its focused regression test file');
+  assert.ok(
+    item.touchpoints.routerReferences.length > 0 ||
+      item.touchpoints.directImportReferences.length > 0,
+    'Unit 8 bonding should report a router/direct knowledge touchpoint'
   );
 }
 

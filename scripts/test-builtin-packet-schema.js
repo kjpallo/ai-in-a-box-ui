@@ -6,7 +6,7 @@ const {
   validateBuiltinPacketEntry
 } = require('../lib/knowledge/builtinPacketSchema');
 
-const EXPECTED_PACKET_COUNT = 11;
+const EXPECTED_PACKET_COUNT = 12;
 const FORBIDDEN_PATH_PARTS = [
   'knowledge/approved-packs',
   'knowledge/deleted-approved-packs',
@@ -54,6 +54,7 @@ function main() {
   assertUnit5Waves(byId.get('unit5-waves'));
   assertUnit6Matter(byId.get('unit6-matter'));
   assertUnit7AtomicStructure(byId.get('unit7-atomic-structure'));
+  assertUnit8Bonding(byId.get('unit8-bonding'));
   assertMotionForce(byId.get('motion-force'), registry.find((entry) => entry.packetId === 'motion-force'));
 
   printSchemaSummary(report);
@@ -99,6 +100,19 @@ function assertUnit7AtomicStructure(unit7) {
   assert.ok(unit7.bodyCounts.relationships > 0, 'Unit 7 should count relationships');
   assert.ok(unit7.bodyCounts.formulas > 0, 'Unit 7 should count formulas');
   assert.ok(unit7.bodyCounts.concepts > 0, 'Unit 7 should count concepts');
+}
+
+function assertUnit8Bonding(unit8) {
+  assert.ok(unit8, 'Unit 8 bonding should appear in the schema report');
+  assert.equal(unit8.isPacketShaped, true, 'Unit 8 bonding should be packet-shaped');
+  assert.equal(unit8.validationStatus, 'valid', 'Unit 8 bonding should validate as packet-shaped');
+  assert.ok(unit8.bodyCounts.facts > 0, 'Unit 8 bonding should count canonical facts');
+  assert.ok(unit8.bodyCounts.vocabulary > 0, 'Unit 8 bonding should count vocabulary');
+  assert.ok(unit8.bodyCounts.comparisons > 0, 'Unit 8 bonding should count comparisons');
+  assert.ok(unit8.bodyCounts.relationships > 0, 'Unit 8 bonding should count relationships');
+  assert.ok(unit8.bodyCounts.formulas > 0, 'Unit 8 bonding should count formulas/rules');
+  assert.ok(unit8.bodyCounts.concepts > 0, 'Unit 8 bonding should count concepts');
+  assert.ok(unit8.bodyCounts.smokeTests > 0, 'Unit 8 bonding should count smoke tests');
 }
 
 function assertMotionForce(motionForce, registryEntry) {

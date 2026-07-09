@@ -17,6 +17,7 @@ const EXPECTED_PACKET_IDS = [
   'unit5-waves',
   'unit6-matter',
   'unit7-atomic-structure',
+  'unit8-bonding',
   'electricity-magnetism'
 ];
 const KEY_PACKET_IDS = [
@@ -26,6 +27,7 @@ const KEY_PACKET_IDS = [
   'unit5-waves',
   'unit6-matter',
   'unit7-atomic-structure',
+  'unit8-bonding',
   'electricity-magnetism'
 ];
 const FORBIDDEN_PATH_PARTS = [
@@ -78,7 +80,7 @@ function assertPacketReadinessCheckpoint(registry) {
   const packetEntries = registry.filter((entry) => entry.status === 'packet');
   const legacyEntries = registry.filter((entry) => entry.status === 'legacy');
 
-  assert.equal(packetEntries.length, 10, 'Registry should currently have 10 packet-shaped built-in curriculum entries');
+  assert.equal(packetEntries.length, 11, 'Registry should currently have 11 packet-shaped built-in curriculum entries');
   assert.deepEqual(
     packetEntries.map((entry) => entry.packetId),
     EXPECTED_PACKET_IDS.filter((packetId) => packetId !== 'electricity-magnetism'),

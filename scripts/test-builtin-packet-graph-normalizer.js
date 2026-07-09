@@ -16,7 +16,7 @@ const {
   normalizeVocabularyNodes
 } = require('../lib/knowledge/builtinPacketGraphNormalizer');
 
-const EXPECTED_REGISTRY_COUNT = 11;
+const EXPECTED_REGISTRY_COUNT = 12;
 const EXPECTED_NORMALIZED_PACKET_IDS = [
   'unit1-measurement',
   'unit1-safety-equipment',
@@ -27,7 +27,8 @@ const EXPECTED_NORMALIZED_PACKET_IDS = [
   'motion-force',
   'unit5-waves',
   'unit6-matter',
-  'unit7-atomic-structure'
+  'unit7-atomic-structure',
+  'unit8-bonding'
 ];
 const EXPECTED_SKIPPED_IDS = [
   'electricity-magnetism'
@@ -79,6 +80,7 @@ function main() {
   assertUnit5Waves(normalized.packets.find((packet) => packet.packetId === 'unit5-waves'));
   assertUnit6Matter(normalized.packets.find((packet) => packet.packetId === 'unit6-matter'));
   assertUnit7AtomicStructure(normalized.packets.find((packet) => packet.packetId === 'unit7-atomic-structure'));
+  assertUnit8Bonding(normalized.packets.find((packet) => packet.packetId === 'unit8-bonding'));
   assertMotionForce(normalized.packets.find((packet) => packet.packetId === 'motion-force'));
   assertIndividualNormalizers();
   assertReport(normalized);
@@ -189,6 +191,28 @@ function assertUnit7AtomicStructure(packet) {
   );
   assert.ok(particleComparison, 'Unit 7 should normalize comparison pairs into graph-support comparison edges');
   assert.equal(particleComparison.graphType, 'commonly_confused_with', 'Comparison edges should be graph-compatible support edges');
+}
+
+function assertUnit8Bonding(packet) {
+  assert.ok(packet, 'Unit 8 bonding should be normalized');
+  assert.ok(packet.nodeCounts.vocabulary > 0, 'Unit 8 bonding should include vocabulary nodes');
+  assert.ok(packet.nodeCounts.fact > 0, 'Unit 8 bonding should include fact nodes');
+  assert.ok(packet.nodeCounts.concept > 0, 'Unit 8 bonding should include concept nodes');
+  assert.ok(packet.nodeCounts.formula > 0, 'Unit 8 bonding should include formula/rule nodes');
+  assert.ok(packet.edgeCounts.relationship > 0, 'Unit 8 bonding should include relationship edges');
+  assert.ok(packet.edgeCounts.comparison > 0, 'Unit 8 bonding should include comparison edges');
+
+  const octetRule = packet.nodes.find((node) => node.id === 'unit8-bonding:vocabulary:octet-rule');
+  assert.ok(octetRule, 'Unit 8 bonding should normalize octet rule vocabulary to a stable graph-support node id');
+  assert.equal(octetRule.unit, 'Unit 8', 'Unit 8 vocabulary node should keep formatted unit label');
+  assert.ok(octetRule.aliases.includes('rule of eight'), 'Octet rule node should preserve aliases');
+
+  const bondComparison = packet.edges.find((edge) =>
+    edge.type === 'comparison' &&
+    edge.fromTerm === 'ionic bond' &&
+    edge.toTerm === 'covalent bond'
+  );
+  assert.ok(bondComparison, 'Unit 8 bonding should normalize ionic/covalent comparison edges');
 }
 
 function assertMotionForce(packet) {

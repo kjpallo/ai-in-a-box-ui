@@ -33,7 +33,7 @@ Legacy built-in modules may remain registered with `status: 'legacy'` until they
 
 ## Readiness Checkpoint
 
-As of the Unit 6 packet conversion checkpoint, these entries are registered as packet-shaped built-in curriculum:
+As of the Bonding packet addition checkpoint, these entries are registered as packet-shaped built-in curriculum:
 
 - Unit 1 Measurement/Data Quality
 - Unit 1 Safety/Equipment
@@ -45,10 +45,11 @@ As of the Unit 6 packet conversion checkpoint, these entries are registered as p
 - Unit 5 Waves
 - Unit 6 Matter
 - Unit 7 Atomic Structure
+- Unit 8 Bonding
 
 `electricity-magnetism` remains intentionally registered as a legacy built-in packet module. It is still active curriculum support data, but it is not yet a direct-matcher packet and should stay a graph-normalizer skip until a focused conversion patch gives it the standard packet export.
 
-The final new units should copy the Unit 5 or Unit 6 pattern: one checked-in knowledge module, one packet export registered in `builtinPacketRegistry.js`, route behavior preserved through the existing matcher/tutor paths, and focused unit regression tests. They should not copy teacher upload, draft-pack, approved-pack, or import-pipeline code.
+The final new units should copy the Unit 5, Unit 6, or Unit 8 pattern: one checked-in knowledge module, one packet export registered in `builtinPacketRegistry.js`, route behavior preserved through the existing matcher/tutor paths, and focused unit regression tests. They should not copy teacher upload, draft-pack, approved-pack, or import-pipeline code.
 
 Out of scope for packet normalization:
 
