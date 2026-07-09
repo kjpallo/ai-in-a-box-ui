@@ -235,6 +235,31 @@ const NON_UNIT1_BOUNDARY_CASES = [
     excludes: [/safety goggles/i, /protect your eyes/i]
   }
 ];
+const REQUIRED_SAFETY_TERMS_AND_TOOLS = [
+  'safety goggles',
+  'lab apron',
+  'heat-resistant gloves',
+  'fire extinguisher',
+  'fire blanket',
+  'waft',
+  'chemical spill or exposure',
+  'broken glass',
+  'graduated cylinder',
+  'Erlenmeyer flask',
+  'test tube holder',
+  'hot plate',
+  'Bunsen burner',
+  'digital scale',
+  'meter stick',
+  'thermometer',
+  'funnel',
+  'beaker tongs',
+  'pipette',
+  'dropper',
+  'mortar and pestle',
+  'watch glass',
+  'beaker'
+];
 
 async function main() {
   assertPacketShape();
@@ -290,18 +315,55 @@ function assertPacketShape() {
   assert.ok(Array.isArray(UNIT1_SAFETY_EQUIPMENT_PACKET.examples), 'Unit 1 safety/equipment packet should expose existing examples');
   assert.ok(Array.isArray(UNIT1_SAFETY_EQUIPMENT_PACKET.relationships), 'Unit 1 safety/equipment packet should expose existing related-term edges');
   assert.ok(Array.isArray(UNIT1_SAFETY_EQUIPMENT_PACKET.safetyRules), 'Unit 1 safety/equipment packet should expose existing safety rules');
+  assert.ok(Array.isArray(UNIT1_SAFETY_EQUIPMENT_PACKET.smokeTests), 'Unit 1 safety/equipment packet should expose smoke tests');
   assert.equal(UNIT1_SAFETY_EQUIPMENT_PACKET.legacyExports.facts, 'ALL_UNIT1_SAFETY_EQUIPMENT_FACTS');
+  assert.equal(UNIT1_SAFETY_EQUIPMENT_PACKET.legacyExports.smokeTests, 'UNIT1_SAFETY_EQUIPMENT_PACKET.smokeTests');
   assert.equal(UNIT1_SAFETY_EQUIPMENT_PACKET.legacyExports.matcher, 'tryUnit1SafetyEquipmentKnowledge');
+  assert.equal(UNIT1_SAFETY_EQUIPMENT_PACKET.canonicalFacts.length > 0, true, 'Unit 1 safety/equipment packet should include canonical facts');
+  assert.equal(UNIT1_SAFETY_EQUIPMENT_PACKET.vocabulary.length > 0, true, 'Unit 1 safety/equipment packet should include vocabulary');
+  assert.equal(UNIT1_SAFETY_EQUIPMENT_PACKET.relationships.length > 0, true, 'Unit 1 safety/equipment packet should include relationship edges');
+  assert.equal(UNIT1_SAFETY_EQUIPMENT_PACKET.safetyRules.length > 0, true, 'Unit 1 safety/equipment packet should include safety rules');
+  assert.equal(UNIT1_SAFETY_EQUIPMENT_PACKET.examples.length > 0, true, 'Unit 1 safety/equipment packet should include natural examples');
+  assert.equal(UNIT1_SAFETY_EQUIPMENT_PACKET.smokeTests.length > 0, true, 'Unit 1 safety/equipment packet should include smoke tests');
   assert.equal(UNIT1_SAFETY_EQUIPMENT_PACKET.counts.canonicalFacts, ALL_UNIT1_SAFETY_EQUIPMENT_FACTS.length);
+  assert.equal(UNIT1_SAFETY_EQUIPMENT_PACKET.counts.vocabulary, UNIT1_SAFETY_EQUIPMENT_PACKET.vocabulary.length);
+  assert.equal(UNIT1_SAFETY_EQUIPMENT_PACKET.counts.relationships, UNIT1_SAFETY_EQUIPMENT_PACKET.relationships.length);
+  assert.equal(UNIT1_SAFETY_EQUIPMENT_PACKET.counts.safetyRules, UNIT1_SAFETY_EQUIPMENT_PACKET.safetyRules.length);
+  assert.equal(UNIT1_SAFETY_EQUIPMENT_PACKET.counts.examples, UNIT1_SAFETY_EQUIPMENT_PACKET.examples.length);
+  assert.equal(UNIT1_SAFETY_EQUIPMENT_PACKET.counts.smokeTests, UNIT1_SAFETY_EQUIPMENT_PACKET.smokeTests.length);
   assert.ok(UNIT1_SAFETY_EQUIPMENT_PACKET.sourceFiles.includes('unit1.corpus.0001'), 'Unit 1 safety/equipment packet should represent existing safety source refs');
   assert.ok(UNIT1_SAFETY_EQUIPMENT_PACKET.sourceFiles.includes('unit1.corpus.0012'), 'Unit 1 safety/equipment packet should represent existing equipment source refs');
+  assert.ok(UNIT1_SAFETY_EQUIPMENT_PACKET.metadata.sourceBacked, 'Unit 1 safety/equipment packet should be marked source-backed');
+  assert.ok(UNIT1_SAFETY_EQUIPMENT_PACKET.metadata.sourceReferences.length > 0, 'Unit 1 safety/equipment packet should expose source metadata refs');
   assert.ok(UNIT1_SAFETY_EQUIPMENT_PACKET.counts.relationships > 0, 'Unit 1 safety/equipment packet should count existing relationships');
   assert.ok(UNIT1_SAFETY_EQUIPMENT_PACKET.counts.safetyRules > 0, 'Unit 1 safety/equipment packet should count existing safety rules');
   assert.ok(UNIT1_SAFETY_EQUIPMENT_PACKET.metadata.generatedFromExistingFactsOnly);
+  assertRequiredSafetyTermsAndTools();
+  assertPacketSmokeTests();
 
   const direct = tryUnit1SafetyEquipmentKnowledge('what are safety goggles for');
   assert.ok(direct, 'Unit 1 safety/equipment matcher should still answer a direct safety prompt');
   assert.equal(direct.directAnswer, 'Safety goggles protect your eyes when using chemicals, fire, glassware, or anything that could splash or break.');
+}
+
+function assertRequiredSafetyTermsAndTools() {
+  const packetTerms = new Set(UNIT1_SAFETY_EQUIPMENT_PACKET.vocabulary.map((entry) => normalizeTerm(entry.term)));
+  for (const term of REQUIRED_SAFETY_TERMS_AND_TOOLS) {
+    assert.ok(packetTerms.has(normalizeTerm(term)), `Unit 1 safety/equipment packet should include ${term}`);
+  }
+}
+
+function assertPacketSmokeTests() {
+  const factIds = new Set(UNIT1_SAFETY_EQUIPMENT_PACKET.canonicalFacts.map((fact) => fact.id));
+  for (const smokeTest of UNIT1_SAFETY_EQUIPMENT_PACKET.smokeTests) {
+    const factId = smokeTest.id.replace(/\.smoke$/, '');
+    assert.ok(factIds.has(factId), `${smokeTest.id} should point to a canonical fact`);
+    assert.ok(smokeTest.query, `${smokeTest.id} should include a query`);
+    assert.equal(smokeTest.expectedRoute, 'direct_answer', `${smokeTest.id} should document direct-answer routing`);
+    assert.equal(smokeTest.expectedTool, 'unit1_safety_equipment_knowledge', `${smokeTest.id} should document the Safety/Equipment tool`);
+    assert.ok(smokeTest.expectedCoreAnswer, `${smokeTest.id} should include expected core answer text`);
+    assert.ok(Array.isArray(smokeTest.sourceRefs) && smokeTest.sourceRefs.length > 0, `${smokeTest.id} should preserve source refs`);
+  }
 }
 
 async function ask(request, sessionId, studentHubId, message) {
@@ -331,6 +393,15 @@ function slug(value) {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')
     .slice(0, 80);
+}
+
+function normalizeTerm(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[’']/g, '')
+    .replace(/[-‐‑‒–—]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 main().catch((error) => {

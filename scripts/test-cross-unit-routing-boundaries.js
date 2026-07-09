@@ -26,6 +26,13 @@ const BOUNDARY_GROUPS = [
     ]
   },
   {
+    name: 'Unit 6 physical/chemical changes vs Unit 1 lab safety',
+    cases: [
+      unit6('Is broken glass evidence of a physical or chemical change?', [/broken glass|glass/i, /physical change/i]),
+      unit1Safety('What should I do if I break glass in the lab?', [/teacher/i, /broken glass|glass/i, /bare hands/i])
+    ]
+  },
+  {
     name: 'Unit 3 energy vs Unit 4 electrical energy/circuits',
     cases: [
       unit3('What energy transformation happens in a toaster?', [/electrical energy/i, /thermal energy/i]),
@@ -65,6 +72,10 @@ function unit6(prompt, includes) {
 
 function unit1(prompt, includes) {
   return routeCase(prompt, ['unit1_measurement_knowledge'], ['unit6_matter_knowledge', 'science_formula_rules'], includes);
+}
+
+function unit1Safety(prompt, includes) {
+  return routeCase(prompt, ['unit1_safety_equipment_knowledge'], ['unit6_matter_knowledge'], includes);
 }
 
 function unit3(prompt, includes) {

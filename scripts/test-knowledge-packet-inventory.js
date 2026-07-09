@@ -72,6 +72,7 @@ function main() {
   assert.equal(byId.get('unit7-atomic-structure').unit, 7, 'Unit 7 atomic structure should be identified as Unit 7');
   assert.equal(byId.get('electricity-magnetism').unit, null, 'Electricity/magnetism should remain a cross-unit built-in packet module');
   assert.equal(byId.get('unit1-measurement').packetExport, 'UNIT1_MEASUREMENT_PACKET', 'Unit 1 measurement should prefer the packet export');
+  assert.equal(byId.get('unit1-safety-equipment').packetExport, 'UNIT1_SAFETY_EQUIPMENT_PACKET', 'Unit 1 safety/equipment should prefer the packet export');
   assert.equal(byId.get('unit1-scientific-method').packetExport, 'UNIT1_SCIENTIFIC_METHOD_PACKET', 'Unit 1 scientific method should prefer the packet export');
   assert.equal(byId.get('unit3-energy').packetExport, 'UNIT3_ENERGY_PACKET', 'Unit 3 energy should prefer the packet export');
   assert.equal(byId.get('motion-force').packetExport, 'MOTION_FORCE_PACKET', 'Motion-force should prefer the packet export');
@@ -90,6 +91,7 @@ function main() {
       byId.get('motion-force').touchpoints.conceptTutorReferences.length > 0,
     'Motion-force should report router or Concept Tutor touchpoints'
   );
+  assertUnit1SafetyEquipmentInventory(byId.get('unit1-safety-equipment'));
   assert.ok(byId.get('unit7-atomic-structure').presence.comparisons, 'Unit 7 should expose comparison metadata');
   assert.ok(byId.get('unit7-atomic-structure').presence.relationships, 'Unit 7 should expose relationship metadata');
   assert.ok(byId.get('unit7-atomic-structure').sourceMetadataPresent, 'Unit 7 should expose source metadata');
@@ -122,6 +124,26 @@ function main() {
 
   printSummary(inventory);
   console.log(`PASS knowledge packet inventory: ${inventory.length} packet/module shapes inspected`);
+}
+
+function assertUnit1SafetyEquipmentInventory(item) {
+  assert.ok(item.presence.vocabulary, 'Unit 1 safety/equipment should expose vocabulary');
+  assert.ok(item.presence.facts, 'Unit 1 safety/equipment should expose canonical facts');
+  assert.ok(item.presence.relationships, 'Unit 1 safety/equipment should expose relationships');
+  assert.ok(item.presence.examples, 'Unit 1 safety/equipment should expose natural examples');
+  assert.ok(item.presence.smokeTests, 'Unit 1 safety/equipment should expose smoke tests');
+  assert.ok(item.sourceMetadataPresent, 'Unit 1 safety/equipment should expose source metadata');
+  assert.equal(item.schemaGaps.sourceMetadata, 'present', 'Unit 1 safety/equipment schema gaps should show source metadata present');
+  assert.equal(item.schemaGaps.vocabulary, 'present', 'Unit 1 safety/equipment schema gaps should show vocabulary present');
+  assert.equal(item.schemaGaps.facts, 'present', 'Unit 1 safety/equipment schema gaps should show facts present');
+  assert.equal(item.schemaGaps.relationships, 'present', 'Unit 1 safety/equipment schema gaps should show relationships present');
+  assert.equal(item.schemaGaps.examples, 'present', 'Unit 1 safety/equipment schema gaps should show examples present');
+  assert.equal(item.schemaGaps.smokeTests, 'present', 'Unit 1 safety/equipment schema gaps should show smoke tests present');
+  assert.deepEqual(
+    item.schemaGaps.missingFields,
+    ['comparisons', 'formulas'],
+    'Unit 1 safety/equipment should only omit comparisons and formulas intentionally'
+  );
 }
 
 function printSummary(inventory) {
