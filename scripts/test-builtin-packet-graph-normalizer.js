@@ -25,10 +25,10 @@ const EXPECTED_NORMALIZED_PACKET_IDS = [
   'unit1-conversions-notation',
   'unit3-energy',
   'motion-force',
+  'unit5-waves',
   'unit7-atomic-structure'
 ];
 const EXPECTED_SKIPPED_IDS = [
-  'unit5-waves',
   'unit6-matter',
   'electricity-magnetism'
 ];
@@ -76,6 +76,7 @@ function main() {
     assert.equal(skipped.validationStatus, 'legacy-gap', `${skipped.packetId} should remain a schema legacy gap`);
   }
 
+  assertUnit5Waves(normalized.packets.find((packet) => packet.packetId === 'unit5-waves'));
   assertUnit7AtomicStructure(normalized.packets.find((packet) => packet.packetId === 'unit7-atomic-structure'));
   assertMotionForce(normalized.packets.find((packet) => packet.packetId === 'motion-force'));
   assertIndividualNormalizers();
@@ -120,6 +121,27 @@ function assertPacketGraphShape(packet) {
     assert.ok(edge.label, `${packet.packetId} edge should include a label`);
     assert.ok(Array.isArray(edge.sourceRefs), `${packet.packetId} edge should include sourceRefs array`);
   }
+}
+
+function assertUnit5Waves(packet) {
+  assert.ok(packet, 'Unit 5 waves should be normalized');
+  assert.ok(packet.nodeCounts.vocabulary > 0, 'Unit 5 waves should include vocabulary nodes');
+  assert.ok(packet.nodeCounts.fact > 0, 'Unit 5 waves should include fact nodes');
+  assert.ok(packet.nodeCounts.concept > 0, 'Unit 5 waves should include concept nodes');
+  assert.ok(packet.nodeCounts.formula > 0, 'Unit 5 waves should include formula nodes');
+  assert.ok(packet.edgeCounts.relationship > 0, 'Unit 5 waves should include relationship edges');
+
+  const wavelength = packet.nodes.find((node) => node.id === 'unit5-waves:vocabulary:wavelength');
+  assert.ok(wavelength, 'Unit 5 waves should normalize wavelength vocabulary to a stable graph-support node id');
+  assert.equal(wavelength.unit, 'Unit 5', 'Unit 5 vocabulary node should keep formatted unit label');
+  assert.ok(wavelength.aliases.includes('lambda'), 'Wavelength node should preserve aliases');
+
+  const relationship = packet.edges.find((edge) =>
+    edge.type === 'relationship' &&
+    edge.fromTerm === 'wavelength' &&
+    edge.toTerm === 'frequency'
+  );
+  assert.ok(relationship, 'Unit 5 waves should normalize wavelength/frequency relationship edges');
 }
 
 function assertUnit7AtomicStructure(packet) {

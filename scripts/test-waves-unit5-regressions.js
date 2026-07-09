@@ -1,6 +1,10 @@
 const assert = require('node:assert/strict');
 
 const { findRelevantKnowledge, loadTeacherKnowledge } = require('../lib/knowledge/teacherKnowledge');
+const {
+  UNIT5_WAVE_FACTS,
+  UNIT5_WAVES_PACKET
+} = require('../lib/knowledge/physics/waves/unit5WavesKnowledge');
 const { routeStudentQuestion } = require('../lib/router/questionRouter');
 const {
   createStudentRouteHarness,
@@ -81,6 +85,10 @@ const CATEGORIES = [
   {
     name: 'concept tutor audit shape',
     run: () => assertConceptTutorCases(conceptTutorCases())
+  },
+  {
+    name: 'packet completeness',
+    run: () => assertPacketCompletenessCases()
   }
 ];
 
@@ -217,6 +225,80 @@ async function assertConceptTutorCases(cases) {
       }
     });
   }
+
+  return results;
+}
+
+async function assertPacketCompletenessCases() {
+  const results = [];
+  const category = 'packet completeness';
+
+  await record(results, {
+    category,
+    name: 'unit5-waves-packet-shape',
+    expectedIdea: 'Unit 5 Waves should expose a packet-shaped built-in curriculum export.'
+  }, async () => {
+    assert.ok(UNIT5_WAVES_PACKET, 'UNIT5_WAVES_PACKET should be exported');
+    assert.equal(UNIT5_WAVES_PACKET.packetId, 'unit5-waves');
+    assert.equal(UNIT5_WAVES_PACKET.unit, 5);
+    assert.equal(UNIT5_WAVES_PACKET.unitTitle, 'Waves');
+    assert.equal(UNIT5_WAVES_PACKET.topic, 'Waves');
+    assert.equal(UNIT5_WAVES_PACKET.legacyExports.matcher, 'tryUnit5WavesKnowledge');
+    assert.equal(UNIT5_WAVES_PACKET.legacyExports.facts, 'UNIT5_WAVE_FACTS');
+    assert.equal(UNIT5_WAVES_PACKET.canonicalFacts.length, UNIT5_WAVE_FACTS.length);
+    assert.equal(UNIT5_WAVES_PACKET.counts.canonicalFacts, UNIT5_WAVE_FACTS.length);
+    assert.equal(UNIT5_WAVES_PACKET.metadata.generatedFromExistingUnit5WavesContentOnly, true);
+    assert.equal(UNIT5_WAVES_PACKET.metadata.sourceBacked, false);
+  });
+
+  await record(results, {
+    category,
+    name: 'unit5-waves-packet-body-fields',
+    expectedIdea: 'The packet should expose vocabulary, concepts, canonical facts, relationships, formulas, hooks, and smoke tests.'
+  }, async () => {
+    assert.ok(UNIT5_WAVES_PACKET.vocabulary.length > 0, 'Unit 5 packet should include vocabulary');
+    assert.ok(UNIT5_WAVES_PACKET.concepts.length > 0, 'Unit 5 packet should include concept groups');
+    assert.ok(UNIT5_WAVES_PACKET.canonicalFacts.length > 0, 'Unit 5 packet should include canonical facts');
+    assert.ok(UNIT5_WAVES_PACKET.relationships.length > 0, 'Unit 5 packet should include natural relationships');
+    assert.ok(UNIT5_WAVES_PACKET.referenceFormulas.length > 0, 'Unit 5 packet should include natural formulas');
+    assert.ok(UNIT5_WAVES_PACKET.examples.length > 0, 'Unit 5 packet should include examples already represented by existing answers');
+    assert.ok(UNIT5_WAVES_PACKET.smokeTests.length > 0, 'Unit 5 packet should include smoke tests');
+    assert.ok(UNIT5_WAVES_PACKET.conceptTutorHooks.length > 0, 'Unit 5 packet should expose existing concept tutor hooks');
+    assert.ok(UNIT5_WAVES_PACKET.formulaTutorHooks.length > 0, 'Unit 5 packet should expose existing formula tutor hooks');
+    assert.ok(UNIT5_WAVES_PACKET.routeHints.length > 0, 'Unit 5 packet should expose route hints/boundaries');
+    assert.equal(UNIT5_WAVES_PACKET.comparisons.length, 0, 'Unit 5 packet should not force unsupported comparisons');
+  });
+
+  await record(results, {
+    category,
+    name: 'unit5-waves-required-vocabulary',
+    expectedIdea: 'Required wave terms should be present in packet vocabulary.'
+  }, async () => {
+    const vocabularyTerms = new Set(UNIT5_WAVES_PACKET.vocabulary.map((entry) => normalizeTerm(entry.term)));
+    for (const term of requiredWaveTerms()) {
+      assert.ok(vocabularyTerms.has(normalizeTerm(term)), `Unit 5 packet vocabulary should include ${term}`);
+    }
+  });
+
+  await record(results, {
+    category,
+    name: 'unit5-waves-packet-source-for-answers',
+    expectedIdea: 'Static answer branches should use packet facts as their answer source.'
+  }, async () => {
+    const factById = new Map(UNIT5_WAVES_PACKET.canonicalFacts.map((fact) => [fact.id, fact]));
+    for (const smokeTest of UNIT5_WAVES_PACKET.smokeTests) {
+      const factId = smokeTest.id.replace(/\.smoke$/, '');
+      assert.ok(factById.has(factId), `${smokeTest.id} should reference a canonical fact`);
+      const route = routeWithTeacherKnowledge(smokeTest.query);
+      assertDirectRoute(route, {
+        category,
+        name: smokeTest.id,
+        expectedIdea: 'Smoke prompt should route to the packet-backed Unit 5 matcher.',
+        includes: [new RegExp(escapeRegex(coreAnswerFragment(smokeTest.expectedCoreAnswer)), 'i')]
+      });
+      assert.equal(route.directAnswer, factById.get(factId).answer, `${smokeTest.id} answer should come from the matching packet fact`);
+    }
+  });
 
   return results;
 }
@@ -364,6 +446,34 @@ function assertFormulaWork(formulaWork, testCase, route) {
   assert.match(formulaWork.formulaId || '', expected.formulaId, detail(testCase, route, null, 'formulaWork formulaId'));
   assert.match(formulaWork.solveFor || '', expected.solveFor, detail(testCase, route, null, 'formulaWork solveFor'));
   assert.ok(Array.isArray(formulaWork.steps) && formulaWork.steps.length >= expected.minimumSteps, detail(testCase, route, null, `formulaWork should include at least ${expected.minimumSteps} steps`));
+}
+
+function requiredWaveTerms() {
+  return [
+    'wavelength',
+    'frequency',
+    'amplitude',
+    'period',
+    'wave speed',
+    'reflection',
+    'refraction',
+    'mechanical wave',
+    'electromagnetic wave',
+    'transverse wave',
+    'longitudinal wave'
+  ];
+}
+
+function normalizeTerm(value) {
+  return String(value || '').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+function coreAnswerFragment(answer) {
+  return String(answer || '').split(/[.!?]/)[0].trim();
+}
+
+function escapeRegex(value) {
+  return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 async function createHarnessSession(options) {

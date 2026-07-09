@@ -40,7 +40,7 @@ function main() {
     assert.ok(Object.values(schemaEntry.bodyCounts).some((count) => count > 0), `${schemaEntry.packetId} should include body counts`);
   }
 
-  for (const legacyId of ['unit5-waves', 'unit6-matter', 'electricity-magnetism']) {
+  for (const legacyId of ['unit6-matter', 'electricity-magnetism']) {
     const legacy = byId.get(legacyId);
     assert.ok(legacy, `${legacyId} should be represented in the schema report`);
     assert.equal(legacy.isLegacy, true, `${legacyId} should be reported as legacy`);
@@ -51,11 +51,26 @@ function main() {
   }
 
   assertNoForbiddenPaths(report);
+  assertUnit5Waves(byId.get('unit5-waves'));
   assertUnit7AtomicStructure(byId.get('unit7-atomic-structure'));
   assertMotionForce(byId.get('motion-force'), registry.find((entry) => entry.packetId === 'motion-force'));
 
   printSchemaSummary(report);
   console.log(`PASS built-in packet schema: ${report.length} registry entries inspected`);
+}
+
+function assertUnit5Waves(unit5) {
+  assert.ok(unit5, 'Unit 5 waves should appear in the schema report');
+  assert.equal(unit5.isPacketShaped, true, 'Unit 5 waves should be packet-shaped');
+  assert.equal(unit5.validationStatus, 'valid', 'Unit 5 waves should validate as packet-shaped');
+  assert.ok(unit5.bodyCounts.facts > 0, 'Unit 5 waves should count canonical facts');
+  assert.ok(unit5.bodyCounts.vocabulary > 0, 'Unit 5 waves should count vocabulary');
+  assert.ok(unit5.bodyCounts.relationships > 0, 'Unit 5 waves should count relationships');
+  assert.ok(unit5.bodyCounts.formulas > 0, 'Unit 5 waves should count formulas');
+  assert.ok(unit5.bodyCounts.concepts > 0, 'Unit 5 waves should count concepts');
+  assert.ok(unit5.bodyCounts.conceptTutorHooks > 0, 'Unit 5 waves should count concept tutor hooks');
+  assert.ok(unit5.bodyCounts.formulaTutorHooks > 0, 'Unit 5 waves should count formula tutor hooks');
+  assert.ok(unit5.bodyCounts.smokeTests > 0, 'Unit 5 waves should count smoke tests');
 }
 
 function assertUnit7AtomicStructure(unit7) {
