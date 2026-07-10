@@ -131,11 +131,13 @@
   }
 
   function renderStudentControls(controls) {
+    const newJoinsLocked = byId('studentNewJoinsLocked');
     const copyLock = byId('studentCopyInspectLockEnabled');
     const guidedFormulaTutor = byId('studentGuidedFormulaTutoringEnabled');
     const rateLimit = byId('studentQuestionRateLimitEnabled');
     const perMinute = byId('studentQuestionsPerMinute');
 
+    if (newJoinsLocked) newJoinsLocked.checked = controls?.studentNewJoinsLocked === true;
     if (copyLock) copyLock.checked = controls?.studentCopyInspectLockEnabled !== false;
     if (guidedFormulaTutor) guidedFormulaTutor.checked = controls?.studentGuidedFormulaTutoringEnabled !== false;
     if (rateLimit) rateLimit.checked = controls?.studentQuestionRateLimitEnabled !== false;
@@ -169,6 +171,7 @@
   async function saveStudentControls() {
     if (loadingStudentControls) return;
 
+    const newJoinsLocked = byId('studentNewJoinsLocked');
     const copyLock = byId('studentCopyInspectLockEnabled');
     const guidedFormulaTutor = byId('studentGuidedFormulaTutoringEnabled');
     const rateLimit = byId('studentQuestionRateLimitEnabled');
@@ -188,6 +191,7 @@
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
+          studentNewJoinsLocked: Boolean(newJoinsLocked?.checked),
           studentCopyInspectLockEnabled: Boolean(copyLock?.checked),
           studentGuidedFormulaTutoringEnabled: Boolean(guidedFormulaTutor?.checked),
           studentQuestionRateLimitEnabled: Boolean(rateLimit?.checked),
@@ -1207,6 +1211,7 @@
       }
     });
 
+    byId('studentNewJoinsLocked')?.addEventListener('change', saveStudentControls);
     byId('studentCopyInspectLockEnabled')?.addEventListener('change', saveStudentControls);
     byId('studentGuidedFormulaTutoringEnabled')?.addEventListener('change', saveStudentControls);
     byId('studentQuestionRateLimitEnabled')?.addEventListener('change', saveStudentControls);

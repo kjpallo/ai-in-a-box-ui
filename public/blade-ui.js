@@ -320,6 +320,13 @@
 
               <div class="live-student-controls">
                 <label class="profile-control-row">
+                  <input type="checkbox" id="studentNewJoinsLocked" />
+                  <span>
+                    Lock new student joins
+                    <small>Current student hubs can continue.</small>
+                  </span>
+                </label>
+                <label class="profile-control-row">
                   <input type="checkbox" id="studentCopyInspectLockEnabled" />
                   <span title="Lock copying and inspect shortcuts">Disable right click</span>
                 </label>

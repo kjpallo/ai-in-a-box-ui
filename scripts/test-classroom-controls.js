@@ -44,6 +44,7 @@ async function testClassroomControlsStoreAndRoutes() {
 
   try {
     assert.deepEqual(getClassroomControls(controlsFile), DEFAULT_CLASSROOM_CONTROLS);
+    assert.equal(DEFAULT_CLASSROOM_CONTROLS.studentNewJoinsLocked, false, 'new student joins should be open by default');
 
     const handlers = new Map();
     registerClassroomControlsRoutes(createApp(handlers), {
@@ -80,6 +81,7 @@ async function testClassroomControlsStoreAndRoutes() {
     assert.equal(extraField.statusCode, 400);
 
     const updated = await request(handlers, 'POST', '/api/classroom-controls', {
+      studentNewJoinsLocked: true,
       studentCopyInspectLockEnabled: false,
       studentGuidedFormulaTutoringEnabled: false,
       studentQuestionRateLimitEnabled: true,
@@ -88,6 +90,7 @@ async function testClassroomControlsStoreAndRoutes() {
       questionsStandardsAutoArchiveInactiveMinutes: 45
     });
     assert.equal(updated.statusCode, 200);
+    assert.equal(updated.body.controls.studentNewJoinsLocked, true);
     assert.equal(updated.body.controls.studentCopyInspectLockEnabled, false);
     assert.equal(updated.body.controls.studentGuidedFormulaTutoringEnabled, false);
     assert.equal(updated.body.controls.studentQuestionRateLimitEnabled, true);
@@ -95,13 +98,19 @@ async function testClassroomControlsStoreAndRoutes() {
     assert.equal(updated.body.controls.questionsStandardsAutoArchiveEnabled, true);
     assert.equal(updated.body.controls.questionsStandardsAutoArchiveInactiveMinutes, 45);
 
+    const savedAfterLocking = JSON.parse(await fsp.readFile(controlsFile, 'utf8'));
+    assert.equal(savedAfterLocking.studentNewJoinsLocked, true, 'new student join lock should persist through controls storage');
+
     const guidedTutorOn = await request(handlers, 'POST', '/api/classroom-controls', {
-      studentGuidedFormulaTutoringEnabled: true
+      studentGuidedFormulaTutoringEnabled: true,
+      studentNewJoinsLocked: false
     });
     assert.equal(guidedTutorOn.statusCode, 200);
     assert.equal(guidedTutorOn.body.controls.studentGuidedFormulaTutoringEnabled, true);
+    assert.equal(guidedTutorOn.body.controls.studentNewJoinsLocked, false);
 
     const saved = getClassroomControls(controlsFile);
+    assert.equal(saved.studentNewJoinsLocked, false, 'new student join lock should persist through controls storage');
     assert.equal(saved.studentGuidedFormulaTutoringEnabled, true);
     assert.equal(saved.studentQuestionRateLimitEnabled, true);
     assert.equal(saved.studentQuestionsPerMinute, 2);
@@ -250,6 +259,7 @@ async function testStudentSafeControlsAndRateLimit() {
     }
   };
   const controls = {
+    studentNewJoinsLocked: false,
     studentCopyInspectLockEnabled: true,
     studentQuestionRateLimitEnabled: true,
     studentQuestionsPerMinute: 2,
@@ -274,6 +284,7 @@ async function testStudentSafeControlsAndRateLimit() {
   const publicControls = await request(handlers, 'GET', '/api/student/controls');
   assert.equal(publicControls.statusCode, 200);
   assert.equal(publicControls.body.studentCopyInspectLockEnabled, true);
+  assert.equal(publicControls.body.studentNewJoinsLocked, undefined, 'student controls should not expose teacher-only join lock state');
   assert.equal(publicControls.body.questionsStandardsAutoArchiveEnabled, undefined);
   assert.equal(publicControls.body.teacherOnlySecret, undefined);
 
@@ -342,6 +353,39 @@ async function testStudentSafeControlsAndRateLimit() {
   const unlimited = await sendStudentMessage(handlers, 'classA', 'student-a');
   assert.equal(unlimited.statusCode, 200);
   assert.equal(unlimited.body.rateLimit.enabled, false);
+
+  controls.studentNewJoinsLocked = true;
+  const existingHub = studentSessions.classA.anonymousHubs['student-a'];
+  const anonymousHubCountBeforeRejoin = Object.keys(studentSessions.classA.anonymousHubs).length;
+  const firstSeenAtBeforeRejoin = existingHub.firstSeenAt;
+  const messageCountBeforeRejoin = existingHub.messageCount;
+  const existingJoin = await request(handlers, 'POST', '/api/student/join', {
+    classSessionId: 'classA',
+    studentHubId: 'student-a'
+  });
+  assert.equal(existingJoin.statusCode, 200, 'existing anonymous hubs should rejoin while new joins are locked');
+  assert.equal(Object.keys(studentSessions.classA.anonymousHubs).length, anonymousHubCountBeforeRejoin, 'existing hub rejoin should not create a duplicate');
+  assert.equal(studentSessions.classA.anonymousHubs['student-a'], existingHub, 'existing hub rejoin should reuse the same hub object');
+  assert.equal(existingHub.firstSeenAt, firstSeenAtBeforeRejoin, 'existing hub rejoin should not change when the hub was first seen');
+  assert.equal(existingHub.messageCount, messageCountBeforeRejoin, 'existing hub rejoin should not count as a message');
+
+  const blockedJoin = await request(handlers, 'POST', '/api/student/join', {
+    classSessionId: 'classA',
+    studentHubId: 'student-new'
+  });
+  assert.equal(blockedJoin.statusCode, 403, 'new students should be blocked while join lock is enabled');
+  assert.equal(blockedJoin.body.error, 'This class session is locked. Ask your teacher before joining.');
+  assert.equal(studentSessions.classA.anonymousHubs['student-new'], undefined);
+
+  const existingMessage = await sendStudentMessage(handlers, 'classA', 'student-a');
+  assert.equal(existingMessage.statusCode, 200, 'existing hubs should keep messaging while new joins are locked');
+
+  controls.studentNewJoinsLocked = false;
+  const unlockedJoin = await request(handlers, 'POST', '/api/student/join', {
+    classSessionId: 'classA',
+    studentHubId: 'student-new'
+  });
+  assert.equal(unlockedJoin.statusCode, 200, 'unlocking should allow a new student to join');
 }
 
 function testStudentQuestionTokenBucket() {

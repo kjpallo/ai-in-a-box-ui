@@ -125,6 +125,7 @@ const studentSessions = {
     anonymousHubs: {}
   }
 };
+let studentNewJoinsLocked = false;
 
 registerProfileRoutes(app, {
   clearGoogleIdentity: async () => null,
@@ -132,7 +133,7 @@ registerProfileRoutes(app, {
   createGoogleConnectUrl: () => '/google/start',
   disconnectGoogle: () => {},
   getAvailableProfileDates: () => ({ dates: [] }),
-  getClassroomControls: () => ({}),
+  getClassroomControls: () => ({ studentNewJoinsLocked }),
   getDailyQuestionSummary: () => ({}),
   getProfileStatus: () => ({ authenticated: true }),
   getStandardsSummaryReport: (date) => buildStandardsSummaryReport(loadQuestionsStandardsRecords({
@@ -152,7 +153,7 @@ registerProfileRoutes(app, {
 });
 registerStudentRoutes(app, {
   answerStudentMessage: async () => ({ response: 'ok' }),
-  getClassroomControls: () => ({}),
+  getClassroomControls: () => ({ studentNewJoinsLocked }),
   logCompletedInteraction: () => {},
   studentSessions
 });
@@ -223,6 +224,8 @@ async function main() {
   );
   assert.equal(emptyJoinBeforeArchive.statusCode, 200, 'empty live session should be joinable before end/archive');
 
+  studentNewJoinsLocked = true;
+
   const emptyArchiveResponse = await request(
     handlers,
     'POST',
@@ -270,6 +273,14 @@ async function main() {
   );
   assert.equal(emptyJoinAfterArchive.statusCode, 404, 'old empty student link should not join after end/archive');
   assert.equal(emptyJoinAfterArchive.body.error, 'Student session not found.');
+  studentNewJoinsLocked = false;
+  const emptyJoinAfterArchiveUnlocked = await request(
+    handlers,
+    'POST',
+    '/api/student/join',
+    { sessionId: emptySessionId, studentHubId: 'empty-session-student' }
+  );
+  assert.equal(emptyJoinAfterArchiveUnlocked.statusCode, 404, 'old empty student link should remain blocked after join lock is disabled');
   const emptyMessageAfterArchive = await request(
     handlers,
     'POST',

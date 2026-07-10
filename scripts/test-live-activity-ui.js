@@ -40,6 +40,16 @@ assert.match(
 );
 assert.match(
   bladeUi,
+  /id="studentNewJoinsLocked"[\s\S]*Lock new student joins/,
+  'Classroom Controls should provide a teacher join-lock control.'
+);
+assert.match(
+  profileUi,
+  /studentNewJoinsLocked: Boolean\(newJoinsLocked\?\.checked\)/,
+  'Teacher UI should save the join-lock control through classroom controls.'
+);
+assert.match(
+  bladeUi,
   /id="liveStudentGrid"/,
   'Live Activity should include a live student grid target.'
 );

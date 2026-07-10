@@ -49,6 +49,7 @@ const { detectAnswerRepresentationIntent } = require('../lib/router/answerIntent
 function registerStudentRoutes(app, {
   answerStudentMessage,
   getClassroomControls = () => ({
+    studentNewJoinsLocked: false,
     studentCopyInspectLockEnabled: true,
     studentGuidedFormulaTutoringEnabled: true,
     studentQuestionRateLimitEnabled: true,
@@ -80,8 +81,12 @@ function registerStudentRoutes(app, {
       return res.status(400).json({ error: 'Student hub id is required.' });
     }
 
-    touchAnonymousHub(session, studentHubId);
     const controls = normalizeStudentControls(getClassroomControls());
+    if (shouldBlockNewStudentHub(session, studentHubId, controls)) {
+      return res.status(403).json({ error: NEW_STUDENT_JOINS_LOCKED_MESSAGE });
+    }
+
+    touchAnonymousHub(session, studentHubId);
     res.json({
       rateLimit: getStudentRateLimitInfo({
         controls,
@@ -103,6 +108,11 @@ function registerStudentRoutes(app, {
 
     if (!studentHubId) {
       return res.status(400).json({ error: 'Student hub id is required.' });
+    }
+
+    const controls = normalizeStudentControls(getClassroomControls());
+    if (shouldBlockNewStudentHub(session, studentHubId, controls)) {
+      return res.status(403).json({ error: NEW_STUDENT_JOINS_LOCKED_MESSAGE });
     }
 
     const hub = touchAnonymousHub(session, studentHubId);
@@ -139,8 +149,12 @@ function registerStudentRoutes(app, {
     }
 
     try {
-      const hub = touchAnonymousHub(session, studentHubId);
       const controls = normalizeStudentControls(getClassroomControls());
+      if (shouldBlockNewStudentHub(session, studentHubId, controls)) {
+        return res.status(403).json({ error: NEW_STUDENT_JOINS_LOCKED_MESSAGE });
+      }
+
+      const hub = touchAnonymousHub(session, studentHubId);
       let rateLimitInfo = getStudentRateLimitInfo({
         controls,
         questionRateLimiter,
@@ -900,6 +914,9 @@ function registerStudentRoutes(app, {
 function normalizeStudentControls(value = {}) {
   const controls = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   return {
+    studentNewJoinsLocked: typeof controls.studentNewJoinsLocked === 'boolean'
+      ? controls.studentNewJoinsLocked
+      : false,
     studentCopyInspectLockEnabled: typeof controls.studentCopyInspectLockEnabled === 'boolean'
       ? controls.studentCopyInspectLockEnabled
       : true,
@@ -911,6 +928,12 @@ function normalizeStudentControls(value = {}) {
       : true,
     studentQuestionsPerMinute: normalizeQuestionLimit(controls.studentQuestionsPerMinute)
   };
+}
+
+const NEW_STUDENT_JOINS_LOCKED_MESSAGE = 'This class session is locked. Ask your teacher before joining.';
+
+function shouldBlockNewStudentHub(session, studentHubId, controls) {
+  return controls.studentNewJoinsLocked && !Object.prototype.hasOwnProperty.call(session.anonymousHubs || {}, studentHubId);
 }
 
 function closeInactiveFormulaTutorProblem(hub) {

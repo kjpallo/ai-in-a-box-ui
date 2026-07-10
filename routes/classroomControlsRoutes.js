@@ -31,6 +31,7 @@ function registerClassroomControlsRoutes(app, {
 
 function pickAllowedSettings(body) {
   const allowedKeys = [
+    'studentNewJoinsLocked',
     'studentCopyInspectLockEnabled',
     'studentGuidedFormulaTutoringEnabled',
     'studentQuestionRateLimitEnabled',
