@@ -76,6 +76,11 @@ const DIRECT_CASES = [
     includes: [/conclusion/i, /proven|disproven/i, /support|do not support/i, /hypothesis/i]
   },
   {
+    name: 'repeated-trials-reliability',
+    prompt: 'Why should a scientist repeat an experiment several times?',
+    includes: [/repeat(?:ed)? trials/i, /reliability/i, /random error/i, /unusual results/i, /averaged/i]
+  },
+  {
     name: 'independent-variable',
     prompt: 'what is an independent variable',
     includes: [/independent variable/i, /changes? on purpose|changed on purpose/i]
@@ -232,6 +237,12 @@ const TYPO_CASES = [
 
 const SCENARIO_CASES = [
   {
+    name: 'sunlight-plant-height-both-variables',
+    prompt: 'A student changes the amount of sunlight a plant receives and measures its height. What are the independent and dependent variables?',
+    choices: ['1', '2'],
+    includes: [/independent variable/i, /amount of sunlight/i, /dependent variable/i, /plant height/i]
+  },
+  {
     name: 'sunlight-plant-growth-iv',
     prompt: 'In an experiment testing how sunlight affects plant growth, what is the independent variable?',
     choice: '1',
@@ -326,6 +337,16 @@ const CONCEPT_TUTOR_BOUNDARY_CASES = [
 
 const DIRECT_BOUNDARY_CASES = [
   {
+    prompt: 'What is amplitude in waves?',
+    includes: [/amplitude/i, /height of a wave|wave.*height/i, /energy/i],
+    excludes: [/independent variable/i, /dependent variable/i]
+  },
+  {
+    prompt: "What is Newton's Second Law?",
+    includes: [/Newton.s Second Law/i, /force/i, /mass/i, /acceleration/i],
+    excludes: [/repeat(?:ed)? trials/i, /reliability/i]
+  },
+  {
     prompt: 'What is conservation of mass?',
     includes: [/conservation of mass/i, /mass/i],
     excludes: [/scientific method/i, /independent variable/i]
@@ -364,7 +385,10 @@ async function main() {
     assert.equal(response.tutor?.id, UNIT1_VARIABLES_TUTOR_ID, `${testCase.name} tutor id`);
     assert.doesNotMatch(response.response, testCase.includes[0], `${testCase.name} should hide final answer until completion`);
 
-    const completed = await ask(request, sessionId, studentHubId, testCase.choice);
+    let completed = response;
+    for (const choice of testCase.choices || [testCase.choice]) {
+      completed = await ask(request, sessionId, studentHubId, choice);
+    }
     assert.equal(completed.routeType, 'concept_tutor', `${testCase.name} completion route`);
     assert.equal(completed.tutor?.id, UNIT1_VARIABLES_TUTOR_ID, `${testCase.name} completion tutor id`);
     assert.equal(completed.tutor?.completed, true, `${testCase.name} should complete after the correct number`);
@@ -419,6 +443,13 @@ function assertUnit1ScientificMethodPacketShape() {
   assert.ok(directResult, 'Legacy Unit 1 scientific method matcher should still return a direct result');
   assert.match(directResult.directAnswer, /ask questions/i);
   assert.match(directResult.directAnswer, /collect data/i);
+
+  const pairedVariablesResult = tryUnit1ScientificMethodKnowledge(
+    'A student changes the amount of sunlight a plant receives and measures its height. What are the independent and dependent variables?'
+  );
+  assert.ok(pairedVariablesResult, 'Explicit paired variable scenarios should outrank unrelated vocabulary matches');
+  assert.match(pairedVariablesResult.directAnswer, /independent variable.*amount of sunlight/i);
+  assert.match(pairedVariablesResult.directAnswer, /dependent variable.*plant height/i);
 }
 
 async function ask(request, sessionId, studentHubId, message) {
