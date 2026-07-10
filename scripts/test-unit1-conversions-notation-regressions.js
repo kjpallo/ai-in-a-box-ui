@@ -308,6 +308,25 @@ const CONCEPT_BOUNDARY_CASES = [
   { prompt: 'Is a circuit with one path series or parallel?', tutorId: 'electricity.circuits.series-parallel.identification' }
 ];
 
+const METRIC_QUESTION_FORM_CASES = [
+  'if I have 3 km how many mm is that',
+  'how many millimeters are in 3 kilometers?',
+  '3 km is how many mm?',
+  'I have 3 km. How many mm is that?'
+];
+
+const METRIC_CONTEXT_CASES = [
+  { name: 'reported-conversation', previous: ['what is mass', 'how do I solve for mass', 'what is the speed of light'] },
+  { name: 'after-mass', previous: ['what is mass'] },
+  { name: 'after-mass-number-neutrons', previous: ['what is mass number?', 'how do you calculate neutrons?'] },
+  { name: 'after-unrelated-science', previous: ['what is the speed of light'] }
+];
+
+const ATOMIC_STRUCTURE_BOUNDARY_CASES = [
+  { prompt: 'What is mass number?', includes: [/protons/i, /neutrons/i] },
+  { prompt: 'How do you calculate neutrons?', includes: [/mass number/i, /atomic number/i] }
+];
+
 async function main() {
   assertUnit1ConversionsNotationPacketShape();
 
@@ -344,6 +363,8 @@ async function main() {
 
   await assertMetricMethodBranches(request, sessionId);
   await assertMixedUnitPicketFenceTypedFlow(request, sessionId);
+  await assertMetricQuestionForms(request, sessionId);
+  await assertMetricQuestionsOverrideConversationContext(request, sessionId);
 
   for (const prompt of FORMULA_BOUNDARY_CASES) {
     const response = await ask(request, sessionId, `unit1-conversions-formula-boundary-${slug(prompt)}`, prompt);
@@ -364,7 +385,73 @@ async function main() {
     assert.equal(response.tutor?.id, testCase.tutorId, `${testCase.prompt} tutor id`);
   }
 
+  for (const testCase of ATOMIC_STRUCTURE_BOUNDARY_CASES) {
+    const route = routeStudentQuestion(testCase.prompt);
+    assert.ok(route.toolsUsed.includes('unit7_atomic_structure_knowledge'), `${testCase.prompt} should retain Unit 7 atomic-structure routing`);
+    assertAnswer(route.directAnswer, testCase);
+  }
+
   console.log('PASS Unit 1 conversions/notation regressions: direct answers, formula tutor coverage, visual metadata, and route boundaries');
+}
+
+async function assertMetricQuestionForms(request, sessionId) {
+  for (const [index, prompt] of METRIC_QUESTION_FORM_CASES.entries()) {
+    await assertThreeKmToMillimetersFlow(request, sessionId, {
+      studentHubId: `unit1-conversions-question-form-${index + 1}`,
+      prompt,
+      method: index % 2 === 0 ? 'stair_step' : 'picket_fence'
+    });
+  }
+}
+
+async function assertMetricQuestionsOverrideConversationContext(request, sessionId) {
+  for (const [index, testCase] of METRIC_CONTEXT_CASES.entries()) {
+    const studentHubId = `unit1-conversions-context-${testCase.name}`;
+    for (const previousPrompt of testCase.previous) {
+      const previous = await ask(request, sessionId, studentHubId, previousPrompt);
+      assert.notEqual(previous.routeType, 'formula_tutor', `${previousPrompt} should establish context without starting the conversion tutor`);
+    }
+    await assertThreeKmToMillimetersFlow(request, sessionId, {
+      studentHubId,
+      prompt: METRIC_QUESTION_FORM_CASES[index % METRIC_QUESTION_FORM_CASES.length],
+      method: index % 2 === 0 ? 'stair_step' : 'picket_fence'
+    });
+  }
+}
+
+async function assertThreeKmToMillimetersFlow(request, sessionId, { studentHubId, prompt, method }) {
+  const route = routeStudentQuestion(prompt);
+  assert.equal(route.type, 'science_formula', `${prompt} should use the existing science_formula route`);
+  assert.equal(route.formulaWork?.formulaId, 'unit1_metric_stair_step_conversion', `${prompt} should use the existing Unit 1 metric conversion tutor`);
+  assert.equal(route.formulaWork?.finalAnswer?.value, 3000000, `${prompt} should calculate 3,000,000`);
+  assert.equal(route.formulaWork?.finalAnswer?.unit, 'mm', `${prompt} should retain millimeters as the target unit`);
+
+  const start = await ask(request, sessionId, studentHubId, prompt);
+  assert.equal(start.routeType, 'formula_tutor', `${prompt} should start Formula Tutor`);
+  assert.equal(start.tutor?.formulaId, 'unit1_metric_stair_step_conversion', `${prompt} tutor formulaId`);
+  assert.equal(start.tutor?.currentStep?.id, 'choose_method', `${prompt} should begin with method selection`);
+  assert.equal(start.tutor?.work?.originalQuestion, prompt, `${prompt} should be retained as the original conversion question`);
+  assertCleanMetricMethodChoice(start, { name: prompt });
+  assert.doesNotMatch(start.response, /mass number|atomic number|neutrons?|atomic structure|I found something related/i, `${prompt} should not use atomic-structure or weak class-fact fallback`);
+
+  if (method === 'stair_step') {
+    const selected = await ask(request, sessionId, studentHubId, '1');
+    assert.equal(selected.tutor?.work?.selectedMethod, 'stair_step', `${prompt} should continue through stair-step`);
+    const complete = await ask(request, sessionId, studentHubId, '3,000,000 mm');
+    assert.equal(complete.tutor?.completed, true, `${prompt} stair-step flow should complete`);
+    assert.match(complete.response, /3 km\s*=\s*3,?000,?000 mm|3,?000,?000 mm/i, `${prompt} should finish at 3,000,000 mm`);
+    return;
+  }
+
+  const selected = await ask(request, sessionId, studentHubId, '2');
+  assert.equal(selected.tutor?.work?.selectedMethod, 'picket_fence', `${prompt} should continue through picket fence`);
+  await ask(request, sessionId, studentHubId, '3');
+  await ask(request, sessionId, studentHubId, '1000000');
+  await ask(request, sessionId, studentHubId, '1');
+  await ask(request, sessionId, studentHubId, 'km');
+  const complete = await ask(request, sessionId, studentHubId, '3000000');
+  assert.equal(complete.tutor?.completed, true, `${prompt} picket-fence flow should complete`);
+  assert.match(complete.response, /3 km\s*=\s*3,?000,?000 mm|3,?000,?000 mm/i, `${prompt} should finish at 3,000,000 mm`);
 }
 
 function assertUnit1ConversionsNotationPacketShape() {
