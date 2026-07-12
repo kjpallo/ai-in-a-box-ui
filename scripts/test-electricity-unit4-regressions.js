@@ -63,6 +63,13 @@ const CATEGORIES = [
     })
   },
   {
+    name: 'routing collision regressions',
+    run: () => assertDirectStudentCases(routingCollisionCases(), {
+      guidedTutorEnabled: true,
+      assertRoute: true
+    })
+  },
+  {
     name: 'magnetism concepts',
     run: () => assertDirectStudentCases(magnetismCases(), {
       guidedTutorEnabled: true,
@@ -355,6 +362,12 @@ function assertDirectRoute(route, testCase) {
   }
   if (testCase.routeTypes) {
     assert.ok(testCase.routeTypes.includes(route.type), detail(testCase, route, null, `route should be one of ${testCase.routeTypes.join(', ')}`));
+  }
+  for (const tool of testCase.expectedTools || []) {
+    assert.ok((route.toolsUsed || []).includes(tool), detail(testCase, route, null, `route should use ${tool}`));
+  }
+  for (const tool of testCase.forbiddenTools || []) {
+    assert.ok(!(route.toolsUsed || []).includes(tool), detail(testCase, route, null, `route should not use ${tool}`));
   }
   assertAnswer(route.directAnswer, testCase, route);
 }
@@ -927,6 +940,119 @@ function circuitComponentCases() {
       prompt: 'What are the circuit symbols for battery, switch, light bulb, resistor, ammeter, and voltmeter?',
       expectedIdea: 'Recognize battery, switch, bulb/lamp, resistor, ammeter, voltmeter symbols.',
       includes: [/battery/i, /switch/i, /bulb|lamp/i, /resistor/i, /ammeter|circle A/i, /voltmeter|circle V/i]
+    }
+  ];
+}
+
+function routingCollisionCases() {
+  const category = 'routing collision regressions';
+  return [
+    {
+      category,
+      name: 'closed-circuit-electron-flow-components',
+      prompt: 'Describe how electrons travel through a closed circuit containing a battery, wires, and a lamp.',
+      expectedIdea: 'Electron flow uses the complete path and explains the battery, wires, and lamp roles.',
+      routeTypes: ['science_concept'],
+      expectedTools: ['electricity_magnetism_knowledge_pack'],
+      forbiddenTools: ['unit7_atomic_structure_knowledge'],
+      includes: [/closed circuit/i, /electrons?.*complete path/i, /battery.*voltage difference/i, /wires?.*conducting path/i, /lamp.*light.*thermal energy/i],
+      excludes: [/electron cloud|nucleus|mass number/i]
+    },
+    {
+      category,
+      name: 'complete-circuit-charge-flow-variation',
+      prompt: 'Explain how charge moves around a complete circuit with a battery, conducting wires, and a light bulb.',
+      expectedIdea: 'A realistic charge-flow variation receives the same component explanation.',
+      routeTypes: ['science_concept'],
+      expectedTools: ['electricity_magnetism_knowledge_pack'],
+      includes: [/complete path/i, /battery.*voltage difference/i, /wires?.*conducting path/i, /lamp.*light.*thermal energy/i]
+    },
+    {
+      category,
+      name: 'current-resistance-different',
+      prompt: 'How are electric current and resistance different?',
+      expectedIdea: 'Directly compare current flow in amperes with resistance opposition in ohms.',
+      routeTypes: ['definition'],
+      expectedTools: ['electricity_magnetism_knowledge_pack'],
+      forbiddenTools: ['teacher_facts'],
+      includes: [/current.*movement|current.*rate of flow/i, /amperes|amps/i, /resistance.*opposition/i, /ohms/i]
+    },
+    {
+      category,
+      name: 'current-resistance-difference-variation',
+      prompt: 'What is the difference between resistance and electric current?',
+      expectedIdea: 'Difference-between wording receives both trusted definitions and units.',
+      routeTypes: ['definition'],
+      expectedTools: ['electricity_magnetism_knowledge_pack'],
+      forbiddenTools: ['teacher_facts'],
+      includes: [/current.*movement|current.*rate of flow/i, /amperes|amps/i, /resistance.*opposition/i, /ohms/i]
+    },
+    {
+      category,
+      name: 'atomic-electron-definition-boundary',
+      prompt: 'What is an electron?',
+      expectedIdea: 'A plain atomic electron prompt remains in Unit 7.',
+      routeTypes: ['definition'],
+      expectedTools: ['unit7_atomic_structure_knowledge'],
+      forbiddenTools: ['electricity_magnetism_knowledge_pack'],
+      includes: [/electron.*negatively charged/i, /electron cloud|nucleus/i],
+      excludes: [/battery|lamp|conducting path/i]
+    },
+    {
+      category,
+      name: 'ion-electron-count-boundary',
+      prompt: 'An ion has 17 protons, 18 electrons, and 18 neutrons. What is its element, charge, and mass number?',
+      expectedIdea: 'An ion prompt containing electrons remains in Unit 7.',
+      routeTypes: ['science_concept'],
+      expectedTools: ['unit7_atomic_structure_knowledge'],
+      forbiddenTools: ['electricity_magnetism_knowledge_pack'],
+      includes: [/chlorine/i, /charge:\s*-1/i, /mass number:\s*35/i],
+      excludes: [/battery|lamp|conducting path/i]
+    },
+    {
+      category,
+      name: 'simple-current-definition-boundary',
+      prompt: 'What is electric current?',
+      expectedIdea: 'A single current definition does not become a comparison.',
+      routeTypes: ['definition'],
+      includes: [/current.*flow/i, /amperes|amps/i],
+      excludes: [/resistance is|measured in ohms/i]
+    },
+    {
+      category,
+      name: 'simple-resistance-definition-boundary',
+      prompt: 'What is resistance?',
+      expectedIdea: 'A single resistance definition does not become a comparison.',
+      routeTypes: ['definition'],
+      includes: [/resistance.*opposition/i, /ohms/i],
+      excludes: [/current is the movement|measured in amperes/i]
+    },
+    {
+      category,
+      name: 'open-circuit-electron-flow-boundary',
+      prompt: 'Describe electron flow in an open circuit with a battery, wires, and a lamp.',
+      expectedIdea: 'An open circuit does not allow continuous electron flow.',
+      routeTypes: ['science_concept'],
+      includes: [/open circuit/i, /break|incomplete/i, /cannot flow|does not flow/i],
+      excludes: [/move continuously/i]
+    },
+    {
+      category,
+      name: 'lamp-only-boundary',
+      prompt: 'What does a lamp do in a circuit?',
+      expectedIdea: 'A lamp-only prompt defines the load without inventing a whole circuit explanation.',
+      routeTypes: ['definition'],
+      includes: [/lamp|light bulb/i, /load|converts/i, /light/i],
+      excludes: [/wires provide|complete path/i]
+    },
+    {
+      category,
+      name: 'battery-only-boundary',
+      prompt: 'What does a battery do in a circuit?',
+      expectedIdea: 'A battery-only prompt explains the source without inventing all component roles.',
+      routeTypes: ['definition'],
+      includes: [/battery/i, /voltage difference/i, /charge/i],
+      excludes: [/wires provide|lamp is the load/i]
     }
   ];
 }
