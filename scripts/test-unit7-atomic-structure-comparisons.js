@@ -56,6 +56,18 @@ const COMPARISON_CASES = [
   {
     prompt: 'How are isotopes of the same element the same and different?',
     includes: [/isotope/i, /same element/i, /same protons/i, /different.*neutrons/i, /different mass numbers/i]
+  },
+  {
+    prompt: 'What is the difference between an isotope and an ion?',
+    includes: [/isotope.*same element.*different number of neutrons/is, /ion.*unequal proton and electron counts.*gained or lost/is]
+  },
+  {
+    prompt: 'Explain how an isotope differs from an ion.',
+    includes: [/isotope.*same element.*different number of neutrons/is, /ion.*unequal proton and electron counts.*gained or lost/is]
+  },
+  {
+    prompt: 'How does an ion differ from an isotope?',
+    includes: [/isotope.*same element.*different number of neutrons/is, /ion.*unequal proton and electron counts.*gained or lost/is]
   }
 ];
 
@@ -67,6 +79,40 @@ const RELATIONSHIP_CASES = [
   {
     prompt: 'Which one tells energy levels, group or period?',
     includes: [/Period/i, /energy levels/i]
+  }
+];
+
+const BOUNDARY_CASES = [
+  {
+    prompt: 'What is an isotope?',
+    routeType: 'definition',
+    includes: [/same element/i, /different numbers of neutrons/i]
+  },
+  {
+    prompt: 'What is an ion?',
+    routeType: 'definition',
+    includes: [/charge/i, /gained or lost electrons/i]
+  },
+  {
+    prompt: 'What is an isotope? I already know what an ion is.',
+    routeType: 'definition',
+    includes: [/same element/i, /different numbers of neutrons/i]
+  },
+  {
+    prompt: 'Explain why different isotopes have different mass numbers.',
+    includes: [/isotope/i, /different numbers of neutrons/i]
+  },
+  {
+    prompt: 'Explain how electron charge differs from mass number.',
+    includes: [/electron/i, /negative/i, /electron cloud/i, /mass number/i]
+  },
+  {
+    prompt: 'How many electrons does oxygen have?',
+    includes: [/Oxygen \(O\).*8 electrons/is]
+  },
+  {
+    prompt: 'An ion has 17 protons, 18 electrons, and 18 neutrons. What is its element, charge, and mass number?',
+    includes: [/Element: Chlorine \(Cl\)/i, /Charge: -1/i, /Mass number: 35/i]
   }
 ];
 
@@ -113,6 +159,22 @@ async function main() {
     }
   }
 
+  for (const testCase of BOUNDARY_CASES) {
+    const route = routeStudentQuestion(testCase.prompt);
+    assert.notEqual(route.notes, 'Answered Unit 7 Atomic Structure concept: unit7.compare.isotope.ion.', `${testCase.prompt} should not trigger the isotope/ion comparison`);
+    if (testCase.routeType) assert.equal(route.type, testCase.routeType, `${testCase.prompt} should preserve its route type`);
+
+    const response = await request('POST', '/api/student/message', {
+      sessionId,
+      studentHubId: `unit7-comparison-boundary-${slug(testCase.prompt)}`,
+      message: testCase.prompt
+    });
+    assert.equal(response.statusCode, 200);
+    for (const pattern of testCase.includes) {
+      assert.match(response.body.response, pattern, `${testCase.prompt} should include ${pattern}`);
+    }
+  }
+
   const conceptPrompt = 'Classify an element that is shiny, malleable, and a good conductor.';
   const conceptStart = await request('POST', '/api/student/message', {
     sessionId,
@@ -122,7 +184,7 @@ async function main() {
   assert.equal(conceptStart.statusCode, 200);
   assert.equal(conceptStart.body.routeType, 'concept_tutor', 'clue/reasoning classification should still use Concept Tutor');
 
-  console.log(`PASS Unit 7 Atomic Structure comparisons: ${COMPARISON_CASES.length} comparisons, ${RELATIONSHIP_CASES.length} relationships, and Concept Tutor boundaries`);
+  console.log(`PASS Unit 7 Atomic Structure comparisons: ${COMPARISON_CASES.length} comparisons, ${RELATIONSHIP_CASES.length} relationships, ${BOUNDARY_CASES.length} immediate boundaries, and Concept Tutor boundaries`);
 }
 
 function slug(value) {
