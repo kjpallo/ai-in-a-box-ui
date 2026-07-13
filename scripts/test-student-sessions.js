@@ -217,8 +217,112 @@ async function main() {
   await testGuidedNetForceTutorFlows();
   await testPhase9CNetForceTutorRegression();
   await testExpandedFormulaTutorIsolation();
+  await testIndependentQuestionsDoNotInheritStaleTopicContext();
 
   console.log('✅ student sessions: anonymous hubs, same-hub context, and formula tutoring are isolated');
+}
+
+async function testIndependentQuestionsDoNotInheritStaleTopicContext() {
+  const direct = createRouteHarness({ studentGuidedFormulaTutoringEnabled: false });
+  const create = await direct.request('POST', '/api/profile/create-student-session');
+  assert.equal(create.statusCode, 201);
+  const sessionId = create.body.sessionId;
+  const staleContextHub = 'stale-topic-context';
+  const atomicQuestion = 'This atom has atomic number 8. How many protons and electrons does it have?';
+
+  const force = await direct.request('POST', '/api/student/message', {
+    sessionId,
+    studentHubId: staleContextHub,
+    message: 'What is force?'
+  });
+  assert.equal(force.body.routeType, 'definition');
+  assert.match(force.body.response, /push or pull/i);
+
+  const atomicAfterForce = await direct.request('POST', '/api/student/message', {
+    sessionId,
+    studentHubId: staleContextHub,
+    message: atomicQuestion
+  });
+  assert.equal(atomicAfterForce.body.routeType, 'science_formula');
+  assert.match(atomicAfterForce.body.response, /Protons = 8/i);
+  assert.doesNotMatch(atomicAfterForce.body.response, /You were asking about force/i);
+
+  const atomicFresh = await direct.request('POST', '/api/student/message', {
+    sessionId,
+    studentHubId: 'fresh-atomic-question',
+    message: atomicQuestion
+  });
+  assert.equal(atomicFresh.body.routeType, 'science_formula');
+  assert.equal(atomicFresh.body.response, atomicAfterForce.body.response);
+
+  const waveAfterForce = await direct.request('POST', '/api/student/message', {
+    sessionId,
+    studentHubId: staleContextHub,
+    message: 'This wave travels at 20 m/s and has a frequency of 5 Hz. What is its wavelength?'
+  });
+  assert.equal(waveAfterForce.body.routeType, 'science_formula');
+  assert.match(waveAfterForce.body.response, /wavelength = 4 m/i);
+  assert.doesNotMatch(waveAfterForce.body.response, /You were asking about force/i);
+
+  const followUpHub = 'genuine-force-follow-up';
+  await direct.request('POST', '/api/student/message', {
+    sessionId,
+    studentHubId: followUpHub,
+    message: 'What is force?'
+  });
+  const forceFollowUp = await direct.request('POST', '/api/student/message', {
+    sessionId,
+    studentHubId: followUpHub,
+    message: 'What is the formula for it?'
+  });
+  assert.equal(forceFollowUp.body.routeType, 'formula_only');
+  assert.match(forceFollowUp.body.response, /You were asking about force/i);
+  assert.match(forceFollowUp.body.response, /F = m × a/i);
+
+  const guided = createRouteHarness();
+  const guidedCreate = await guided.request('POST', '/api/profile/create-student-session');
+  assert.equal(guidedCreate.statusCode, 201);
+  const guidedSessionId = guidedCreate.body.sessionId;
+
+  const conceptStart = await guided.request('POST', '/api/student/message', {
+    sessionId: guidedSessionId,
+    studentHubId: 'active-concept-tutor',
+    message: 'Which model has electrons in fixed orbits?'
+  });
+  assert.equal(conceptStart.body.routeType, 'concept_tutor');
+  const conceptContinuation = await guided.request('POST', '/api/student/message', {
+    sessionId: guidedSessionId,
+    studentHubId: 'active-concept-tutor',
+    message: '1'
+  });
+  assert.equal(conceptContinuation.body.routeType, 'concept_tutor');
+  assert.equal(conceptContinuation.body.tutor.completed, true);
+  assert.match(conceptContinuation.body.response, /Bohr model/i);
+
+  const formulaStart = await guided.request('POST', '/api/student/message', {
+    sessionId: guidedSessionId,
+    studentHubId: 'active-formula-tutor',
+    message: 'What is the force if mass is 10 kg and acceleration is 3 m/s²?'
+  });
+  assert.equal(formulaStart.body.routeType, 'formula_tutor');
+  const formulaContinuation = await guided.request('POST', '/api/student/message', {
+    sessionId: guidedSessionId,
+    studentHubId: 'active-formula-tutor',
+    message: 'force'
+  });
+  assert.equal(formulaContinuation.body.routeType, 'formula_tutor');
+  assert.match(formulaContinuation.body.response, /Which formula should we use/i);
+
+  assert.equal(
+    direct.studentSessions[sessionId].anonymousHubs['fresh-atomic-question'].messages.length,
+    1,
+    'fresh hub should remain isolated from stale force context'
+  );
+  assert.equal(
+    guided.studentSessions[guidedSessionId].anonymousHubs['active-concept-tutor'].messages.length,
+    2,
+    'Concept Tutor state should remain isolated from Formula Tutor state'
+  );
 }
 
 async function testPhase6FormulaTutorCoverage() {
