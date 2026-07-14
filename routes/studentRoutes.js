@@ -45,6 +45,7 @@ const {
 } = require('../lib/tutor/motionForceKnowledgeTutor');
 const { buildMotionForceFlashcardDeck } = require('../lib/knowledge/physics/motion-force/motionForceKnowledge');
 const { detectAnswerRepresentationIntent } = require('../lib/router/answerIntent');
+const { sanitizeBalancingActivityTranscriptMessage } = require('../lib/tutor/activities/ammoniaBalancingActivity');
 
 function registerStudentRoutes(app, {
   answerStudentMessage,
@@ -602,6 +603,7 @@ function registerStudentRoutes(app, {
         }
 
         const tutorResult = answerFormulaTutorStep(previousTutorProblem, message);
+        const transcriptMessage = sanitizeBalancingActivityTranscriptMessage(previousTutorProblem, message);
         hub.currentTutorProblem = tutorResult.completed || tutorResult.stopped
           ? null
           : tutorResult.currentTutorProblem;
@@ -611,14 +613,14 @@ function registerStudentRoutes(app, {
           {
             completed: tutorResult.completed,
             stopped: tutorResult.stopped,
-            latestStudentReply: message
+            latestStudentReply: transcriptMessage
           }
         );
 
         const entry = appendStudentHubEntry({
           session,
           hub,
-          message,
+          message: transcriptMessage,
           response: tutorResult.response,
           routeType: 'formula_tutor',
           confidence: 'strong',
@@ -629,7 +631,7 @@ function registerStudentRoutes(app, {
         });
 
         logCompletedInteraction({
-          message,
+          message: transcriptMessage,
           questionRoute: makeFormulaTutorRoute(tutorProblemForResponse, entry),
           answerGiven: tutorResult.response,
           source: 'student',

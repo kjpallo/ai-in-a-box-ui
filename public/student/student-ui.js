@@ -69,6 +69,9 @@
   const picketFenceState = new Map();
   const picketFenceCancellationClickState = new Map();
   const scientificNotationState = new Map();
+  let selectedBalancingElement = null;
+  const BALANCING_PENDING_TRANSCRIPT_LABEL = 'Used the balancing workspace controls';
+  const BALANCING_ACTIVITY_ID = 'unit9.balance-ammonia';
   const tutorSessionExpandedState = new Map();
   const tutorStepExpandedState = new Map();
   let completedCelebrationKey = '';
@@ -94,6 +97,7 @@
     clearButton?.addEventListener('click', handleClearClick);
     composerTutorChoices?.addEventListener('click', handleComposerTutorChoiceClick);
     timeline.addEventListener('click', handleTimelineClick);
+    timeline.addEventListener('change', handleTimelineChange);
     timeline.addEventListener('mouseover', handleTimelinePreview);
     timeline.addEventListener('focusin', handleTimelinePreview);
     timeline.addEventListener('mouseout', handleTimelinePreviewClear);
@@ -1426,7 +1430,151 @@
     if (visual.visualType === 'scientific_notation_decimal_move') {
       return renderScientificNotationVisual(visual, turnId);
     }
+    if (visual.visualType === 'chemical_equation_balancing') {
+      return renderChemicalEquationBalancingVisual(visual, turnId);
+    }
     return '';
+  }
+
+  function renderChemicalEquationBalancingVisual(visual, turnId) {
+    const reactants = Array.isArray(visual.reactants) ? visual.reactants : [];
+    const products = Array.isArray(visual.products) ? visual.products : [];
+    const tableComplete = visual.tableComplete === true;
+    const coefficientsEnabled = tableComplete && visual.phase !== 'complete';
+    const counts = visual.counts || { reactants: {}, products: {} };
+    const options = Array.isArray(visual.coefficientOptions) ? visual.coefficientOptions : [];
+    const activityId = String(visual.activityId || '');
+
+    return `
+      <section class="balancing-workspace" data-balancing-workspace data-balancing-activity-id="${escapeAttr(activityId)}" aria-label="Chemical equation balancing workspace">
+        <div class="balancing-protected-equation" aria-label="Protected equation with coefficients">
+          ${renderBalancingEquationSide(reactants, 'reactants', visual, options, coefficientsEnabled)}
+          <span class="balancing-equation-arrow" aria-hidden="true">→</span>
+          <span class="sr-only">yields</span>
+          ${renderBalancingEquationSide(products, 'products', visual, options, coefficientsEnabled)}
+        </div>
+        <p class="balancing-protected-note">Formulas and subscripts are protected. Balancing changes coefficients, never subscripts.</p>
+        ${tableComplete
+          ? renderCompletedBalancingTable(visual)
+          : renderBalancingElementTable(visual)}
+        ${tableComplete ? `
+          <div class="balancing-count-grid" aria-label="Live atom counts">
+            ${renderBalancingCountColumn('reactants', counts)}
+            ${renderBalancingCountColumn('products', counts)}
+          </div>
+          ${visual.balancedNotSimplified ? `
+            <p class="balancing-reduction-note">Balanced, but not smallest: factor ${escapeHtml(String(visual.balancedNotSimplified.factor || ''))}; reduce to ${escapeHtml((visual.balancedNotSimplified.reducedCoefficients || []).join(', '))}.</p>
+          ` : ''}
+          ${visual.phase !== 'complete' ? `
+            <div class="balancing-workspace-actions">
+              <button type="button" class="student-tutor-control student-tutor-control--workspace" data-balancing-check>Check Balance</button>
+              <button type="button" class="student-tutor-control student-tutor-control--helper" data-balancing-reset>Reset</button>
+            </div>
+          ` : `
+            <p class="balancing-final-equation"><strong>Final equation:</strong> ${renderConventionalEquation()}</p>
+          `}
+        ` : ''}
+        <p class="balancing-announcement" data-balancing-announcement role="status" aria-live="polite" aria-atomic="true">${escapeHtml(visual.feedback || '')}</p>
+      </section>
+    `;
+  }
+
+  function renderBalancingEquationSide(compounds, side, visual, options, coefficientsEnabled) {
+    return compounds.map((compound, index) => {
+      const coefficient = Number(visual.coefficients?.[compound.id]) || 1;
+      const control = coefficientsEnabled
+        ? renderBalancingCoefficientSelect(compound, side, coefficient, options)
+        : `<span class="balancing-coefficient-static" aria-label="coefficient ${coefficient}">[${coefficient}]</span>`;
+      return `${index > 0 ? '<span class="balancing-equation-plus" aria-hidden="true">+</span>' : ''}
+        <span class="balancing-compound" data-balancing-compound-id="${escapeAttr(compound.id || '')}">
+          ${control}
+          <span class="balancing-formula" aria-label="${escapeAttr(compound.accessibleName || compound.formula || '')}">${renderProtectedFormulaParts(compound, visual.tableComplete !== true)}</span>
+        </span>`;
+    }).join('');
+  }
+
+  function renderBalancingCoefficientSelect(compound, side, selected, options) {
+    const label = `Coefficient for ${compound.accessibleName || compound.formula}`;
+    return `
+      <label class="balancing-coefficient-label">
+        <span class="sr-only">${escapeHtml(label)}</span>
+        <select class="balancing-coefficient-select" data-balancing-coefficient data-compound-id="${escapeAttr(compound.id || '')}" data-balancing-side="${escapeAttr(side)}" data-n-atoms="${escapeAttr(String(compound.atomMap?.N || 0))}" data-h-atoms="${escapeAttr(String(compound.atomMap?.H || 0))}" aria-label="${escapeAttr(label)}">
+          ${options.map((value) => `<option value="${escapeAttr(String(value))}"${Number(value) === selected ? ' selected' : ''}>${escapeHtml(String(value))}</option>`).join('')}
+        </select>
+      </label>
+    `;
+  }
+
+  function renderProtectedFormulaParts(compound, interactive) {
+    return (Array.isArray(compound.formulaParts) ? compound.formulaParts : []).map((part) => {
+      const symbol = escapeHtml(part.element || '');
+      const subscript = Number(part.subscript) > 1 ? `<sub>${escapeHtml(String(part.subscript))}</sub>` : '';
+      if (!interactive) return `<span class="balancing-formula-part">${symbol}${subscript}</span>`;
+      return `<button type="button" class="balancing-element-token" draggable="true" data-balancing-element="${escapeAttr(part.element || '')}" data-balancing-source-compound="${escapeAttr(compound.id || '')}" aria-label="Select ${escapeAttr(part.element || '')} from ${escapeAttr(compound.accessibleName || compound.formula || '')}">${symbol}${subscript}</button>`;
+    }).join('');
+  }
+
+  function renderBalancingElementTable(visual) {
+    return `
+      <div class="balancing-element-instructions">
+        <strong>Build the element table</strong>
+        <span>Drag an element, or select it and then choose a destination.</span>
+      </div>
+      <div class="balancing-element-table">
+        ${renderBalancingDestination('reactants', visual.placements?.reactants || [])}
+        ${renderBalancingDestination('products', visual.placements?.products || [])}
+      </div>
+    `;
+  }
+
+  function renderBalancingDestination(side, placements) {
+    const label = side === 'products' ? 'PRODUCTS' : 'REACTANTS';
+    return `
+      <section class="balancing-element-column" aria-label="${label} element table column">
+        <h4>${label}</h4>
+        <button type="button" class="balancing-element-destination" data-balancing-destination="${escapeAttr(side)}" aria-label="Place selected element in ${label}">Place selected element here</button>
+        <div class="balancing-placement-list">
+          ${placements.length ? placements.map((placement) => `
+            <span class="balancing-placement-chip">
+              ${escapeHtml(placement.element || '')}
+              <button type="button" data-balancing-remove-element="${escapeAttr(placement.element || '')}" data-balancing-remove-side="${escapeAttr(side)}" aria-label="Remove ${escapeAttr(placement.element || '')} from ${label}">×</button>
+            </span>
+          `).join('') : '<span class="balancing-placement-empty">No elements placed yet</span>'}
+        </div>
+      </section>
+    `;
+  }
+
+  function renderCompletedBalancingTable(visual) {
+    return `
+      <div class="balancing-element-table is-complete" aria-label="Completed element table">
+        ${['reactants', 'products'].map((side) => {
+          const label = side === 'products' ? 'PRODUCTS' : 'REACTANTS';
+          const elements = (visual.placements?.[side] || []).map((placement) => placement.element);
+          return `<section class="balancing-element-column"><h4>${label}</h4><p>${elements.map(escapeHtml).join(' · ')}</p><span>Table complete</span></section>`;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  function renderBalancingCountColumn(side, counts) {
+    const label = side === 'products' ? 'PRODUCTS' : 'REACTANTS';
+    return `
+      <section class="balancing-count-column" data-balancing-count-side="${escapeAttr(side)}">
+        <h4>${label}</h4>
+        ${['N', 'H'].map((element) => {
+          const own = Number(counts?.[side]?.[element]) || 0;
+          const otherSide = side === 'reactants' ? 'products' : 'reactants';
+          const other = Number(counts?.[otherSide]?.[element]) || 0;
+          const matches = own === other;
+          return `<p><strong>${element}:</strong> <span data-balancing-count="${side}:${element}">${own}</span> <span data-balancing-match="${side}:${element}">${matches ? 'Matches' : 'Does not match'}</span></p>`;
+        }).join('')}
+      </section>
+    `;
+  }
+
+  function renderConventionalEquation() {
+    return '<span class="balancing-formula">N<sub>2</sub> + 3H<sub>2</sub> → 2NH<sub>3</sub></span>';
   }
 
   function renderMetricStairStepVisual(visual, turnId, context = {}) {
@@ -2573,6 +2721,19 @@
   }
 
   function handleTimelineDragStart(event) {
+    const balancingToken = event.target.closest('[data-balancing-element][data-balancing-source-compound]');
+    if (balancingToken && timeline.contains(balancingToken)) {
+      if (!isLiveTutorControl(balancingToken) || !event.dataTransfer) return;
+      const payload = {
+        element: balancingToken.getAttribute('data-balancing-element') || '',
+        compoundId: balancingToken.getAttribute('data-balancing-source-compound') || ''
+      };
+      event.dataTransfer.effectAllowed = 'copy';
+      event.dataTransfer.setData('application/x-chemical-balancing-element', JSON.stringify(payload));
+      event.dataTransfer.setData('text/plain', payload.element);
+      balancingToken.classList.add('is-dragging');
+      return;
+    }
     const chip = event.target.closest('[data-picket-fence-drag-answer]');
     if (!chip || !timeline.contains(chip)) return;
     if (!isLiveTutorControl(chip)) return;
@@ -2588,6 +2749,14 @@
   }
 
   function handleTimelineDragOver(event) {
+    const balancingDestination = event.target.closest('[data-balancing-destination]');
+    if (balancingDestination && timeline.contains(balancingDestination)) {
+      if (!isLiveTutorControl(balancingDestination)) return;
+      event.preventDefault();
+      if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
+      balancingDestination.classList.add('is-drag-over');
+      return;
+    }
     const dropZone = event.target.closest('[data-picket-fence-drop-section]');
     if (!dropZone || !timeline.contains(dropZone)) return;
     if (!isLiveTutorControl(dropZone)) return;
@@ -2597,6 +2766,13 @@
   }
 
   function handleTimelineDragLeave(event) {
+    const balancingDestination = event.target.closest('[data-balancing-destination]');
+    if (balancingDestination && timeline.contains(balancingDestination)) {
+      if (!event.relatedTarget || !balancingDestination.contains(event.relatedTarget)) {
+        balancingDestination.classList.remove('is-drag-over');
+      }
+      return;
+    }
     const dropZone = event.target.closest('[data-picket-fence-drop-section]');
     if (!dropZone || !timeline.contains(dropZone)) return;
     const relatedTarget = event.relatedTarget;
@@ -2605,6 +2781,26 @@
   }
 
   function handleTimelineDrop(event) {
+    const balancingDestination = event.target.closest('[data-balancing-destination]');
+    if (balancingDestination && timeline.contains(balancingDestination)) {
+      if (!isLiveTutorControl(balancingDestination)) return;
+      event.preventDefault();
+      balancingDestination.classList.remove('is-drag-over');
+      let payload = null;
+      try {
+        payload = JSON.parse(event.dataTransfer?.getData('application/x-chemical-balancing-element') || 'null');
+      } catch (_error) {
+        payload = null;
+      }
+      if (payload?.element && payload?.compoundId) {
+        sendBalancingAction(balancingDestination, 'place_element', {
+          side: balancingDestination.getAttribute('data-balancing-destination') || '',
+          element: payload.element,
+          compoundId: payload.compoundId
+        });
+      }
+      return;
+    }
     const dropZone = event.target.closest('[data-picket-fence-drop-section]');
     if (!dropZone || !timeline.contains(dropZone)) return;
     if (!isLiveTutorControl(dropZone)) return;
@@ -2622,7 +2818,7 @@
   }
 
   function clearPicketFenceDragState() {
-    timeline?.querySelectorAll('.student-tutor-answer-chip.is-dragging, .picket-fence-drop-zone.is-drag-over').forEach((element) => {
+    timeline?.querySelectorAll('.student-tutor-answer-chip.is-dragging, .picket-fence-drop-zone.is-drag-over, .balancing-element-token.is-dragging, .balancing-element-destination.is-drag-over').forEach((element) => {
       element.classList.remove('is-dragging', 'is-drag-over');
     });
   }
@@ -2720,6 +2916,49 @@
       return;
     }
 
+    const balancingElement = event.target.closest('[data-balancing-element][data-balancing-source-compound]');
+    if (balancingElement && timeline.contains(balancingElement)) {
+      if (!isLiveTutorControl(balancingElement)) return;
+      selectBalancingElement(balancingElement);
+      return;
+    }
+
+    const balancingDestination = event.target.closest('[data-balancing-destination]');
+    if (balancingDestination && timeline.contains(balancingDestination)) {
+      if (!isLiveTutorControl(balancingDestination) || !selectedBalancingElement) return;
+      sendBalancingAction(balancingDestination, 'place_element', {
+        side: balancingDestination.getAttribute('data-balancing-destination') || '',
+        element: selectedBalancingElement.element,
+        compoundId: selectedBalancingElement.compoundId
+      });
+      selectedBalancingElement = null;
+      return;
+    }
+
+    const balancingRemove = event.target.closest('[data-balancing-remove-element]');
+    if (balancingRemove && timeline.contains(balancingRemove)) {
+      if (!isLiveTutorControl(balancingRemove)) return;
+      sendBalancingAction(balancingRemove, 'remove_element', {
+        side: balancingRemove.getAttribute('data-balancing-remove-side') || '',
+        element: balancingRemove.getAttribute('data-balancing-remove-element') || ''
+      });
+      return;
+    }
+
+    const balancingCheck = event.target.closest('[data-balancing-check]');
+    if (balancingCheck && timeline.contains(balancingCheck)) {
+      if (!isLiveTutorControl(balancingCheck)) return;
+      sendBalancingAction(balancingCheck, 'check_balance');
+      return;
+    }
+
+    const balancingReset = event.target.closest('[data-balancing-reset]');
+    if (balancingReset && timeline.contains(balancingReset)) {
+      if (!isLiveTutorControl(balancingReset)) return;
+      sendBalancingAction(balancingReset, 'reset');
+      return;
+    }
+
     const metricStairStepControl = event.target.closest('[data-metric-stair-step-index], [data-metric-stair-step-move]');
     if (metricStairStepControl && handleMetricStairStepClick(metricStairStepControl)) {
       return;
@@ -2780,6 +3019,89 @@
     }
   }
 
+  function handleTimelineChange(event) {
+    const select = event.target.closest('[data-balancing-coefficient]');
+    if (!select || !timeline.contains(select) || !isLiveTutorControl(select)) return;
+    const value = Number(select.value);
+    updateBalancingCountsFromControls(select.closest('[data-balancing-workspace]'));
+    sendBalancingAction(select, 'set_coefficient', {
+      compoundId: select.getAttribute('data-compound-id') || '',
+      value
+    });
+  }
+
+  function selectBalancingElement(control) {
+    const workspace = control.closest('[data-balancing-workspace]');
+    workspace?.querySelectorAll('[data-balancing-element]').forEach((element) => {
+      const selected = element === control;
+      element.classList.toggle('is-selected', selected);
+      element.setAttribute('aria-pressed', selected ? 'true' : 'false');
+    });
+    selectedBalancingElement = {
+      element: control.getAttribute('data-balancing-element') || '',
+      compoundId: control.getAttribute('data-balancing-source-compound') || ''
+    };
+    const announcement = workspace?.querySelector('[data-balancing-announcement]');
+    if (announcement) announcement.textContent = `${selectedBalancingElement.element} selected. Choose REACTANTS or PRODUCTS.`;
+  }
+
+  function sendBalancingAction(control, type, payload = {}) {
+    const workspace = control.closest('[data-balancing-workspace]');
+    const activityId = workspace?.getAttribute('data-balancing-activity-id') || '';
+    if (!activityId) return;
+    const command = `balance_activity:${JSON.stringify({ type, activityId, ...payload })}`;
+    sendTutorCommand(command, BALANCING_PENDING_TRANSCRIPT_LABEL, {
+      resolveDisplayCommand: resolveConfirmedBalancingTranscriptLabel
+    });
+  }
+
+  function resolveConfirmedBalancingTranscriptLabel(data) {
+    const tutor = data?.tutor && typeof data.tutor === 'object' ? data.tutor : null;
+    const work = tutor?.work && typeof tutor.work === 'object' ? tutor.work : null;
+    const activityId = String(
+      tutor?.activity?.id ||
+      work?.activity?.id ||
+      tutor?.visualMetadata?.activityId ||
+      work?.visualMetadata?.activityId ||
+      ''
+    ).trim();
+    const label = String(tutor?.latestStudentReply || work?.latestStudentReply || '').trim();
+    if (activityId !== BALANCING_ACTIVITY_ID || !label || hasUnsafeBalancingTranscriptContent(label)) {
+      return BALANCING_PENDING_TRANSCRIPT_LABEL;
+    }
+    return label;
+  }
+
+  function hasUnsafeBalancingTranscriptContent(label) {
+    return /balance_activity:|unit9\.balance-ammonia|place_element|remove_element|set_coefficient|check_balance|[{}]/i.test(String(label || ''));
+  }
+
+  function updateBalancingCountsFromControls(workspace) {
+    if (!workspace) return;
+    const counts = { reactants: { N: 0, H: 0 }, products: { N: 0, H: 0 } };
+    workspace.querySelectorAll('[data-balancing-coefficient]').forEach((select) => {
+      const side = select.getAttribute('data-balancing-side') || '';
+      if (!counts[side]) return;
+      const coefficient = Number(select.value) || 0;
+      counts[side].N += coefficient * (Number(select.getAttribute('data-n-atoms')) || 0);
+      counts[side].H += coefficient * (Number(select.getAttribute('data-h-atoms')) || 0);
+    });
+    for (const side of ['reactants', 'products']) {
+      for (const element of ['N', 'H']) {
+        const count = counts[side][element];
+        const other = counts[side === 'reactants' ? 'products' : 'reactants'][element];
+        const countNode = workspace.querySelector(`[data-balancing-count="${side}:${element}"]`);
+        const matchNode = workspace.querySelector(`[data-balancing-match="${side}:${element}"]`);
+        if (countNode) countNode.textContent = String(count);
+        if (matchNode) matchNode.textContent = count === other ? 'Matches' : 'Does not match';
+      }
+    }
+    const announcement = workspace.querySelector('[data-balancing-announcement]');
+    if (announcement) {
+      announcement.textContent = `Counts updated. Reactants: N ${counts.reactants.N}, H ${counts.reactants.H}. Products: N ${counts.products.N}, H ${counts.products.H}.`;
+    }
+  }
+
   function handleComposerTutorChoiceClick(event) {
     const tutorChoiceButton = event.target.closest('[data-tutor-choice]');
     if (!tutorChoiceButton || !composerTutorChoices?.contains(tutorChoiceButton)) return;
@@ -2822,15 +3144,20 @@
     return work.finalAnswer || work.answer || turn.response || lastAnswerText;
   }
 
-  async function sendTutorCommand(command) {
+  async function sendTutorCommand(command, displayCommand = command, options = {}) {
     if (!command || !sessionIsValid) return;
 
-    const turnId = addPendingTurn(command);
+    const turnId = addPendingTurn(displayCommand);
     setSendingState();
 
     try {
       const data = await sendStudentMessage(command);
-      renderStudentMessageResult(data, command, { turnId });
+      const confirmedDisplayCommand = typeof options.resolveDisplayCommand === 'function'
+        ? options.resolveDisplayCommand(data)
+        : displayCommand;
+      const turn = findTurn(turnId);
+      if (turn) turn.message = confirmedDisplayCommand;
+      renderStudentMessageResult(data, confirmedDisplayCommand, { turnId });
     } catch (error) {
       renderStudentError(turnId, error);
     } finally {
@@ -3572,7 +3899,8 @@
 
   if (window.__CHARLEMAGNE_ENABLE_STUDENT_UI_TEST_HOOKS__ === true) {
     window.CharlemagneStudentUiTestHooks = {
-      renderPicketFenceVisual
+      renderPicketFenceVisual,
+      resolveConfirmedBalancingTranscriptLabel
     };
   }
 

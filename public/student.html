@@ -2005,6 +2005,216 @@
         }
       }
 
+      .balancing-workspace {
+        display: grid;
+        gap: 0.72rem;
+        padding: 0.78rem;
+        border: 1px solid rgba(126, 233, 255, 0.26);
+        border-radius: 10px;
+        background: rgba(4, 18, 21, 0.78);
+      }
+
+      .balancing-protected-equation {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: center;
+        gap: 0.45rem;
+        min-height: 3.4rem;
+        padding: 0.62rem;
+        border: 1px solid rgba(102, 247, 209, 0.22);
+        border-radius: 8px;
+        color: #f5fffb;
+        background: rgba(0, 0, 0, 0.22);
+        font-size: 1.18rem;
+      }
+
+      .balancing-compound,
+      .balancing-formula {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 0.16rem;
+      }
+
+      .balancing-formula sub {
+        font-size: 0.7em;
+        line-height: 0;
+      }
+
+      .balancing-coefficient-static {
+        color: #ffe98e;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .balancing-equation-plus,
+      .balancing-equation-arrow {
+        color: #9eeeff;
+        font-weight: 800;
+      }
+
+      .balancing-coefficient-select {
+        min-width: 3.3rem;
+        padding: 0.32rem;
+        border: 1px solid rgba(126, 233, 255, 0.5);
+        border-radius: 6px;
+        color: #f5fffb;
+        background: #09262b;
+        font: inherit;
+      }
+
+      .balancing-coefficient-select:focus-visible,
+      .balancing-element-token:focus-visible,
+      .balancing-element-destination:focus-visible,
+      .balancing-placement-chip button:focus-visible {
+        outline: 3px solid #ffe66a;
+        outline-offset: 3px;
+      }
+
+      .balancing-element-token {
+        margin: 0;
+        padding: 0.22rem 0.3rem;
+        border: 1px solid rgba(102, 247, 209, 0.36);
+        border-radius: 6px;
+        color: #f5fffb;
+        background: rgba(102, 247, 209, 0.08);
+        font: inherit;
+        cursor: grab;
+      }
+
+      .balancing-element-token.is-selected {
+        border-color: #ffe66a;
+        box-shadow: 0 0 0 2px rgba(255, 230, 106, 0.24);
+      }
+
+      .balancing-protected-note,
+      .balancing-element-instructions,
+      .balancing-announcement,
+      .balancing-reduction-note,
+      .balancing-final-equation {
+        margin: 0;
+        color: #c9dfdc;
+        line-height: 1.45;
+      }
+
+      .balancing-element-instructions {
+        display: grid;
+        gap: 0.16rem;
+      }
+
+      .balancing-element-instructions strong,
+      .balancing-final-equation strong {
+        color: #f5fffb;
+      }
+
+      .balancing-element-table,
+      .balancing-count-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.62rem;
+      }
+
+      .balancing-element-column,
+      .balancing-count-column {
+        display: grid;
+        align-content: start;
+        gap: 0.46rem;
+        padding: 0.62rem;
+        border: 1px solid rgba(126, 233, 255, 0.18);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.025);
+      }
+
+      .balancing-element-column h4,
+      .balancing-count-column h4,
+      .balancing-count-column p,
+      .balancing-element-column p {
+        margin: 0;
+      }
+
+      .balancing-element-column h4,
+      .balancing-count-column h4 {
+        color: #9eeeff;
+        letter-spacing: 0.07em;
+      }
+
+      .balancing-element-destination {
+        min-height: 3rem;
+        border: 1px dashed rgba(102, 247, 209, 0.5);
+        border-radius: 7px;
+        color: #dffaf3;
+        background: rgba(102, 247, 209, 0.06);
+        cursor: pointer;
+      }
+
+      .balancing-element-destination.is-drag-over {
+        border-style: solid;
+        background: rgba(102, 247, 209, 0.18);
+      }
+
+      .balancing-placement-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        min-height: 2rem;
+        align-items: center;
+      }
+
+      .balancing-placement-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.3rem 0.42rem;
+        border-radius: 999px;
+        color: #071719;
+        background: #8ff5dc;
+        font-weight: 800;
+      }
+
+      .balancing-placement-chip button {
+        width: 1.45rem;
+        height: 1.45rem;
+        border: 0;
+        border-radius: 50%;
+        color: #071719;
+        background: rgba(0, 0, 0, 0.12);
+        cursor: pointer;
+      }
+
+      .balancing-placement-empty,
+      .balancing-element-table.is-complete span,
+      .balancing-count-column span {
+        color: #a9c3c0;
+        font-size: 0.82rem;
+      }
+
+      .balancing-count-column p {
+        display: grid;
+        grid-template-columns: auto auto minmax(7rem, 1fr);
+        align-items: baseline;
+        gap: 0.35rem;
+        color: #f5fffb;
+      }
+
+      .balancing-count-column [data-balancing-match] {
+        justify-self: end;
+      }
+
+      .balancing-workspace-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+
+      .balancing-reduction-note {
+        padding: 0.55rem;
+        border-left: 3px solid #ffe66a;
+        background: rgba(255, 230, 106, 0.08);
+      }
+
+      .balancing-announcement:empty {
+        min-height: 0;
+      }
+
       @media (max-width: 820px) {
         .student-shell {
           width: calc(100% - 0.8rem);
@@ -2059,6 +2269,11 @@
         .student-tutor-body,
         .student-tutor-grid,
         .student-tutor-session-step {
+          grid-template-columns: 1fr;
+        }
+
+        .balancing-element-table,
+        .balancing-count-grid {
           grid-template-columns: 1fr;
         }
 
