@@ -32,7 +32,8 @@ async function main() {
   await assertBalancingUiTranscriptFlow(harness, sessionId, studentUiHooks);
   await assertTranscriptSafety(harness, sessionId);
   await assertCoefficientChecksAndCompletion(harness, sessionId);
-  await assertBalancedNotSimplifiedAndReset(harness, sessionId);
+  await assertBalancedNotSimplifiedReductionAndReset(harness, sessionId, studentUiHooks);
+  await assertPostCompletionBalancingCommandSafety(harness, sessionId);
   await assertUnit1BalanceVocabularyPreserved(harness, sessionId);
 
   console.log('PASS Unit 9 balancing workspace: trusted bounded route, accessible UI contract, validated activity state, coefficient checks, and reset');
@@ -48,6 +49,12 @@ function assertTrustedDefinition() {
   assert.deepEqual(AMMONIA_BALANCING_ACTIVITY.coefficientOptions, [1, 2, 3, 4, 5, 6, 7, 8]);
   assert.deepEqual(AMMONIA_BALANCING_ACTIVITY.initialCoefficients, { nitrogen: 1, hydrogen: 1, ammonia: 1 });
   assert.deepEqual(AMMONIA_BALANCING_ACTIVITY.simplestCoefficients, { nitrogen: 1, hydrogen: 3, ammonia: 2 });
+  assert.deepEqual(AMMONIA_BALANCING_ACTIVITY.coefficientReduction, {
+    factor: 2,
+    originalCoefficients: { nitrogen: 2, hydrogen: 6, ammonia: 4 },
+    reducedCoefficients: { nitrogen: 1, hydrogen: 3, ammonia: 2 }
+  });
+  assert.ok(Object.isFrozen(AMMONIA_BALANCING_ACTIVITY.coefficientReduction));
   assert.equal(AMMONIA_BALANCING_ACTIVITY.finalConventionalEquation, 'N2 + 3H2 → 2NH3');
   assert.equal(AMMONIA_BALANCING_ACTIVITY.provenance.kind, 'user_approved_trusted_fact');
   assert.deepEqual(AMMONIA_BALANCING_ACTIVITY.reactants.map((item) => item.atomMap), [{ N: 2 }, { H: 2 }]);
@@ -310,6 +317,13 @@ async function assertTranscriptSafety(harness, sessionId) {
   await action(harness, sessionId, hubId, 'set_coefficient', { compoundId: 'hydrogen', value: 3 });
   await action(harness, sessionId, hubId, 'check_balance');
   await action(harness, sessionId, hubId, 'reset');
+  await action(harness, sessionId, hubId, 'set_coefficient', { compoundId: 'nitrogen', value: 2 });
+  await action(harness, sessionId, hubId, 'set_coefficient', { compoundId: 'hydrogen', value: 6 });
+  await action(harness, sessionId, hubId, 'set_coefficient', { compoundId: 'ammonia', value: 4 });
+  await action(harness, sessionId, hubId, 'check_balance');
+  await action(harness, sessionId, hubId, 'reduce_coefficient', { compoundId: 'nitrogen', divisor: 2 });
+  await action(harness, sessionId, hubId, 'reduce_coefficient', { compoundId: 'hydrogen', divisor: 2 });
+  await action(harness, sessionId, hubId, 'reduce_coefficient', { compoundId: 'ammonia', divisor: 2 });
 
   const ordinaryHubId = 'ordinary-transcript';
   const ordinaryQuestion = 'What does mass measure?';
@@ -319,7 +333,7 @@ async function assertTranscriptSafety(harness, sessionId) {
   const sessionTranscript = harness.studentSessions[sessionId].messages;
   for (const transcript of [hubMessages, sessionTranscript]) {
     const transcriptJson = JSON.stringify(transcript);
-    assert.doesNotMatch(transcriptJson, /balance_activity:|place_element|remove_element|set_coefficient|check_balance|unit9\.balance-ammonia/);
+    assert.doesNotMatch(transcriptJson, /balance_activity:|place_element|remove_element|set_coefficient|check_balance|reduce_coefficient|unit9\.balance-ammonia/);
   }
   const loggedControlMessages = harness.studentInteractionLog
     .filter((entry) => entry.debug?.studentHubId === hubId)
@@ -330,12 +344,15 @@ async function assertTranscriptSafety(harness, sessionId) {
     }));
   assert.doesNotMatch(
     JSON.stringify(loggedControlMessages),
-    /balance_activity:|place_element|remove_element|set_coefficient|check_balance|unit9\.balance-ammonia/
+    /balance_activity:|place_element|remove_element|set_coefficient|check_balance|reduce_coefficient|unit9\.balance-ammonia/
   );
   assert.ok(hubMessages.some((entry) => entry.message === 'Placed nitrogen under REACTANTS'));
   assert.ok(hubMessages.some((entry) => entry.message === 'Changed the H2 coefficient to 3'));
   assert.ok(hubMessages.some((entry) => entry.message === 'Checked the equation balance'));
   assert.ok(hubMessages.some((entry) => entry.message === 'Reset the coefficients'));
+  assert.ok(hubMessages.some((entry) => entry.message === 'Reduced the N2 coefficient by 2'));
+  assert.ok(hubMessages.some((entry) => entry.message === 'Reduced the H2 coefficient by 2'));
+  assert.ok(hubMessages.some((entry) => entry.message === 'Reduced the NH3 coefficient by 2'));
   assert.equal(
     harness.studentSessions[sessionId].anonymousHubs[ordinaryHubId].messages[0].message,
     ordinaryQuestion,
@@ -351,9 +368,9 @@ async function assertTranscriptSafety(harness, sessionId) {
   assert.ok(ordinaryHub);
   assert.doesNotMatch(
     JSON.stringify(teacherHub.recentMessages),
-    /balance_activity:|\"activityId\"|place_element|remove_element|set_coefficient|check_balance|unit9\.balance-ammonia/
+    /balance_activity:|\"activityId\"|place_element|remove_element|set_coefficient|check_balance|reduce_coefficient|unit9\.balance-ammonia/
   );
-  assert.ok(teacherHub.recentMessages.some((entry) => entry.message === 'Placed nitrogen under REACTANTS'));
+  assert.ok(teacherHub.recentMessages.some((entry) => entry.message === 'Reduced the NH3 coefficient by 2'));
   assert.equal(ordinaryHub.recentMessages[0].message, ordinaryQuestion);
   assert.equal(
     teacherHub.recentMessages.some((entry) => entry.message === ordinaryQuestion),
@@ -372,6 +389,12 @@ async function assertCoefficientChecksAndCompletion(harness, sessionId) {
     products: { N: 1, H: 3 }
   });
   assert.deepEqual(response.body.tutor.activity.coefficients, { nitrogen: 1, hydrogen: 1, ammonia: 1 });
+
+  const reductionBeforeCheck = await action(harness, sessionId, initialHub, 'reduce_coefficient', {
+    compoundId: 'nitrogen', divisor: 2
+  });
+  assert.match(reductionBeforeCheck.body.response, /reduction step is not active/i);
+  assert.equal(reductionBeforeCheck.body.tutor.activity.reductionProgress, null);
 
   const invalid = await action(harness, sessionId, initialHub, 'set_coefficient', { compoundId: 'hydrogen', value: 9 });
   assert.match(invalid.body.response, /1 through 8/i);
@@ -397,7 +420,7 @@ async function assertCoefficientChecksAndCompletion(harness, sessionId) {
   assert.equal(harness.studentSessions[sessionId].anonymousHubs[completeHub].currentTutorProblem, null);
 }
 
-async function assertBalancedNotSimplifiedAndReset(harness, sessionId) {
+async function assertBalancedNotSimplifiedReductionAndReset(harness, sessionId, studentUiHooks) {
   const hubId = 'not-simplified';
   await startAndCompleteTable(harness, sessionId, hubId);
   await action(harness, sessionId, hubId, 'set_coefficient', { compoundId: 'nitrogen', value: 2 });
@@ -411,22 +434,114 @@ async function assertBalancedNotSimplifiedAndReset(harness, sessionId) {
   response = await action(harness, sessionId, hubId, 'check_balance');
   assert.equal(response.body.tutor.completed, false);
   assert.equal(response.body.tutor.active, true);
+  assert.equal(response.body.tutor.activity.phase, 'reduction');
   assert.equal(response.body.tutor.activity.latestCheck.status, 'balanced_not_simplified');
   assert.deepEqual(response.body.tutor.activity.balancedNotSimplified, {
     factor: 2,
     selectedCoefficients: [2, 6, 4],
     reducedCoefficients: [1, 3, 2]
   });
-  assert.match(response.body.response, /share a factor of 2/i);
-  assert.match(response.body.response, /reduce to 1, 3, and 2/i);
+  assert.match(response.body.response, /atom totals match.*equation is balanced/i);
+  assert.match(response.body.response, /not in the smallest whole-number ratio/i);
+  assert.match(response.body.response, /all three coefficients can be divided.*factor of 2/i);
+  assert.equal(response.body.tutor.activity.completionEligible, false);
+  assert.deepEqual(response.body.tutor.activity.reductionProgress, {
+    factor: 2,
+    items: [
+      { compoundId: 'nitrogen', formula: 'N2', accessibleName: 'nitrogen gas', originalCoefficient: 2, divisor: 2, reducedCoefficient: 1, reduced: false },
+      { compoundId: 'hydrogen', formula: 'H2', accessibleName: 'hydrogen gas', originalCoefficient: 6, divisor: 2, reducedCoefficient: 3, reduced: false },
+      { compoundId: 'ammonia', formula: 'NH3', accessibleName: 'ammonia', originalCoefficient: 4, divisor: 2, reducedCoefficient: 2, reduced: false }
+    ],
+    completedCount: 0,
+    totalCount: 3,
+    complete: false
+  });
   assert.ok(harness.studentSessions[sessionId].anonymousHubs[hubId].currentTutorProblem);
 
-  response = await action(harness, sessionId, hubId, 'reset');
+  const renderBalancing = studentUiHooks.renderChemicalEquationBalancingVisual;
+  assert.equal(typeof renderBalancing, 'function');
+  let rendered = renderBalancing(response.body.tutor.visualMetadata, 'reduction-test');
+  assert.match(rendered, /Balanced, but not in the smallest whole-number ratio/);
+  assert.match(rendered, /All three coefficients can be divided by the trusted common factor of 2/);
+  assert.match(rendered, /data-balancing-reduce[^>]*data-compound-id="nitrogen"[^>]*aria-label="Reduce nitrogen gas coefficient: 2 ÷ 2 = 1"/);
+  assert.match(rendered, /data-balancing-reduce[^>]*data-compound-id="hydrogen"[^>]*aria-label="Reduce hydrogen gas coefficient: 6 ÷ 2 = 3"/);
+  assert.match(rendered, /data-balancing-reduce[^>]*data-compound-id="ammonia"[^>]*aria-label="Reduce ammonia coefficient: 4 ÷ 2 = 2"/);
+  assert.match(rendered, /role="status" aria-live="polite" aria-atomic="true">0 of 3 coefficients reduced/);
+
+  const wrongDivisor = await action(harness, sessionId, hubId, 'reduce_coefficient', { compoundId: 'nitrogen', divisor: 3 });
+  assert.match(wrongDivisor.body.response, /trusted common factor of 2/i);
+  assert.equal(wrongDivisor.body.tutor.activity.reductionProgress.completedCount, 0);
+
+  const wrongCoefficient = await action(harness, sessionId, hubId, 'reduce_coefficient', { compoundId: 'browser-supplied', divisor: 2 });
+  assert.match(wrongCoefficient.body.response, /not part of this trusted reduction/i);
+  assert.equal(wrongCoefficient.body.tutor.activity.reductionProgress.completedCount, 0);
+
+  const malformedDivisor = await action(harness, sessionId, hubId, 'reduce_coefficient', { compoundId: 'nitrogen', divisor: '2' });
+  assert.match(malformedDivisor.body.response, /malformed/i);
+  assert.equal(malformedDivisor.body.tutor.activity.reductionProgress.completedCount, 0);
+
+  const unsupportedValue = await action(harness, sessionId, hubId, 'reduce_coefficient', {
+    compoundId: 'nitrogen', divisor: 2, reducedValue: 999
+  });
+  assert.match(unsupportedValue.body.response, /malformed/i);
+  assert.equal(unsupportedValue.body.tutor.activity.reductionProgress.completedCount, 0);
+
+  const blockedCoefficientChange = await action(harness, sessionId, hubId, 'set_coefficient', { compoundId: 'nitrogen', value: 1 });
+  assert.match(blockedCoefficientChange.body.response, /finish the divide-by-2 reduction or reset/i);
+  assert.deepEqual(blockedCoefficientChange.body.tutor.activity.coefficients, { nitrogen: 2, hydrogen: 6, ammonia: 4 });
+
+  response = await action(harness, sessionId, hubId, 'reduce_coefficient', { compoundId: 'nitrogen', divisor: 2 });
+  assert.equal(response.body.tutor.completed, false);
+  assert.equal(response.body.tutor.activity.reductionProgress.completedCount, 1);
+  assert.match(response.body.response, /2 ÷ 2 = 1.*1 of 3.*not complete yet/i);
+  rendered = renderBalancing(response.body.tutor.visualMetadata, 'reduction-test-partial');
+  assert.match(rendered, /<del aria-label="original coefficient 2">2<\/del>/);
+  assert.match(rendered, /<ins aria-label="replacement coefficient 1">1<\/ins>/);
+
+  const duplicate = await action(harness, sessionId, hubId, 'reduce_coefficient', { compoundId: 'nitrogen', divisor: 2 });
+  assert.match(duplicate.body.response, /already been reduced.*remaining coefficient/i);
+  assert.equal(duplicate.body.tutor.activity.reductionProgress.completedCount, 1);
+
+  response = await action(harness, sessionId, hubId, 'reduce_coefficient', { compoundId: 'hydrogen', divisor: 2 });
+  assert.equal(response.body.tutor.completed, false);
+  assert.equal(response.body.tutor.active, true);
+  assert.equal(response.body.tutor.activity.reductionProgress.completedCount, 2);
+  assert.equal(response.body.tutor.activity.completionEligible, false);
+  assert.match(response.body.response, /6 ÷ 2 = 3.*2 of 3.*not complete yet/i);
+
+  response = await action(harness, sessionId, hubId, 'reduce_coefficient', { compoundId: 'ammonia', divisor: 2 });
+  assert.equal(response.body.tutor.completed, true);
+  assert.equal(response.body.tutor.active, false);
+  assert.equal(response.body.tutor.activity.phase, 'complete');
+  assert.equal(response.body.tutor.activity.completionEligible, true);
+  assert.equal(response.body.tutor.activity.reductionProgress.completedCount, 3);
+  assert.equal(response.body.tutor.activity.reductionProgress.complete, true);
+  assert.deepEqual(response.body.tutor.activity.coefficients, { nitrogen: 1, hydrogen: 3, ammonia: 2 });
+  assert.match(response.body.response, /4 ÷ 2 = 2.*all 3 coefficients are reduced/i);
+  assert.match(response.body.response, /N2 \+ 3H2 → 2NH3/);
+  assert.equal(response.body.tutor.visualMetadata.finalConventionalEquation, 'N2 + 3H2 → 2NH3');
+  assert.equal(response.body.tutor.work.finalAnswer, 'N2 + 3H2 → 2NH3');
+  rendered = renderBalancing(response.body.tutor.visualMetadata, 'reduction-test-complete');
+  const finalEquationMarkup = rendered.match(/<p class="balancing-final-equation">[\s\S]*?<\/p>/)?.[0] || '';
+  assert.match(finalEquationMarkup, /N<sub>2<\/sub> \+ 3H<sub>2<\/sub> → 2NH<sub>3<\/sub>/);
+  assert.doesNotMatch(finalEquationMarkup, />1N/);
+  assert.equal(harness.studentSessions[sessionId].anonymousHubs[hubId].currentTutorProblem, null);
+
+  const resetHubId = 'not-simplified-reset';
+  await startAndCompleteTable(harness, sessionId, resetHubId);
+  await action(harness, sessionId, resetHubId, 'set_coefficient', { compoundId: 'nitrogen', value: 2 });
+  await action(harness, sessionId, resetHubId, 'set_coefficient', { compoundId: 'hydrogen', value: 6 });
+  await action(harness, sessionId, resetHubId, 'set_coefficient', { compoundId: 'ammonia', value: 4 });
+  await action(harness, sessionId, resetHubId, 'check_balance');
+  await action(harness, sessionId, resetHubId, 'reduce_coefficient', { compoundId: 'nitrogen', divisor: 2 });
+  response = await action(harness, sessionId, resetHubId, 'reset');
   assert.equal(response.body.tutor.activity.phase, 'coefficients');
   assert.equal(response.body.tutor.activity.tableComplete, true);
   assert.deepEqual(response.body.tutor.activity.coefficients, { nitrogen: 1, hydrogen: 1, ammonia: 1 });
   assert.equal(response.body.tutor.activity.latestCheck, null);
   assert.equal(response.body.tutor.activity.balancedNotSimplified, null);
+  assert.equal(response.body.tutor.activity.reductionProgress, null);
+  assert.equal(response.body.tutor.activity.completionEligible, false);
   assert.deepEqual(response.body.tutor.activity.placements, {
     reactants: [
       { element: 'N', sourceCompoundId: 'nitrogen' },
@@ -437,6 +552,88 @@ async function assertBalancedNotSimplifiedAndReset(harness, sessionId) {
       { element: 'H', sourceCompoundId: 'ammonia' }
     ]
   });
+}
+
+async function assertPostCompletionBalancingCommandSafety(harness, sessionId) {
+  const hubId = 'post-completion-command-safety';
+  await startAndCompleteTable(harness, sessionId, hubId);
+  await action(harness, sessionId, hubId, 'set_coefficient', { compoundId: 'nitrogen', value: 2 });
+  await action(harness, sessionId, hubId, 'set_coefficient', { compoundId: 'hydrogen', value: 6 });
+  await action(harness, sessionId, hubId, 'set_coefficient', { compoundId: 'ammonia', value: 4 });
+  await action(harness, sessionId, hubId, 'check_balance');
+  await action(harness, sessionId, hubId, 'reduce_coefficient', { compoundId: 'nitrogen', divisor: 2 });
+  await action(harness, sessionId, hubId, 'reduce_coefficient', { compoundId: 'hydrogen', divisor: 2 });
+  const completed = await action(harness, sessionId, hubId, 'reduce_coefficient', { compoundId: 'ammonia', divisor: 2 });
+
+  const hub = harness.studentSessions[sessionId].anonymousHubs[hubId];
+  assert.equal(completed.body.tutor.completed, true);
+  assert.equal(hub.currentTutorProblem, null, 'completed balancing activity should clear the tutor problem');
+  const completedActivity = JSON.parse(JSON.stringify(completed.body.tutor.activity));
+  const hubMessageStart = hub.messages.length;
+  const sessionMessageStart = harness.studentSessions[sessionId].messages.length;
+  const interactionLogStart = harness.studentInteractionLog.length;
+
+  const postCompletionCommands = [
+    activityMessage('reduce_coefficient', { compoundId: 'nitrogen', divisor: 2 }),
+    activityMessage('reduce_coefficient', { compoundId: 'ammonia', divisor: 2 }),
+    activityMessage('reduce_coefficient', { compoundId: 'hydrogen', divisor: 987654 }),
+    activityMessage('reduce_coefficient', { compoundId: 987654321, divisor: 2 }),
+    activityMessage('unknown_balancing_action', { compoundId: 'browser-supplied', divisor: 2 }),
+    activityMessage('reduce_coefficient', {
+      compoundId: 'nitrogen',
+      divisor: 2,
+      serializedPayload: { secretMarker: 'must-not-leak' }
+    }),
+    activityMessage('reduce_coefficient', {
+      activityId: 'stale.activity.marker',
+      compoundId: 'nitrogen',
+      divisor: 2
+    }, false)
+  ];
+
+  for (const command of postCompletionCommands) {
+    const replay = await send(harness, sessionId, hubId, command);
+    assert.equal(replay.statusCode, 200);
+    assert.equal(replay.body.routeType, 'tutor_control');
+    assert.notEqual(replay.body.routeType, 'chemistry_formula');
+    assert.match(replay.body.response, /balancing workspace is no longer active/i);
+    assert.equal(replay.body.tutor, null);
+    assert.equal(hub.currentTutorProblem, null, 'a stale balancing command must not recreate an activity');
+  }
+
+  assert.deepEqual(completed.body.tutor.activity, completedActivity, 'post-completion commands must not alter completed state');
+
+  const hubEntries = hub.messages.slice(hubMessageStart);
+  const sessionEntries = harness.studentSessions[sessionId].messages.slice(sessionMessageStart);
+  const loggedEntries = harness.studentInteractionLog.slice(interactionLogStart);
+  const teacher = await harness.request('GET', '/api/profile/live-student-activity');
+  assert.equal(teacher.statusCode, 200);
+  const teacherSession = teacher.body.sessions.find((item) => item.classSessionId === sessionId);
+  const teacherHub = teacherSession.anonymousHubs.find((item) => item.studentHubId === hubId);
+  const teacherEntries = teacherHub.recentMessages.slice(-postCompletionCommands.length);
+
+  for (const entries of [hubEntries, sessionEntries, loggedEntries, teacherEntries]) {
+    assert.equal(entries.length, postCompletionCommands.length);
+    assert.doesNotMatch(
+      JSON.stringify(entries),
+      /balance_activity:|reduce_coefficient|unknown_balancing_action|unit9\.balance-ammonia|stale\.activity\.marker|browser-supplied|nitrogen|hydrogen|ammonia|987654|"activityId"|"compoundId"|"divisor"|serializedPayload|secretMarker|must-not-leak|chemistry_compounds/
+    );
+  }
+
+  for (const entry of [...hubEntries, ...sessionEntries]) {
+    assert.equal(entry.message, 'Used the balancing workspace controls');
+    assert.equal(entry.routeType, 'tutor_control');
+  }
+  for (const entry of teacherEntries) {
+    assert.equal(entry.message, 'Used the balancing workspace controls');
+    assert.equal(entry.question, 'Used the balancing workspace controls');
+    assert.equal(entry.routeType, 'tutor_control');
+  }
+  for (const entry of loggedEntries) {
+    assert.equal(entry.message, 'Used the balancing workspace controls');
+    assert.equal(entry.routeType, 'tutor_control');
+    assert.deepEqual(entry.debug.route.toolsUsed, ['tutor_control']);
+  }
 }
 
 async function assertUnit1BalanceVocabularyPreserved(harness, sessionId) {
@@ -466,9 +663,15 @@ function assertStudentUiContract() {
   assert.match(ui, /function sendTutorCommand\(command, displayCommand = command, options = \{\}\)[\s\S]*addPendingTurn\(displayCommand\)[\s\S]*await sendStudentMessage\(command\)[\s\S]*options\.resolveDisplayCommand\(data\)[\s\S]*findTurn\(turnId\)[\s\S]*turn\.message = confirmedDisplayCommand[\s\S]*renderStudentMessageResult\(data, confirmedDisplayCommand/);
   assert.match(ui, /Check Balance/);
   assert.match(ui, /data-balancing-reset/);
+  assert.match(ui, /data-balancing-reduce[^]*data-balancing-divisor/);
+  assert.match(ui, /function renderBalancingReductionInteraction[\s\S]*trusted common factor[\s\S]*role="status" aria-live="polite"/);
+  assert.match(ui, /function renderBalancingReductionControl[\s\S]*<del aria-label="original coefficient[\s\S]*<ins aria-label="replacement coefficient/);
+  assert.match(ui, /function handleTimelineClick[\s\S]*'reduce_coefficient'[\s\S]*data-balancing-divisor/);
   assert.match(ui, /Matches.*Does not match/s);
   assert.match(ui, /role="status" aria-live="polite"/);
   assert.match(html, /\.balancing-coefficient-select:focus-visible/);
+  assert.match(html, /\.balancing-reduction-control:focus-visible/);
+  assert.match(html, /\.balancing-reduction-control[\s\S]*min-height:\s*44px/);
   assert.match(html, /\.balancing-element-table\.is-complete/);
 }
 

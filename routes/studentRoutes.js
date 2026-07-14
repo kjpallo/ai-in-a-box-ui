@@ -45,7 +45,11 @@ const {
 } = require('../lib/tutor/motionForceKnowledgeTutor');
 const { buildMotionForceFlashcardDeck } = require('../lib/knowledge/physics/motion-force/motionForceKnowledge');
 const { detectAnswerRepresentationIntent } = require('../lib/router/answerIntent');
-const { sanitizeBalancingActivityTranscriptMessage } = require('../lib/tutor/activities/ammoniaBalancingActivity');
+const {
+  ACTIVITY_ACTION_PREFIX,
+  isAmmoniaBalancingProblem,
+  sanitizeBalancingActivityTranscriptMessage
+} = require('../lib/tutor/activities/ammoniaBalancingActivity');
 
 function registerStudentRoutes(app, {
   answerStudentMessage,
@@ -152,6 +156,45 @@ function registerStudentRoutes(app, {
       const contextMessages = hub.messages;
       const lastAnsweredContext = findLastAnsweredContext(contextMessages);
       closeInactiveFormulaTutorProblem(hub);
+
+      if (message.startsWith(ACTIVITY_ACTION_PREFIX) && !isAmmoniaBalancingProblem(hub.currentTutorProblem)) {
+        const transcriptMessage = 'Used the balancing workspace controls';
+        const response = 'That balancing workspace is no longer active. Start the activity again to keep working.';
+        const entry = appendStudentHubEntry({
+          session,
+          hub,
+          message: transcriptMessage,
+          response,
+          routeType: 'tutor_control',
+          confidence: 'strong',
+          reportableForStandards: false
+        });
+
+        logCompletedInteraction({
+          message: transcriptMessage,
+          questionRoute: makeTutorControlRoute(entry),
+          answerGiven: response,
+          source: 'student',
+          sessionId,
+          reportableForStandards: false,
+          debug: {
+            className: session.className || '',
+            studentHubId,
+            tutorControl: {
+              active: false,
+              stale: true
+            }
+          }
+        });
+
+        return res.json({
+          response,
+          routeType: 'tutor_control',
+          confidence: 'strong',
+          rateLimit: rateLimitInfo,
+          tutor: null
+        });
+      }
 
       const tutorCelebrationFeedback = answerTutorCelebrationFeedback(message, contextMessages);
       if (!hub.currentTutorProblem && tutorCelebrationFeedback) {

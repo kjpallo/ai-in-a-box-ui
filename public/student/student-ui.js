@@ -1440,7 +1440,7 @@
     const reactants = Array.isArray(visual.reactants) ? visual.reactants : [];
     const products = Array.isArray(visual.products) ? visual.products : [];
     const tableComplete = visual.tableComplete === true;
-    const coefficientsEnabled = tableComplete && visual.phase !== 'complete';
+    const coefficientsEnabled = tableComplete && visual.phase === 'coefficients';
     const counts = visual.counts || { reactants: {}, products: {} };
     const options = Array.isArray(visual.coefficientOptions) ? visual.coefficientOptions : [];
     const activityId = String(visual.activityId || '');
@@ -1462,12 +1462,14 @@
             ${renderBalancingCountColumn('reactants', counts)}
             ${renderBalancingCountColumn('products', counts)}
           </div>
-          ${visual.balancedNotSimplified ? `
-            <p class="balancing-reduction-note">Balanced, but not smallest: factor ${escapeHtml(String(visual.balancedNotSimplified.factor || ''))}; reduce to ${escapeHtml((visual.balancedNotSimplified.reducedCoefficients || []).join(', '))}.</p>
-          ` : ''}
-          ${visual.phase !== 'complete' ? `
+          ${visual.phase === 'reduction' ? renderBalancingReductionInteraction(visual, turnId) : ''}
+          ${visual.phase === 'coefficients' ? `
             <div class="balancing-workspace-actions">
               <button type="button" class="student-tutor-control student-tutor-control--workspace" data-balancing-check>Check Balance</button>
+              <button type="button" class="student-tutor-control student-tutor-control--helper" data-balancing-reset>Reset</button>
+            </div>
+          ` : visual.phase === 'reduction' ? `
+            <div class="balancing-workspace-actions">
               <button type="button" class="student-tutor-control student-tutor-control--helper" data-balancing-reset>Reset</button>
             </div>
           ` : `
@@ -1476,6 +1478,47 @@
         ` : ''}
         <p class="balancing-announcement" data-balancing-announcement role="status" aria-live="polite" aria-atomic="true">${escapeHtml(visual.feedback || '')}</p>
       </section>
+    `;
+  }
+
+  function renderBalancingReductionInteraction(visual, turnId) {
+    const progress = visual.reductionProgress || {};
+    const items = Array.isArray(progress.items) ? progress.items : [];
+    const completedCount = Number(progress.completedCount) || 0;
+    const totalCount = Number(progress.totalCount) || items.length;
+    const progressId = `balancing-reduction-progress-${String(turnId || 'current')}`;
+    return `
+      <fieldset class="balancing-reduction-step" aria-describedby="${escapeAttr(progressId)}">
+        <legend>Balanced, but not in the smallest whole-number ratio</legend>
+        <p class="balancing-reduction-note">All three coefficients can be divided by the trusted common factor of ${escapeHtml(String(progress.factor ?? ''))}. Reduce each coefficient to finish.</p>
+        <div class="balancing-reduction-controls" aria-label="Coefficient reductions">
+          ${items.map((item) => renderBalancingReductionControl(item)).join('')}
+        </div>
+        <p id="${escapeAttr(progressId)}" class="balancing-reduction-progress" role="status" aria-live="polite" aria-atomic="true">${escapeHtml(String(completedCount))} of ${escapeHtml(String(totalCount))} coefficients reduced.${completedCount < totalCount ? ' Complete all three reductions to finish.' : ''}</p>
+      </fieldset>
+    `;
+  }
+
+  function renderBalancingReductionControl(item) {
+    const original = Number(item?.originalCoefficient);
+    const divisor = Number(item?.divisor);
+    const reduced = Number(item?.reducedCoefficient);
+    const equation = `${original} ÷ ${divisor} = ${reduced}`;
+    const accessibleName = String(item?.accessibleName || item?.formula || 'compound');
+    if (item?.reduced === true) {
+      return `
+        <span class="balancing-reduction-result" aria-label="${escapeAttr(`${accessibleName} coefficient reduced: ${equation}`)}">
+          <del aria-label="original coefficient ${escapeAttr(String(original))}">${escapeHtml(String(original))}</del>
+          <span aria-hidden="true"> ÷ ${escapeHtml(String(divisor))} = </span>
+          <ins aria-label="replacement coefficient ${escapeAttr(String(reduced))}">${escapeHtml(String(reduced))}</ins>
+          <span class="sr-only"> Reduced.</span>
+        </span>
+      `;
+    }
+    return `
+      <button type="button" class="balancing-reduction-control" data-balancing-reduce data-compound-id="${escapeAttr(item?.compoundId || '')}" data-balancing-divisor="${escapeAttr(String(divisor))}" aria-label="${escapeAttr(`Reduce ${accessibleName} coefficient: ${equation}`)}">
+        ${escapeHtml(equation)}
+      </button>
     `;
   }
 
@@ -2952,6 +2995,16 @@
       return;
     }
 
+    const balancingReduction = event.target.closest('[data-balancing-reduce]');
+    if (balancingReduction && timeline.contains(balancingReduction)) {
+      if (!isLiveTutorControl(balancingReduction)) return;
+      sendBalancingAction(balancingReduction, 'reduce_coefficient', {
+        compoundId: balancingReduction.getAttribute('data-compound-id') || '',
+        divisor: Number(balancingReduction.getAttribute('data-balancing-divisor'))
+      });
+      return;
+    }
+
     const balancingReset = event.target.closest('[data-balancing-reset]');
     if (balancingReset && timeline.contains(balancingReset)) {
       if (!isLiveTutorControl(balancingReset)) return;
@@ -3073,7 +3126,7 @@
   }
 
   function hasUnsafeBalancingTranscriptContent(label) {
-    return /balance_activity:|unit9\.balance-ammonia|place_element|remove_element|set_coefficient|check_balance|[{}]/i.test(String(label || ''));
+    return /balance_activity:|unit9\.balance-ammonia|place_element|remove_element|set_coefficient|check_balance|reduce_coefficient|[{}]/i.test(String(label || ''));
   }
 
   function updateBalancingCountsFromControls(workspace) {
@@ -3900,6 +3953,7 @@
   if (window.__CHARLEMAGNE_ENABLE_STUDENT_UI_TEST_HOOKS__ === true) {
     window.CharlemagneStudentUiTestHooks = {
       renderPicketFenceVisual,
+      renderChemicalEquationBalancingVisual,
       resolveConfirmedBalancingTranscriptLabel
     };
   }
