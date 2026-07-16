@@ -23,6 +23,11 @@ const DIRECT_CASES = [
   { prompt: 'How do temperature, concentration, surface area, catalyst, and pressure affect reaction rate?', includes: [/Temperature, concentration, surface area, and catalysts/i, /Pressure affects rate for gases/i] },
   { prompt: 'Define exergonic vs exothermic.', includes: [/Exergonic means/i, /releases energy overall/i, /Exothermic means/i, /releases heat/i] },
   { prompt: 'Define endergonic vs endothermic.', includes: [/Endergonic means/i, /absorbs energy overall/i, /Endothermic means/i, /absorbs heat/i] },
+  { prompt: 'What happens to the surroundings during an exothermic process?', includes: [/exothermic process/i, /releases thermal energy to the surroundings/i], excludes: [/\breaction\b/i, /usually become warmer/i] },
+  { prompt: 'What happens to the surroundings during an endothermic process?', includes: [/endothermic process/i, /absorbs thermal energy from the surroundings/i], excludes: [/\breaction\b/i, /usually become cooler/i] },
+  { prompt: 'What happens to the surroundings during an exothermic reaction?', includes: [/release(?:s)? thermal energy to the surroundings/i, /surroundings gain thermal energy/i, /usually become warmer/i] },
+  { prompt: 'What happens to the surroundings during an endothermic reaction?', includes: [/absorb(?:s)? thermal energy from the surroundings/i, /surroundings lose thermal energy/i, /usually become cooler/i] },
+  { prompt: 'Heat flows from the reacting chemicals into the surrounding air. Classify the reaction and explain what happens to the air.', includes: [/exothermic reaction/i, /air gains thermal energy/i, /usually becomes warmer/i] },
   { prompt: 'Define acid.', includes: [/produces hydrogen ions/i, /pH below 7/i] },
   { prompt: 'Define base.', includes: [/produces hydroxide ions/i, /pH above 7/i] },
   { prompt: 'Define electrolyte.', includes: [/conducts electricity/i, /dissolved in water/i] },
@@ -153,6 +158,9 @@ function assertDirectAndRouted(testCase) {
   for (const pattern of testCase.includes) {
     assert.match(direct.directAnswer, pattern, `${testCase.prompt} direct matcher should include ${pattern}`);
   }
+  for (const pattern of testCase.excludes || []) {
+    assert.doesNotMatch(direct.directAnswer, pattern, `${testCase.prompt} direct matcher should not include ${pattern}`);
+  }
 
   const route = routeStudentQuestion(testCase.prompt);
   assert.notEqual(route.type, 'no_match', `${testCase.prompt} should not be No Match`);
@@ -163,6 +171,9 @@ function assertDirectAndRouted(testCase) {
   );
   for (const pattern of testCase.includes) {
     assert.match(route.directAnswer, pattern, `${testCase.prompt} route should include ${pattern}`);
+  }
+  for (const pattern of testCase.excludes || []) {
+    assert.doesNotMatch(route.directAnswer, pattern, `${testCase.prompt} route should not include ${pattern}`);
   }
 }
 
@@ -177,6 +188,7 @@ function assertUnit9PacketShape() {
   assert.equal(UNIT9_REACTIONS_PACKET.metadata.sourceBacked, true);
   assert.ok(Array.isArray(UNIT9_REACTIONS_PACKET.sourceFiles), 'Unit 9 packet should expose source files');
   assert.ok(UNIT9_REACTIONS_PACKET.sourceFiles.includes('Grounded Reactions synthesis supplied by user for Patch 11'));
+  assert.ok(UNIT9_REACTIONS_PACKET.sourceFiles.includes('Teacher-approved supplemental Unit 9 energy-response content'));
   assert.ok(Array.isArray(UNIT9_REACTIONS_PACKET.vocabulary), 'Unit 9 packet should expose vocabulary');
   assert.ok(Array.isArray(UNIT9_REACTIONS_PACKET.concepts), 'Unit 9 packet should expose concepts');
   assert.ok(Array.isArray(UNIT9_REACTIONS_PACKET.canonicalFacts), 'Unit 9 packet should expose canonical facts');
@@ -193,6 +205,15 @@ function assertUnit9PacketShape() {
   assert.ok(UNIT9_REACTIONS_PACKET.counts.comparisons >= 8);
   assert.ok(UNIT9_REACTIONS_PACKET.counts.relationships >= 10);
   assert.ok(UNIT9_REACTIONS_PACKET.counts.referenceFormulas >= 4);
+
+  const exothermicSurroundings = UNIT9_REACTIONS_FACTS.find((entry) => entry.id === 'unit9.exothermic_surroundings');
+  const endothermicSurroundings = UNIT9_REACTIONS_FACTS.find((entry) => entry.id === 'unit9.endothermic_surroundings');
+  assert.deepEqual(exothermicSurroundings.sourceRefs, ['Teacher-approved supplemental Unit 9 energy-response content']);
+  assert.deepEqual(endothermicSurroundings.sourceRefs, ['Teacher-approved supplemental Unit 9 energy-response content']);
+  assert.deepEqual(
+    tryUnit9ReactionsKnowledge('What happens to the surroundings during an exothermic reaction?').knowledgeRefs,
+    ['Teacher-approved supplemental Unit 9 energy-response content']
+  );
 }
 
 function assertNoStudentFacingHonorsNames() {
