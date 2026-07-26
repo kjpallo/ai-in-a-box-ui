@@ -15,6 +15,8 @@ const {
 } = require('../lib/tutor/formulaTutor');
 const motionForceKnowledge = require('../lib/knowledge/physics/motion-force');
 
+const approvedGraphRows = (items) => (Array.isArray(items) ? items : [])
+  .map((item) => ({ ...item, reviewStatus: 'approved' }));
 const teacherFactsPath = path.join(__dirname, '..', 'knowledge', 'teacher_facts.json');
 const teacherKnowledge = loadTeacherKnowledge(teacherFactsPath);
 const graph = buildKnowledgeGraph([
@@ -23,10 +25,10 @@ const graph = buildKnowledgeGraph([
       packId: 'motion-force-local',
       title: 'Motion and Force Local Knowledge',
       source: 'local Motion/Force pack',
-      vocabulary: motionForceKnowledge.vocabulary,
-      concepts: motionForceKnowledge.concepts,
-      referenceFormulas: motionForceKnowledge.formulas,
-      problemBank: motionForceKnowledge.problemBank,
+      vocabulary: approvedGraphRows(motionForceKnowledge.vocabulary),
+      concepts: approvedGraphRows(motionForceKnowledge.concepts),
+      referenceFormulas: approvedGraphRows(motionForceKnowledge.formulas),
+      problemBank: approvedGraphRows(motionForceKnowledge.problemBank),
       standardsMap: []
     },
     packId: 'motion-force-local',

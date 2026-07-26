@@ -4791,7 +4791,11 @@ async function runContextCarryoverTests() {
       pendingClarification: fragmentFollowUp.pendingClarification
     });
     assert.equal(selectedFriction.routeType, 'formula_only');
-    assert.equal(selectedFriction.confidence, 'none');
+    assert.equal(
+      selectedFriction.confidence,
+      'weak',
+      'A safe, useful formula-unavailable follow-up should be centrally classified as Weak'
+    );
     assert.ok(selectedFriction.response.includes('does not include a formula yet'));
     assert.ok(!selectedFriction.response.includes('Density'));
 

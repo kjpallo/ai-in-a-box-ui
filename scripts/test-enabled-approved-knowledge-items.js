@@ -61,6 +61,28 @@ async function main() {
     const dnaMatches = findRelevantKnowledge('What is DNA?', enabledItems, 6);
     assert.ok(dnaMatches.length > 0, 'findRelevantKnowledge should match enabled approved DNA item');
     assert.ok(dnaMatches.some((item) => item.title === 'DNA'));
+    const oneKeywordProblemMatches = findRelevantKnowledge(
+      'What is food?',
+      [{
+        id: 'approved-pack:biology:test-problem',
+        category: 'approved_problem_bank',
+        title: 'photosynthesis-problem',
+        subject: 'Biology',
+        terms: ['what process do plants use to make food'],
+        fact: 'Plants use photosynthesis to make food.',
+        reviewStatus: 'approved',
+        provenance: {
+          type: 'approved_knowledge_pack',
+          packId: 'biology'
+        }
+      }],
+      6
+    );
+    assert.deepEqual(
+      oneKeywordProblemMatches,
+      [],
+      'approved problem-bank evidence must not match an unrelated definition on one shared keyword'
+    );
 
     const combinedKnowledge = [
       ...loadTeacherKnowledge(teacherFactsFile),
@@ -203,9 +225,11 @@ async function assertDeletedApprovedPackNoLongerAnswers() {
   assert.equal(enabledBeforeDelete.some((item) => item.title === 'Finalium'), true, 'approved pack item should load before deletion.');
 
   const beforeDelete = await questionAnswer.answerStudentMessage('What is Finalium?');
-  assert.equal(beforeDelete.routeType, 'no_match', 'enabled approved upload should not answer live student questions.');
-  assert.doesNotMatch(beforeDelete.response, /classroom-only mineral used in a deletion test/);
-  assert.match(beforeDelete.response, /I do not have a trusted local (science )?fact for that yet\./i);
+  assertEnabledApprovedAnswer({
+    result: beforeDelete,
+    label: 'enabled approved item before deletion',
+    answerPattern: /Finalium is (?:a )?classroom-only mineral used in a deletion test\./i
+  });
 
   const deletion = deleteApprovedKnowledgePack('delete-me-approved-pack', {
     approvedPacksDir: workflowApprovedPacksDir,
@@ -306,10 +330,12 @@ async function assertEditedReapprovedContentWinsOverArchivedDraftCopy() {
   });
 
   const answer = await questionAnswer.answerStudentMessage('What is RevisionTerm?');
-  assert.equal(answer.routeType, 'no_match', 're-approved uploaded content should not answer live student questions.');
-  assert.doesNotMatch(answer.response, /newest teacher-approved wording/);
+  assertEnabledApprovedAnswer({
+    result: answer,
+    label: 're-approved uploaded content',
+    answerPattern: /newest teacher-approved wording/
+  });
   assert.doesNotMatch(answer.response, /old archived wording/);
-  assert.match(answer.response, /I do not have a trusted local (science )?fact for that yet\./i);
 }
 
 async function assertTeacherFactsStillAnswerWithEnabledApprovedPacks() {
@@ -328,9 +354,11 @@ async function assertTeacherFactsStillAnswerWithEnabledApprovedPacks() {
   assert.match(massAnswer.response, /Mass is the amount of matter in an object\./);
 
   const dnaAnswer = await questionAnswer.answerStudentMessage('What is DNA?');
-  assert.equal(dnaAnswer.routeType, 'no_match', 'enabled approved uploads should not answer live student questions.');
-  assert.doesNotMatch(dnaAnswer.response, /DNA is a molecule that stores genetic instructions\./);
-  assert.match(dnaAnswer.response, /I do not have a trusted local (science )?fact for that yet\./i);
+  assertEnabledApprovedAnswer({
+    result: dnaAnswer,
+    label: 'enabled approved DNA alongside teacher facts',
+    answerPattern: /DNA is a molecule that stores genetic instructions\./
+  });
 }
 
 async function assertCivicsResponsibilityQuestionsDoNotUseApprovedKnowledge() {
@@ -430,7 +458,10 @@ async function assertCivicsResponsibilityQuestionsDoNotUseApprovedKnowledge() {
 
   const unsupported = await questionAnswer.answerStudentMessage('what branch changes laws?');
   assert.equal(unsupported.routeType, 'no_match', 'unsupported responsibility question should still fail safely.');
-  assert.match(unsupported.response, /I do not have a trusted local fact for that yet\./);
+  assert.match(
+    unsupported.response,
+    /I do not have (?:a trusted local fact|a trusted answer that matches this question) (?:for that )?yet\./i
+  );
   assert.doesNotMatch(unsupported.response, /judicial branch|legislative branch|executive branch/i);
 
   const barePower = await questionAnswer.answerStudentMessage('what is power?');
@@ -458,9 +489,21 @@ async function assertQuestionAnswer({ questionAnswer, question, routeType, answe
 
 async function assertQuestionDoesNotUseApprovedAnswer({ questionAnswer, question, blockedPattern }) {
   const result = await questionAnswer.answerStudentMessage(question);
-  assert.equal(result.routeType, 'no_match', `${question} should not route from enabled approved uploads.`);
+  assert.equal(
+    result.routeType,
+    'no_match',
+    `${question} should not route from enabled approved uploads. Result: ${JSON.stringify({
+      response: result.response,
+      confidence: result.confidence,
+      questionRoute: result.questionRoute,
+      answerValidation: result.answerValidation
+    })}`
+  );
   assert.doesNotMatch(result.response, blockedPattern);
-  assert.match(result.response, /I do not have a trusted local (science )?fact for that yet\./i);
+  assert.match(
+    result.response,
+    /I do not have (?:a trusted local (?:science )?fact|a trusted answer that matches this question) (?:for that )?yet\./i
+  );
 }
 
 async function assertSelectedApprovalWorkflowCreatesEnabledStudentKnowledge() {
@@ -542,9 +585,11 @@ async function assertSelectedApprovalWorkflowCreatesEnabledStudentKnowledge() {
   });
 
   const answer = await questionAnswer.answerStudentMessage('what is dna');
-  assert.equal(answer.routeType, 'no_match');
-  assert.doesNotMatch(answer.response, /DNA is a molecule that stores genetic instructions\./);
-  assert.match(answer.response, /I do not have a trusted local (science )?fact for that yet\./i);
+  assertEnabledApprovedAnswer({
+    result: answer,
+    label: 'selected approval workflow DNA',
+    answerPattern: /DNA is a molecule that stores genetic instructions\./
+  });
 }
 
 async function assertRealContentSmokeApprovalScenarios() {
@@ -915,10 +960,46 @@ function assertHotReloadBehavior() {
     assert.equal(enabledItems.some((item) => item.title === 'DNA'), true, 'enabled approved item should load after activation changes.');
 
     return questionAnswer.answerStudentMessage('What is DNA?').then((afterEnable) => {
-      assert.match(afterEnable.response, /I do not have a trusted local (science )?fact for that yet\./i);
-      assert.doesNotMatch(afterEnable.response, /DNA is a molecule that stores genetic instructions\./);
+      assertEnabledApprovedAnswer({
+        result: afterEnable,
+        label: 'hot-reloaded enabled approved DNA',
+        answerPattern: /DNA is a molecule that stores genetic instructions\./
+      });
     });
   });
+}
+
+function assertEnabledApprovedAnswer({ result, label, answerPattern }) {
+  assert.equal(
+    result.routeType,
+    'definition',
+    `${label} should answer through the trusted definition route.`
+  );
+  assert.match(result.response, answerPattern, `${label} should use the approved answer text.`);
+  assert.doesNotMatch(
+    result.response,
+    /I do not have a trusted local (science )?fact for that yet\./i,
+    `${label} should not fall back to no-match.`
+  );
+  assert.ok(
+    result.questionRoute?.toolsUsed?.includes('approved_teacher_content'),
+    `${label} should identify approved teacher content as its source.`
+  );
+  assert.equal(
+    result.questionRoute?.evidence?.trust,
+    'teacher_approved',
+    `${label} should retain teacher-approved evidence trust.`
+  );
+  assert.equal(
+    result.answerValidation?.valid,
+    true,
+    `${label} should pass the final answer contract.`
+  );
+  assert.notEqual(
+    result.confidence,
+    'none',
+    `${label} should retain nonzero confidence after validation.`
+  );
 }
 
 function seedTeacherFacts() {

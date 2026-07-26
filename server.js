@@ -6,6 +6,15 @@ const {
   loadTeacherKnowledge,
   findRelevantKnowledge
 } = require('./lib/knowledge/teacherKnowledge');
+const {
+  loadEnabledApprovedKnowledgeItems,
+  loadEnabledApprovedKnowledgePackRecords
+} = require('./lib/knowledge/loadEnabledApprovedKnowledgeItems');
+const {
+  hasScienceKnowledgeMetadata,
+  isApprovedKnowledgeItem,
+  isScienceApprovedKnowledgeItem
+} = require('./lib/knowledge/approvedKnowledgeIdentity');
 const { buildKnowledgeGraph } = require('./lib/knowledge/knowledgeGraph');
 const { createOllamaClient } = require('./lib/ollama/client');
 const { createTtsService } = require('./lib/tts/piper');
@@ -131,7 +140,11 @@ ensureDir(knowledgeDir);
 ensureDir(approvedPacksDir);
 
 function loadStudentKnowledge() {
-  return loadTeacherKnowledge(teacherFactsFile);
+  return [
+    ...loadTeacherKnowledge(teacherFactsFile),
+    ...loadEnabledApprovedKnowledgeItems({ approvedPacksDir })
+      .filter(isScienceApprovedKnowledgeItem)
+  ];
 }
 
 function loadStudentKnowledgeGraph({ teacherKnowledge } = {}) {
@@ -139,7 +152,11 @@ function loadStudentKnowledgeGraph({ teacherKnowledge } = {}) {
     ? teacherKnowledge
     : loadStudentKnowledge();
 
-  return buildKnowledgeGraph([], graphTeacherKnowledge);
+  return buildKnowledgeGraph(
+    loadEnabledApprovedKnowledgePackRecords({ approvedPacksDir })
+      .filter(hasScienceKnowledgeMetadata),
+    graphTeacherKnowledge.filter((item) => !isApprovedKnowledgeItem(item))
+  );
 }
 
 const questionAnswer = createQuestionAnswerService({

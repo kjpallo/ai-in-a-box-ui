@@ -1,5 +1,3 @@
-const { isWhyThisMattersFollowUp } = require('../lib/standards/standardsFollowUp');
-
 function registerQuestionRoutes(app, {
   ollama,
   questionAnswer,
@@ -84,198 +82,36 @@ function registerQuestionRoutes(app, {
     let fullText = '';
     let matchedKnowledge = [];
     let questionRoute = null;
-    let usedAiFallback = false;
 
     try {
-      let pending = '';
-      let speechBuffer = [];
-      let firstChunkSent = false;
-      const clarificationFollowUp = questionAnswer.resolvePendingClarification(message, pendingClarification);
-
-      if (clarificationFollowUp?.handled) {
-        pendingClarification = clarificationFollowUp.pendingClarification || null;
-        questionRoute = clarificationFollowUp.questionRoute;
-        currentStandardId = questionRoute.standardId || questionRoute.public?.standardId || currentStandardId;
-        fullText += questionRoute.directAnswer;
-        sendEvent({ type: 'router', router: questionRoute.public });
-        sendEvent({ type: 'text_delta', chunk: questionRoute.directAnswer });
-        queueSentenceForSpeech(questionRoute.directAnswer);
-        questionAnswer.logCompletedInteraction({
-          message,
-          questionRoute,
-          answerGiven: fullText,
-          source: 'chat_router'
-        });
-        await ttsChain;
-        sendEvent({ type: 'done', fullText });
-        res.end();
-        return;
-      }
-
-      if (isWhyThisMattersFollowUp(message)) {
-        const whyThisMatters = await questionAnswer.answerStudentMessage(message, {
-          lastAnsweredPrompt,
-          lastAnsweredAnswer,
-          pendingClarification
-        });
-        pendingClarification = whyThisMatters.pendingClarification || null;
-        questionRoute = whyThisMatters.questionRoute;
-        fullText += whyThisMatters.response;
-        sendEvent({ type: 'router', router: questionRoute.public });
-        sendEvent({ type: 'text_delta', chunk: whyThisMatters.response });
-        queueSentenceForSpeech(whyThisMatters.response);
-        questionAnswer.logCompletedInteraction({
-          message,
-          questionRoute,
-          answerGiven: fullText,
-          source: 'chat_why_this_matters_followup',
-          debug: {
-            contextQuestion: lastAnsweredPrompt,
-            contextAnswer: lastAnsweredAnswer
-          }
-        });
-        await ttsChain;
-        sendEvent({ type: 'done', fullText });
-        res.end();
-        return;
-      }
-
-      const standardsFollowUp = questionAnswer.answerStandardsFollowUp(message, lastAnsweredPrompt, {
+      const answered = await questionAnswer.answerStudentMessage(message, {
+        lastAnsweredPrompt,
         lastAnsweredAnswer,
-        currentStandardId
+        pendingClarification,
+        currentStandardId,
+        signal: abortController.signal
       });
+      questionRoute = answered.questionRoute;
+      fullText = String(answered.response || questionRoute?.directAnswer || '').trim();
+      pendingClarification = answered.pendingClarification || null;
+      currentStandardId =
+        answered.standardId ||
+        questionRoute?.standardId ||
+        questionRoute?.public?.standardId ||
+        (answered.isStandardsFollowUp ? currentStandardId : '');
 
-      if (standardsFollowUp?.handled) {
-        pendingClarification = standardsFollowUp.pendingClarification || null;
-        currentStandardId = standardsFollowUp.standardId || currentStandardId;
-        fullText += standardsFollowUp.response;
-        questionRoute = {
-          type: 'standards_followup',
-          confidence: standardsFollowUp.matched ? 'strong' : 'none',
-          directAnswer: standardsFollowUp.response,
-          aiAllowed: false,
-          standardId: standardsFollowUp.standardId || '',
-          public: {
-            type: 'standards_followup',
-            confidence: standardsFollowUp.matched ? 'strong' : 'none',
-            standardId: standardsFollowUp.standardId || '',
-            pendingClarification: standardsFollowUp.pendingClarification
-              ? {
-                id: standardsFollowUp.pendingClarification.id,
-                choices: standardsFollowUp.pendingClarification.choices.map((choice) => ({
-                  number: choice.number,
-                  label: choice.label
-                }))
-              }
-              : undefined
-          }
-        };
-        sendEvent({ type: 'router', router: questionRoute.public });
-        sendEvent({ type: 'text_delta', chunk: standardsFollowUp.response });
-        queueSentenceForSpeech(standardsFollowUp.response);
-        questionAnswer.logCompletedInteraction({
-          message,
-          questionRoute,
-          answerGiven: fullText,
-          source: 'chat_standards_followup',
-          debug: {
-            contextQuestion: lastAnsweredPrompt,
-            contextAnswer: lastAnsweredAnswer
-          }
-        });
-        await ttsChain;
-        sendEvent({ type: 'done', fullText });
-        res.end();
-        return;
-      }
-
-      ({ matchedKnowledge, questionRoute } = questionAnswer.routeMessage(message));
-      pendingClarification = questionAnswer.nextPendingClarification(questionRoute);
-
-      console.log('Knowledge matches:', matchedKnowledge.map((item) => item.title || item.id));
       console.log('Question route:', questionRoute.public);
       sendEvent({ type: 'router', router: questionRoute.public });
-
-      questionAnswer.maybeLogReviewQuestion({
-        message,
-        questionRoute,
-        matchedKnowledge,
-        answerGiven: questionRoute.directAnswer
-      });
-
-      if (questionRoute.directAnswer && !questionRoute.aiAllowed) {
-        fullText += questionRoute.directAnswer;
-        sendEvent({ type: 'text_delta', chunk: questionRoute.directAnswer });
-        queueSentenceForSpeech(questionRoute.directAnswer);
-      } else {
-        usedAiFallback = true;
-        await ollama.stream({
-          prompt: ollama.buildTeacherPrompt({ message, matchedKnowledge, questionRoute }),
-          signal: abortController.signal,
-          onText(textChunk) {
-            if (!textChunk || clientClosed) return;
-
-            fullText += textChunk;
-            pending += textChunk;
-            sendEvent({ type: 'text_delta', chunk: textChunk });
-
-            const { complete, remaining } = ollama.extractCompletedSentences(pending);
-            pending = remaining;
-
-            for (const sentence of complete) {
-              const cleaned = sentence.trim();
-              if (!cleaned) continue;
-
-              speechBuffer.push(cleaned);
-
-              if (!firstChunkSent) {
-                if (speechBuffer.length >= 2) {
-                  queueSentenceForSpeech(speechBuffer.join(' '));
-                  speechBuffer = [];
-                  firstChunkSent = true;
-                }
-              } else {
-                queueSentenceForSpeech(speechBuffer.shift());
-              }
-            }
-          }
-        });
-      }
-
-      const trailing = pending.trim();
-      if (trailing) {
-        speechBuffer.push(trailing);
-      }
-
-      if (speechBuffer.length > 0) {
-        if (!firstChunkSent) {
-          queueSentenceForSpeech(speechBuffer.join(' '));
-        } else {
-          for (const chunk of speechBuffer) {
-            queueSentenceForSpeech(chunk);
-          }
-        }
-      }
-
-      if (usedAiFallback) {
-        questionAnswer.logAiImprovementProblem({
-          message,
-          questionRoute,
-          matchedKnowledge,
-          answerGiven: fullText,
-          category: 'fallback_review',
-          reason: 'fallback',
-          source: 'auto'
-        });
-      }
+      sendEvent({ type: 'text_delta', chunk: fullText });
+      queueSentenceForSpeech(fullText);
 
       questionAnswer.logCompletedInteraction({
         message,
         questionRoute,
         answerGiven: fullText,
-        source: usedAiFallback ? 'chat_ai_fallback' : 'chat_router'
+        source: 'chat_validated_service'
       });
-      if (fullText.trim()) {
+      if (fullText && !answered.isStandardsFollowUp) {
         lastAnsweredPrompt = message;
         lastAnsweredAnswer = fullText;
         currentStandardId = '';

@@ -213,7 +213,9 @@ async function testKnowledgePromptsAnswerDirectly() {
       prompt: 'Which of the following factors does not affect air resistance?',
       routeTypes: ['science_concept'],
       includes: [/speed/i, /shape|frontal area|surface area/i, /air or fluid conditions|density/i],
-      excludes: [/electrons|wire diameter/i]
+      excludes: [/electrons|wire diameter/i],
+      studentRouteTypes: ['missing_context'],
+      studentIncludes: [/answer choices|choices/i]
     },
     {
       name: 'free-fall-constant-acceleration-direct',
@@ -295,7 +297,17 @@ async function testKnowledgePromptsAnswerDirectly() {
       'motion_force_knowledge_tutor',
       `${testCase.name} should not start General Tutor`
     );
-    assertAnswer(student.body.response, testCase);
+    if (testCase.studentRouteTypes) {
+      assert.ok(
+        testCase.studentRouteTypes.includes(student.body.routeType),
+        `${testCase.name} student route should be one of ${testCase.studentRouteTypes.join(', ')}`
+      );
+    }
+    assertAnswer(student.body.response, {
+      ...testCase,
+      includes: testCase.studentIncludes || testCase.includes,
+      excludes: testCase.studentExcludes || testCase.excludes
+    });
     assert.equal(
       harness.studentSessions[harness.sessionId].anonymousHubs[testCase.name].currentTutorProblem,
       null,

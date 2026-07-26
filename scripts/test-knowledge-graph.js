@@ -21,18 +21,65 @@ const {
 const motionForceKnowledge = require('../lib/knowledge/physics/motion-force');
 const teacherFacts = require('../knowledge/teacher_facts.json');
 
+const approvedGraphRows = (items) => (Array.isArray(items) ? items : [])
+  .map((item) => ({ ...item, reviewStatus: 'approved' }));
 const teacherFactsPath = path.join(__dirname, '..', 'knowledge', 'teacher_facts.json');
 const teacherKnowledge = loadTeacherKnowledge(teacherFactsPath);
+const reviewGateGraph = buildKnowledgeGraph([
+  {
+    packId: 'review-gate-pack',
+    title: 'Review Gate Pack',
+    pack: {
+      packId: 'review-gate-pack',
+      title: 'Review Gate Pack',
+      vocabulary: [
+        {
+          term: 'ApprovedGraphTerm',
+          studentDefinition: 'Approved graph content.',
+          reviewStatus: 'approved'
+        },
+        {
+          term: 'PendingGraphTerm',
+          studentDefinition: 'Pending graph content.',
+          reviewState: 'pending'
+        },
+        {
+          term: 'StatuslessGraphTerm',
+          studentDefinition: 'Content without a review decision.'
+        }
+      ],
+      concepts: [],
+      referenceFormulas: [],
+      problemBank: [],
+      standardsMap: []
+    }
+  }
+], []);
+assert.ok(
+  findNodeByLabel(reviewGateGraph, 'ApprovedGraphTerm'),
+  'approved graph rows should be ingested'
+);
+assert.equal(
+  findNodeByLabel(reviewGateGraph, 'PendingGraphTerm'),
+  undefined,
+  'reviewState=pending graph rows must not be ingested'
+);
+assert.equal(
+  findNodeByLabel(reviewGateGraph, 'StatuslessGraphTerm'),
+  undefined,
+  'status-less graph rows must not be ingested'
+);
+
 const graph = buildKnowledgeGraph([
   {
     pack: {
       packId: 'motion-force-local',
       title: 'Motion and Force Local Knowledge',
       source: 'local Motion/Force pack',
-      vocabulary: motionForceKnowledge.vocabulary,
-      concepts: motionForceKnowledge.concepts,
-      referenceFormulas: motionForceKnowledge.formulas,
-      problemBank: motionForceKnowledge.problemBank,
+      vocabulary: approvedGraphRows(motionForceKnowledge.vocabulary),
+      concepts: approvedGraphRows(motionForceKnowledge.concepts),
+      referenceFormulas: approvedGraphRows(motionForceKnowledge.formulas),
+      problemBank: approvedGraphRows(motionForceKnowledge.problemBank),
       standardsMap: []
     },
     packId: 'motion-force-local',
@@ -235,6 +282,7 @@ function stripTutorTimestamps(problem) {
   const clone = JSON.parse(JSON.stringify(problem));
   delete clone.startedAt;
   delete clone.updatedAt;
+  delete clone.tutorProblemId;
   return clone;
 }
 
