@@ -51,7 +51,9 @@ const {
   sanitizeBalancingActivityTranscriptMessage
 } = require('../lib/tutor/activities/ammoniaBalancingActivity');
 const {
+  createStudentSessionReopenRequest,
   resolveActiveStudentSession,
+  resolveStudentSession,
   sendStudentSessionAccessError,
   studentSessionAccessFromRequest
 } = require('../lib/server/studentSessionLifecycle');
@@ -119,7 +121,7 @@ function registerStudentRoutes(app, {
       studentSessionAccessFromRequest(req),
       { now: now() }
     );
-    if (!resolved.ok) return sendStudentSessionAccessError(res, resolved);
+    if (!resolved.ok) return sendStudentSessionAccessError(res, resolved, studentHubId);
     const session = resolved.session;
     const sessionId = session.sessionId;
 
@@ -144,6 +146,41 @@ function registerStudentRoutes(app, {
       response.classSessionId = sessionId;
     }
     res.json(response);
+  });
+
+  app.post('/api/student/reopen-request', (req, res) => {
+    const studentHubId = String(req.body?.studentHubId || '').trim();
+    if (!studentHubId) {
+      return res.status(400).json({
+        error: 'Student hub id is required.',
+        code: 'STUDENT_HUB_REQUIRED'
+      });
+    }
+
+    const resolved = resolveStudentSession(
+      studentSessions,
+      studentSessionAccessFromRequest(req),
+      { now: now() }
+    );
+    if (!resolved.ok) return sendStudentSessionAccessError(res, resolved);
+
+    try {
+      const result = createStudentSessionReopenRequest(resolved.session, studentHubId, {
+        now: now()
+      });
+      return res.status(result.created ? 201 : 200).json({
+        ok: true,
+        created: result.created,
+        reopenRequest: {
+          pending: true
+        }
+      });
+    } catch (error) {
+      return res.status(Number(error?.statusCode || 500)).json({
+        error: error instanceof Error ? error.message : String(error),
+        code: error?.code || 'REOPEN_REQUEST_FAILED'
+      });
+    }
   });
 
   app.post('/api/student/message', async (req, res) => {

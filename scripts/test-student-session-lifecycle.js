@@ -293,7 +293,7 @@ function testStudentExpiredEndedUiContract() {
   const bladeUi = fs.readFileSync(path.join(projectRoot, 'public', 'blade-ui.js'), 'utf8');
 
   assert.match(studentHtml, /id="studentSessionAccessState"/);
-  assert.match(studentHtml, /id="studentSessionCheckAgain"[^>]*>Check session again</);
+  assert.match(studentHtml, /id="studentSessionReopenRequest"[^>]*>Ask teacher to reopen</);
   assert.match(studentUi, /This classroom session has expired\. Ask your teacher to reopen it or provide a new link\./);
   assert.match(studentUi, /This classroom session has ended\. Ask your teacher for a new link\./);
   assert.match(studentUi, /setInterval\([\s\S]*sendHeartbeat[\s\S]*20_000/);

@@ -21,7 +21,7 @@
   const sessionAccessState = document.getElementById('studentSessionAccessState');
   const sessionAccessTitle = document.getElementById('studentSessionAccessTitle');
   const sessionAccessMessage = document.getElementById('studentSessionAccessMessage');
-  const sessionCheckAgainButton = document.getElementById('studentSessionCheckAgain');
+  const sessionReopenRequestButton = document.getElementById('studentSessionReopenRequest');
   const fireworks = document.getElementById('studentTutorFireworks');
   const sessionMessage = document.getElementById('studentSessionMessage');
   const frictionWarning = document.getElementById('studentFrictionWarning');
@@ -62,6 +62,8 @@
     updatedAtMs: Date.now()
   };
   let sessionIsValid = false;
+  let reopenRequestPending = false;
+  let reopenRequestSubmitting = false;
   let heartbeatTimer = null;
   let rateLimitStatusTimer = null;
   let resetTickTimer = null;
@@ -104,7 +106,7 @@
     askHighlightButton?.addEventListener('click', handleAskHighlightClick);
     clearButton?.addEventListener('click', handleClearClick);
     composerTutorChoices?.addEventListener('click', handleComposerTutorChoiceClick);
-    sessionCheckAgainButton?.addEventListener('click', () => validateSession({ manual: true }));
+    sessionReopenRequestButton?.addEventListener('click', submitReopenRequest);
     timeline.addEventListener('click', handleTimelineClick);
     timeline.addEventListener('change', handleTimelineChange);
     timeline.addEventListener('mouseover', handleTimelinePreview);
@@ -182,13 +184,14 @@
     }
 
     try {
-      if (sessionCheckAgainButton) sessionCheckAgainButton.disabled = true;
+      if (sessionReopenRequestButton) sessionReopenRequestButton.disabled = true;
       if (options.manual) {
         sessionMessage.textContent = 'Checking classroom session again...';
         status.textContent = 'Checking link';
       }
       await window.Charlemagne.api.joinStudentSession(sessionAccess, studentHubId);
       sessionIsValid = true;
+      reopenRequestPending = false;
       await refreshRateLimitStatus();
 
       sessionText.textContent = sessionDisplay;
@@ -207,7 +210,29 @@
         );
       }
     } finally {
-      if (sessionCheckAgainButton) sessionCheckAgainButton.disabled = false;
+      updateReopenRequestButton();
+    }
+  }
+
+  async function submitReopenRequest() {
+    if (!sessionAccess || reopenRequestPending || reopenRequestSubmitting) return;
+    reopenRequestSubmitting = true;
+    updateReopenRequestButton();
+
+    try {
+      await window.Charlemagne.api.requestStudentSessionReopen(sessionAccess, studentHubId);
+      reopenRequestPending = true;
+      sessionMessage.textContent = 'Reopen request sent';
+      if (sessionAccessMessage) sessionAccessMessage.textContent = 'Reopen request sent';
+    } catch (error) {
+      if (!handleSessionAccessError(error)) {
+        const message = error.message || 'Could not send the reopen request.';
+        sessionMessage.textContent = message;
+        if (sessionAccessMessage) sessionAccessMessage.textContent = message;
+      }
+    } finally {
+      reopenRequestSubmitting = false;
+      updateReopenRequestButton();
     }
   }
 
@@ -357,7 +382,10 @@
 
   function showSessionAccessState(code, message) {
     sessionIsValid = false;
-    sessionMessage.textContent = message;
+    const closedSession = code === 'SESSION_EXPIRED' || code === 'SESSION_ENDED';
+    if (!closedSession) reopenRequestPending = false;
+    const displayMessage = closedSession && reopenRequestPending ? 'Reopen request sent' : message;
+    sessionMessage.textContent = displayMessage;
     status.textContent = code === 'SESSION_EXPIRED'
       ? 'Session expired'
       : code === 'SESSION_ENDED'
@@ -372,18 +400,33 @@
           ? 'Classroom session ended'
           : 'Classroom link unavailable';
     }
-    if (sessionAccessMessage) sessionAccessMessage.textContent = message;
+    if (sessionAccessMessage) sessionAccessMessage.textContent = displayMessage;
+    if (sessionReopenRequestButton) sessionReopenRequestButton.hidden = !closedSession;
+    updateReopenRequestButton();
     setFormEnabled(false);
     startHeartbeat();
   }
 
   function hideSessionAccessState() {
+    reopenRequestPending = false;
     if (sessionAccessState) sessionAccessState.hidden = true;
+    updateReopenRequestButton();
+  }
+
+  function updateReopenRequestButton() {
+    if (!sessionReopenRequestButton) return;
+    sessionReopenRequestButton.disabled = reopenRequestPending || reopenRequestSubmitting;
+    sessionReopenRequestButton.textContent = reopenRequestSubmitting
+      ? 'Sending request...'
+      : reopenRequestPending
+        ? 'Reopen request sent'
+        : 'Ask teacher to reopen';
   }
 
   function handleSessionAccessError(error) {
     const code = String(error?.code || '');
     if (code === 'SESSION_EXPIRED') {
+      reopenRequestPending = error?.data?.reopenRequest?.pending === true;
       showSessionAccessState(
         code,
         'This classroom session has expired. Ask your teacher to reopen it or provide a new link.'
@@ -391,6 +434,7 @@
       return true;
     }
     if (code === 'SESSION_ENDED') {
+      reopenRequestPending = error?.data?.reopenRequest?.pending === true;
       showSessionAccessState(
         code,
         'This classroom session has ended. Ask your teacher for a new link.'

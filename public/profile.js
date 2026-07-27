@@ -1223,6 +1223,12 @@
         return;
       }
 
+      const dismissReopenRequestsButton = event.target.closest('[data-dismiss-reopen-requests]');
+      if (dismissReopenRequestsButton) {
+        dismissStudentSessionReopenRequests(dismissReopenRequestsButton);
+        return;
+      }
+
       const archiveButton = event.target.closest('[data-archive-student-session]');
       if (archiveButton) {
         archiveStudentSession(archiveButton);
@@ -1711,6 +1717,11 @@
         ? ' is-ended'
         : '';
     const active = lifecycleStatus === 'active';
+    const reopenRequestCount = toCount(session?.reopenRequest?.count);
+    const reopenRequestPending = session?.reopenRequest?.pending === true && reopenRequestCount > 0;
+    const reopenRequestLabel = reopenRequestCount === 1
+      ? '1 reopen request'
+      : `${reopenRequestCount} reopen requests`;
     const studentCounts = sessionStudentCounts(session);
     const questionCount = sessionQuestionCount(session);
     const questionsLabel = questionCount === 1 ? 'question/message' : 'questions/messages';
@@ -1727,7 +1738,10 @@
             <strong>${escapeHtml(className)}</strong>
             <time datetime="${escapeAttr(createdAt)}">Created ${escapeHtml(formatSessionTime(createdAt))}</time>
           </div>
-          <span class="active-session-running-pill${statusClass}">${escapeHtml(statusLabel)}</span>
+          <div>
+            ${reopenRequestPending ? `<span class="active-session-running-pill is-expired">${escapeHtml(reopenRequestLabel)}</span>` : ''}
+            <span class="active-session-running-pill${statusClass}">${escapeHtml(statusLabel)}</span>
+          </div>
         </div>
 
         <dl class="active-session-facts">
@@ -1765,7 +1779,8 @@
           <button type="button" class="small-button secondary-small" data-student-session-lifecycle="extend" data-session-id="${escapeAttr(sessionId)}" data-minutes="30"${active ? '' : ' disabled'}>Extend 30 minutes</button>
           <button type="button" class="small-button secondary-small" data-student-session-lifecycle="set_expiration" data-session-id="${escapeAttr(sessionId)}"${lifecycleStatus === 'ended' ? ' disabled' : ''}>Set new expiration</button>
           <button type="button" class="small-button secondary-small danger-small" data-student-session-lifecycle="end" data-session-id="${escapeAttr(sessionId)}"${active ? '' : ' disabled'}>End now</button>
-          <button type="button" class="small-button secondary-small" data-student-session-lifecycle="reopen" data-session-id="${escapeAttr(sessionId)}" data-minutes="30"${active ? ' disabled' : ''}>Reopen for 30 minutes</button>
+          <button type="button" class="small-button secondary-small" data-student-session-lifecycle="reopen" data-session-id="${escapeAttr(sessionId)}" data-minutes="30"${active ? ' disabled' : ''}>${reopenRequestPending ? 'Reopen' : 'Reopen for 30 minutes'}</button>
+          ${reopenRequestPending ? `<button type="button" class="small-button secondary-small" data-dismiss-reopen-requests data-session-id="${escapeAttr(sessionId)}">Dismiss all</button>` : ''}
           <button
             type="button"
             class="small-button secondary-small"
@@ -2090,6 +2105,29 @@
       await loadStudentSessions();
     } catch (error) {
       setText('profileStudentLinkStatus', error.message || 'Could not update session access.');
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  async function dismissStudentSessionReopenRequests(button) {
+    const sessionId = button?.getAttribute('data-session-id') || '';
+    if (!sessionId) return;
+
+    try {
+      button.disabled = true;
+      const result = await fetchJson(`/api/profile/student-sessions/${encodeURIComponent(sessionId)}/reopen-request/dismiss`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({})
+      });
+      const clearedCount = toCount(result?.clearedCount);
+      setText('profileStudentLinkStatus', `${clearedCount} reopen request${clearedCount === 1 ? '' : 's'} dismissed.`);
+      await loadStudentSessions();
+    } catch (error) {
+      setText('profileStudentLinkStatus', error.message || 'Could not dismiss reopen requests.');
     } finally {
       button.disabled = false;
     }

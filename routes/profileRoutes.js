@@ -23,11 +23,13 @@ const {
 } = require('../lib/profile/questionsStandardsSessionArchive');
 const {
   applyStudentSessionLifecycleAction,
+  clearStudentSessionReopenRequests,
   generateUniqueJoinCode,
   initializeStudentSessionLifecycle,
   normalizeJoinCode,
   normalizeSessionDurationMinutes,
   refreshStudentSessionStatus,
+  serializeSessionReopenRequests,
   serializeStudentSessionLifecycle
 } = require('../lib/server/studentSessionLifecycle');
 const { getStandardsBankDetails } = require('../lib/standards/standardsBankDiscovery');
@@ -119,6 +121,27 @@ function registerProfileRoutes(app, {
       } catch (error) {
         sendProfileError(res, error);
       }
+    }
+  );
+
+  registerMaybeProtectedPost(
+    app,
+    '/api/profile/student-sessions/:sessionId/reopen-request/dismiss',
+    requireTeacherAuth,
+    (req, res) => {
+      const sessionId = safeText(req.params?.sessionId);
+      const session = studentSessions?.[sessionId];
+      if (!session) {
+        res.status(404).json({ error: 'Student session not found.', code: 'SESSION_NOT_FOUND' });
+        return;
+      }
+
+      const clearedCount = clearStudentSessionReopenRequests(session);
+      res.json({
+        ok: true,
+        clearedCount,
+        session: serializeClassSession(session, { now: now() })
+      });
     }
   );
 
@@ -955,6 +978,7 @@ function serializeClassSession(session, options = {}) {
     ...lifecycle,
     studentUrl: session.studentUrl || (lifecycle.joinCode ? `/join/${encodeURIComponent(lifecycle.joinCode)}` : ''),
     archivedAt: session.archivedAt || null,
+    reopenRequest: serializeSessionReopenRequests(session),
     activeAnonymousHubCount: hubs.filter((hub) => hub.active).length,
     anonymousHubs: hubs
   };
@@ -1016,6 +1040,7 @@ function serializeLiveClassSession(session, {
     classSessionId: session?.sessionId || '',
     ...lifecycle,
     studentUrl: session?.studentUrl || (lifecycle.joinCode ? `/join/${encodeURIComponent(lifecycle.joinCode)}` : ''),
+    reopenRequest: serializeSessionReopenRequests(session),
     runningDurationMs,
     runningSeconds: Math.floor(runningDurationMs / 1000),
     activeAnonymousHubCount,

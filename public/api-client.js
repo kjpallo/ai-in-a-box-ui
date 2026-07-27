@@ -162,6 +162,17 @@
     });
   }
 
+  function requestStudentSessionReopen(sessionAccess, studentHubId) {
+    return fetchJson('/api/student/reopen-request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...buildStudentSessionAccess(sessionAccess),
+        studentHubId
+      })
+    });
+  }
+
   function sendStudentMessage(sessionAccess, message, studentHubId = '') {
     return fetchJson('/api/student/message', {
       method: 'POST',
@@ -218,6 +229,7 @@
     fetchVoices,
     joinStudentSession,
     reloadTeacherFacts,
+    requestStudentSessionReopen,
     sendDailySummary,
     sendStudentMessage,
     sendStudentWhyThisMatters,
