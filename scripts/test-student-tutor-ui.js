@@ -221,10 +221,15 @@ const sessionQuestionBlock = getCssBlock('.student-tutor-session-question');
 const collapsedPanelBlock = getCssBlock('.student-tutor-session.is-collapsed .student-tutor-session-panel');
 const sessionScrollBlock = getCssBlock('.student-tutor-session-scroll');
 const sessionStepBlock = getCssBlock('.student-tutor-session-step');
+const sessionCurrentStepBlock = getCssBlock('.student-tutor-session-step.is-current');
 const sessionSideAnswerStepBlock = getCssBlock('.student-tutor-session-step.has-side-answer');
 const sessionCompactStepBlock = getCssBlock('.student-tutor-session-step-compact');
 const tutorInstructionBlock = getCssBlock('.student-tutor-instruction');
+const tutorCurrentInstructionBlock = getCssBlock('.student-tutor-instruction.is-current');
 const tutorInstructionPromptBlock = getCssBlock('.student-tutor-instruction-prompt');
+const tutorEquationBlock = getCssBlock('.student-tutor-equation');
+const tutorEquationBlankBlock = getCssBlock('.student-tutor-equation-blank');
+const tutorResponseExpectationBlock = getCssBlock('.student-tutor-response-expectation');
 const tutorHistoryRowBlock = getCssBlock('.student-tutor-history-row');
 const tutorHistoryExpandedBlock = getCssBlock('.student-tutor-history-expanded');
 const tutorJustAnsweredRowBlock = getCssBlock('.student-tutor-just-answered-row .student-tutor-history-row');
@@ -360,6 +365,8 @@ assert.match(sessionScrollBlock, /overflow-y:\s*auto;/, 'Expanded formula sessio
 assert.match(sessionScrollBlock, /overscroll-behavior:\s*contain;/, 'Formula session scroller should contain scroll gestures.');
 assert.match(sessionScrollBlock, /scrollbar-gutter:\s*stable;/, 'Formula session scroller should reserve stable scrollbar space.');
 assert.match(sessionStepBlock, /grid-template-columns:\s*minmax\(0,\s*1fr\);/, 'Tutor steps without a student-answer side panel should use the full work width.');
+assert.match(sessionCurrentStepBlock, /border:\s*2px solid/, 'The current Formula Tutor step should have a stronger structural border.');
+assert.match(sessionCurrentStepBlock, /box-shadow:/, 'The current Formula Tutor step should remain visually prominent without relying only on color.');
 assert.match(sessionSideAnswerStepBlock, /grid-template-columns:\s*minmax\(7\.4rem,\s*0\.2fr\) minmax\(0,\s*1fr\);/, 'Tutor steps with actual student answers should keep a compact side answer column.');
 
 assert.match(
@@ -455,8 +462,13 @@ assert.doesNotMatch(
 );
 assert.match(
   studentUi,
-  /function renderTutorInstructionBlock\(\{ tutor, work, currentStep, responseText, stepStatus, isCurrentStep \}\)[\s\S]*formatTutorInstructionProgress\(tutor, work, stepStatus\)[\s\S]*getTutorFeedbackLine\(responseText, prompt\)[\s\S]*student-tutor-instruction-head[\s\S]*student-tutor-instruction-feedback[\s\S]*student-tutor-instruction-prompt[\s\S]*student-tutor-instruction-hint/,
-  'Formula Tutor instruction block should own progress, compact feedback, current prompt, and hint display.'
+  /function renderTutorInstructionBlock\(\{ tutor, work, currentStep, responseText, stepStatus, isCurrentStep \}\)[\s\S]*formatTutorInstructionProgress\(tutor, work, stepStatus\)[\s\S]*renderTutorDisplayEquation\(tutor, work\)[\s\S]*student-tutor-instruction-head[\s\S]*Current step[\s\S]*student-tutor-instruction-prompt[\s\S]*displayEquation[\s\S]*student-tutor-instruction-hint/,
+  'Formula Tutor instruction block should own progress, an explicit current-step label, the prompt, optional equation, and hint display.'
+);
+assert.match(
+  studentUi,
+  /function renderTutorDisplayEquation\(tutor, work = \{\}\)[\s\S]*step\.displayEquation[\s\S]*template\.split\('\{\{blank\}\}'\)[\s\S]*student-tutor-equation-blank[\s\S]*Enter only the missing number\./,
+  'The student UI should render the structured equation template and explicit number-only response expectation without parsing prompt prose.'
 );
 assert.match(
   studentUi,
@@ -465,18 +477,18 @@ assert.match(
 );
 assert.match(
   studentUi,
-  /session\.turns\.map\(\(turn, index\) => renderTutorSessionStep\(turn,[\s\S]*previousTurn: index > 0 \? session\.turns\[index - 1\] : null/,
-  'Grouped Formula Tutor rendering should pass the prior turn so saved rows can label the step that was just answered.'
+  /session\.turns\.map\(\(turn, index\) => \{[\s\S]*index === 0 && session\.turns\.length > 1[\s\S]*renderTutorSessionStep\(turn,[\s\S]*previousTurn: index > 0 \? session\.turns\[index - 1\] : null/,
+  'Grouped Formula Tutor rendering should omit the superseded initial state and pass the prior turn so each answered step appears once.'
 );
 assert.match(
   studentUi,
-  /function renderCompactTutorSessionStep\(turn, context = \{\}\)[\s\S]*const submitted = getTutorSubmittedMessage\(turn, context\.stepIndex\)[\s\S]*const answeredStep = getAnsweredTutorStepContext[\s\S]*formatTutorInstructionProgress\(answeredStep\.tutor, answeredStep\.work[\s\S]*summarizeTutorStepPrompt\(answeredStep\.currentStep\)[\s\S]*student-tutor-session-step-compact[\s\S]*student-tutor-history-answer[\s\S]*student-tutor-history-final/,
-  'Compact Formula Tutor history rows should pair student answers with the answered step, not the next prompt.'
+  /function renderCompactTutorSessionStep\(turn, context = \{\}\)[\s\S]*const submitted = getTutorSubmittedMessage\(turn, context\.stepIndex\)[\s\S]*const answeredStep = getAnsweredTutorStepContext[\s\S]*formatTutorInstructionProgress\(answeredStep\.tutor, answeredStep\.work[\s\S]*const resultStatus[\s\S]*student-tutor-session-step-compact[\s\S]*student-tutor-history-feedback[\s\S]*student-tutor-history-review-label[\s\S]*student-tutor-history-final/,
+  'Collapsed Formula Tutor history rows should show only compact step/result/review summary content while preserving the final answer.'
 );
 assert.match(
   studentUi,
-  /function renderJustAnsweredTutorSessionRow\(turn, context = \{\}\)[\s\S]*getTutorSubmittedMessage\(turn, context\.stepIndex\)[\s\S]*doesSubmittedAnswerBelongToAnsweredFormulaStep\(context\)[\s\S]*if \(tutor\.completed === true \|\| work\.isComplete === true\) return '';[\s\S]*getAnsweredTutorStepContext\(turn,[\s\S]*formatTutorInstructionProgress\(answeredStep\.tutor, answeredStep\.work, 'Saved'\)[\s\S]*summarizeTutorStepPrompt\(answeredStep\.currentStep\)[\s\S]*student-tutor-just-answered-row[\s\S]*Student answer:/,
-  'Correct active Formula Tutor advancement should render the just-answered step as a compact row before the new prompt.'
+  /function renderJustAnsweredTutorSessionRow\(turn, context = \{\}\)[\s\S]*getTutorSubmittedMessage\(turn, context\.stepIndex\)[\s\S]*doesSubmittedAnswerBelongToAnsweredFormulaStep\(context\)[\s\S]*getAnsweredTutorStepContext\(turn,[\s\S]*const reviewKey[\s\S]*student-tutor-just-answered-row[\s\S]*aria-expanded[\s\S]*aria-controls[\s\S]*student-tutor-history-review-label/,
+  'The just-answered Formula Tutor step should remain a compact, accessible, expandable review row before the new current prompt.'
 );
 assert.match(
   studentUi,
@@ -484,14 +496,9 @@ assert.match(
   'Answered-step context should use the prior tutor turn for submitted answers and stay on the current step for unanswered/wrong-state rows.'
 );
 assert.match(
-  getFunctionBlock('summarizeTutorStepPrompt'),
-  /Method choice[\s\S]*Given number[\s\S]*Top number[\s\S]*Bottom number[\s\S]*Canceling unit[\s\S]*Final number/,
-  'Compact history labels should cover method choice, given number, top number, bottom number, canceling unit, and final number steps.'
-);
-assert.match(
   studentUi,
-  /function renderCompactTutorSessionStep\(turn, context = \{\}\)[\s\S]*tutorStepExpandedState\.get\(turn\.id\)[\s\S]*data-toggle-tutor-step-id="\$\{escapeAttr\(turn\.id\)\}"[\s\S]*aria-expanded="\$\{expanded \? 'true' : 'false'\}"[\s\S]*renderTutorStepReviewDetails/,
-  'Compact saved Formula Tutor rows should be independently expandable by tutor turn id.'
+  /function renderCompactTutorSessionStep\(turn, context = \{\}\)[\s\S]*tutorStepExpandedState\.get\(turn\.id\)[\s\S]*data-toggle-tutor-step-id="\$\{escapeAttr\(turn\.id\)\}"[\s\S]*aria-expanded="\$\{expanded \? 'true' : 'false'\}"[\s\S]*aria-controls[\s\S]*renderTutorStepReviewDetails/,
+  'Compact saved Formula Tutor rows should be independently expandable and connected to their review panels.'
 );
 assert.doesNotMatch(
   getFunctionBlock('renderCompactTutorSessionStep'),
@@ -954,10 +961,15 @@ assert.match(sessionQuestionBlock, /border:\s*1px solid rgba\(255,214,102,0\.3\)
 assert.match(sessionCompactStepBlock, /padding:\s*0\.36rem 0\.44rem;/, 'Saved Formula Tutor steps should use compact history-row spacing.');
 assert.match(studentHtml, /\.student-tutor-history-row,\s*\.student-tutor-history-final\s*\{[\s\S]*flex-wrap:\s*wrap;/, 'Saved Formula Tutor history rows should keep progress, feedback, prompt, and answer compact.');
 assert.match(tutorHistoryRowBlock, /cursor:\s*pointer;/, 'Saved Formula Tutor history rows should look tappable/clickable.');
-assert.match(tutorJustAnsweredRowBlock, /cursor:\s*default;/, 'Just-answered Formula Tutor rows should read as passive summaries, not expandable controls.');
+assert.equal(tutorJustAnsweredRowBlock, '', 'Just-answered Formula Tutor rows should use the same accessible disclosure behavior as other saved steps.');
 assert.match(tutorHistoryExpandedBlock, /display:\s*grid;/, 'Expanded saved Formula Tutor review details should render in a structured panel.');
 assert.match(tutorInstructionBlock, /display:\s*grid;/, 'Formula Tutor instruction block should be a compact shared prompt region.');
-assert.match(tutorInstructionPromptBlock, /font-weight:\s*760;/, 'Formula Tutor active prompt should be prominent in the instruction block.');
+assert.match(tutorInstructionPromptBlock, /font-weight:\s*820;/, 'Formula Tutor active prompt should be prominent in the instruction block.');
+assert.match(tutorCurrentInstructionBlock, /border:\s*2px solid/, 'The current instruction should have stronger structure than saved steps.');
+assert.match(tutorEquationBlock, /font-size:\s*clamp/, 'The active equation should use a prominent responsive type size.');
+assert.match(tutorEquationBlock, /text-align:\s*center;/, 'The active equation should be easy to scan on a phone.');
+assert.match(tutorEquationBlankBlock, /border-bottom:\s*3px solid/, 'The requested equation value should have a visible blank beyond color alone.');
+assert.match(tutorResponseExpectationBlock, /font-weight:\s*850;/, 'The number-only response expectation should be visually prominent.');
 
 assert.match(
   studentUi,
@@ -981,8 +993,8 @@ assert.match(
 );
 assert.match(
   studentUi,
-  /function scrollTimelineToBottom\(\)[\s\S]*student-tutor-session\.is-expanded\.is-active \.student-tutor-session-scroll[\s\S]*timeline\.scrollTop = timeline\.scrollHeight;/,
-  'Newest active tutor work should stay visible in both the session scroller and timeline.'
+  /function scrollTimelineToBottom\(\)[\s\S]*student-tutor-session\.is-expanded\.is-active \.student-tutor-session-scroll[\s\S]*student-tutor-session-step\.is-current[\s\S]*activeStep\.offsetTop - activeSessionScroll\.offsetTop[\s\S]*student-tutor-instruction\.is-current[\s\S]*instructionTop - timelineTop[\s\S]*timeline\.scrollTop = timeline\.scrollHeight;/,
+  'The current tutor instruction should be aligned inside both bounded scrollers while normal chat still scrolls to the newest message.'
 );
 assert.match(
   studentUi,

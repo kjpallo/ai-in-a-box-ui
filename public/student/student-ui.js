@@ -978,11 +978,14 @@
           ` : ''}
           <div class="student-tutor-session-scroll">
             <div class="student-tutor-session-steps">
-              ${session.turns.map((turn, index) => renderTutorSessionStep(turn, {
-                isLatestActiveStep: session.isActive && turn.id === latestTurn.id,
-                stepIndex: index,
-                previousTurn: index > 0 ? session.turns[index - 1] : null
-              })).join('')}
+              ${session.turns.map((turn, index) => {
+                if (index === 0 && session.turns.length > 1) return '';
+                return renderTutorSessionStep(turn, {
+                  isLatestActiveStep: session.isActive && turn.id === latestTurn.id,
+                  stepIndex: index,
+                  previousTurn: index > 0 ? session.turns[index - 1] : null
+                });
+              }).join('')}
             </div>
           </div>
         </div>
@@ -1052,7 +1055,7 @@
       : '';
 
     return `
-      <section class="student-tutor-session-step ${stateClass} ${sideAnswerClass}" data-tutor-turn-id="${escapeAttr(turn.id)}">
+      <section class="student-tutor-session-step ${stateClass} ${sideAnswerClass}" data-tutor-turn-id="${escapeAttr(turn.id)}"${isCurrentStep && isFormulaTutor ? ' aria-current="step"' : ''}>
         ${answerHtml}
         <div class="student-tutor-session-step-work">
           ${justAnsweredHtml}
@@ -1094,16 +1097,38 @@
       submitted
     });
     const progress = formatTutorInstructionProgress(answeredStep.tutor, answeredStep.work, 'Saved');
-    const promptLabel = summarizeTutorStepPrompt(answeredStep.currentStep);
     const feedback = getTutorCompactFeedback(context.responseText);
+    const reviewKey = `${turn.id}-answered`;
+    const expanded = tutorStepExpandedState.get(reviewKey) === true;
+    const reviewPanelId = `student-tutor-step-review-${reviewKey}`;
+    const reviewPanelHtml = renderTutorStepReviewDetails(turn, {
+      tutor,
+      work,
+      reviewTutor: answeredStep.tutor,
+      reviewWork: answeredStep.work,
+      currentStep: answeredStep.currentStep,
+      responseText: context.responseText,
+      submitted,
+      reviewPanelId,
+      hidden: !expanded
+    });
+    const resultStatus = feedback || 'Saved';
     return `
       <div class="student-tutor-session-step-compact student-tutor-just-answered-row">
-        <div class="student-tutor-history-row" aria-label="Just answered tutor step">
+        <button
+          type="button"
+          class="student-tutor-history-row ${expanded ? 'is-expanded' : ''}"
+          data-toggle-tutor-step-id="${escapeAttr(reviewKey)}"
+          aria-expanded="${expanded ? 'true' : 'false'}"
+          aria-controls="${escapeAttr(reviewPanelId)}"
+          aria-label="${escapeAttr(`${progress || 'Saved step'}. ${resultStatus}. ${expanded ? 'Hide' : 'Review'} step details.`)}"
+        >
+          <span class="student-tutor-history-caret" aria-hidden="true">${expanded ? '▾' : '▸'}</span>
           <strong>${escapeHtml(progress || 'Saved step')}</strong>
-          ${feedback ? `<span class="student-tutor-history-feedback">${escapeHtml(feedback)}</span>` : ''}
-          ${promptLabel ? `<span class="student-tutor-history-prompt">${escapeHtml(promptLabel)}</span>` : ''}
-          <span class="student-tutor-history-answer">Student answer: ${escapeHtml(formatTutorSubmittedMessage(submitted))}</span>
-        </div>
+          <span class="student-tutor-history-feedback">${escapeHtml(resultStatus)}</span>
+          <span class="student-tutor-history-review-label">${expanded ? 'Hide details' : 'Review'}</span>
+        </button>
+        ${reviewPanelHtml}
       </div>
     `;
   }
@@ -1117,19 +1142,22 @@
       submitted
     });
     const progress = formatTutorInstructionProgress(answeredStep.tutor, answeredStep.work, context.stepStatus);
-    const promptLabel = summarizeTutorStepPrompt(answeredStep.currentStep);
     const feedback = getTutorCompactFeedback(context.responseText);
     const finalAnswer = work.finalAnswer || work.answer || formatTutorAnswer(tutor.solveFor, tutor.finalAnswerDisplay);
     const expanded = tutorStepExpandedState.get(turn.id) === true;
-    const expandedHtml = expanded ? renderTutorStepReviewDetails(turn, {
+    const reviewPanelId = `student-tutor-step-review-${turn.id}`;
+    const reviewPanelHtml = renderTutorStepReviewDetails(turn, {
       tutor,
       work,
       reviewTutor: answeredStep.tutor,
       reviewWork: answeredStep.work,
       currentStep: answeredStep.currentStep,
       responseText: context.responseText,
-      submitted
-    }) : '';
+      submitted,
+      reviewPanelId,
+      hidden: !expanded
+    });
+    const resultStatus = feedback || context.stepStatus || 'Saved';
     const classes = [
       'student-tutor-session-step',
       'student-tutor-session-step-compact',
@@ -1145,14 +1173,15 @@
           class="student-tutor-history-row ${expanded ? 'is-expanded' : ''}"
           data-toggle-tutor-step-id="${escapeAttr(turn.id)}"
           aria-expanded="${expanded ? 'true' : 'false'}"
+          aria-controls="${escapeAttr(reviewPanelId)}"
+          aria-label="${escapeAttr(`${progress || 'Saved step'}. ${resultStatus}. ${expanded ? 'Hide' : 'Review'} step details.`)}"
         >
           <span class="student-tutor-history-caret" aria-hidden="true">${expanded ? '▾' : '▸'}</span>
           <strong>${escapeHtml(progress || 'Saved step')}</strong>
-          ${feedback ? `<span class="student-tutor-history-feedback">${escapeHtml(feedback)}</span>` : ''}
-          ${promptLabel ? `<span class="student-tutor-history-prompt">${escapeHtml(promptLabel)}</span>` : ''}
-          ${submitted ? `<span class="student-tutor-history-answer">Student answer: ${escapeHtml(formatTutorSubmittedMessage(submitted))}</span>` : ''}
+          <span class="student-tutor-history-feedback">${escapeHtml(resultStatus)}</span>
+          <span class="student-tutor-history-review-label">${expanded ? 'Hide details' : 'Review'}</span>
         </button>
-        ${expandedHtml}
+        ${reviewPanelHtml}
         ${finalAnswer ? `<div class="student-tutor-history-final"><strong>Final Answer</strong><span>${escapeHtml(finalAnswer)}</span></div>` : ''}
       </section>
     `;
@@ -1200,10 +1229,10 @@
       ['Calculator check', formatTutorCalculatorCheck(reviewWork.calculatorCheck)]
     ];
     const visibleRows = rows.filter(([, value]) => String(value || '').trim());
-    if (visibleRows.length === 0) return '';
+    if (visibleRows.length === 0 && !context.reviewPanelId) return '';
 
     return `
-      <div class="student-tutor-history-expanded" aria-label="Saved step review details">
+      <div${context.reviewPanelId ? ` id="${escapeAttr(context.reviewPanelId)}"` : ''} class="student-tutor-history-expanded" aria-label="Saved step review details"${context.hidden === true ? ' hidden' : ''}>
         ${visibleRows.map(([label, value]) => `
           <div class="student-tutor-history-detail">
             <strong>${escapeHtml(label)}</strong>
@@ -1219,6 +1248,7 @@
     const prompt = String(currentStep || '').trim();
     const feedback = getTutorFeedbackLine(responseText, prompt);
     const hint = String(tutor?.currentHint || '').trim();
+    const displayEquation = isCurrentStep ? renderTutorDisplayEquation(tutor, work) : '';
     const classes = [
       'student-tutor-instruction',
       isCurrentStep ? 'is-current' : 'is-saved',
@@ -1230,12 +1260,36 @@
       <div class="${escapeAttr(classes)}">
         <div class="student-tutor-instruction-head">
           <strong>${escapeHtml(progress)}</strong>
-          <span>${escapeHtml(stepStatus || '')}</span>
+          <span class="student-tutor-current-step-label">${escapeHtml(isCurrentStep ? 'Current step' : stepStatus || '')}</span>
         </div>
         ${feedback ? `<p class="student-tutor-instruction-feedback">${escapeHtml(feedback)}</p>` : ''}
         ${prompt ? `<p class="student-tutor-instruction-prompt">${escapeHtml(prompt)}</p>` : '<p class="student-tutor-instruction-prompt student-tutor-pending">Waiting...</p>'}
+        ${displayEquation}
         ${hint ? `<p class="student-tutor-instruction-hint">Hint: ${escapeHtml(hint)}</p>` : ''}
       </div>
+    `;
+  }
+
+  function renderTutorDisplayEquation(tutor, work = {}) {
+    const step = work.currentStep || tutor?.currentStep || {};
+    const template = String(step.displayEquation || '').trim();
+    const markerIndex = template.indexOf('{{blank}}');
+    if (markerIndex === -1 || template.indexOf('{{blank}}', markerIndex + '{{blank}}'.length) !== -1) return '';
+
+    const parts = template.split('{{blank}}');
+    const equationHtml = parts.map((part, index) => {
+      const blank = index < parts.length - 1
+        ? '<span class="student-tutor-equation-blank" aria-hidden="true">____</span>'
+        : '';
+      return `${escapeHtml(part)}${blank}`;
+    }).join('');
+    const accessibleEquation = template.split('{{blank}}').join('blank');
+
+    return `
+      <div class="student-tutor-equation" aria-label="${escapeAttr(`Equation: ${accessibleEquation}`)}">
+        ${equationHtml}
+      </div>
+      <p class="student-tutor-response-expectation">Enter only the missing number.</p>
     `;
   }
 
@@ -1303,6 +1357,7 @@
     if (!turnId) return;
     tutorStepExpandedState.set(turnId, tutorStepExpandedState.get(turnId) !== true);
     renderTimeline();
+    timeline?.querySelector(`[data-toggle-tutor-step-id="${cssEscape(turnId)}"]`)?.focus();
   }
 
   function getTutorSessionQuestion(session) {
@@ -1354,20 +1409,6 @@
     const stepId = String(work?.currentStep?.id || tutor?.currentStep?.id || tutor?.stepId || '').trim();
     if (stepId === 'choose_method') return 'Choose method';
     return formatTutorProgress(tutor, work) || stepStatus || '';
-  }
-
-  function summarizeTutorStepPrompt(prompt) {
-    const text = String(prompt || '').replace(/\s+/g, ' ').trim();
-    if (!text) return '';
-    const lower = text.toLowerCase();
-    if (/\bmethod\b/.test(lower)) return 'Method choice';
-    if (/\bgiven number\b/.test(lower)) return 'Given number';
-    if (/\btop number\b/.test(lower)) return 'Top number';
-    if (/\bbottom number\b/.test(lower)) return 'Bottom number';
-    if (/\bunit\b.*\bcancel|\bcancel/.test(lower)) return 'Canceling unit';
-    if (/\bfinal number\b/.test(lower)) return 'Final number';
-    if (/\bmarker\b.*\btarget unit\b|\btarget unit\b/.test(lower)) return 'Target unit';
-    return summarizeText(text, 64);
   }
 
   function getTutorCompactFeedback(response) {
@@ -3363,7 +3404,17 @@
     if (!timeline) return;
     const activeSessionScroll = timeline.querySelector('.student-tutor-session.is-expanded.is-active .student-tutor-session-scroll');
     if (activeSessionScroll) {
-      activeSessionScroll.scrollTop = activeSessionScroll.scrollHeight;
+      const activeStep = activeSessionScroll.querySelector('.student-tutor-session-step.is-current');
+      activeSessionScroll.scrollTop = activeStep
+        ? Math.max(0, activeStep.offsetTop - activeSessionScroll.offsetTop)
+        : activeSessionScroll.scrollHeight;
+      const activeInstruction = activeStep?.querySelector('.student-tutor-instruction.is-current');
+      if (activeInstruction) {
+        const instructionTop = activeInstruction.getBoundingClientRect().top;
+        const timelineTop = timeline.getBoundingClientRect().top;
+        timeline.scrollTop = Math.max(0, timeline.scrollTop + instructionTop - timelineTop - 4);
+        return;
+      }
     }
     timeline.scrollTop = timeline.scrollHeight;
   }
@@ -4077,6 +4128,8 @@
     window.CharlemagneStudentUiTestHooks = {
       renderPicketFenceVisual,
       renderChemicalEquationBalancingVisual,
+      renderTutorSessionStep,
+      toggleTutorStepReview,
       resolveConfirmedBalancingTranscriptLabel
     };
   }
