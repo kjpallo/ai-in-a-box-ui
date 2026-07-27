@@ -19,6 +19,7 @@ function createStudentRouteHarness(options = {}) {
   const app = createApp(handlers, ['get', 'post']);
   const studentSessions = Object.create(null);
   const studentInteractionLog = [];
+  const now = typeof options.now === 'function' ? options.now : () => new Date();
   const questionRateLimiter = createStudentQuestionRateLimiter(options.rateLimitClock ? { now: options.rateLimitClock } : undefined);
   const classroomControls = {
     studentCopyInspectLockEnabled: true,
@@ -69,6 +70,8 @@ function createStudentRouteHarness(options = {}) {
       return {};
     },
     linkGoogleIdentity() {},
+    defaultSessionMinutes: options.defaultSessionMinutes,
+    now,
     port: 3000,
     questionRateLimiter,
     sendDailySummaryEmail() {},
@@ -76,16 +79,19 @@ function createStudentRouteHarness(options = {}) {
   });
 
   registerStudentRoutes(app, {
-    answerStudentMessage: questionAnswer.answerStudentMessage,
+    answerStudentMessage: typeof options.answerStudentMessage === 'function'
+      ? options.answerStudentMessage
+      : questionAnswer.answerStudentMessage,
     getClassroomControls: () => classroomControls,
     logCompletedInteraction: questionAnswer.logCompletedInteraction,
+    now,
     questionRateLimiter,
     studentSessions
   });
 
   return {
-    request(method, route, body = {}, query = {}) {
-      return request(handlers, method, route, body, {}, query, {
+    request(method, route, body = {}, query = {}, params = {}) {
+      return request(handlers, method, route, body, params, query, {
         protocol: 'http',
         get(name) {
           return name === 'host' ? 'localhost:3000' : '';

@@ -4,7 +4,7 @@ const os = require('os');
 const path = require('path');
 const { parse } = require('csv-parse/sync');
 const {
-  parseStudentSessionIdFromUrl,
+  parseStudentJoinCodeFromUrl,
   registerProfileRoutes
 } = require('../routes/profileRoutes');
 const { registerStudentRoutes } = require('../routes/studentRoutes');
@@ -232,20 +232,17 @@ async function main() {
     {},
     authorizedExtras
   );
-  assert.equal(emptyArchiveResponse.statusCode, 200, 'confirmed empty session end/archive should succeed');
+  assert.equal(emptyArchiveResponse.statusCode, 200, 'confirmed empty session archive attempt should succeed');
   assert.equal(emptyArchiveResponse.body.ok, true);
   assert.equal(emptyArchiveResponse.body.archived, false);
   assert.equal(emptyArchiveResponse.body.status, 'no_records');
-  assert.equal(emptyArchiveResponse.body.sessionEnded, true);
+  assert.equal(emptyArchiveResponse.body.sessionEnded, false);
   assert.equal(emptyArchiveResponse.body.rowCount, 0);
   assert.equal(emptyArchiveResponse.body.deletedRecordCount, 0);
   assert.equal(emptyArchiveResponse.body.rawRecordsDeleted, false);
-  assert.equal(
-    emptyArchiveResponse.body.message,
-    'Session ended. No question history was archived.'
-  );
-  assert.equal(fs.readFileSync(logFilePath, 'utf8'), originalLogContents, 'empty session end/archive should not change raw records');
-  assert.equal(studentSessions[emptySessionId], undefined, 'empty runtime session should be ended even without archived records');
+  assert.match(emptyArchiveResponse.body.message, /No question history records matched/i);
+  assert.equal(fs.readFileSync(logFilePath, 'utf8'), originalLogContents, 'empty session archive should not change raw records');
+  assert.ok(studentSessions[emptySessionId], 'archiving should not end or delete an empty runtime session');
 
   const emptyLiveAfterArchive = await request(
     handlers,
@@ -259,8 +256,8 @@ async function main() {
   assert.equal(emptyLiveAfterArchive.statusCode, 200);
   assert.equal(
     emptyLiveAfterArchive.body.sessions.some((session) => session.classSessionId === emptySessionId),
-    false,
-    'empty ended session should disappear from Live Activity'
+    true,
+    'an empty session remains in Live Activity when no report was archived'
   );
   const emptyJoinAfterArchive = await request(
     handlers,
@@ -268,8 +265,7 @@ async function main() {
     '/api/student/join',
     { sessionId: emptySessionId, studentHubId: 'empty-session-student' }
   );
-  assert.equal(emptyJoinAfterArchive.statusCode, 404, 'old empty student link should not join after end/archive');
-  assert.equal(emptyJoinAfterArchive.body.error, 'Student session not found.');
+  assert.equal(emptyJoinAfterArchive.statusCode, 200, 'archive attempts must not change student access');
   const emptyMessageAfterArchive = await request(
     handlers,
     'POST',
@@ -280,8 +276,7 @@ async function main() {
       message: 'Can I still ask after the session ended?'
     }
   );
-  assert.equal(emptyMessageAfterArchive.statusCode, 404, 'old empty student link should not ask after end/archive');
-  assert.equal(emptyMessageAfterArchive.body.error, 'Student session not found.');
+  assert.equal(emptyMessageAfterArchive.statusCode, 200, 'archive attempts must not block student questions');
 
   const archiveResponse = await request(
     handlers,
@@ -314,7 +309,8 @@ async function main() {
     problemQuestionsContents,
     'archive endpoint should not touch problem_questions.json'
   );
-  assert.equal(studentSessions['session-a'], undefined, 'archived runtime session should be ended');
+  assert.ok(studentSessions['session-a'], 'archiving should retain runtime session access state');
+  assert.ok(studentSessions['session-a'].archivedAt, 'archived runtime session should be removed from active reporting');
   assert.ok(studentSessions['session-b'], 'archive endpoint should not end unrelated sessions');
 
   const archiveCsvPath = path.join(archiveDir, archiveResponse.body.csvFilename);
@@ -447,31 +443,31 @@ async function main() {
   assert.notEqual(restartResponse.body.sessionId, 'session-a', 'restart should generate a fresh sessionId');
   assert.match(restartResponse.body.sessionId, /^[0-9a-f-]{32,36}$/i);
   assert.notEqual(restartResponse.body.studentUrl, '/student.html?sessionId=session-a', 'restart should generate a fresh studentUrl');
-  assert.match(restartResponse.body.studentUrl, new RegExp(encodeURIComponent(restartResponse.body.sessionId)));
-  const restartedSessionIdFromUrl = parseStudentSessionIdFromUrl(restartResponse.body.studentUrl);
+  assert.doesNotMatch(restartResponse.body.studentUrl, new RegExp(encodeURIComponent(restartResponse.body.sessionId)));
+  const restartedJoinCodeFromUrl = parseStudentJoinCodeFromUrl(restartResponse.body.studentUrl);
   assert.equal(
-    restartedSessionIdFromUrl,
-    restartResponse.body.sessionId,
-    'restart studentUrl should contain the new live session id expected by student join'
+    restartedJoinCodeFromUrl,
+    restartResponse.body.joinCode,
+    'restart studentUrl should contain the new clean join code'
   );
   const joinRestarted = await request(
     handlers,
     'POST',
     '/api/student/join',
-    { sessionId: restartedSessionIdFromUrl, studentHubId: 'restart-route-student' }
+    { joinCode: restartedJoinCodeFromUrl, studentHubId: 'restart-route-student' }
   );
   assert.equal(
     joinRestarted.statusCode,
     200,
     'id parsed from restart studentUrl should be joinable through the real student join route'
   );
-  assert.equal(joinRestarted.body.classSessionId, restartResponse.body.sessionId);
+  assert.equal(joinRestarted.body.classSessionId, undefined, 'clean joins should not expose the internal session id');
   const restartedStudentMessage = await request(
     handlers,
     'POST',
     '/api/student/message',
     {
-      sessionId: restartedSessionIdFromUrl,
+      joinCode: restartedJoinCodeFromUrl,
       studentHubId: 'restart-route-student',
       message: 'Can I ask from the restarted session?'
     }
@@ -488,7 +484,7 @@ async function main() {
     'Restarted Science A. A new student link is ready.',
     'restart should not double-prefix the success message'
   );
-  assert.equal(studentSessions['session-a'], undefined, 'restart should not resurrect the old archived runtime session');
+  assert.ok(studentSessions['session-a'], 'restart should not mutate the old archived runtime session');
   assert.ok(studentSessions[restartResponse.body.sessionId], 'restart should create a new runtime session');
   assert.equal(studentSessions[restartResponse.body.sessionId].className, 'Restarted Science A');
   assert.deepEqual(
@@ -579,25 +575,25 @@ async function main() {
   );
   assert.equal(legacyRestart.statusCode, 201, 'legacy archives without class metadata should still restart');
   assert.equal(legacyRestart.body.ok, true);
-  assert.match(legacyRestart.body.studentUrl, new RegExp(encodeURIComponent(legacyRestart.body.sessionId)));
-  const legacySessionIdFromUrl = parseStudentSessionIdFromUrl(legacyRestart.body.studentUrl);
+  assert.doesNotMatch(legacyRestart.body.studentUrl, new RegExp(encodeURIComponent(legacyRestart.body.sessionId)));
+  const legacyJoinCodeFromUrl = parseStudentJoinCodeFromUrl(legacyRestart.body.studentUrl);
   assert.equal(
-    legacySessionIdFromUrl,
-    legacyRestart.body.sessionId,
-    'legacy restart studentUrl should contain the new live session id'
+    legacyJoinCodeFromUrl,
+    legacyRestart.body.joinCode,
+    'legacy restart studentUrl should contain a clean join code'
   );
   const joinLegacyRestart = await request(
     handlers,
     'POST',
     '/api/student/join',
-    { sessionId: legacySessionIdFromUrl, studentHubId: 'legacy-restart-route-student' }
+    { joinCode: legacyJoinCodeFromUrl, studentHubId: 'legacy-restart-route-student' }
   );
   assert.equal(
     joinLegacyRestart.statusCode,
     200,
     'legacy restart URL should be joinable through the real student join route'
   );
-  assert.equal(joinLegacyRestart.body.classSessionId, legacyRestart.body.sessionId);
+  assert.equal(joinLegacyRestart.body.classSessionId, undefined);
   assert.equal(
     legacyRestart.body.className,
     'Restarted Session',

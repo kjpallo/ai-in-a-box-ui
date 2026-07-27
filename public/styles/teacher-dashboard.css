@@ -1450,6 +1450,39 @@
   background: var(--surface-soft);
 }
 
+.student-session-create-controls {
+  display: grid;
+  gap: 8px;
+}
+
+.student-session-create-controls label {
+  display: grid;
+  gap: 5px;
+  color: #d8efe8;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.student-session-create-controls [hidden] {
+  display: none;
+}
+
+.student-session-create-controls select,
+.student-session-create-controls input {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid rgba(102, 247, 209, 0.26);
+  border-radius: 8px;
+  padding: 7px 9px;
+  color: #f4fffb;
+  background: rgba(7, 24, 25, 0.84);
+}
+
+.student-session-create-controls .small-button {
+  width: 100%;
+  justify-content: center;
+}
+
 .live-student-link-row #profileStudentLinkStatus {
   grid-column: 1 / -1;
   color: #b7d1cf;
@@ -1593,6 +1626,18 @@
   font-weight: 900;
   line-height: 1;
   white-space: nowrap;
+}
+
+.active-session-running-pill.is-expired {
+  border-color: rgba(255, 214, 102, 0.54);
+  color: #2e1d03;
+  background: #ffd666;
+}
+
+.active-session-running-pill.is-ended {
+  border-color: rgba(255, 127, 127, 0.52);
+  color: #2b0808;
+  background: #ff9c9c;
 }
 
 .active-session-facts {

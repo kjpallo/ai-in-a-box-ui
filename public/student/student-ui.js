@@ -1,7 +1,11 @@
 (() => {
   const STUDENT_HUB_STORAGE_KEY = 'charlemagne.anonymousStudentHubId';
   const params = new URLSearchParams(window.location.search);
-  const sessionId = params.get('sessionId') || params.get('classSessionId') || '';
+  const cleanPathMatch = String(window.location.pathname || '').match(/^\/join\/([^/]+)\/?$/i);
+  const joinCode = normalizeJoinCode(cleanPathMatch?.[1] || '');
+  const legacySessionId = params.get('sessionId') || params.get('classSessionId') || '';
+  const sessionAccess = joinCode || legacySessionId;
+  const sessionDisplay = joinCode || (legacySessionId ? 'Legacy classroom link' : 'Missing session');
   const studentHubId = getOrCreateStudentHubId();
   const form = document.getElementById('studentMessageForm');
   const input = document.getElementById('studentMessageInput');
@@ -14,6 +18,10 @@
   const sessionText = document.getElementById('sessionIdText');
   const status = document.getElementById('studentStatus');
   const routeInfo = document.getElementById('studentRouteInfo');
+  const sessionAccessState = document.getElementById('studentSessionAccessState');
+  const sessionAccessTitle = document.getElementById('studentSessionAccessTitle');
+  const sessionAccessMessage = document.getElementById('studentSessionAccessMessage');
+  const sessionCheckAgainButton = document.getElementById('studentSessionCheckAgain');
   const fireworks = document.getElementById('studentTutorFireworks');
   const sessionMessage = document.getElementById('studentSessionMessage');
   const frictionWarning = document.getElementById('studentFrictionWarning');
@@ -83,12 +91,12 @@
   async function init() {
     if (!form || !input || !sendButton || !timeline) return;
 
-    sessionText.textContent = sessionId || 'Missing session';
+    sessionText.textContent = sessionDisplay;
     setFormEnabled(false);
     renderTimeline();
+    await validateSession();
     await loadStudentControls();
     renderRateLimitEnergy();
-    await validateSession();
 
     form.addEventListener('submit', handleSubmit);
     input.addEventListener('keydown', handleInputKeydown);
@@ -96,6 +104,7 @@
     askHighlightButton?.addEventListener('click', handleAskHighlightClick);
     clearButton?.addEventListener('click', handleClearClick);
     composerTutorChoices?.addEventListener('click', handleComposerTutorChoiceClick);
+    sessionCheckAgainButton?.addEventListener('click', () => validateSession({ manual: true }));
     timeline.addEventListener('click', handleTimelineClick);
     timeline.addEventListener('change', handleTimelineChange);
     timeline.addEventListener('mouseover', handleTimelinePreview);
@@ -124,9 +133,7 @@
       input.value = '';
     } catch (error) {
       renderStudentError(turnId, error);
-      if (/session/i.test(error.message || '')) {
-        showInvalidSession(error.message);
-      }
+      handleSessionAccessError(error);
     } finally {
       setFormEnabled(sessionIsValid);
       if (sessionIsValid) input.focus();
@@ -154,45 +161,59 @@
     setSendingState();
 
     try {
-      const data = await window.Charlemagne.api.sendStudentWhyThisMatters(sessionId, studentHubId);
+      const data = await window.Charlemagne.api.sendStudentWhyThisMatters(sessionAccess, studentHubId);
       renderStudentMessageResult(data, prompt, { turnId });
     } catch (error) {
       renderStudentError(turnId, error);
-      if (/session/i.test(error.message || '')) {
-        showInvalidSession(error.message);
-      }
+      handleSessionAccessError(error);
     } finally {
       setFormEnabled(sessionIsValid);
       if (sessionIsValid) input.focus();
     }
   }
 
-  async function validateSession() {
-    if (!sessionId) {
-      showInvalidSession('This student link is missing a session id. Ask your teacher for a new link.');
+  async function validateSession(options = {}) {
+    if (!sessionAccess) {
+      showSessionAccessState(
+        'SESSION_NOT_FOUND',
+        'This classroom link is incomplete. Ask your teacher for a new link.'
+      );
       return;
     }
 
     try {
-      await window.Charlemagne.api.joinStudentSession(sessionId, studentHubId);
+      if (sessionCheckAgainButton) sessionCheckAgainButton.disabled = true;
+      if (options.manual) {
+        sessionMessage.textContent = 'Checking classroom session again...';
+        status.textContent = 'Checking link';
+      }
+      await window.Charlemagne.api.joinStudentSession(sessionAccess, studentHubId);
+      sessionIsValid = true;
       await refreshRateLimitStatus();
 
-      sessionIsValid = true;
-      sessionText.textContent = sessionId;
-      sessionMessage.textContent = 'Connected to session.';
+      sessionText.textContent = sessionDisplay;
+      sessionMessage.textContent = 'Connected to classroom session.';
       status.textContent = 'Connected';
+      hideSessionAccessState();
       setFormEnabled(true);
       startHeartbeat();
       startRateLimitRefresh();
       input.focus();
     } catch (error) {
-      showInvalidSession(error.message || 'Could not check this student session.');
+      if (!handleSessionAccessError(error)) {
+        showSessionAccessState(
+          'SESSION_NOT_FOUND',
+          error.message || 'Could not check this classroom session.'
+        );
+      }
+    } finally {
+      if (sessionCheckAgainButton) sessionCheckAgainButton.disabled = false;
     }
   }
 
   async function loadStudentControls() {
     try {
-      const data = await window.Charlemagne.api.fetchStudentControls();
+      const data = await window.Charlemagne.api.fetchStudentControls(sessionAccess);
       controls.studentCopyInspectLockEnabled = data.studentCopyInspectLockEnabled !== false;
       controls.studentQuestionRateLimitEnabled = data.studentQuestionRateLimitEnabled !== false;
       controls.studentQuestionsPerMinute = Number(data.studentQuestionsPerMinute) || 6;
@@ -222,23 +243,29 @@
   }
 
   async function sendHeartbeat() {
-    if (!sessionId || !studentHubId) return;
-    await window.Charlemagne.api.joinStudentSession(sessionId, studentHubId);
+    if (!sessionAccess || !studentHubId) return;
+    try {
+      await window.Charlemagne.api.joinStudentSession(sessionAccess, studentHubId);
+      if (!sessionIsValid) await validateSession();
+    } catch (error) {
+      handleSessionAccessError(error);
+    }
   }
 
   function startHeartbeat() {
     if (heartbeatTimer) return;
     heartbeatTimer = window.setInterval(() => {
       sendHeartbeat().catch(() => {});
-    }, 30_000);
+    }, 20_000);
   }
 
   async function refreshRateLimitStatus() {
-    if (!sessionId || !studentHubId) return;
+    if (!sessionAccess || !studentHubId || !sessionIsValid) return;
     try {
-      const data = await window.Charlemagne.api.fetchStudentRateLimitStatus(sessionId, studentHubId);
+      const data = await window.Charlemagne.api.fetchStudentRateLimitStatus(sessionAccess, studentHubId);
       updateRateLimitState(data.rateLimit);
-    } catch {
+    } catch (error) {
+      handleSessionAccessError(error);
       renderRateLimitEnergy();
     }
   }
@@ -328,13 +355,56 @@
     }
   }
 
-  function showInvalidSession(message) {
+  function showSessionAccessState(code, message) {
     sessionIsValid = false;
     sessionMessage.textContent = message;
-    status.textContent = 'Invalid session';
+    status.textContent = code === 'SESSION_EXPIRED'
+      ? 'Session expired'
+      : code === 'SESSION_ENDED'
+        ? 'Session ended'
+        : 'Invalid session';
     routeInfo.textContent = 'Unavailable';
-    addSystemMessage(message);
+    if (sessionAccessState) sessionAccessState.hidden = false;
+    if (sessionAccessTitle) {
+      sessionAccessTitle.textContent = code === 'SESSION_EXPIRED'
+        ? 'Classroom session expired'
+        : code === 'SESSION_ENDED'
+          ? 'Classroom session ended'
+          : 'Classroom link unavailable';
+    }
+    if (sessionAccessMessage) sessionAccessMessage.textContent = message;
     setFormEnabled(false);
+    startHeartbeat();
+  }
+
+  function hideSessionAccessState() {
+    if (sessionAccessState) sessionAccessState.hidden = true;
+  }
+
+  function handleSessionAccessError(error) {
+    const code = String(error?.code || '');
+    if (code === 'SESSION_EXPIRED') {
+      showSessionAccessState(
+        code,
+        'This classroom session has expired. Ask your teacher to reopen it or provide a new link.'
+      );
+      return true;
+    }
+    if (code === 'SESSION_ENDED') {
+      showSessionAccessState(
+        code,
+        'This classroom session has ended. Ask your teacher for a new link.'
+      );
+      return true;
+    }
+    if (code === 'SESSION_NOT_FOUND' || error?.status === 404) {
+      showSessionAccessState(
+        'SESSION_NOT_FOUND',
+        'This classroom link is not available. Ask your teacher for a new link.'
+      );
+      return true;
+    }
+    return false;
   }
 
   function setSendingState() {
@@ -362,7 +432,7 @@
   }
 
   async function sendStudentMessage(message) {
-    return window.Charlemagne.api.sendStudentMessage(sessionId, message, studentHubId);
+    return window.Charlemagne.api.sendStudentMessage(sessionAccess, message, studentHubId);
   }
 
   function addPendingTurn(message) {
@@ -3888,6 +3958,15 @@
   function createStudentHubId() {
     if (window.crypto?.randomUUID) return window.crypto.randomUUID();
     return `hub-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+
+  function normalizeJoinCode(value) {
+    const raw = String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (raw.length !== 10) return '';
+    const formatted = `${raw.slice(0, 5)}-${raw.slice(5)}`;
+    return /^[23456789ABCDEFGHJKMNPQRSTVWXYZ]{5}-[23456789ABCDEFGHJKMNPQRSTVWXYZ]{5}$/.test(formatted)
+      ? formatted
+      : '';
   }
 
   function normalizePositiveInteger(value, fallback) {

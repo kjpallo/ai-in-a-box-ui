@@ -121,6 +121,7 @@
       setText('studentControlsStatus', 'Loading student controls...');
       const data = await fetchJson('/api/classroom-controls');
       renderStudentControls(data.controls || data);
+      renderStudentSessionDefaults(data.sessionDefaults);
       renderStudentLanHint(data.network || null);
       setText('studentControlsStatus', 'Student controls loaded.');
     } catch (error) {
@@ -141,6 +142,23 @@
     if (rateLimit) rateLimit.checked = controls?.studentQuestionRateLimitEnabled !== false;
     if (perMinute) perMinute.value = String(Number(controls?.studentQuestionsPerMinute) || 6);
     updateQuestionSpeedSummary();
+  }
+
+  function renderStudentSessionDefaults(sessionDefaults) {
+    const minutes = Number(sessionDefaults?.durationMinutes);
+    const preset = byId('studentSessionDurationPreset');
+    if (!preset || !Number.isInteger(minutes) || minutes < 1) return;
+
+    const matchingOption = Array.from(preset.options || [])
+      .find((option) => Number(option.value) === minutes);
+    if (matchingOption) {
+      preset.value = matchingOption.value;
+    } else {
+      preset.value = 'custom';
+      const custom = byId('studentSessionCustomDuration');
+      if (custom) custom.value = String(minutes);
+    }
+    updateCustomSessionDurationVisibility();
   }
 
   function renderStudentLanHint(network) {
@@ -1155,13 +1173,14 @@
       const button = byId('profileCreateStudentLink');
       try {
         if (button) button.disabled = true;
-        setText('profileStudentLinkStatus', 'Creating student link...');
+        setText('profileStudentLinkStatus', 'Starting classroom session...');
+        const duration = selectedStudentSessionDuration();
         const result = await fetchJson('/api/profile/create-student-session', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({})
+          body: JSON.stringify(duration)
         });
         renderStudentLink(result.studentUrl || '');
         await loadStudentSessions();
@@ -1171,6 +1190,9 @@
         if (button) button.disabled = false;
       }
     });
+
+    byId('studentSessionDurationPreset')?.addEventListener('change', updateCustomSessionDurationVisibility);
+    updateCustomSessionDurationVisibility();
 
     byId('profileCopyStudentLink')?.addEventListener('click', async () => {
       if (!currentStudentUrl) return;
@@ -1184,6 +1206,12 @@
     });
 
     byId('profileStudentSessions')?.addEventListener('click', async (event) => {
+      const lifecycleButton = event.target.closest('[data-student-session-lifecycle]');
+      if (lifecycleButton) {
+        updateStudentSessionLifecycle(lifecycleButton);
+        return;
+      }
+
       const archiveButton = event.target.closest('[data-archive-student-session]');
       if (archiveButton) {
         archiveStudentSession(archiveButton);
@@ -1300,8 +1328,26 @@
 
     setText(
       'profileStudentLinkStatus',
-      studentUrl ? 'Class link ready in Active Sessions.' : 'No student link created yet.'
+      studentUrl ? 'Class link ready in Classroom Sessions.' : 'No student link created yet.'
     );
+  }
+
+  function updateCustomSessionDurationVisibility() {
+    const preset = byId('studentSessionDurationPreset')?.value || '60';
+    const customField = byId('studentSessionCustomDurationField');
+    if (customField) customField.hidden = preset !== 'custom';
+  }
+
+  function selectedStudentSessionDuration() {
+    const preset = byId('studentSessionDurationPreset')?.value || '60';
+    if (preset === 'none') return { noExpiration: true };
+    const minutes = preset === 'custom'
+      ? Number(byId('studentSessionCustomDuration')?.value)
+      : Number(preset);
+    if (!Number.isInteger(minutes) || minutes < 1 || minutes > 10080) {
+      throw new Error('Session length must be a whole number from 1 to 10080 minutes.');
+    }
+    return { durationMinutes: minutes };
   }
 
   function setLiveDateStatus(date, questionCount) {
@@ -1500,7 +1546,7 @@
 
     if (!sortedSessions.length) {
       currentLiveStudentTiles = [];
-      setText('profileStudentSessionCount', '0 running');
+      setText('profileStudentSessionCount', '0 sessions');
       setText('liveStudentConnectionValue', '0 active');
       setText('liveStudentConnectionHint', 'Create a class link to begin.');
       setText('liveStudentPresenceBreakdown', '0 connected / 0 idle');
@@ -1521,10 +1567,11 @@
       return;
     }
 
-    setText('profileStudentSessionCount', `${sortedSessions.length} running`);
+    const activeSessionCount = sortedSessions.filter((session) => sessionStatus(session) === 'active').length;
+    setText('profileStudentSessionCount', `${activeSessionCount} active / ${sortedSessions.length} total`);
     setText('liveStudentConnectionValue', `${activeCount} active`);
     setText('liveStatusValue', activeCount > 0 ? 'Active' : 'Open');
-    setText('liveRunningSessionsValue', `${liveStats.runningSessionCount}`);
+    setText('liveRunningSessionsValue', `${activeSessionCount}`);
     setText('liveSessionDurationValue', liveStats.longestRunningLabel ? `Longest session ${liveStats.longestRunningLabel}` : 'Session just started.');
     setText('liveMessageCountValue', `${liveStats.totalMessageCount}`);
     setText(
@@ -1641,13 +1688,22 @@
   function renderActiveSessionCard(session, index) {
     const sessionId = firstText(session?.classSessionId, session?.sessionId);
     const studentUrl = firstText(session?.studentUrl);
+    const joinCode = firstText(session?.joinCode);
     const className = firstText(session?.className, session?.name, session?.title) || `Class Session ${index + 1}`;
     const createdAt = firstText(session?.createdAt);
-    const duration = formatRunningDuration(session);
+    const expiresAt = firstText(session?.expiresAt);
+    const lifecycleStatus = sessionStatus(session);
+    const statusLabel = titleCaseLabel(lifecycleStatus);
+    const statusClass = lifecycleStatus === 'expired'
+      ? ' is-expired'
+      : lifecycleStatus === 'ended'
+        ? ' is-ended'
+        : '';
+    const active = lifecycleStatus === 'active';
     const studentCounts = sessionStudentCounts(session);
     const questionCount = sessionQuestionCount(session);
     const questionsLabel = questionCount === 1 ? 'question/message' : 'questions/messages';
-    const archiveDisabled = sessionId ? '' : ' disabled';
+    const archiveDisabled = sessionId && !active ? '' : ' disabled';
     const linkDisabled = studentUrl ? '' : ' disabled';
     const openAttrs = studentUrl
       ? `href="${escapeAttr(studentUrl)}" target="_blank" rel="noreferrer"`
@@ -1658,18 +1714,24 @@
         <div class="active-session-card-head">
           <div>
             <strong>${escapeHtml(className)}</strong>
-            <time datetime="${escapeAttr(createdAt)}">${escapeHtml(formatSessionTime(createdAt))}</time>
+            <time datetime="${escapeAttr(createdAt)}">Created ${escapeHtml(formatSessionTime(createdAt))}</time>
           </div>
-          <span class="active-session-running-pill">Running</span>
+          <span class="active-session-running-pill${statusClass}">${escapeHtml(statusLabel)}</span>
         </div>
 
         <dl class="active-session-facts">
-          ${duration ? `
-            <div>
-              <dt>Duration</dt>
-              <dd>${escapeHtml(duration)}</dd>
-            </div>
-          ` : ''}
+          <div>
+            <dt>Expiration</dt>
+            <dd>${escapeHtml(expiresAt ? formatSessionTime(expiresAt) : 'No automatic expiration')}</dd>
+          </div>
+          <div>
+            <dt>Time remaining</dt>
+            <dd>${escapeHtml(formatSessionTimeRemaining(session))}</dd>
+          </div>
+          <div>
+            <dt>Join code</dt>
+            <dd>${escapeHtml(joinCode || 'Unavailable')}</dd>
+          </div>
           <div>
             <dt>Students</dt>
             <dd>${studentCounts.active} active / ${studentCounts.total} total</dd>
@@ -1688,11 +1750,16 @@
         <div class="active-session-actions">
           <button type="button" class="small-button secondary-small" data-copy-student-url="${escapeAttr(studentUrl)}"${linkDisabled}>Copy Link</button>
           <a class="small-button secondary-small active-session-open-button${studentUrl ? '' : ' is-disabled'}" ${openAttrs}>Open Student View</a>
+          <button type="button" class="small-button secondary-small" data-student-session-lifecycle="extend" data-session-id="${escapeAttr(sessionId)}" data-minutes="15"${active ? '' : ' disabled'}>Extend 15 minutes</button>
+          <button type="button" class="small-button secondary-small" data-student-session-lifecycle="extend" data-session-id="${escapeAttr(sessionId)}" data-minutes="30"${active ? '' : ' disabled'}>Extend 30 minutes</button>
+          <button type="button" class="small-button secondary-small" data-student-session-lifecycle="set_expiration" data-session-id="${escapeAttr(sessionId)}"${lifecycleStatus === 'ended' ? ' disabled' : ''}>Set new expiration</button>
+          <button type="button" class="small-button secondary-small danger-small" data-student-session-lifecycle="end" data-session-id="${escapeAttr(sessionId)}"${active ? '' : ' disabled'}>End now</button>
+          <button type="button" class="small-button secondary-small" data-student-session-lifecycle="reopen" data-session-id="${escapeAttr(sessionId)}" data-minutes="30"${active ? ' disabled' : ''}>Reopen for 30 minutes</button>
           <button
             type="button"
-            class="small-button secondary-small danger-small"
+            class="small-button secondary-small"
             data-archive-student-session="${escapeAttr(sessionId)}"${archiveDisabled}
-          >End Session &amp; Archive</button>
+          >Archive report</button>
         </div>
       </article>
     `;
@@ -1751,6 +1818,25 @@
     if (hours > 0 && minutes > 0) return `${hours}h ${minutes}m`;
     if (hours > 0) return `${hours}h`;
     return `${Math.max(1, minutes)}m`;
+  }
+
+  function sessionStatus(session) {
+    const status = firstText(session?.status).toLowerCase();
+    return ['active', 'expired', 'ended'].includes(status) ? status : 'active';
+  }
+
+  function formatSessionTimeRemaining(session) {
+    const status = sessionStatus(session);
+    if (status === 'expired') return 'Expired';
+    if (status === 'ended') return 'Ended';
+    if (session?.expiresAt === null || !firstText(session?.expiresAt)) return 'No time limit';
+
+    const explicitMs = Number(session?.timeRemainingMs);
+    const expiresAtMs = new Date(session.expiresAt).getTime();
+    const remainingMs = Number.isFinite(explicitMs)
+      ? explicitMs
+      : Number.isFinite(expiresAtMs) ? Math.max(0, expiresAtMs - Date.now()) : NaN;
+    return Number.isFinite(remainingMs) ? formatDurationMs(remainingMs) : 'Unavailable';
   }
 
   function collectLiveStudentHubs(sessions) {
@@ -1955,6 +2041,49 @@
     }).join('');
   }
 
+  async function updateStudentSessionLifecycle(button) {
+    const sessionId = button?.getAttribute('data-session-id') || '';
+    const action = button?.getAttribute('data-student-session-lifecycle') || '';
+    if (!sessionId || !action) return;
+
+    let minutes = Number(button.getAttribute('data-minutes') || 0);
+    if (action === 'set_expiration') {
+      const entered = window.prompt('Set a new expiration in whole-number minutes from now:', '60');
+      if (entered === null) return;
+      minutes = Number(entered);
+      if (!Number.isInteger(minutes) || minutes < 1 || minutes > 10080) {
+        setText('profileStudentLinkStatus', 'Expiration must be a whole number from 1 to 10080 minutes.');
+        return;
+      }
+    }
+
+    if (action === 'end' && !window.confirm('End student access now? You can archive separately or reopen this session later.')) {
+      return;
+    }
+
+    try {
+      button.disabled = true;
+      setText('profileStudentLinkStatus', 'Updating session access...');
+      const result = await fetchJson(`/api/profile/student-sessions/${encodeURIComponent(sessionId)}/lifecycle`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          action,
+          ...(minutes ? { minutes } : {})
+        })
+      });
+      const updatedStatus = titleCaseLabel(result?.session?.status || '');
+      setText('profileStudentLinkStatus', updatedStatus ? `Session access updated: ${updatedStatus}.` : 'Session access updated.');
+      await loadStudentSessions();
+    } catch (error) {
+      setText('profileStudentLinkStatus', error.message || 'Could not update session access.');
+    } finally {
+      button.disabled = false;
+    }
+  }
+
   async function archiveStudentSession(button) {
     const sessionId = button?.getAttribute('data-archive-student-session') || '';
     if (!sessionId) return;
@@ -1962,11 +2091,12 @@
     const statusId = button?.closest('#reportSessionGroups') ? 'reportExportStatus' : 'profileStudentLinkStatus';
 
     const confirmed = window.confirm([
-      'End Session & Archive?',
+      'Archive this session report?',
       '',
       'This will save this session to CSV.',
       'The session will remain available in Questions & Standards.',
       'Raw JSON history for this session will be deleted after the CSV is verified.',
+      'Archiving does not change student access. End access separately when needed.',
       'This cannot be undone from the app.'
     ].join('\n'));
     if (!confirmed) return;
@@ -2362,16 +2492,13 @@
   }
 
   function restartSessionLinkMatchesResponse(studentUrl, result) {
-    const expectedSessionId = firstText(result?.sessionId, result?.classSessionId);
-    if (!studentUrl || !expectedSessionId) return false;
+    const expectedJoinCode = firstText(result?.joinCode, result?.session?.joinCode).toUpperCase();
+    if (!studentUrl || !expectedJoinCode) return false;
 
     try {
       const parsedUrl = new URL(studentUrl, 'http://localhost');
-      const linkedSessionId = firstText(
-        parsedUrl.searchParams.get('sessionId'),
-        parsedUrl.searchParams.get('classSessionId')
-      );
-      return linkedSessionId === expectedSessionId;
+      const match = parsedUrl.pathname.match(/^\/join\/([^/]+)\/?$/i);
+      return decodeURIComponent(match?.[1] || '').toUpperCase() === expectedJoinCode;
     } catch {
       return false;
     }

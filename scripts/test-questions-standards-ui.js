@@ -212,8 +212,8 @@ assert.match(
 );
 assert.match(
   profileUi,
-  /function restartSessionLinkMatchesResponse\(studentUrl, result\)[\s\S]*searchParams\.get\('sessionId'\)[\s\S]*searchParams\.get\('classSessionId'\)[\s\S]*linkedSessionId === expectedSessionId/,
-  'Restart Session should verify the returned studentUrl contains the returned live session id.'
+  /function restartSessionLinkMatchesResponse\(studentUrl, result\)[\s\S]*expectedJoinCode[\s\S]*pathname\.match\(\/\^\\\/join\\\/[\s\S]*toUpperCase\(\) === expectedJoinCode/,
+  'Restart Session should verify the returned studentUrl contains the returned clean join code.'
 );
 assert.match(
   restartHandler,

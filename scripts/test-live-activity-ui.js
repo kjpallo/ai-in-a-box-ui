@@ -35,8 +35,8 @@ assert.match(
 );
 assert.match(
   bladeUi,
-  /<strong>Active Sessions<\/strong>/,
-  'Live Activity should render an Active Sessions board in the right rail.'
+  /<strong>Classroom Sessions<\/strong>/,
+  'Live Activity should render a Classroom Sessions board in the right rail.'
 );
 assert.match(
   bladeUi,

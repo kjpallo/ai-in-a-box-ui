@@ -303,18 +303,34 @@
               </div>
 
               <div class="live-student-link-row">
-                <button type="button" id="profileCreateStudentLink" class="small-button">Create Student Link</button>
+                <div class="student-session-create-controls">
+                  <label for="studentSessionDurationPreset">
+                    <span>Session length</span>
+                    <select id="studentSessionDurationPreset">
+                      <option value="45">45 minutes</option>
+                      <option value="60" selected>60 minutes</option>
+                      <option value="90">90 minutes</option>
+                      <option value="custom">Custom minutes</option>
+                      <option value="none">No automatic expiration</option>
+                    </select>
+                  </label>
+                  <label id="studentSessionCustomDurationField" for="studentSessionCustomDuration" hidden>
+                    <span>Custom whole-number minutes</span>
+                    <input type="number" id="studentSessionCustomDuration" min="1" max="10080" step="1" value="60" />
+                  </label>
+                  <button type="button" id="profileCreateStudentLink" class="small-button">Start New Session</button>
+                </div>
                 <p id="profileStudentLanHint" class="profile-student-lan-hint">Phones/tablets must be on the same local network as this teacher device.</p>
                 <span id="profileStudentLinkStatus">No student link created yet.</span>
               </div>
 
-              <div class="profile-student-session-list" aria-label="Active student sessions">
+              <div class="profile-student-session-list" aria-label="Classroom sessions">
                 <div class="profile-student-session-head">
-                  <strong>Active Sessions</strong>
-                  <span id="profileStudentSessionCount">0 running</span>
+                  <strong>Classroom Sessions</strong>
+                  <span id="profileStudentSessionCount">0 sessions</span>
                 </div>
                 <div id="profileStudentSessions" class="profile-student-session-rows">
-                  <p class="profile-empty-state">No running sessions yet.</p>
+                  <p class="profile-empty-state">No classroom sessions yet.</p>
                 </div>
               </div>
 

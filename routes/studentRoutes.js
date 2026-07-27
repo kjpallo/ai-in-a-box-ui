@@ -50,6 +50,11 @@ const {
   isAmmoniaBalancingProblem,
   sanitizeBalancingActivityTranscriptMessage
 } = require('../lib/tutor/activities/ammoniaBalancingActivity');
+const {
+  resolveActiveStudentSession,
+  sendStudentSessionAccessError,
+  studentSessionAccessFromRequest
+} = require('../lib/server/studentSessionLifecycle');
 
 function registerStudentRoutes(app, {
   answerStudentMessage,
@@ -61,9 +66,17 @@ function registerStudentRoutes(app, {
   }),
   logCompletedInteraction,
   studentSessions,
+  now = () => new Date(),
   questionRateLimiter = createStudentQuestionRateLimiter()
 }) {
-  app.get('/api/student/controls', (_req, res) => {
+  app.get('/api/student/controls', (req, res) => {
+    const resolved = resolveActiveStudentSession(
+      studentSessions,
+      studentSessionAccessFromRequest(req, 'query'),
+      { now: now() }
+    );
+    if (!resolved.ok) return sendStudentSessionAccessError(res, resolved);
+
     const controls = normalizeStudentControls(getClassroomControls());
     res.json({
       studentCopyInspectLockEnabled: controls.studentCopyInspectLockEnabled,
@@ -73,13 +86,15 @@ function registerStudentRoutes(app, {
   });
 
   app.get('/api/student/rate-limit-status', (req, res) => {
-    const sessionId = String(req.query?.sessionId || req.query?.classSessionId || '').trim();
     const studentHubId = String(req.query?.studentHubId || '').trim();
-    const session = studentSessions[sessionId];
-
-    if (!session) {
-      return res.status(404).json({ error: 'Student session not found.' });
-    }
+    const resolved = resolveActiveStudentSession(
+      studentSessions,
+      studentSessionAccessFromRequest(req, 'query'),
+      { now: now() }
+    );
+    if (!resolved.ok) return sendStudentSessionAccessError(res, resolved);
+    const session = resolved.session;
+    const sessionId = session.sessionId;
 
     if (!studentHubId) {
       return res.status(400).json({ error: 'Student hub id is required.' });
@@ -98,42 +113,51 @@ function registerStudentRoutes(app, {
   });
 
   app.post('/api/student/join', (req, res) => {
-    const sessionId = String(req.body?.sessionId || req.body?.classSessionId || '').trim();
     const studentHubId = String(req.body?.studentHubId || '').trim();
-    const session = studentSessions[sessionId];
-
-    if (!session) {
-      return res.status(404).json({ error: 'Student session not found.' });
-    }
+    const resolved = resolveActiveStudentSession(
+      studentSessions,
+      studentSessionAccessFromRequest(req),
+      { now: now() }
+    );
+    if (!resolved.ok) return sendStudentSessionAccessError(res, resolved);
+    const session = resolved.session;
+    const sessionId = session.sessionId;
 
     if (!studentHubId) {
       return res.status(400).json({ error: 'Student hub id is required.' });
     }
 
     const hub = touchAnonymousHub(session, studentHubId);
-    res.json({
+    const response = {
       ok: true,
-      sessionId,
-      classSessionId: sessionId,
+      status: 'active',
+      joinCode: resolved.joinCode || undefined,
       studentHub: {
         label: hub.label,
         firstSeenAt: hub.firstSeenAt,
         lastSeenAt: hub.lastSeenAt,
         messageCount: hub.messageCount
       }
-    });
+    };
+    if (resolved.matchedBy === 'legacySessionId') {
+      response.sessionId = sessionId;
+      response.classSessionId = sessionId;
+    }
+    res.json(response);
   });
 
   app.post('/api/student/message', async (req, res) => {
-    const sessionId = String(req.body?.sessionId || req.body?.classSessionId || '').trim();
     const studentHubId = String(req.body?.studentHubId || '').trim();
     const message = String(req.body?.message || '').trim();
     const intent = String(req.body?.intent || '').trim();
-    const session = studentSessions[sessionId];
-
-    if (!session) {
-      return res.status(404).json({ error: 'Student session not found.' });
-    }
+    const resolved = resolveActiveStudentSession(
+      studentSessions,
+      studentSessionAccessFromRequest(req),
+      { now: now() }
+    );
+    if (!resolved.ok) return sendStudentSessionAccessError(res, resolved);
+    const session = resolved.session;
+    const sessionId = session.sessionId;
 
     if (!message) {
       return res.status(400).json({ error: 'Message is required.' });

@@ -1,6 +1,7 @@
 const os = require('os');
 
 function registerClassroomControlsRoutes(app, {
+  defaultStudentSessionMinutes = 60,
   getClassroomControls,
   port,
   updateClassroomControls
@@ -10,6 +11,9 @@ function registerClassroomControlsRoutes(app, {
     res.json({
       ok: true,
       controls: getClassroomControls(),
+      sessionDefaults: {
+        durationMinutes: defaultStudentSessionMinutes
+      },
       network: {
         localIpv4Addresses,
         suggestedBaseUrls: localIpv4Addresses.map((address) => `http://${address}:${port || process.env.PORT || 3000}`)

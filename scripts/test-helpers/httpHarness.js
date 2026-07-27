@@ -61,7 +61,14 @@ function createResponse() {
       this.body = payload;
       return this;
     },
-    redirect(url) {
+    sendFile(filePath) {
+      this.body = { filePath };
+      return this;
+    },
+    redirect(statusOrUrl, maybeUrl) {
+      const hasStatus = Number.isInteger(statusOrUrl);
+      if (hasStatus) this.statusCode = statusOrUrl;
+      const url = hasStatus ? maybeUrl : statusOrUrl;
       this.body = { redirect: url };
       return this;
     }

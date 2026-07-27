@@ -16,6 +16,15 @@ const {
 const {
   archiveQuestionsStandardsSession
 } = require('../lib/profile/questionsStandardsSessionArchive');
+const {
+  applyStudentSessionLifecycleAction,
+  generateUniqueJoinCode,
+  initializeStudentSessionLifecycle,
+  normalizeJoinCode,
+  normalizeSessionDurationMinutes,
+  refreshStudentSessionStatus,
+  serializeStudentSessionLifecycle
+} = require('../lib/server/studentSessionLifecycle');
 const { getStandardsBankDetails } = require('../lib/standards/standardsBankDiscovery');
 const { loadMissouriStandardsBank } = require('../lib/standards/standardsMatcher');
 
@@ -30,6 +39,8 @@ function registerProfileRoutes(app, {
   getStandardsSummaryReport,
   getProfileStatus,
   linkGoogleIdentity,
+  defaultSessionMinutes,
+  now = () => new Date(),
   port,
   requireTeacherAuth,
   sendDailySummaryEmail,
@@ -46,28 +57,64 @@ function registerProfileRoutes(app, {
 
   app.post('/api/profile/create-student-session', (req, res) => {
     const className = safeText(req.body?.className);
-    const session = createProfileStudentSession({
-      className,
-      port,
-      req,
-      studentSessions
-    });
+    try {
+      const session = createProfileStudentSession({
+        className,
+        defaultSessionMinutes,
+        durationMinutes: req.body?.durationMinutes,
+        noExpiration: req.body?.noExpiration === true,
+        now: now(),
+        port,
+        req,
+        studentSessions
+      });
 
-    res.status(201).json({
-      sessionId: session.sessionId,
-      className: session.className,
-      createdAt: session.createdAt,
-      studentUrl: session.studentUrl
-    });
+      res.status(201).json(serializeClassSession(session, { now: now() }));
+    } catch (error) {
+      sendProfileError(res, error);
+    }
   });
 
   app.get('/api/profile/student-sessions', (_req, res) => {
     const sessions = Object.values(studentSessions)
-      .map(serializeClassSession)
+      .filter((session) => !session?.archivedAt)
+      .map((session) => serializeClassSession(session, { now: now() }))
       .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
 
     res.json({ sessions });
   });
+
+  registerMaybeProtectedPost(
+    app,
+    '/api/profile/student-sessions/:sessionId/lifecycle',
+    requireTeacherAuth,
+    (req, res) => {
+      try {
+        const sessionId = safeText(req.params?.sessionId);
+        const session = studentSessions?.[sessionId];
+        if (!session) {
+          res.status(404).json({ error: 'Student session not found.', code: 'SESSION_NOT_FOUND' });
+          return;
+        }
+
+        const action = safeText(req.body?.action);
+        applyStudentSessionLifecycleAction(session, action, {
+          expiresAt: req.body?.expiresAt,
+          minutes: req.body?.minutes,
+          noExpiration: req.body?.noExpiration === true,
+          now: now()
+        });
+
+        res.json({
+          ok: true,
+          action,
+          session: serializeClassSession(session, { now: now() })
+        });
+      } catch (error) {
+        sendProfileError(res, error);
+      }
+    }
+  );
 
   app.get('/api/profile/live-student-activity', (_req, res) => {
     const sessions = serializeLiveStudentActivity({
@@ -102,25 +149,20 @@ function registerProfileRoutes(app, {
           archiveDir: questionsStandardsArchiveDir
         });
         const sessionId = result.sessionId || req.params?.sessionId || '';
-        const shouldEndRuntimeSession = studentSessions && sessionId && studentSessions[sessionId] && (
-          result.archived === true ||
-          result.status === 'no_records'
-        );
         const message = result.archived
-          ? 'Session archived. The CSV was verified, raw JSON history for this session was deleted, and the session remains available in Questions & Standards.'
-          : result.status === 'no_records' && shouldEndRuntimeSession
-            ? 'Session ended. No question history was archived.'
+          ? 'Session archived. The CSV was verified, raw JSON history was deleted, and student access state was left unchanged.'
           : result.message || 'No question history records matched this session.';
 
-        if (shouldEndRuntimeSession) {
-          delete studentSessions[sessionId];
+        if (result.archived === true && liveSession) {
+          liveSession.archivedAt = result.archiveCreatedAt || now().toISOString();
+          liveSession.archiveId = result.archiveId || '';
         }
 
         res.json({
           ok: true,
           archived: result.archived === true,
           status: result.status || '',
-          sessionEnded: shouldEndRuntimeSession === true,
+          sessionEnded: false,
           archiveId: result.archiveId || '',
           exportId: result.exportId || result.archiveId || '',
           sessionId,
@@ -129,6 +171,7 @@ function registerProfileRoutes(app, {
           rowCount: Number(result.rowCount || 0),
           deletedRecordCount: Number(result.deletedRecordCount || 0),
           rawRecordsDeleted: result.rawRecordsDeleted === true,
+          accessStatus: liveSession ? refreshStudentSessionStatus(liveSession, now()) : '',
           message
         });
       } catch (error) {
@@ -172,6 +215,10 @@ function registerProfileRoutes(app, {
         const className = restartSessionTitle(cleanRestartName);
         const session = createProfileStudentSession({
           className,
+          defaultSessionMinutes,
+          durationMinutes: req.body?.durationMinutes,
+          noExpiration: req.body?.noExpiration === true,
+          now: now(),
           port,
           req,
           studentSessions
@@ -194,8 +241,11 @@ function registerProfileRoutes(app, {
           classSessionId: session.sessionId,
           className: session.className,
           createdAt: session.createdAt,
+          expiresAt: session.expiresAt,
+          status: session.status,
+          joinCode: session.joinCode,
           studentUrl: session.studentUrl,
-          session: serializeClassSession(session),
+          session: serializeClassSession(session, { now: now() }),
           sourceSession: {
             sessionId: sourceSession.sessionId,
             classSessionId: sourceSession.sessionId,
@@ -573,9 +623,9 @@ function textField(item, field) {
   return typeof item?.[field] === 'string' ? item[field].trim() : '';
 }
 
-function buildStudentUrl(req, sessionId, port, options = {}) {
+function buildStudentUrl(req, joinCode, port, options = {}) {
   const baseUrl = getConfiguredPublicBaseUrl() || buildRequestBaseUrl(req, port, options);
-  return `${baseUrl}/student.html?sessionId=${encodeURIComponent(sessionId)}`;
+  return `${baseUrl}/join/${encodeURIComponent(normalizeJoinCode(joinCode))}`;
 }
 
 function getConfiguredPublicBaseUrl(env = process.env) {
@@ -589,7 +639,7 @@ function getConfiguredPublicBaseUrl(env = process.env) {
     url.search = '';
     return url.toString().replace(/\/+$/g, '');
   } catch {
-    return rawBaseUrl.replace(/\/+$/g, '');
+    return '';
   }
 }
 
@@ -598,9 +648,10 @@ function buildRequestBaseUrl(req, port, options = {}) {
     ? (name) => req.get(name)
     : (name) => req?.headers?.[String(name).toLowerCase()];
   const host = getHeader('host') || `localhost:${port}`;
-  const protocol = req?.protocol || getHeader('x-forwarded-proto') || 'http';
+  const protocol = req?.protocol || (req?.socket?.encrypted ? 'https' : 'http');
   const shareableHost = buildShareableHost(host, port, options);
-  return `${String(protocol).split(',')[0].trim() || 'http'}://${shareableHost}`.replace(/\/+$/g, '');
+  const safeProtocol = protocol === 'https' ? 'https' : 'http';
+  return `${safeProtocol}://${shareableHost}`.replace(/\/+$/g, '');
 }
 
 function buildShareableHost(host, port, options = {}) {
@@ -670,34 +721,47 @@ function compareIpv4(left, right) {
 
 function createProfileStudentSession({
   className = '',
+  defaultSessionMinutes,
+  durationMinutes,
+  generateCode,
+  noExpiration = false,
+  now = new Date(),
   port,
   req,
   studentSessions
 } = {}) {
   const sessionId = crypto.randomUUID();
-  const studentUrl = buildStudentUrl(req, sessionId, port);
+  const joinCode = generateUniqueJoinCode(studentSessions, { generateCode });
+  const studentUrl = buildStudentUrl(req, joinCode, port);
   const session = {
     sessionId,
+    joinCode,
     className: safeText(className),
-    createdAt: new Date().toISOString(),
     studentUrl,
     messages: [],
     anonymousHubs: Object.create(null)
   };
+  initializeStudentSessionLifecycle(session, {
+    defaultMinutes: defaultSessionMinutes,
+    durationMinutes: noExpiration ? null : normalizeSessionDurationMinutes(durationMinutes, defaultSessionMinutes),
+    noExpiration,
+    now
+  });
 
   studentSessions[sessionId] = session;
   return session;
 }
 
 function getJoinableStudentSessionFromUrl(studentUrl, studentSessions) {
-  const sessionId = parseStudentSessionIdFromUrl(studentUrl);
-  if (!sessionId || !studentSessions) return null;
-
-  const session = studentSessions[sessionId];
-  if (!session || safeText(session.sessionId) !== sessionId) return null;
+  const joinCode = parseStudentJoinCodeFromUrl(studentUrl);
+  if (!joinCode || !studentSessions) return null;
+  const session = Object.values(studentSessions)
+    .find((candidate) => normalizeJoinCode(candidate?.joinCode) === joinCode);
+  if (!session) return null;
 
   return {
-    sessionId,
+    sessionId: session.sessionId,
+    joinCode,
     session
   };
 }
@@ -709,6 +773,19 @@ function parseStudentSessionIdFromUrl(studentUrl) {
   try {
     const url = new URL(rawUrl, 'http://localhost');
     return safeText(url.searchParams.get('sessionId') || url.searchParams.get('classSessionId'));
+  } catch {
+    return '';
+  }
+}
+
+function parseStudentJoinCodeFromUrl(studentUrl) {
+  const rawUrl = safeText(studentUrl);
+  if (!rawUrl) return '';
+
+  try {
+    const url = new URL(rawUrl, 'http://localhost');
+    const match = url.pathname.match(/^\/join\/([^/]+)\/?$/i);
+    return normalizeJoinCode(match?.[1]);
   } catch {
     return '';
   }
@@ -777,8 +854,11 @@ function recordMatchesRestartKey(record, restartKey) {
   return false;
 }
 
-function serializeClassSession(session) {
-  const now = Date.now();
+function serializeClassSession(session, options = {}) {
+  const now = options.now instanceof Date
+    ? options.now.getTime()
+    : Number(options.now || Date.now());
+  const lifecycle = serializeStudentSessionLifecycle(session, { now: new Date(now) });
   const hubs = Object.values(session.anonymousHubs || {})
     .map((hub, index) => ({
       label: `Anonymous Student ${index + 1}`,
@@ -801,8 +881,9 @@ function serializeClassSession(session) {
     className: session.className || '',
     sessionId: session.sessionId,
     classSessionId: session.sessionId,
-    createdAt: session.createdAt,
-    studentUrl: session.studentUrl || `/student.html?sessionId=${encodeURIComponent(session.sessionId)}`,
+    ...lifecycle,
+    studentUrl: session.studentUrl || (lifecycle.joinCode ? `/join/${encodeURIComponent(lifecycle.joinCode)}` : ''),
+    archivedAt: session.archivedAt || null,
     activeAnonymousHubCount: hubs.filter((hub) => hub.active).length,
     anonymousHubs: hubs
   };
@@ -817,6 +898,7 @@ function serializeLiveStudentActivity({
 }) {
   const controls = typeof getClassroomControls === 'function' ? getClassroomControls() : null;
   return Object.values(studentSessions || {})
+    .filter((session) => !session?.archivedAt)
     .map((session) => serializeLiveClassSession(session, {
       controls,
       getStudentRateLimitInfo,
@@ -832,6 +914,7 @@ function serializeLiveClassSession(session, {
   questionRateLimiter,
   now = Date.now()
 } = {}) {
+  const lifecycle = serializeStudentSessionLifecycle(session, { now: new Date(now) });
   const rawHubs = Object.values(session?.anonymousHubs || {});
   const displayOrderByHubId = new Map(rawHubs
     .slice()
@@ -860,8 +943,8 @@ function serializeLiveClassSession(session, {
     className: session?.className || '',
     sessionId: session?.sessionId || '',
     classSessionId: session?.sessionId || '',
-    createdAt: session?.createdAt || '',
-    studentUrl: session?.studentUrl || (session?.sessionId ? `/student.html?sessionId=${encodeURIComponent(session.sessionId)}` : ''),
+    ...lifecycle,
+    studentUrl: session?.studentUrl || (lifecycle.joinCode ? `/join/${encodeURIComponent(lifecycle.joinCode)}` : ''),
     runningDurationMs,
     runningSeconds: Math.floor(runningDurationMs / 1000),
     activeAnonymousHubCount,
@@ -1154,7 +1237,9 @@ module.exports = {
   getConfiguredPublicBaseUrl,
   getJoinableStudentSessionFromUrl,
   getPrivateLanIpv4Addresses,
+  parseStudentJoinCodeFromUrl,
   parseStudentSessionIdFromUrl,
   registerProfileRoutes,
+  serializeClassSession,
   serializeLiveStudentActivity
 };

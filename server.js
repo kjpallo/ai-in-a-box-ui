@@ -50,6 +50,10 @@ const { logStudentInteraction } = require('./lib/system/studentInteractionLogger
 const { createQuestionAnswerService } = require('./lib/server/questionAnswerService');
 const { ensureDir, loadLocalEnv } = require('./lib/server/utils');
 const {
+  getDefaultStudentSessionMinutes,
+  registerStudentPageRoutes
+} = require('./lib/server/studentSessionLifecycle');
+const {
   createTeacherAuthStore,
   createTeacherSessionStore,
   getTeacherSession,
@@ -187,6 +191,10 @@ app.get('/', (req, res, next) => {
   next();
 });
 
+registerStudentPageRoutes(app, {
+  studentSessions,
+  studentPagePath: path.join(publicDir, 'student.html')
+});
 app.use(express.static(publicDir));
 app.use('/audio', express.static(audioDir));
 
@@ -242,6 +250,7 @@ registerProfileRoutes(app, {
     gmailStatus: getGmailProfileStatus()
   }),
   linkGoogleIdentity: (teacher) => teacherAuthStore.updateGoogleIdentity(teacher),
+  defaultSessionMinutes: getDefaultStudentSessionMinutes(),
   port: PORT,
   questionRateLimiter: studentQuestionRateLimiter,
   requireTeacherAuth: teacherAuthRequired,
@@ -250,6 +259,7 @@ registerProfileRoutes(app, {
   studentSessions
 });
 registerClassroomControlsRoutes(app, {
+  defaultStudentSessionMinutes: getDefaultStudentSessionMinutes(),
   getClassroomControls,
   port: PORT,
   updateClassroomControls

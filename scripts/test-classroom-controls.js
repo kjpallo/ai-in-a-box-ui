@@ -55,6 +55,7 @@ async function testClassroomControlsStoreAndRoutes() {
     const loaded = await request(handlers, 'GET', '/api/classroom-controls');
     assert.equal(loaded.statusCode, 200);
     assert.deepEqual(loaded.body.controls, DEFAULT_CLASSROOM_CONTROLS);
+    assert.equal(loaded.body.sessionDefaults.durationMinutes, 60);
     assert.ok(Array.isArray(loaded.body.network.localIpv4Addresses));
     assert.ok(Array.isArray(loaded.body.network.suggestedBaseUrls));
 
@@ -139,45 +140,52 @@ function testStudentLinkBaseUrlGeneration() {
     delete process.env.APP_BASE_URL;
     assert.equal(getConfiguredPublicBaseUrl(), 'http://192.168.1.42:3000');
     assert.equal(
-      buildStudentUrl(createRequest('localhost:3000'), 'class public', 3000),
-      'http://192.168.1.42:3000/student.html?sessionId=class%20public'
+      buildStudentUrl(createRequest('localhost:3000'), 'ABCDE-FGHJK', 3000),
+      'http://192.168.1.42:3000/join/ABCDE-FGHJK'
     );
 
     delete process.env.PUBLIC_BASE_URL;
     process.env.APP_BASE_URL = 'http://10.0.0.9:3000';
     assert.equal(getConfiguredPublicBaseUrl(), 'http://10.0.0.9:3000');
     assert.equal(
-      buildStudentUrl(createRequest('localhost:3000'), 'class app', 3000),
-      'http://10.0.0.9:3000/student.html?sessionId=class%20app'
+      buildStudentUrl(createRequest('localhost:3000'), 'K7M4Q-P9X2D', 3000),
+      'http://10.0.0.9:3000/join/K7M4Q-P9X2D'
     );
 
     delete process.env.PUBLIC_BASE_URL;
     delete process.env.APP_BASE_URL;
     assert.deepEqual(getPrivateLanIpv4Addresses(networkInterfaces), ['10.0.0.9', '192.168.1.42']);
     assert.equal(
-      buildStudentUrl(createRequest('localhost:3000'), 'class localhost', 3000, { networkInterfaces }),
-      'http://10.0.0.9:3000/student.html?sessionId=class%20localhost'
+      buildStudentUrl(createRequest('localhost:3000'), 'ABCDE-FGHJK', 3000, { networkInterfaces }),
+      'http://10.0.0.9:3000/join/ABCDE-FGHJK'
     );
     assert.equal(
-      buildStudentUrl(createRequest('127.0.0.1:3000'), 'class loopback', 3000, { networkInterfaces }),
-      'http://10.0.0.9:3000/student.html?sessionId=class%20loopback'
+      buildStudentUrl(createRequest('127.0.0.1:3000'), 'ABCDE-FGHJK', 3000, { networkInterfaces }),
+      'http://10.0.0.9:3000/join/ABCDE-FGHJK'
     );
     assert.equal(
-      buildStudentUrl(createRequest('192.168.1.99:3000'), 'class lan', 3000, { networkInterfaces }),
-      'http://192.168.1.99:3000/student.html?sessionId=class%20lan'
+      buildStudentUrl(createRequest('192.168.1.99:3000'), 'ABCDE-FGHJK', 3000, { networkInterfaces }),
+      'http://192.168.1.99:3000/join/ABCDE-FGHJK'
     );
     assert.equal(
-      buildStudentUrl(createRequest('teacher-mac.local:3000', 'https'), 'class local', 3000),
-      'https://teacher-mac.local:3000/student.html?sessionId=class%20local'
+      buildStudentUrl(createRequest('teacher-mac.local:3000', 'https'), 'ABCDE-FGHJK', 3000),
+      'https://teacher-mac.local:3000/join/ABCDE-FGHJK'
     );
     assert.equal(
-      buildStudentUrl(createRequest('localhost:3000'), 'class fallback', 3000, {
+      buildStudentUrl(createRequest('localhost:3000'), 'ABCDE-FGHJK', 3000, {
         networkInterfaces: {
           lo0: [{ family: 'IPv4', address: '127.0.0.1', internal: true }],
           Public: [{ family: 'IPv4', address: '8.8.8.8', internal: false }]
         }
       }),
-      'http://localhost:3000/student.html?sessionId=class%20fallback'
+      'http://localhost:3000/join/ABCDE-FGHJK'
+    );
+
+    const untrustedForwarded = createRequest('teacher-mac.local:3000', 'http');
+    untrustedForwarded.headers['x-forwarded-proto'] = 'https';
+    assert.equal(
+      buildStudentUrl(untrustedForwarded, 'ABCDE-FGHJK', 3000),
+      'http://teacher-mac.local:3000/join/ABCDE-FGHJK'
     );
   } finally {
     restoreEnv('PUBLIC_BASE_URL', originalPublicBaseUrl);
@@ -228,7 +236,8 @@ async function testCreateStudentSessionRouteLanUrl() {
     });
 
     assert.equal(created.statusCode, 201);
-    assert.match(created.body.studentUrl, /^http:\/\/192\.168\.50\.12:3000\/student\.html\?sessionId=/);
+    assert.match(created.body.studentUrl, /^http:\/\/192\.168\.50\.12:3000\/join\/[A-Z0-9]{5}-[A-Z0-9]{5}$/);
+    assert.doesNotMatch(created.body.studentUrl, new RegExp(created.body.sessionId));
     assert.doesNotMatch(created.body.studentUrl, /localhost/);
   } finally {
     os.networkInterfaces = originalNetworkInterfaces;
@@ -271,7 +280,9 @@ async function testStudentSafeControlsAndRateLimit() {
     questionRateLimiter
   });
 
-  const publicControls = await request(handlers, 'GET', '/api/student/controls');
+  const publicControls = await request(handlers, 'GET', '/api/student/controls', {}, {
+    sessionId: 'classA'
+  });
   assert.equal(publicControls.statusCode, 200);
   assert.equal(publicControls.body.studentCopyInspectLockEnabled, true);
   assert.equal(publicControls.body.questionsStandardsAutoArchiveEnabled, undefined);
@@ -452,7 +463,9 @@ async function testInvalidStudentControlsFallBackSafely() {
     studentSessions
   });
 
-  const publicControls = await request(handlers, 'GET', '/api/student/controls');
+  const publicControls = await request(handlers, 'GET', '/api/student/controls', {}, {
+    sessionId: 'classA'
+  });
   assert.equal(publicControls.statusCode, 200);
   assert.equal(publicControls.body.studentCopyInspectLockEnabled, true);
   assert.equal(publicControls.body.studentQuestionRateLimitEnabled, true);
@@ -467,7 +480,9 @@ async function testInvalidStudentControlsFallBackSafely() {
   assert.equal(blocked.statusCode, 429);
 
   controls = {};
-  const fallbackControls = await request(handlers, 'GET', '/api/student/controls');
+  const fallbackControls = await request(handlers, 'GET', '/api/student/controls', {}, {
+    sessionId: 'classA'
+  });
   assert.equal(fallbackControls.statusCode, 200);
   assert.equal(fallbackControls.body.studentQuestionsPerMinute, 6);
 }

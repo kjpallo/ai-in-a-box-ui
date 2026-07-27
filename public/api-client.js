@@ -28,7 +28,8 @@
   }
 
   function isStudentPage() {
-    return window.location.pathname.endsWith('/student.html');
+    return window.location.pathname.endsWith('/student.html')
+      || window.location.pathname.startsWith('/join/');
   }
 
   async function askQuestion(question, options = {}) {
@@ -121,16 +122,14 @@
     return fetchJson('/api/profile/student-sessions');
   }
 
-  function fetchStudentControls() {
-    return fetchJson('/api/student/controls');
+  function fetchStudentControls(sessionAccess = '') {
+    const query = buildStudentSessionQuery(sessionAccess);
+    return fetchJson(`/api/student/controls?${query.toString()}`);
   }
 
-  function fetchStudentRateLimitStatus(sessionId, studentHubId = '') {
-    const query = new URLSearchParams({
-      sessionId: String(sessionId || ''),
-      classSessionId: String(sessionId || ''),
-      studentHubId: String(studentHubId || '')
-    });
+  function fetchStudentRateLimitStatus(sessionAccess, studentHubId = '') {
+    const query = buildStudentSessionQuery(sessionAccess);
+    query.set('studentHubId', String(studentHubId || ''));
     return fetchJson(`/api/student/rate-limit-status?${query.toString()}`);
   }
 
@@ -152,34 +151,55 @@
     });
   }
 
-  function joinStudentSession(sessionId, studentHubId) {
+  function joinStudentSession(sessionAccess, studentHubId) {
     return fetchJson('/api/student/join', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sessionId, classSessionId: sessionId, studentHubId })
+      body: JSON.stringify({
+        ...buildStudentSessionAccess(sessionAccess),
+        studentHubId
+      })
     });
   }
 
-  function sendStudentMessage(sessionId, message, studentHubId = '') {
-    return fetchJson('/api/student/message', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sessionId, classSessionId: sessionId, message, studentHubId })
-    });
-  }
-
-  function sendStudentWhyThisMatters(sessionId, studentHubId = '') {
+  function sendStudentMessage(sessionAccess, message, studentHubId = '') {
     return fetchJson('/api/student/message', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        sessionId,
-        classSessionId: sessionId,
+        ...buildStudentSessionAccess(sessionAccess),
+        message,
+        studentHubId
+      })
+    });
+  }
+
+  function sendStudentWhyThisMatters(sessionAccess, studentHubId = '') {
+    return fetchJson('/api/student/message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...buildStudentSessionAccess(sessionAccess),
         studentHubId,
         message: "What's the point?",
         intent: 'why_this_matters'
       })
     });
+  }
+
+  function buildStudentSessionAccess(sessionAccess) {
+    const value = String(sessionAccess || '').trim();
+    if (/^[23456789ABCDEFGHJKMNPQRSTVWXYZ]{5}-[23456789ABCDEFGHJKMNPQRSTVWXYZ]{5}$/i.test(value)) {
+      return { joinCode: value.toUpperCase() };
+    }
+    return {
+      sessionId: value,
+      classSessionId: value
+    };
+  }
+
+  function buildStudentSessionQuery(sessionAccess) {
+    return new URLSearchParams(buildStudentSessionAccess(sessionAccess));
   }
 
   const api = {

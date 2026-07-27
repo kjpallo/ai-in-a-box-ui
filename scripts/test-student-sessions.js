@@ -15,7 +15,9 @@ async function main() {
   assert.equal(create.statusCode, 201);
   const classSessionId = create.body.sessionId;
   assert.ok(classSessionId, 'created student session should include sessionId');
-  assert.ok(create.body.studentUrl.includes(`sessionId=${encodeURIComponent(classSessionId)}`));
+  assert.match(create.body.joinCode, /^[23456789ABCDEFGHJKMNPQRSTVWXYZ]{5}-[23456789ABCDEFGHJKMNPQRSTVWXYZ]{5}$/);
+  assert.ok(create.body.studentUrl.endsWith(`/join/${create.body.joinCode}`));
+  assert.doesNotMatch(create.body.studentUrl, new RegExp(classSessionId));
 
   const joinA = await request('POST', '/api/student/join', {
     classSessionId,
