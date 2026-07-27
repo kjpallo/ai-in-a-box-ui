@@ -1,6 +1,7 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const vm = require('node:vm');
 
 const projectRoot = path.join(__dirname, '..');
 const protectedFiles = [
@@ -21,6 +22,7 @@ const bladeUi = read(path.join(projectRoot, 'public', 'blade-ui.js'));
 const teacherDashboardCss = read(path.join(projectRoot, 'public', 'styles', 'teacher-dashboard.css'));
 const responsiveCss = read(path.join(projectRoot, 'public', 'styles', 'responsive.css'));
 const exportHandler = between(profileUi, 'async function exportReportCsv()', 'function printReport()');
+const gmailHandler = between(profileUi, 'async function openGmailReport()', 'async function purgeQuestionsStandardsExport()');
 const purgeHandler = between(profileUi, 'async function purgeQuestionsStandardsExport()', 'function printReport()');
 const archiveHandler = between(profileUi, 'async function archiveStudentSession(button)', 'async function restartStudentSessionFromReport(button)');
 const restartHandler = between(profileUi, 'async function restartStudentSessionFromReport(button)', 'function formatLiveQuestionsLeft');
@@ -84,6 +86,16 @@ assert.match(
   bladeUi,
   /id="reportExportCsv"[\s\S]*Export CSV/,
   'Questions & Standards should keep the Export CSV button.'
+);
+assert.match(
+  bladeUi,
+  /id="reportModeSelect"[\s\S]*value="summary"[\s\S]*value="detailed"/,
+  'Questions & Standards should offer summary and detailed anonymous report modes.'
+);
+assert.match(
+  bladeUi,
+  /id="reportOpenGmail"[\s\S]*Open Gmail Report/,
+  'Questions & Standards should expose the teacher Gmail report action.'
 );
 assert.match(
   bladeUi,
@@ -301,9 +313,29 @@ assert.match(
   'Purge success should refresh Questions & Standards data.'
 );
 assert.match(
-  exportHandler,
-  /exportButton\) exportButton\.disabled = currentReportQuestions\.length === 0/,
-  'Export button state should use archive-aware report question rows.'
+  profileUi,
+  /params\.set\('status', reportQuestionFilter\)/,
+  'CSV export should send the active report filter to the server.'
+);
+assert.match(
+  gmailHandler,
+  /buildQuestionsStandardsGmailReportUrl\(\)[\s\S]*composeUrl\.startsWith\('https:\/\/mail\.google\.com\/mail\/'\)[\s\S]*popup\.location\.replace\(composeUrl\)/,
+  'Gmail report should load a teacher-generated anonymous compose URL.'
+);
+assert.match(
+  gmailHandler,
+  /Gmail was blocked by the browser\. Allow popups for this page and try again\./,
+  'Gmail report should explain popup blocking.'
+);
+assert.match(
+  profileUi,
+  /params\.set\('mode', byId\('reportModeSelect'\)\?\.value === 'detailed' \? 'detailed' : 'summary'\)/,
+  'Gmail report should preserve the selected anonymous report mode.'
+);
+assert.doesNotMatch(
+  profileUi,
+  /truncate\(group\.(?:sessionKey|restartKey)/,
+  'Questions & Standards should not render raw session keys as report labels.'
 );
 assert.match(
   purgeHandler,
@@ -355,7 +387,14 @@ for (const file of protectedFiles) {
   );
 }
 
-console.log('Questions & Standards UI export checks passed.');
+runClientBehaviorChecks()
+  .then(() => {
+    console.log('Questions & Standards UI export and client behavior checks passed.');
+  })
+  .catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
 
 function read(filePath) {
   return fs.readFileSync(filePath, 'utf8');
@@ -367,4 +406,275 @@ function between(source, start, end) {
   const endIndex = source.indexOf(end, startIndex);
   assert.notEqual(endIndex, -1, `Expected to find ${end}.`);
   return source.slice(startIndex, endIndex);
+}
+
+async function runClientBehaviorChecks() {
+  const harness = createProfileClientHarness(profileUi);
+  const client = harness.window.Charlemagne.questionsStandardsReporting;
+  const matchedQuestion = reportQuestion('Live matched question', '2026-07-27', 'LIVE.STANDARD.1');
+
+  assert.doesNotThrow(
+    () => client.renderReportQuestionRows([matchedQuestion]),
+    'the real client grouping/render path should own its standard-count Map'
+  );
+  assert.match(
+    harness.elements.get('reportSessionGroups').innerHTML,
+    /Matched standards[\s\S]*<dd>1<\/dd>/u,
+    'the rendered live session group should include one matched standard'
+  );
+  assert.equal(harness.elements.get('reportQuestionsAskedValue').textContent, '1');
+  assert.equal(harness.elements.get('reportStandardsTaggedValue').textContent, '1');
+
+  const mapInitializer = '        standardCounts: new Map(),';
+  assert.match(profileUi, new RegExp(mapInitializer.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'u'));
+  const mapMutantHarness = createProfileClientHarness(profileUi.replace(mapInitializer, ''));
+  assert.throws(
+    () => mapMutantHarness.window.Charlemagne.questionsStandardsReporting.renderReportQuestionRows([matchedQuestion]),
+    /(?:get|set|undefined|null)/iu,
+    'the behavioral regression should fail when the production group Map initializer is removed'
+  );
+
+  await assertLatestReportLoadWins(harness);
+  await assertStaleFailureIsIgnored(harness);
+  await assertGenerationGuardMutationDetected();
+}
+
+async function assertLatestReportLoadWins(harness) {
+  const pending = [];
+  harness.window.Charlemagne.api.fetchJson = (url) => {
+    const request = deferred();
+    pending.push({ ...request, url });
+    return request.promise;
+  };
+  const client = harness.window.Charlemagne.questionsStandardsReporting;
+
+  const loadA = client.loadStandardsSummaryReport('2026-07-26');
+  const loadB = client.loadStandardsSummaryReport('2026-07-27');
+  assert.equal(pending.length, 2);
+  assert.match(pending[0].url, /date=2026-07-26/u);
+  assert.match(pending[1].url, /date=2026-07-27/u);
+
+  pending[1].resolve(reportPayload('Current date B question', '2026-07-27', 'CURRENT.B'));
+  await loadB;
+  assert.match(harness.elements.get('reportQuestionRows').innerHTML, /Current date B question/u);
+  assert.equal(harness.elements.get('reportQuestionsAskedValue').textContent, '1');
+  assert.equal(harness.elements.get('reportStandardsTaggedValue').textContent, '1');
+  assert.equal(harness.elements.get('profileRefreshStandardsReport').disabled, false);
+
+  pending[0].resolve(reportPayload('Stale date A question', '2026-07-26', 'STALE.A'));
+  await loadA;
+  assert.match(harness.elements.get('reportQuestionRows').innerHTML, /Current date B question/u);
+  assert.doesNotMatch(harness.elements.get('reportQuestionRows').innerHTML, /Stale date A question/u);
+  assert.equal(harness.elements.get('profileRefreshStandardsReport').disabled, false);
+}
+
+async function assertStaleFailureIsIgnored(harness) {
+  const pending = [];
+  harness.window.Charlemagne.api.fetchJson = (url) => {
+    const request = deferred();
+    pending.push({ ...request, url });
+    return request.promise;
+  };
+  const client = harness.window.Charlemagne.questionsStandardsReporting;
+
+  const loadA = client.loadStandardsSummaryReport('2026-07-26');
+  const loadB = client.loadStandardsSummaryReport('2026-07-27');
+  pending[1].resolve(reportPayload('Successful B survives', '2026-07-27', 'SUCCESS.B'));
+  await loadB;
+  const successfulStatus = harness.elements.get('standardsSummaryStatus').textContent;
+
+  pending[0].reject(new Error('stale A failed'));
+  await loadA;
+  assert.match(harness.elements.get('reportQuestionRows').innerHTML, /Successful B survives/u);
+  assert.equal(harness.elements.get('standardsSummaryStatus').textContent, successfulStatus);
+  assert.doesNotMatch(harness.elements.get('standardsSummaryStatus').textContent, /stale A failed/u);
+  assert.equal(harness.elements.get('profileRefreshStandardsReport').disabled, false);
+}
+
+async function assertGenerationGuardMutationDetected() {
+  const guard = '      if (loadGeneration !== questionsStandardsLoadGeneration) return;';
+  assert.match(profileUi, new RegExp(guard.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'u'));
+  const mutantHarness = createProfileClientHarness(profileUi.replace(guard, ''));
+  const pending = [];
+  mutantHarness.window.Charlemagne.api.fetchJson = () => {
+    const request = deferred();
+    pending.push(request);
+    return request.promise;
+  };
+  const client = mutantHarness.window.Charlemagne.questionsStandardsReporting;
+  const loadA = client.loadStandardsSummaryReport('2026-07-26');
+  const loadB = client.loadStandardsSummaryReport('2026-07-27');
+
+  pending[1].resolve(reportPayload('Mutation current B', '2026-07-27', 'MUTATION.B'));
+  await loadB;
+  pending[0].resolve(reportPayload('Mutation stale A', '2026-07-26', 'MUTATION.A'));
+  await loadA;
+  assert.match(
+    mutantHarness.elements.get('reportQuestionRows').innerHTML,
+    /Mutation stale A/u,
+    'the in-memory stale-request mutation should overwrite B, proving the behavioral test detects a bypassed guard'
+  );
+}
+
+function createProfileClientHarness(source) {
+  const elements = new Map();
+  const table = {
+    classList: classList()
+  };
+  for (const id of [
+    'profileRefreshStandardsReport',
+    'standardsSummaryRows',
+    'standardsSummaryStatus',
+    'reportQuestionRows',
+    'reportSessionGroups',
+    'reportSessionGroupCount',
+    'reportQuestionsAskedValue',
+    'reportStandardsTaggedValue',
+    'reportNeedsReviewValue',
+    'reportUntaggedQuestionsValue',
+    'reportTopTopicValue',
+    'reportDateRangeValue',
+    'reportQuestionCount',
+    'reportSummaryStatus',
+    'reportDateSelect'
+  ]) {
+    elements.set(id, elementStub());
+  }
+  elements.get('reportQuestionRows').closest = () => table;
+
+  const document = {
+    body: { classList: classList() },
+    documentElement: {},
+    addEventListener() {},
+    getElementById(id) {
+      return elements.get(id) || null;
+    },
+    querySelectorAll() {
+      return [];
+    }
+  };
+  const window = {
+    Charlemagne: {
+      api: {
+        fetchJson: async () => ({})
+      }
+    }
+  };
+  window.window = window;
+  const context = {
+    AbortController,
+    Date,
+    Error,
+    Map,
+    Math,
+    MutationObserver: class {
+      observe() {}
+    },
+    Number,
+    Object,
+    Promise,
+    Set,
+    String,
+    URL,
+    URLSearchParams,
+    console,
+    decodeURIComponent,
+    document,
+    encodeURIComponent,
+    setTimeout() {
+      return 0;
+    },
+    window
+  };
+  vm.runInNewContext(source, context, {
+    filename: path.join(projectRoot, 'public', 'profile.js')
+  });
+  return { document, elements, window };
+}
+
+function elementStub() {
+  return {
+    classList: classList(),
+    disabled: false,
+    hidden: false,
+    innerHTML: '',
+    options: [],
+    style: {
+      setProperty() {}
+    },
+    textContent: '',
+    value: '',
+    addEventListener() {},
+    closest() {
+      return null;
+    },
+    getAttribute() {
+      return '';
+    },
+    setAttribute() {}
+  };
+}
+
+function classList() {
+  return {
+    add() {},
+    remove() {},
+    toggle() {}
+  };
+}
+
+function deferred() {
+  let resolve;
+  let reject;
+  const promise = new Promise((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, reject, resolve };
+}
+
+function reportQuestion(question, date, standardId) {
+  return {
+    anonymousSession: 'Session 1',
+    archived: false,
+    date,
+    missingStandard: false,
+    needsReview: false,
+    primaryStandards: [
+      { standardId, label: `${standardId} label` }
+    ],
+    question,
+    reviewStatus: 'Ready',
+    sessionKey: `session-${date}`,
+    standardsConfidence: 'strong',
+    state: 'live',
+    timestamp: `${date}T18:00:00.000Z`,
+    topic: 'motion'
+  };
+}
+
+function reportPayload(question, date, standardId) {
+  return {
+    ok: true,
+    summary: {
+      availableDates: [date],
+      generatedAt: `${date}T18:05:00.000Z`,
+      report: {
+        availableDates: [date],
+        records: [reportQuestion(question, date, standardId)]
+      },
+      standards: [
+        { standardId, label: `${standardId} label`, count: 1 }
+      ],
+      standardsConfidence: {
+        strong: 1,
+        medium: 0,
+        weak: 0,
+        none: 0
+      },
+      taggedQuestions: 1,
+      totalQuestions: 1,
+      untaggedQuestions: 0
+    }
+  };
 }

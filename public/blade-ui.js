@@ -384,6 +384,14 @@
               <span id="standardsSummaryStatus">No standards report loaded yet.</span>
             </div>
             <div class="reports-header-actions" aria-label="Report actions">
+              <label class="reports-mode-field" for="reportModeSelect">
+                <span>Anonymous report</span>
+                <select id="reportModeSelect">
+                  <option value="summary">Summary</option>
+                  <option value="detailed">Detailed</option>
+                </select>
+              </label>
+              <button type="button" id="reportOpenGmail" class="small-button">Open Gmail Report</button>
               <button type="button" id="reportExportCsv" class="small-button">Export CSV</button>
               <button type="button" id="reportPurgeRawHistory" class="small-button secondary-small danger-small" hidden disabled>Delete raw history used for this CSV</button>
               <button type="button" id="reportPrintReport" class="small-button secondary-small">Print</button>

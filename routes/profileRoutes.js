@@ -11,6 +11,11 @@ const {
   readStudentInteractions
 } = require('../lib/profile/questionsStandardsCsvExport');
 const {
+  buildAnonymousQuestionsStandardsReport,
+  buildQuestionsStandardsReport,
+  normalizeReportMode
+} = require('../lib/profile/questionsStandardsReport');
+const {
   loadQuestionsStandardsRecords
 } = require('../lib/profile/questionsStandardsArchiveRecords');
 const {
@@ -27,6 +32,7 @@ const {
 } = require('../lib/server/studentSessionLifecycle');
 const { getStandardsBankDetails } = require('../lib/standards/standardsBankDiscovery');
 const { loadMissouriStandardsBank } = require('../lib/standards/standardsMatcher');
+const { isDateKey } = require('../lib/system/reportingDate');
 
 function registerProfileRoutes(app, {
   completeGoogleConnect,
@@ -374,19 +380,77 @@ function registerProfileRoutes(app, {
     res.json(getDailyQuestionSummary(req.query.date));
   });
 
-  app.get('/api/profile/standards-summary', (req, res) => {
-    try {
-      res.json({
-        ok: true,
-        summary: getStandardsSummaryReport(req.query.date)
-      });
-    } catch {
-      res.status(500).json({
-        ok: false,
-        error: 'Unable to build standards summary report.'
-      });
+  registerMaybeProtectedGet(
+    app,
+    '/api/profile/standards-summary',
+    requireTeacherAuth,
+    (req, res) => {
+      try {
+        const summary = getStandardsSummaryReport(req.query.date);
+        const report = buildQuestionsStandardsReport(loadQuestionsStandardsRecords({
+          logFilePath: studentInteractionsFile,
+          archiveDir: questionsStandardsArchiveDir,
+          readCurrentRecords: readStudentInteractions
+        }), {
+          date: req.query.date
+        });
+        res.json({
+          ok: true,
+          summary: {
+            ...(summary && typeof summary === 'object' ? summary : {}),
+            availableDates: report.availableDates,
+            questions: report.records,
+            report
+          }
+        });
+      } catch (error) {
+        console.error('Questions & Standards report load failed:', error);
+        res.status(500).json({
+          ok: false,
+          error: 'Unable to load the Questions & Standards report.'
+        });
+      }
     }
-  });
+  );
+
+  registerMaybeProtectedGet(
+    app,
+    '/api/profile/questions-standards/gmail-report',
+    requireTeacherAuth,
+    (req, res) => {
+      const filters = parseQuestionsStandardsExportFilters(req.query || {});
+      if (!filters.ok) {
+        res.status(400).json({ error: filters.error });
+        return;
+      }
+
+      const requestedMode = safeText(req.query?.mode).toLowerCase();
+      if (requestedMode && !['summary', 'detailed'].includes(requestedMode)) {
+        res.status(400).json({ error: 'mode must be summary or detailed.' });
+        return;
+      }
+
+      try {
+        const report = buildQuestionsStandardsReport(loadQuestionsStandardsRecords({
+          logFilePath: studentInteractionsFile,
+          archiveDir: questionsStandardsArchiveDir,
+          readCurrentRecords: readStudentInteractions
+        }), filters);
+        const gmail = buildAnonymousQuestionsStandardsReport(report, {
+          mode: normalizeReportMode(requestedMode)
+        });
+        res.json({
+          ok: true,
+          counts: report.counts,
+          scope: report.scope,
+          gmail
+        });
+      } catch (error) {
+        console.error('Anonymous Gmail report construction failed:', error);
+        res.status(500).json({ error: 'Unable to prepare the anonymous Gmail report.' });
+      }
+    }
+  );
 
   registerMaybeProtectedGet(
     app,
@@ -407,7 +471,8 @@ function registerProfileRoutes(app, {
           date: filters.date,
           startDate: filters.startDate,
           endDate: filters.endDate,
-          sessionId: filters.sessionId
+          sessionId: filters.sessionId,
+          status: filters.status
         });
         const manifestResult = writeQuestionsStandardsExportManifest({
           columns: result.columns,
@@ -422,7 +487,10 @@ function registerProfileRoutes(app, {
 
         res.setHeader('Content-Type', 'text/csv; charset=utf-8');
         res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-        res.setHeader('X-Export-Id', manifestResult.exportId);
+        const liveRowCount = result.report.records.filter((record) => record.state === 'live').length;
+        if (liveRowCount > 0 && result.exportedRecordIds.length === liveRowCount) {
+          res.setHeader('X-Export-Id', manifestResult.exportId);
+        }
         res.send(result.csv);
       } catch {
         res.status(500).json({ error: 'Unable to export question history.' });
@@ -523,6 +591,7 @@ function parseQuestionsStandardsExportFilters(query = {}) {
   const startDate = safeText(query.startDate || query.fromDate || query.dateFrom);
   const endDate = safeText(query.endDate || query.toDate || query.dateTo);
   const sessionId = safeText(query.sessionId || query.classSessionId || query.classSession);
+  const status = safeText(query.status || query.filter).toLowerCase() || 'all';
 
   for (const [label, value] of [
     ['date', date],
@@ -537,18 +606,22 @@ function parseQuestionsStandardsExportFilters(query = {}) {
   if (startDate && endDate && startDate > endDate) {
     return { ok: false, error: 'startDate must be on or before endDate.' };
   }
+  if (!['all', 'needs-review', 'missing-standard'].includes(status)) {
+    return { ok: false, error: 'status must be all, needs-review, or missing-standard.' };
+  }
 
   return {
     ok: true,
     date,
     startDate,
     endDate,
-    sessionId
+    sessionId,
+    status
   };
 }
 
 function buildQuestionsStandardsExportFilename(filters = {}) {
-  const parts = ['questions-standards-history'];
+  const parts = ['questions-standards'];
   if (filters.date) {
     parts.push(filters.date);
   } else if (filters.startDate || filters.endDate) {
@@ -557,16 +630,14 @@ function buildQuestionsStandardsExportFilename(filters = {}) {
     parts.push('all');
   }
 
-  if (filters.sessionId) parts.push(`session-${filters.sessionId}`);
-  return `${parts.map(filenamePart).filter(Boolean).join('-')}.csv`;
+  if (filters.sessionId) parts.push('session');
+  if (filters.status && filters.status !== 'all') parts.push(filters.status);
+  const basename = parts.map(filenamePart).filter(Boolean).join('-') || 'questions-standards';
+  return `${basename}.csv`;
 }
 
 function filenamePart(value) {
   return safeText(value).replace(/[^a-z0-9_-]+/giu, '-').replace(/^-+|-+$/g, '').slice(0, 80);
-}
-
-function isDateKey(value) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(String(value || ''));
 }
 
 function getProfileStandardDetails(standardId, standardsBankId = '') {

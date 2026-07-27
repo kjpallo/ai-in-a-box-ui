@@ -9,6 +9,8 @@
   let currentReportQuestions = [];
   let reportQuestionFilter = 'all';
   let questionsStandardsExportState = null;
+  let profileSummaryLoadGeneration = 0;
+  let questionsStandardsLoadGeneration = 0;
   const restartedReportSessions = new Map();
   let availableActivityDates = [];
   const standardDetailsCache = new Map();
@@ -256,38 +258,55 @@
   }
 
   async function loadSummary(date) {
+    const loadGeneration = ++profileSummaryLoadGeneration;
     const selectedDate = date || currentDate || todayKey();
     currentDate = selectedDate;
     setText('profileSummaryStatus', 'Loading question activity...');
 
     try {
       const data = await fetchJson('/api/profile/question-summary?date=' + encodeURIComponent(selectedDate));
+      if (loadGeneration !== profileSummaryLoadGeneration) return;
       renderSummary(data);
     } catch (error) {
+      if (loadGeneration !== profileSummaryLoadGeneration) return;
       renderSummaryError('Could not load daily question summary.');
     }
   }
 
-  async function loadStandardsSummaryReport() {
+  async function loadStandardsSummaryReport(requestedDate = '') {
     const refreshButton = byId('profileRefreshStandardsReport');
     if (!byId('standardsSummaryRows')) return;
+    const loadGeneration = ++questionsStandardsLoadGeneration;
+    const selectedDate = firstDateKey(
+      requestedDate,
+      currentDate,
+      byId('reportDateSelect')?.value,
+      todayKey()
+    );
+    const requestedScope = {
+      date: selectedDate,
+      filter: reportQuestionFilter
+    };
 
     setText('standardsSummaryStatus', 'Loading standards report...');
     if (refreshButton) refreshButton.disabled = true;
 
     try {
-      const selectedDate = currentDate || byId('profileDateSelect')?.value || todayKey();
       const data = await fetchJson('/api/profile/standards-summary?date=' + encodeURIComponent(selectedDate));
+      if (loadGeneration !== questionsStandardsLoadGeneration) return;
       if (data?.ok === false) {
         renderStandardsSummaryError(data.error || 'Could not load standards summary report.');
         return;
       }
 
-      renderStandardsSummaryReport(data?.summary);
+      renderStandardsSummaryReport(data?.summary, requestedScope);
     } catch (error) {
+      if (loadGeneration !== questionsStandardsLoadGeneration) return;
       renderStandardsSummaryError(error.message || 'Could not load standards summary report.');
     } finally {
-      if (refreshButton) refreshButton.disabled = false;
+      if (loadGeneration === questionsStandardsLoadGeneration && refreshButton) {
+        refreshButton.disabled = false;
+      }
     }
   }
 
@@ -296,24 +315,15 @@
     const questions = Array.isArray(data?.questions) ? data.questions : [];
     const topics = Array.isArray(data?.topics) ? data.topics : [];
     const reviewCount = questions.filter(questionNeedsReview).length;
-    const matchedToStandards = countQuestionsWithStandards(questions);
     const topTopic = topics[0]?.topic ? titleCaseLabel(topics[0].topic) : '-';
-    const untaggedQuestions = Math.max(0, total - currentStandardsTagged);
     const selectedDate = data.date || currentDate || todayKey();
     currentDate = selectedDate;
 
     setText('liveStatusValue', total ? 'Active' : 'Ready');
     setText('profileTotalQuestions', `${total} question${total === 1 ? '' : 's'} ${selectedDate === todayKey() ? 'today' : 'on this date'}`);
-    setText('reportQuestionsAskedValue', total);
     setText('profileNeedsReviewValue', reviewCount);
     setText('profileStandardsTaggedValue', currentStandardsTagged);
-    setText('reportStandardsTaggedValue', currentStandardsTagged || matchedToStandards);
-    setText('reportUntaggedQuestionsValue', untaggedQuestions);
-    setText('reportTopTopicValue', topTopic);
-    setText('reportNeedsReviewValue', reviewCount);
-    setText('reportDateRangeValue', selectedDate);
     setAttentionCount('profileNeedsReviewValue', reviewCount);
-    setAttentionCount('reportNeedsReviewValue', reviewCount);
     updateLiveAttentionState(reviewCount);
     renderLiveAttentionActions(questions);
     setLiveDateStatus(selectedDate, total);
@@ -329,42 +339,29 @@
     );
 
     currentQuestions = questions;
-    currentReportQuestions = questions;
     showingReviewQuestions = false;
-    updateTeacherReportSummary();
     renderQuestionRows(currentQuestions);
-    renderReportQuestionRows(getFilteredReportQuestions());
     renderTopicSummary(topics);
   }
 
   function renderSummaryError(message) {
     setText('liveStatusValue', 'Offline');
     setText('profileTotalQuestions', '0 questions today');
-    setText('reportQuestionsAskedValue', 0);
     setText('profileNeedsReviewValue', 0);
     setText('profileStandardsTaggedValue', currentStandardsTagged);
-    setText('reportStandardsTaggedValue', currentStandardsTagged);
-    setText('reportUntaggedQuestionsValue', 0);
-    setText('reportTopTopicValue', '-');
-    setText('reportNeedsReviewValue', 0);
-    setText('reportDateRangeValue', currentDate || todayKey());
     setAttentionCount('profileNeedsReviewValue', 0);
-    setAttentionCount('reportNeedsReviewValue', 0);
     updateLiveAttentionState(0);
     renderLiveAttentionActions([]);
     setLiveDateStatus(currentDate || todayKey(), 0);
     setText('profileSummaryStatus', message);
     setText('profileDailySummaryText', message);
     currentQuestions = [];
-    currentReportQuestions = [];
     showingReviewQuestions = false;
-    updateTeacherReportSummary(message);
     renderQuestionRows([]);
-    renderReportQuestionRows([]);
     renderTopicSummary([]);
   }
 
-  function renderStandardsSummaryReport(summary) {
+  function renderStandardsSummaryReport(summary, requestedScope = {}) {
     const safeSummary = normalizeStandardsSummary(summary);
     const total = safeSummary.totalQuestions;
     const tagged = safeSummary.taggedQuestions;
@@ -373,7 +370,10 @@
     currentStandardsTagged = tagged;
     currentStandardsSummary = safeSummary;
     currentReportQuestions = safeSummary.questions;
-    syncReportDateSelect(safeSummary.availableDates, currentDate || byId('reportDateSelect')?.value || todayKey());
+    syncReportDateSelect(
+      safeSummary.availableDates,
+      requestedScope.date || currentDate || byId('reportDateSelect')?.value || todayKey()
+    );
 
     setText('standardsTotalQuestions', total);
     setText('standardsTaggedQuestions', tagged);
@@ -392,7 +392,7 @@
     setText('profileStandardsTaggedValue', tagged);
     setText('reportStandardsTaggedValue', tagged);
     setText('reportUntaggedQuestionsValue', safeSummary.untaggedQuestions);
-    setText('reportDateRangeValue', currentDate || byId('reportDateSelect')?.value || todayKey());
+    setText('reportDateRangeValue', requestedScope.date || currentDate || byId('reportDateSelect')?.value || todayKey());
     updateTeacherReportSummary();
     const coverageDonut = byId('standardsCoverageDonut');
     if (coverageDonut) coverageDonut.style.setProperty('--coverage-percent', String(Math.max(0, Math.min(100, percentTagged))));
@@ -606,13 +606,14 @@
 
   function renderReportQuestionRows(questions) {
     const rows = byId('reportQuestionRows');
-    renderReportSessionGroups(currentReportQuestions);
+    renderReportSessionGroups(questions);
     if (!rows) return;
     const table = rows.closest('.questions-standards-table');
     const rowCount = Array.isArray(questions) ? questions.length : 0;
 
     updateReportFilterButtons();
     updateReportQuestionCount(questions);
+    updateReportMetrics(questions);
     updateExportButtonStates(questions);
     if (table) {
       table.classList.toggle('has-many-rows', rowCount > 5);
@@ -692,6 +693,7 @@
         missingStandardCount: 0,
         latestQuestionAt: '',
         standardIds: new Set(),
+        standardCounts: new Map(),
         topics: new Map()
       };
 
@@ -701,6 +703,7 @@
       if (!hasQuestionStandard(question)) existing.missingStandardCount += 1;
       existing.label = normalizeRestartedSessionTitle(firstText(storedLabel, existing.label));
       existing.className = firstText(existing.className, cleanRestartSessionBaseName(storedLabel));
+      existing.anonymousSession = firstText(question?.anonymousSession, existing.anonymousSession);
       existing.latestQuestionAt = latestLabel(existing.latestQuestionAt, question?.timestamp);
       addQuestionStandardsToGroup(existing, question);
       incrementClientCount(existing.topics, question?.topic);
@@ -763,7 +766,7 @@
             <strong>${escapeHtml(group.label || 'Current student question set')}</strong>
             <span class="report-session-state-pill">Current</span>
           </div>
-          <span class="report-session-group-key">${escapeHtml(group.sessionKey ? truncate(group.sessionKey, 96) : 'Missing session key')}</span>
+          <span class="report-session-group-key">${escapeHtml(group.anonymousSession || 'Anonymous session group')}</span>
           <dl class="report-session-group-meta">
             ${metaRows.map(([label, value]) => `
               <div>
@@ -824,6 +827,7 @@
       existing.label = normalizeRestartedSessionTitle(firstText(storedLabel, existing.label));
       existing.restartClassName = firstText(existing.restartClassName, restartClassName);
       existing.restartedLink = restartedReportSessions.get(restartKey) || existing.restartedLink;
+      existing.anonymousSession = firstText(question?.anonymousSession, existing.anonymousSession);
       existing.archivedAt = latestLabel(existing.archivedAt, question?.archiveCreatedAt, question?.timestamp);
       addQuestionStandardsToGroup(existing, question);
       incrementClientCount(existing.topics, question?.topic);
@@ -892,7 +896,7 @@
             <strong>${escapeHtml(group.label || 'Archived Session')}</strong>
             <span class="report-session-state-pill">${escapeHtml(group.status || 'Archived')}</span>
           </div>
-          <span class="report-session-group-key">${escapeHtml(truncate(group.restartKey || 'No session key available', 96))}</span>
+          <span class="report-session-group-key">${escapeHtml(group.anonymousSession || 'Anonymous session group')}</span>
           <dl class="report-session-group-meta">
             ${metaRows.map(([label, value]) => `
               <div>
@@ -1020,16 +1024,22 @@
 
   function bindEvents() {
     byId('profileDateSelect')?.addEventListener('change', async (event) => {
-      syncDateSelectValue(event.target.value);
-      await loadSummary(event.target.value);
-      await loadStudentSessions();
-      await loadStandardsSummaryReport();
+      const selectedDate = event.target.value;
+      syncDateSelectValue(selectedDate);
+      await Promise.all([
+        loadSummary(selectedDate),
+        loadStudentSessions(),
+        loadStandardsSummaryReport(selectedDate)
+      ]);
     });
 
     byId('reportDateSelect')?.addEventListener('change', async (event) => {
-      syncDateSelectValue(event.target.value);
-      await loadSummary(event.target.value);
-      await loadStandardsSummaryReport();
+      const selectedDate = event.target.value;
+      syncDateSelectValue(selectedDate);
+      await Promise.all([
+        loadSummary(selectedDate),
+        loadStandardsSummaryReport(selectedDate)
+      ]);
     });
 
     byId('profileRefreshSummary')?.addEventListener('click', async () => {
@@ -1115,6 +1125,7 @@
     });
 
     byId('reportExportCsv')?.addEventListener('click', exportReportCsv);
+    byId('reportOpenGmail')?.addEventListener('click', openGmailReport);
     byId('reportPurgeRawHistory')?.addEventListener('click', purgeQuestionsStandardsExport);
     byId('reportPrintReport')?.addEventListener('click', printReport);
     byId('reportCopySummary')?.addEventListener('click', copyReportSummary);
@@ -2245,7 +2256,7 @@
 
       const blob = await response.blob();
       const filename = filenameFromContentDisposition(response.headers.get('Content-Disposition'))
-        || `questions-standards-history-${selectedDate}.csv`;
+        || `questions-standards-${selectedDate}.csv`;
       const exportId = response.headers.get('X-Export-Id');
 
       downloadBlob(blob, filename);
@@ -2264,7 +2275,39 @@
     } catch (error) {
       setText('reportExportStatus', error.message || 'Could not export CSV from the server. No retention export was saved.');
     } finally {
-      if (exportButton) exportButton.disabled = currentReportQuestions.length === 0;
+      if (exportButton) exportButton.disabled = false;
+    }
+  }
+
+  async function openGmailReport() {
+    const button = byId('reportOpenGmail');
+    const popup = window.open('about:blank', '_blank');
+    if (!popup) {
+      setText('reportExportStatus', 'Gmail was blocked by the browser. Allow popups for this page and try again.');
+      return;
+    }
+
+    try {
+      if (button) button.disabled = true;
+      popup.opener = null;
+      setText('reportExportStatus', 'Preparing an anonymous Gmail report...');
+      const data = await fetchJson(buildQuestionsStandardsGmailReportUrl());
+      const composeUrl = String(data?.gmail?.composeUrl || '').trim();
+      if (!composeUrl.startsWith('https://mail.google.com/mail/')) {
+        throw new Error('Gmail report link was unavailable.');
+      }
+      popup.location.replace(composeUrl);
+      setText(
+        'reportExportStatus',
+        data?.gmail?.requiresCsvAttachment
+          ? 'Gmail opened with the anonymous summary. Export and attach the filtered CSV for the detailed rows.'
+          : 'Gmail opened with the anonymous report.'
+      );
+    } catch (error) {
+      popup.close();
+      setText('reportExportStatus', error.message || 'Could not open the anonymous Gmail report.');
+    } finally {
+      if (button) button.disabled = false;
     }
   }
 
@@ -2327,15 +2370,16 @@
   }
 
   async function copyReportSummary() {
-    if (!currentReportQuestions.length) {
+    const scopedQuestions = getFilteredReportQuestions();
+    if (!scopedQuestions.length) {
       setText('reportExportStatus', 'No summary is available to copy yet.');
       return;
     }
 
-    const total = currentReportQuestions.length;
-    const matched = currentStandardsTagged || countQuestionsWithStandards(currentReportQuestions);
-    const needsReview = currentReportQuestions.filter(questionNeedsReview).length;
-    const missing = currentReportQuestions.filter((item) => !hasQuestionStandard(item)).length;
+    const total = scopedQuestions.length;
+    const matched = countDistinctQuestionStandards(scopedQuestions);
+    const needsReview = scopedQuestions.filter(questionNeedsReview).length;
+    const missing = scopedQuestions.filter((item) => !hasQuestionStandard(item)).length;
     const generated = currentStandardsSummary?.generatedAt ? formatDateTime(currentStandardsSummary.generatedAt) : 'Not loaded';
     const summary = [
       `Questions & Standards summary for ${currentDate || todayKey()}`,
@@ -2361,7 +2405,16 @@
   function buildQuestionsStandardsExportUrl(selectedDate) {
     const params = new URLSearchParams();
     params.set('date', selectedDate || todayKey());
+    params.set('status', reportQuestionFilter);
     return `${QUESTIONS_STANDARDS_EXPORT_ENDPOINT}?${params.toString()}`;
+  }
+
+  function buildQuestionsStandardsGmailReportUrl() {
+    const params = new URLSearchParams();
+    params.set('date', selectedReportDate());
+    params.set('status', reportQuestionFilter);
+    params.set('mode', byId('reportModeSelect')?.value === 'detailed' ? 'detailed' : 'summary');
+    return `/api/profile/questions-standards/gmail-report?${params.toString()}`;
   }
 
   function validQuestionsStandardsExportId() {
@@ -2547,6 +2600,7 @@
   }
 
   function questionNeedsReview(item) {
+    if (typeof item?.needsReview === 'boolean') return item.needsReview;
     if (isNoMatchQuestion(item)) return true;
     if (!hasQuestionStandard(item)) return true;
     if (String(item?.standardsError || '').trim()) return true;
@@ -2558,17 +2612,30 @@
     return (Array.isArray(questions) ? questions : []).filter(hasQuestionStandard).length;
   }
 
+  function countDistinctQuestionStandards(questions) {
+    const standardIds = new Set();
+    (Array.isArray(questions) ? questions : []).forEach((question) => {
+      getQuestionStandards(question).forEach((standard) => {
+        const standardId = firstText(standard?.standardId);
+        if (standardId) standardIds.add(standardId);
+      });
+    });
+    return standardIds.size;
+  }
+
   function hasQuestionStandard(item) {
+    if (item?.missingStandard === true) return false;
     return getQuestionStandards(item).length > 0;
   }
 
   function getQuestionStandards(item) {
     const primary = objectRows(item?.primaryStandards);
     const legacy = objectRows(item?.standards);
-    const possible = objectRows(item?.possibleStandards);
     if (primary.length) return primary;
     if (legacy.length) return legacy;
-    return possible;
+    return item?.matchedStandard && typeof item.matchedStandard === 'object'
+      ? [item.matchedStandard]
+      : [];
   }
 
   function formatQuestionStandards(item) {
@@ -2732,6 +2799,7 @@
   }
 
   function reviewStatusForQuestion(item) {
+    if (item?.needsReview === false) return { label: 'Ready', needsReview: false };
     if (isNoMatchQuestion(item)) return { label: 'Needs review', needsReview: true };
     if (!hasQuestionStandard(item)) return { label: 'Missing standard', needsReview: true };
     if (String(item?.standardsError || '').trim()) return { label: 'Needs review', needsReview: true };
@@ -2753,7 +2821,7 @@
     const timestamp = item?.timestamp ? new Date(item.timestamp) : null;
     if (timestamp && !Number.isNaN(timestamp.getTime())) {
       return {
-        date: formatDateKeySlash(timestamp),
+        date: formatDateKeySlash(item?.date || currentDate || todayKey()),
         time: timestamp.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
       };
     }
@@ -2779,14 +2847,15 @@
   }
 
   function updateTeacherReportSummary(fallbackMessage = '') {
-    if (fallbackMessage && currentReportQuestions.length === 0) {
+    const scopedQuestions = getFilteredReportQuestions();
+    if (fallbackMessage && scopedQuestions.length === 0) {
       setText('reportSummaryStatus', fallbackMessage);
       return;
     }
 
-    const total = currentReportQuestions.length;
-    const matched = currentStandardsTagged || countQuestionsWithStandards(currentReportQuestions);
-    const needsReview = currentReportQuestions.filter(questionNeedsReview).length;
+    const total = scopedQuestions.length;
+    const matched = countDistinctQuestionStandards(scopedQuestions);
+    const needsReview = scopedQuestions.filter(questionNeedsReview).length;
     const selectedDate = currentDate || todayKey();
     const dateLabel = selectedDate === todayKey() ? 'Today' : `On ${selectedDate}`;
     const reviewPhrase = needsReview === 1 ? '1 question needs teacher review' : `${needsReview} questions need teacher review`;
@@ -2798,8 +2867,27 @@
 
     setText(
       'reportSummaryStatus',
-      `${dateLabel}, students asked ${total} question${total === 1 ? '' : 's'}. ${matched} question${matched === 1 ? '' : 's'} matched a standard. ${reviewPhrase}. ${needsReview ? 'Review the highlighted rows before export.' : 'This report is ready to export.'}`
+      `${dateLabel}, this scope includes ${total} question${total === 1 ? '' : 's'} and ${matched} distinct matched standard${matched === 1 ? '' : 's'}. ${reviewPhrase}. ${needsReview ? 'Review the highlighted rows before export.' : 'This report is ready to export.'}`
     );
+  }
+
+  function updateReportMetrics(questions) {
+    const scopedQuestions = Array.isArray(questions) ? questions : [];
+    const total = scopedQuestions.length;
+    const matchedStandards = countDistinctQuestionStandards(scopedQuestions);
+    const needsReview = scopedQuestions.filter(questionNeedsReview).length;
+    const missingStandard = scopedQuestions.filter((item) => !hasQuestionStandard(item)).length;
+    const topics = new Map();
+    scopedQuestions.forEach((question) => incrementClientCount(topics, question?.topic));
+
+    setText('reportQuestionsAskedValue', total);
+    setText('reportStandardsTaggedValue', total ? matchedStandards : 0);
+    setText('reportNeedsReviewValue', needsReview);
+    setText('reportUntaggedQuestionsValue', missingStandard);
+    setText('reportTopTopicValue', topClientCountLabel(topics) || '-');
+    setText('reportDateRangeValue', selectedReportDate());
+    setAttentionCount('reportNeedsReviewValue', needsReview);
+    updateTeacherReportSummary();
   }
 
   function emptyReportTitle() {
@@ -2825,10 +2913,11 @@
   }
 
   function updateExportButtonStates(questions) {
-    const hasRows = Array.isArray(questions) && questions.length > 0;
     const csvButton = byId('reportExportCsv');
+    const gmailButton = byId('reportOpenGmail');
     const copyButton = byId('reportCopySummary');
-    if (csvButton) csvButton.disabled = !hasRows;
+    if (csvButton) csvButton.disabled = false;
+    if (gmailButton) gmailButton.disabled = false;
     if (copyButton) copyButton.disabled = currentReportQuestions.length === 0;
   }
 
@@ -2867,6 +2956,10 @@
       : {};
     const totalQuestions = toCount(summary?.totalQuestions);
     const taggedQuestions = toCount(summary?.taggedQuestions);
+    const normalizedReport = summary?.report && typeof summary.report === 'object'
+      ? summary.report
+      : {};
+    const reportRecords = objectRows(normalizedReport.records);
 
     return {
       generatedAt: summary?.generatedAt || '',
@@ -2885,8 +2978,10 @@
         weak: toCount(confidence.weak),
         none: toCount(confidence.none)
       },
-      availableDates: Array.isArray(summary?.availableDates) ? summary.availableDates.filter(Boolean) : [],
-      questions: objectRows(summary?.questions),
+      availableDates: Array.isArray(normalizedReport.availableDates)
+        ? normalizedReport.availableDates.filter(Boolean)
+        : Array.isArray(summary?.availableDates) ? summary.availableDates.filter(Boolean) : [],
+      questions: reportRecords.length ? reportRecords : objectRows(summary?.questions),
       recentTaggedQuestions: objectRows(summary?.recentTaggedQuestions)
     };
   }
@@ -2991,6 +3086,12 @@
     const day = String(today.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   }
+
+  window.Charlemagne.questionsStandardsReporting = Object.freeze({
+    buildArchiveableReportSessionGroups,
+    loadStandardsSummaryReport,
+    renderReportQuestionRows
+  });
 
   document.addEventListener('DOMContentLoaded', init);
   document.addEventListener('charlemagne:blade-active', (event) => {

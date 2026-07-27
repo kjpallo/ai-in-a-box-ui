@@ -11,7 +11,8 @@ const {
   exportQuestionsStandardsCsv
 } = require('../lib/profile/questionsStandardsCsvExport');
 const {
-  loadQuestionsStandardsRecords
+  loadQuestionsStandardsRecords,
+  mergeQuestionStandardsRecords
 } = require('../lib/profile/questionsStandardsArchiveRecords');
 const { hashCsv } = require('../lib/profile/questionsStandardsExportManifest');
 
@@ -145,6 +146,32 @@ fs.writeFileSync(archiveManifestPath, `${JSON.stringify({
   deletedRecordCount: archiveExport.rowCount
 }, null, 2)}\n`, 'utf8');
 
+const identicalLegacyRecord = {
+  timestamp: '2026-05-05T14:00:00.000Z',
+  studentQuestion: 'Two physically separate legacy rows are identical.',
+  answerGiven: 'Both rows must remain.',
+  routeType: 'knowledge',
+  confidence: 'strong',
+  category: 'legacy duplicate',
+  primaryStandards: [
+    { standardId: 'LEGACY.DUPLICATE.1', label: 'Legacy duplicate standard', unit: 'Legacy Unit' }
+  ],
+  standards: [
+    { standardId: 'LEGACY.DUPLICATE.1', label: 'Legacy duplicate standard', unit: 'Legacy Unit' }
+  ],
+  units: ['Legacy Unit'],
+  reportableForStandards: true
+};
+const identicalLegacyExport = buildQuestionsStandardsCsvExport([
+  identicalLegacyRecord,
+  { ...identicalLegacyRecord }
+]);
+fs.writeFileSync(
+  path.join(archiveDir, 'legacy-identical-rows.csv'),
+  identicalLegacyExport.csv,
+  'utf8'
+);
+
 const mergedRecords = loadQuestionsStandardsRecords({
   logFilePath,
   archiveDir,
@@ -152,9 +179,38 @@ const mergedRecords = loadQuestionsStandardsRecords({
 });
 
 assert.deepEqual(
-  mergedRecords.map((record) => record.id),
+  mergedRecords.slice(0, 4).map((record) => record.id),
   ['raw-current-1', 'duplicate-1', 'archived-1', 'archived-other-date'],
   'merged history should include raw and archived records without duplicate ids'
+);
+const legacyDuplicateRecords = mergedRecords.filter(
+  (record) => record.studentQuestion === identicalLegacyRecord.studentQuestion
+);
+assert.equal(legacyDuplicateRecords.length, 2, 'identical physical legacy rows should both survive archive loading');
+assert.equal(
+  new Set(legacyDuplicateRecords.map((record) => record.id)).size,
+  2,
+  'identical physical legacy rows should receive distinct deterministic fallback ids'
+);
+assert.equal(
+  legacyDuplicateRecords.every((record) => /^archived_[a-f0-9]{20}$/u.test(record.id)),
+  true
+);
+
+const reloadedRecords = loadQuestionsStandardsRecords({
+  logFilePath,
+  archiveDir,
+  readCurrentRecords: (targetPath) => JSON.parse(fs.readFileSync(targetPath, 'utf8'))
+});
+assert.deepEqual(
+  reloadedRecords.filter((record) => record.studentQuestion === identicalLegacyRecord.studentQuestion).map((record) => record.id),
+  legacyDuplicateRecords.map((record) => record.id),
+  'rereading the same physical rows should reproduce the same fallback ids'
+);
+assert.equal(
+  mergeQuestionStandardsRecords(mergedRecords, reloadedRecords).length,
+  mergedRecords.length,
+  'merging a repeated archive read should not create extra records'
 );
 
 const summary = buildStandardsSummaryReport(mergedRecords, {
@@ -163,7 +219,7 @@ const summary = buildStandardsSummaryReport(mergedRecords, {
 });
 
 assert.equal(summary.totalQuestions, 3, 'date-filtered summary should include raw records and archived records');
-assert.deepEqual(summary.availableDates, ['2026-05-04', '2026-05-03'], 'archived dates should remain available for reports');
+assert.deepEqual(summary.availableDates, ['2026-05-05', '2026-05-04', '2026-05-03'], 'archived dates should remain available for reports');
 assert.deepEqual(
   summary.standards.map((row) => [row.standardId, row.count]),
   [
@@ -211,6 +267,13 @@ const otherDateSummary = buildStandardsSummaryReport(mergedRecords, {
 assert.equal(otherDateSummary.totalQuestions, 1, 'date filtering should work for archived-only dates');
 assert.equal(otherDateSummary.questions[0].id, 'archived-other-date');
 
+const legacyDuplicateSummary = buildStandardsSummaryReport(mergedRecords, {
+  now: new Date('2026-06-06T12:00:00.000Z'),
+  date: '2026-05-05'
+});
+assert.equal(legacyDuplicateSummary.totalQuestions, 2, 'identical legacy rows should count as two questions');
+assert.equal(legacyDuplicateSummary.standards[0].count, 2);
+
 const currentOnly = summary.questions.find((question) => question.id === 'raw-current-1');
 assert.ok(currentOnly, 'current raw records should still appear in Questions & Standards');
 
@@ -221,19 +284,38 @@ const exported = exportQuestionsStandardsCsv({
 });
 const exportedRows = parse(exported.csv, { columns: true });
 assert.deepEqual(
-  exportedRows.map((row) => row.id),
-  ['raw-current-1', 'duplicate-1', 'archived-1'],
-  'CSV export should preserve date filtering and include archived records'
+  exportedRows.map((row) => row.question),
+  [
+    'Current raw question still appears?',
+    'Raw duplicate should win?',
+    'Archived question still appears?'
+  ],
+  'anonymous CSV export should preserve date filtering and include archived records'
 );
 assert.equal(
-  exportedRows.find((row) => row.id === 'archived-1').response,
-  'Archived answer remains reviewable.',
-  'CSV export should preserve archived answers'
+  exportedRows.find((row) => row.question === 'Archived question still appears?').state,
+  'archived',
+  'CSV export should label archived records'
 );
 assert.equal(
-  exportedRows.find((row) => row.id === 'archived-1').primaryStandards,
-  'ARCH.STANDARD.1 | Archived standard label | Archive Unit',
+  exportedRows.find((row) => row.question === 'Archived question still appears?').standard,
+  'ARCH.STANDARD.1 | Archived standard label',
   'CSV export should preserve archived standards'
+);
+assert.equal(Object.hasOwn(exportedRows[0], 'id'), false, 'CSV export should omit raw record ids');
+assert.equal(Object.hasOwn(exportedRows[0], 'sessionId'), false, 'CSV export should omit raw session ids');
+assert.equal(Object.hasOwn(exportedRows[0], 'response'), false, 'CSV export should omit answer metadata');
+
+const anonymousLegacyExport = exportQuestionsStandardsCsv({
+  logFilePath,
+  archiveDir,
+  date: '2026-05-05'
+});
+assert.equal(anonymousLegacyExport.rowCount, 2);
+assert.doesNotMatch(
+  anonymousLegacyExport.csv,
+  /archived_[a-f0-9]{20}/u,
+  'internal fallback ids should not appear in anonymous report CSV'
 );
 
 console.log('Questions & Standards archive record checks passed');

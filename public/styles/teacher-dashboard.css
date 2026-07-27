@@ -218,7 +218,27 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
+  align-items: end;
   gap: 10px;
+}
+
+.reports-mode-field {
+  display: grid;
+  gap: 5px;
+}
+
+.reports-mode-field span {
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.reports-mode-field select {
+  min-height: 42px;
+  border: 1px solid rgba(210, 238, 234, 0.18);
+  border-radius: 12px;
+  padding: 0 34px 0 12px;
+  color: #effffb;
+  background: rgba(5, 27, 28, 0.92);
 }
 
 .reports-header-actions .small-button {
@@ -228,7 +248,8 @@
   box-shadow: none;
 }
 
-.reports-header-actions #reportExportCsv {
+.reports-header-actions #reportExportCsv,
+.reports-header-actions #reportOpenGmail {
   border-color: rgba(102, 247, 209, 0.4);
   color: #061311;
   background: linear-gradient(180deg, rgba(102, 247, 209, 0.95), rgba(36, 195, 154, 0.9));

@@ -14,6 +14,7 @@ const {
   hashCsv
 } = require('../lib/profile/questionsStandardsExportManifest');
 const {
+  ANONYMOUS_CSV_COLUMNS,
   CSV_COLUMNS,
   buildQuestionsStandardsCsvExport,
   exportQuestionsStandardsCsv
@@ -162,11 +163,13 @@ const fileBacked = exportQuestionsStandardsCsv({
   logFilePath,
   archiveDir,
   date: '2026-05-01',
-  sessionId: 'session-b'
+  sessionId: 'session-a'
 });
 
 assert.equal(fileBacked.rowCount, 1, 'file-backed export should read student_interactions.json records');
-assert.deepEqual(fileBacked.exportedRecordIds, ['interaction-2']);
+assert.deepEqual(fileBacked.exportedRecordIds, ['interaction-1']);
+assert.deepEqual(fileBacked.columns, ANONYMOUS_CSV_COLUMNS, 'teacher export should use anonymous report columns');
+assert.doesNotMatch(fileBacked.csv, /session-a|hub-7|interaction-1/u, 'teacher export should omit internal identifiers');
 assert.equal(fs.existsSync(logFilePath), true, 'raw interaction history should not be deleted');
 assert.equal(fs.readFileSync(logFilePath, 'utf8'), logContents, 'raw interaction history should not be modified');
 assert.deepEqual(
@@ -224,9 +227,10 @@ async function runRouteChecks() {
   assert.equal(csvResponse.getHeader('content-type'), 'text/csv; charset=utf-8');
   assert.match(
     csvResponse.getHeader('content-disposition'),
-    /^attachment; filename="questions-standards-history-2026-05-01-to-2026-05-02-session-session-a\.csv"$/,
-    'CSV export should be returned as a safe download filename'
+    /^attachment; filename="questions-standards-2026-05-01-to-2026-05-02-session\.csv"$/,
+    'CSV export should describe the session scope without exposing its identifier'
   );
+  assert.doesNotMatch(csvResponse.getHeader('content-disposition'), /session-a/u);
   assert.match(
     csvResponse.getHeader('x-export-id'),
     /^[0-9a-f-]{32,36}$/i,
@@ -234,29 +238,36 @@ async function runRouteChecks() {
   );
   const routeRows = parse(csvResponse.body, { columns: true });
   assert.deepEqual(
-    routeRows.map((row) => row.id),
-    ['interaction-1', 'interaction-3'],
-    'route should apply date-range and class-session filters'
+    routeRows.map((row) => row.question),
+    ['What is force, really?', 'Message fallback works'],
+    'route should apply date-range and class-session filters using anonymous rows'
   );
   assert.equal(routeRows[0].question, 'What is force, really?');
-  assert.equal(routeRows[0].response, 'A force is a push, a "pull", or both.\nIt can change motion.');
+  assert.equal(routeRows[0].standard, '9-12.PS2.A.1 | Forces and motion');
+  assert.equal(routeRows[1].reviewStatus, 'Missing standard');
+  assert.equal(Object.hasOwn(routeRows[0], 'id'), false, 'anonymous CSV must omit raw record ids');
+  assert.equal(Object.hasOwn(routeRows[0], 'sessionId'), false, 'anonymous CSV must omit session ids');
+  assert.equal(Object.hasOwn(routeRows[0], 'studentHubId'), false, 'anonymous CSV must omit student hub ids');
+  assert.equal(Object.hasOwn(routeRows[0], 'response'), false, 'anonymous CSV should not include answer metadata');
+  assert.doesNotMatch(csvResponse.body, /session-a|hub-7|interaction-1/u);
 
   const manifestFiles = fs.readdirSync(manifestDir).sort();
   assert.equal(manifestFiles.length, 1, 'successful route export should write one manifest');
   const manifestPath = path.join(manifestDir, manifestFiles[0]);
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   assert.equal(manifest.exportId, csvResponse.getHeader('x-export-id'), 'manifest exportId should match response header');
-  assert.equal(manifest.filename, 'questions-standards-history-2026-05-01-to-2026-05-02-session-session-a.csv');
+  assert.equal(manifest.filename, 'questions-standards-2026-05-01-to-2026-05-02-session.csv');
   assert.deepEqual(manifest.filters, {
     date: '',
     startDate: '2026-05-01',
     endDate: '2026-05-02',
-    sessionId: 'session-a'
+    sessionId: 'session-a',
+    status: 'all'
   });
   assert.equal(manifest.sourceLogPath, path.resolve(logFilePath), 'manifest should record the source log path');
   assert.deepEqual(manifest.exportedRecordIds, ['interaction-1', 'interaction-3']);
   assert.equal(manifest.rowCount, 2, 'manifest should record exported row count');
-  assert.deepEqual(manifest.columns, CSV_COLUMNS, 'manifest should record exported columns');
+  assert.deepEqual(manifest.columns, ANONYMOUS_CSV_COLUMNS, 'manifest should record anonymous exported columns');
   assert.deepEqual(manifest.checksum, {
     algorithm: 'sha256',
     value: hashCsv(csvResponse.body)
@@ -280,9 +291,33 @@ async function runRouteChecks() {
     {},
     authorizedExtras
   );
-  assert.equal(parse(allHistoryResponse.body, { columns: true }).length, 3, 'route should export all current history without filters');
+  assert.equal(parse(allHistoryResponse.body, { columns: true }).length, 2, 'route should export all reportable current history without filters');
   assert.equal(fs.readdirSync(manifestDir).length, 2, 'each successful route export should write a manifest');
   assert.equal(fs.readFileSync(logFilePath, 'utf8'), logContents, 'subsequent export endpoint calls should not purge raw records');
+
+  const hostileSessionValue = 'raw-session-id\r\nX-Injected: yes " JOINABCDE';
+  const hostileFilenameResponse = await request(
+    handlers,
+    'GET',
+    '/api/profile/questions-standards/export.csv',
+    {},
+    {},
+    { date: '2026-05-01', classSessionId: hostileSessionValue },
+    authorizedExtras
+  );
+  assert.equal(hostileFilenameResponse.statusCode, 200);
+  const hostileDisposition = hostileFilenameResponse.getHeader('content-disposition');
+  assert.equal(
+    hostileDisposition,
+    'attachment; filename="questions-standards-2026-05-01-session.csv"',
+    'session-filtered filenames should be deterministic and independent of the raw query value'
+  );
+  assert.doesNotMatch(hostileDisposition, /raw-session-id|JOINABCDE|X-Injected/iu);
+  assert.doesNotMatch(hostileDisposition, /[\r\n]/u, 'Content-Disposition must not contain header injection characters');
+  const hostileFilename = hostileDisposition.match(/filename="([^"]+)"/u)?.[1] || '';
+  assert.match(hostileFilename, /^[a-z0-9_-]+\.csv$/u);
+  assert.equal(hostileFilename.endsWith('.csv'), true);
+  assert.doesNotMatch(hostileFilename, /["\r\n]/u);
 
   const invalidDateResponse = await request(
     handlers,
@@ -295,6 +330,18 @@ async function runRouteChecks() {
   );
   assert.equal(invalidDateResponse.statusCode, 400, 'route should reject unsafe date filters');
   assert.equal(invalidDateResponse.body.error, 'date must use YYYY-MM-DD.');
+
+  const impossibleDateResponse = await request(
+    handlers,
+    'GET',
+    '/api/profile/questions-standards/export.csv',
+    {},
+    {},
+    { date: '2026-02-30' },
+    authorizedExtras
+  );
+  assert.equal(impossibleDateResponse.statusCode, 400, 'route should reject impossible calendar dates');
+  assert.equal(impossibleDateResponse.body.error, 'date must use YYYY-MM-DD.');
 
   const failingHandlers = new Map();
   const failingApp = createApp(failingHandlers);
