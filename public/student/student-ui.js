@@ -82,6 +82,7 @@
   let selectedBalancingElement = null;
   const BALANCING_PENDING_TRANSCRIPT_LABEL = 'Used the balancing workspace controls';
   const BALANCING_ACTIVITY_ID = 'unit9.balance-ammonia';
+  const FORMULA_VISUAL_ACTION_PREFIX = 'formula_visual_action:';
   const tutorSessionExpandedState = new Map();
   const tutorStepExpandedState = new Map();
   let completedCelebrationKey = '';
@@ -1583,7 +1584,7 @@
       return renderPicketFenceVisual(visual, turnId, context);
     }
     if (visual.visualType === 'scientific_notation_decimal_move') {
-      return renderScientificNotationVisual(visual, turnId);
+      return renderScientificNotationVisual(visual, turnId, context);
     }
     if (visual.visualType === 'chemical_equation_balancing') {
       return renderChemicalEquationBalancingVisual(visual, turnId);
@@ -1657,10 +1658,12 @@
   function renderBalancingReductionControl(item) {
     const original = Number(item?.originalCoefficient);
     const divisor = Number(item?.divisor);
-    const reduced = Number(item?.reducedCoefficient);
-    const equation = `${original} ÷ ${divisor} = ${reduced}`;
+    const reducedCoefficientEarned = item?.reduced === true &&
+      Object.prototype.hasOwnProperty.call(item || {}, 'reducedCoefficient');
+    const reduced = reducedCoefficientEarned ? Number(item.reducedCoefficient) : null;
+    const equation = `${original} ÷ ${divisor} = ${reducedCoefficientEarned ? reduced : '?'}`;
     const accessibleName = String(item?.accessibleName || item?.formula || 'compound');
-    if (item?.reduced === true) {
+    if (reducedCoefficientEarned) {
       return `
         <span class="balancing-reduction-result" aria-label="${escapeAttr(`${accessibleName} coefficient reduced: ${equation}`)}">
           <del aria-label="original coefficient ${escapeAttr(String(original))}">${escapeHtml(String(original))}</del>
@@ -1671,7 +1674,7 @@
       `;
     }
     return `
-      <button type="button" class="balancing-reduction-control" data-balancing-reduce data-compound-id="${escapeAttr(item?.compoundId || '')}" data-balancing-divisor="${escapeAttr(String(divisor))}" aria-label="${escapeAttr(`Reduce ${accessibleName} coefficient: ${equation}`)}">
+      <button type="button" class="balancing-reduction-control" data-balancing-reduce data-compound-id="${escapeAttr(item?.compoundId || '')}" data-balancing-divisor="${escapeAttr(String(divisor))}" aria-label="${escapeAttr(`Reduce ${accessibleName} coefficient: ${original} divided by ${divisor}`)}">
         ${escapeHtml(equation)}
       </button>
     `;
@@ -1793,14 +1796,23 @@
     const startExponent = Number(startStep.exponent) || 0;
     const currentExponent = Number(displayStep.exponent) || 0;
     const startValue = Number(visual.startValue);
-    const computedCurrentValue = Number.isFinite(startValue)
+    const completed = context?.tutor?.completed === true || context?.work?.isComplete === true;
+    const canShowCurrentValue = completed || previewIndex === startIndex;
+    const computedCurrentValue = canShowCurrentValue && Number.isFinite(startValue)
       ? startValue * (10 ** (startExponent - currentExponent))
       : visual.startValue;
     const stepValue = getMetricStairStepValue(visual, displayStep, previewIndex);
-    const currentValue = stepValue?.value ?? computedCurrentValue;
+    const currentValue = canShowCurrentValue ? stepValue?.value ?? computedCurrentValue : null;
     const currentUnit = metricUnitForStep(displayStep, baseUnit);
-    const finalDisplay = `${formatMetricVisualValue(visual.resultValue)} ${visual.resultUnit || targetUnit}`.trim();
-    const completed = context?.tutor?.completed === true || context?.work?.isComplete === true;
+    const currentDisplay = canShowCurrentValue
+      ? stepValue?.display || `${formatMetricVisualValue(currentValue)} ${currentUnit}`.trim()
+      : `${currentUnit} value hidden until submitted`;
+    const startDisplay = visual.startValue == null
+      ? 'Waiting until entered'
+      : `${formatMetricVisualValue(visual.startValue)} ${startUnit}`.trim();
+    const finalDisplay = completed
+      ? `${formatMetricVisualValue(visual.resultValue)} ${visual.resultUnit || targetUnit}`.trim()
+      : '';
     const decimalMove = visual.decimalMove || {};
     const moveDirection = String(decimalMove.direction || '').trim();
     const places = Number(decimalMove.places);
@@ -1815,8 +1827,8 @@
           <span>${escapeHtml(`${startUnit} to ${targetUnit}`)}</span>
         </div>
         <div class="metric-stair-step-status-panel" aria-live="polite">
-          <span class="metric-stair-step-current-display">Current <strong data-metric-stair-step-current-value>${escapeHtml(stepValue?.display || `${formatMetricVisualValue(currentValue)} ${currentUnit}`)}</strong></span>
-          <span>Start <strong>${escapeHtml(`${formatMetricVisualValue(visual.startValue)} ${startUnit}`)}</strong></span>
+          <span class="metric-stair-step-current-display">Current <strong data-metric-stair-step-current-value>${escapeHtml(currentDisplay)}</strong></span>
+          <span>Start <strong>${escapeHtml(startDisplay)}</strong></span>
           <span>Target <strong>${escapeHtml(targetUnit)}</strong></span>
         </div>
         <div class="metric-stair-step-track metric-stair-step-ladder" role="list" aria-label="Metric ladder">
@@ -1833,9 +1845,9 @@
           <button type="button" class="metric-stair-step-control student-tutor-control student-tutor-control--workspace" data-metric-stair-step-move="decimal-left" data-metric-stair-step-id="${escapeAttr(stateKey)}">Move decimal left</button>
           <button type="button" class="metric-stair-step-control student-tutor-control student-tutor-control--workspace" data-metric-stair-step-move="decimal-right" data-metric-stair-step-id="${escapeAttr(stateKey)}">Move decimal right</button>
         </div>
-        <p class="metric-stair-step-preview-hint">Preview: hover over a step to see the value change. Click or tap the target unit to check it.</p>
+        <p class="metric-stair-step-preview-hint">Preview the unit position. Derived values stay hidden until you submit them.</p>
         <p class="metric-stair-step-helper">Moving down/right means multiply by 10 each step. Moving up/left means divide by 10 each step.</p>
-        <p class="metric-stair-step-note">${completed ? `${escapeHtml(moveMessage)} Answer: <strong>${escapeHtml(finalDisplay)}</strong>` : `${escapeHtml(moveMessage)} Answer appears when the marker reaches ${escapeHtml(targetUnit)}.`}</p>
+        <p class="metric-stair-step-note">${completed ? `${escapeHtml(moveMessage)} Answer: <strong>${escapeHtml(finalDisplay)}</strong>` : `${escapeHtml(moveMessage)} Move to ${escapeHtml(targetUnit)}, then enter the value you calculated.`}</p>
       </section>
     `;
   }
@@ -1907,7 +1919,10 @@
     if (shouldAutoCompleteMetricStairStep(control, visual, stateKey, clampedIndex, targetIndex)) {
       metricStairStepCompletionState.add(stateKey);
       window.setTimeout(() => {
-        sendTutorCommand(getMetricStairStepCompletionAnswer(visual));
+        sendTutorCommand(
+          getMetricStairStepCompletionAction(visual, clampedIndex),
+          'Moved the metric marker to the target unit'
+        );
       }, 0);
     }
     return true;
@@ -1949,9 +1964,17 @@
     const index = clampMetricStepIndex(previewIndex, steps);
     const displayStep = steps[index] || {};
     const stepValue = getMetricStairStepValue(visual, displayStep, index);
+    const startIndex = findMetricStepIndex(steps, visual?.startPrefix, visual?.startUnit, visual?.baseUnit);
+    const turnId = String(stateKey || '').replace(/^metric-stair-step:/, '');
+    const turn = findTurn(turnId);
+    const tutor = turn?.tutor || {};
+    const work = getTutorWork(tutor);
+    const completed = tutor.completed === true || work.isComplete === true;
     const currentDisplay = visualElement.querySelector('[data-metric-stair-step-current-value]');
     if (currentDisplay) {
-      currentDisplay.textContent = stepValue?.display || buildMetricStairStepDisplay(visual, displayStep, index);
+      currentDisplay.textContent = completed || index === startIndex
+        ? stepValue?.display || buildMetricStairStepDisplay(visual, displayStep, index)
+        : `${metricUnitForStep(displayStep, visual?.baseUnit)} value hidden until submitted`;
     }
     visualElement.querySelectorAll('[data-metric-stair-step-index]').forEach((button) => {
       const buttonIndex = Number(button.getAttribute('data-metric-stair-step-index'));
@@ -1976,6 +1999,7 @@
 
   function shouldAutoCompleteMetricStairStep(control, visual, stateKey, currentIndex, targetIndex) {
     if (currentIndex !== targetIndex) return false;
+    if (visual?.visualType !== 'metric_stair_step') return false;
     if (metricStairStepCompletionState.has(stateKey)) return false;
     if (!isLiveTutorControl(control)) return false;
     const activeTurn = getCurrentActiveTutorTurn();
@@ -1984,8 +2008,13 @@
     return work?.selectedMethod === 'stair_step' && work?.currentStep?.id === 'move_marker_to_target';
   }
 
-  function getMetricStairStepCompletionAnswer(visual) {
-    return String(visual?.autoCompleteAnswer || `${formatMetricVisualValue(visual?.resultValue)} ${visual?.resultUnit || visual?.targetUnit || ''}`).trim();
+  function getMetricStairStepCompletionAction(visual, currentIndex) {
+    const steps = Array.isArray(visual?.steps) ? visual.steps : [];
+    const markerPrefix = String(steps[currentIndex]?.label || '').trim();
+    return `${FORMULA_VISUAL_ACTION_PREFIX}${JSON.stringify({
+      type: 'metric_marker_position',
+      markerPrefix
+    })}`;
   }
 
   function findMetricStairStepVisualForStateKey(stateKey) {
@@ -2417,18 +2446,31 @@
     });
   }
 
-  function renderScientificNotationVisual(visual, turnId) {
+  function renderScientificNotationVisual(visual, turnId, context = {}) {
     const stateKey = scientificNotationKey(turnId);
     const move = visual.decimalMove || {};
     const finalSignedMoves = scientificNotationSignedMoves(move);
     const currentSignedMoves = getScientificNotationSignedMoves(stateKey, finalSignedMoves);
     const places = Math.abs(Number(move.places) || 0);
-    const currentValue = calculateScientificNotationCurrentValue(visual, currentSignedMoves);
     const startDisplay = scientificNotationStartDisplay(visual);
     const targetFormat = visual.mode === 'to_standard' ? 'standard notation' : 'scientific notation';
     const rule = scientificNotationRule(visual);
     const moveDirection = String(move.direction || '').trim();
-    const finalDisplay = visual.resultDisplay || String(visual.resultValue || '').trim();
+    const completed = context?.tutor?.completed === true || context?.work?.isComplete === true;
+    const showCurrentValue = completed || currentSignedMoves === 0;
+    const currentValue = showCurrentValue
+      ? calculateScientificNotationCurrentValue(visual, currentSignedMoves)
+      : null;
+    const currentDisplay = showCurrentValue
+      ? formatScientificNotationNumber(currentValue)
+      : 'Hidden until submitted';
+    const finalDisplay = completed
+      ? visual.resultDisplay || String(visual.resultValue || '').trim()
+      : 'Waiting for your answer';
+    const coefficientDisplay = visual.coefficient == null
+      ? 'Waiting until earned'
+      : formatScientificNotationNumber(visual.coefficient);
+    const exponentDisplay = visual.exponent == null ? 'Waiting until earned' : String(visual.exponent);
 
     return `
       <section class="scientific-notation-visual" data-scientific-notation-id="${escapeAttr(stateKey)}" aria-label="Scientific notation decimal mover visual">
@@ -2437,18 +2479,18 @@
           <span>${escapeHtml(targetFormat)}</span>
         </div>
         <div class="scientific-notation-summary">
-          <span>Start: <strong>${escapeHtml(startDisplay)}</strong></span>
+          <span>Start: <strong>${escapeHtml(startDisplay || 'Waiting until entered')}</strong></span>
           <span>Move: <strong>${escapeHtml(`${moveDirection || 'unknown'} ${places} place${places === 1 ? '' : 's'}`)}</strong></span>
           <span>Final result: <strong>${escapeHtml(finalDisplay)}</strong></span>
         </div>
         <div class="scientific-notation-number" aria-label="Current decimal position">
-          ${renderScientificNotationNumber(currentValue)}
+          ${showCurrentValue ? renderScientificNotationNumber(currentValue) : '<span>Value hidden</span>'}
         </div>
         <div class="scientific-notation-move">
-          <span>Current value: <strong>${escapeHtml(formatScientificNotationNumber(currentValue))}</strong></span>
+          <span>Current value: <strong>${escapeHtml(currentDisplay)}</strong></span>
           <span>Moves shown: <strong>${escapeHtml(String(Math.abs(currentSignedMoves)))} / ${escapeHtml(String(places))}</strong></span>
-          <span>Coefficient: <strong>${escapeHtml(formatScientificNotationNumber(visual.coefficient))}</strong></span>
-          <span>Exponent: <strong>${escapeHtml(String(visual.exponent ?? ''))}</strong></span>
+          <span>Coefficient: <strong>${escapeHtml(coefficientDisplay)}</strong></span>
+          <span>Exponent: <strong>${escapeHtml(exponentDisplay)}</strong></span>
         </div>
         <p class="scientific-notation-rule">${escapeHtml(rule)}</p>
         <div class="scientific-notation-controls">
@@ -2536,13 +2578,18 @@
 
   function scientificNotationStartDisplay(visual) {
     if (visual.mode === 'to_standard') {
+      if (visual.coefficient == null || visual.exponent == null) return '';
       return `${formatScientificNotationNumber(visual.coefficient)} x 10^${visual.exponent}`;
     }
+    if (visual.startValue == null) return '';
     return formatScientificNotationNumber(visual.startValue);
   }
 
   function scientificNotationRule(visual) {
     const mode = visual.mode || '';
+    if (!visual?.decimalMove?.direction) {
+      return 'Use the exponent and requested notation to decide how the decimal moves.';
+    }
     const exponent = Number(visual.exponent) || 0;
     if (mode === 'to_standard') {
       return exponent >= 0
@@ -2816,9 +2863,9 @@
           <button type="button" class="student-calculator-button student-tutor-control student-tutor-control--tool is-clear" data-calculator-key="clear">C</button>
           <button type="button" class="student-calculator-button student-tutor-control student-tutor-control--tool is-backspace" data-calculator-key="backspace">⌫</button>
           <button type="button" class="student-calculator-button student-tutor-control student-tutor-control--tool is-sqrt" data-calculator-key="sqrt">√</button>
-          <button type="button" class="student-calculator-button student-tutor-control student-tutor-control--tool is-equals" data-calculator-key="equals">=</button>
+          <button type="button" class="student-calculator-button student-tutor-control student-tutor-control--tool is-equals" data-calculator-key="equals" aria-label="Check expression">Check</button>
         </div>
-        <button type="button" class="student-calculator-use-result student-tutor-control student-tutor-control--tool" data-calculator-use-result>Use result</button>
+        <button type="button" class="student-calculator-use-result student-tutor-control student-tutor-control--tool" data-calculator-use-result>Use expression</button>
       </div>
     `;
   }
@@ -3479,6 +3526,7 @@
   }
 
   function calculateExpression() {
+    if (submitActiveFormulaTutorCalculatorExpression(calculatorExpression)) return;
     try {
       const result = evaluateCalculatorExpression(calculatorExpression);
       calculatorExpression = formatCalculatorResult(result);
@@ -3492,6 +3540,8 @@
   }
 
   function calculateSquareRoot() {
+    const activeExpression = String(calculatorExpression || '').trim();
+    if (submitActiveFormulaTutorCalculatorExpression(activeExpression ? `sqrt(${activeExpression})` : '')) return;
     try {
       const value = calculatorExpression.trim()
         ? evaluateCalculatorExpression(calculatorExpression)
@@ -3505,6 +3555,30 @@
       calculatorJustEvaluated = true;
     }
     updateCalculatorDisplay();
+  }
+
+  function submitActiveFormulaTutorCalculatorExpression(expression) {
+    const activeTurn = getCurrentActiveTutorTurn();
+    const tutor = activeTurn?.tutor || null;
+    const work = getTutorWork(tutor);
+    if (!activeTurn || !shouldProtectTutorCalculator(tutor, work)) return false;
+
+    const value = String(expression || '').trim();
+    if (!value || value === 'Error') {
+      if (status) status.textContent = 'Enter a number or expression to check.';
+      return true;
+    }
+
+    calculatorJustEvaluated = false;
+    sendTutorCommand(value);
+    return true;
+  }
+
+  function shouldProtectTutorCalculator(tutor, work = {}) {
+    return tutor?.active === true &&
+      tutor.completed !== true &&
+      tutor.stopped !== true &&
+      isStructuredFormulaTutor(tutor, work);
   }
 
   function resetCalculator(options = {}) {
@@ -4128,7 +4202,11 @@
     window.CharlemagneStudentUiTestHooks = {
       renderPicketFenceVisual,
       renderChemicalEquationBalancingVisual,
+      renderMetricStairStepVisual,
+      renderScientificNotationVisual,
       renderTutorSessionStep,
+      getMetricStairStepCompletionAction,
+      shouldProtectTutorCalculator,
       toggleTutorStepReview,
       resolveConfirmedBalancingTranscriptLabel
     };

@@ -524,18 +524,36 @@ async function assertMetricMethodBranches(request, sessionId) {
   assert.notEqual(stair.tutor?.work?.visualMetadata?.visualType, 'picket_fence', 'stair-step branch should not show picket-fence visual metadata');
   assert.equal(stair.tutor?.work?.visualMetadata?.startUnit, 'km', 'stair-step branch should expose start unit');
   assert.equal(stair.tutor?.work?.visualMetadata?.targetUnit, 'm', 'stair-step branch should expose target unit');
-  assertNearly(stair.tutor?.work?.visualMetadata?.resultValue, 48000, 'stair-step branch result value');
-  assert.equal(stair.tutor?.work?.visualMetadata?.autoCompleteAnswer, '48,000 m', 'stair-step branch should expose auto-complete answer');
-  assertMetricStepValueDisplays(stair.tutor?.work?.visualMetadata, ['48 km', '480 hm', '4,800 dam', '48,000 m']);
+  for (const key of ['resultValue', 'resultUnit', 'autoCompleteAnswer', 'stepValues']) {
+    assert.equal(
+      Object.hasOwn(stair.tutor?.work?.visualMetadata || {}, key),
+      false,
+      `active stair-step branch should not expose ${key}`
+    );
+  }
   assert.equal(stair.tutor?.work?.currentStep?.suppressFormulaDetails, true, 'stair-step visual step should suppress formula detail rows');
   assert.equal(stair.tutor?.work?.currentStep?.suppressKnownValues, true, 'stair-step visual step should suppress known values');
   assert.doesNotMatch(stair.response, /\bdraw\b/i, 'stair-step branch should not use draw language');
-  const completedStair = await ask(request, sessionId, 'unit1-conversions-method-branch-stair-start', '48,000 m');
+  const wrongMarker = await ask(
+    request,
+    sessionId,
+    'unit1-conversions-method-branch-stair-start',
+    'formula_visual_action:{"type":"metric_marker_position","markerPrefix":"h"}'
+  );
+  assert.equal(wrongMarker.tutor?.currentStep?.id, 'move_marker_to_target', 'incorrect marker action should not advance');
+  assert.equal(wrongMarker.tutor?.active, true, 'incorrect marker action should keep the Tutor active');
+  const completedStair = await ask(
+    request,
+    sessionId,
+    'unit1-conversions-method-branch-stair-start',
+    'formula_visual_action:{"type":"metric_marker_position","markerPrefix":"UNIT"}'
+  );
   assert.equal(completedStair.routeType, 'formula_tutor', 'stair-step completion should stay Formula Tutor');
   assert.equal(completedStair.tutor?.completed, true, 'stair-step final marker answer should complete the tutor');
   assert.equal(completedStair.tutor?.active, false, 'stair-step final marker answer should deactivate the tutor');
   assert.match(completedStair.response, /Correct/i, 'stair-step final marker answer should be marked correct');
   assert.match(completedStair.response, /48 km\s*=\s*48,?000 m/i, 'stair-step final marker answer should show clean equation final answer');
+  assertNearly(completedStair.tutor?.visualMetadata?.resultValue, 48000, 'completed stair-step result value');
 
   const picketStart = await ask(request, sessionId, 'unit1-conversions-method-branch-picket-start', 'Convert 48 km to meters.');
   assertCleanMetricMethodChoice(picketStart, { name: 'metric-method-branch-picket' });
@@ -760,13 +778,6 @@ function assertSameMixedPicketProblem(response, problemId, label) {
   assert.equal(response.tutor?.tutorProblemId, problemId, `${label} should stay in same tutorProblemId`);
   assert.equal((response.tutor?.currentStep?.choices || []).length, 0, `${label} should not use multiple-choice fill values`);
   assertNoMixedPicketClutter(response, label);
-}
-
-function assertMetricStepValueDisplays(visual, expectedDisplays) {
-  const displays = (visual?.stepValues || []).map((item) => item.display);
-  for (const expected of expectedDisplays) {
-    assert.ok(displays.includes(expected), `metric stair-step values should include ${expected}`);
-  }
 }
 
 function assertCompletedStep(response, stepId) {

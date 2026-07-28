@@ -542,7 +542,7 @@ assert.match(
 );
 assert.match(
   studentUi,
-  /function renderFormulaVisualMetadata\(visual, turnId, context = \{\}\)[\s\S]*currentStep\?\.id === 'choose_method'[\s\S]*return '';[\s\S]*isComplete === true[\s\S]*selectedMethod === 'stair_step'[\s\S]*return '';[\s\S]*visual\.visualType === 'metric_stair_step'[\s\S]*renderMetricStairStepVisual\(visual, turnId, context\)[\s\S]*visual\.visualType === 'picket_fence'[\s\S]*renderPicketFenceVisual\(visual, turnId, context\)[\s\S]*visual\.visualType === 'scientific_notation_decimal_move'[\s\S]*renderScientificNotationVisual\(visual, turnId\)/,
+  /function renderFormulaVisualMetadata\(visual, turnId, context = \{\}\)[\s\S]*currentStep\?\.id === 'choose_method'[\s\S]*return '';[\s\S]*isComplete === true[\s\S]*selectedMethod === 'stair_step'[\s\S]*return '';[\s\S]*visual\.visualType === 'metric_stair_step'[\s\S]*renderMetricStairStepVisual\(visual, turnId, context\)[\s\S]*visual\.visualType === 'picket_fence'[\s\S]*renderPicketFenceVisual\(visual, turnId, context\)[\s\S]*visual\.visualType === 'scientific_notation_decimal_move'[\s\S]*renderScientificNotationVisual\(visual, turnId, context\)/,
   'Formula Tutor visual metadata should hide method visuals before method selection, keep completed stair-step turns compact, and route selected visuals to renderers.'
 );
 assert.match(
@@ -552,8 +552,8 @@ assert.match(
 );
 assert.match(
   studentUi,
-  /function renderMetricStairStepVisual\(visual, turnId, context = \{\}\)[\s\S]*metricStairStepPreviewState[\s\S]*const previewIndex[\s\S]*getMetricStairStepValue\(visual, displayStep, previewIndex\)[\s\S]*const completed = context\?\.tutor\?\.completed[\s\S]*Metric stair-step[\s\S]*metric-stair-step-status-panel[\s\S]*metric-stair-step-current-display[\s\S]*Current[\s\S]*metric-stair-step-ladder[\s\S]*data-metric-stair-step-move="decimal-left"[\s\S]*Move decimal left[\s\S]*data-metric-stair-step-move="decimal-right"[\s\S]*Move decimal right[\s\S]*Preview: hover over a step to see the value change[\s\S]*Click or tap the target unit to check it[\s\S]*Answer appears when the marker reaches/,
-  'Metric stair-step renderer should show title, central live preview current value display, ladder structure, decimal movement controls, helper text, and hide the answer until target completion.'
+  /function renderMetricStairStepVisual\(visual, turnId, context = \{\}\)[\s\S]*metricStairStepPreviewState[\s\S]*const previewIndex[\s\S]*const completed = context\?\.tutor\?\.completed[\s\S]*canShowCurrentValue[\s\S]*getMetricStairStepValue\(visual, displayStep, previewIndex\)[\s\S]*value hidden until submitted[\s\S]*Metric stair-step[\s\S]*metric-stair-step-status-panel[\s\S]*metric-stair-step-current-display[\s\S]*Current[\s\S]*metric-stair-step-ladder[\s\S]*data-metric-stair-step-move="decimal-left"[\s\S]*Move decimal left[\s\S]*data-metric-stair-step-move="decimal-right"[\s\S]*Move decimal right[\s\S]*Derived values stay hidden until you submit them[\s\S]*then enter the value you calculated/,
+  'Metric stair-step renderer should show its controls while keeping derived active values hidden until the student submits them.'
 );
 assert.match(
   studentUi,
@@ -612,8 +612,18 @@ assert.match(
 );
 assert.match(
   studentUi,
-  /sendTutorCommand\(getMetricStairStepCompletionAnswer\(visual\)\)/,
-  'Metric stair-step visual should submit the final answer through the normal tutor command path.'
+  /sendTutorCommand\([\s\S]*getMetricStairStepCompletionAction\(visual, clampedIndex\)[\s\S]*Moved the metric marker to the target unit/,
+  'Metric stair-step visual should submit a non-answer visual action through the normal tutor command path.'
+);
+assert.match(
+  studentUi,
+  /function getMetricStairStepCompletionAction\(visual, currentIndex\)[\s\S]*markerPrefix[\s\S]*type: 'metric_marker_position'/,
+  'Metric stair-step completion should identify the selected marker position for server validation.'
+);
+assert.doesNotMatch(
+  getFunctionBlock('getMetricStairStepCompletionAction'),
+  /autoCompleteAnswer|resultValue|resultUnit/,
+  'Metric stair-step completion actions must not derive or submit the numeric answer.'
 );
 assert.match(
   studentUi,
@@ -757,12 +767,12 @@ assert.match(
 );
 assert.match(
   studentUi,
-  /function renderScientificNotationVisual\(visual, turnId\)[\s\S]*visual\.decimalMove[\s\S]*Scientific notation decimal mover[\s\S]*Final result:[\s\S]*data-scientific-notation-action="left"[\s\S]*data-scientific-notation-action="right"[\s\S]*data-scientific-notation-action="next"[\s\S]*data-scientific-notation-action="reset"/,
-  'Scientific notation renderer should show title, decimal move details, local controls, and final result.'
+  /function renderScientificNotationVisual\(visual, turnId, context = \{\}\)[\s\S]*visual\.decimalMove[\s\S]*const completed = context\?\.tutor\?\.completed[\s\S]*Waiting for your answer[\s\S]*Scientific notation decimal mover[\s\S]*Final result:[\s\S]*data-scientific-notation-action="left"[\s\S]*data-scientific-notation-action="right"[\s\S]*data-scientific-notation-action="next"[\s\S]*data-scientific-notation-action="reset"/,
+  'Scientific notation renderer should show its controls while withholding the active derived and final values.'
 );
 assert.match(
   studentUi,
-  /function renderScientificNotationVisual\(visual, turnId\)[\s\S]*scientific-notation-control student-tutor-control student-tutor-control--workspace[\s\S]*data-scientific-notation-action="left"[\s\S]*scientific-notation-control student-tutor-control student-tutor-control--workspace[\s\S]*data-scientific-notation-action="reset"/,
+  /function renderScientificNotationVisual\(visual, turnId, context = \{\}\)[\s\S]*scientific-notation-control student-tutor-control student-tutor-control--workspace[\s\S]*data-scientific-notation-action="left"[\s\S]*scientific-notation-control student-tutor-control student-tutor-control--workspace[\s\S]*data-scientific-notation-action="reset"/,
   'Scientific notation local controls should inherit shared workspace control styling.'
 );
 assert.match(
@@ -1281,15 +1291,15 @@ async function assertGuidedTutorStartsAndCompletes(testCase) {
   assert.equal(start.body.routeType, 'formula_tutor', `${testCase.name} should start formula tutor`);
   assert.equal(start.body.tutor.active, true, `${testCase.name} tutor should be active`);
   assert.equal(start.body.tutor.formulaId, testCase.formulaId, `${testCase.name} formula id`);
-  assert.equal(start.body.tutor.solveFor, testCase.solveFor, `${testCase.name} solve target`);
+  assert.equal(start.body.tutor.solveFor, '', `${testCase.name} active solve target stays private`);
   assert.equal(start.body.tutor.originalQuestion, testCase.question, `${testCase.name} keeps original question`);
   assert.ok(start.body.tutor.totalSteps > 0, `${testCase.name} should expose tutor steps`);
   assert.equal(start.body.tutor.work.originalQuestion, testCase.question, `${testCase.name} work keeps original question`);
   assert.doesNotMatch(start.body.response, testCase.directAnswer, `${testCase.name} should not give direct final answer at tutor start`);
-  if (testCase.formula) assert.equal(start.body.tutor.formula, testCase.formula, `${testCase.name} formula`);
+  if (testCase.formula) assert.equal(start.body.tutor.formula, '', `${testCase.name} active formula stays private`);
 
   let latest = start;
-  for (const message of testCase.steps) {
+  for (const [stepIndex, message] of testCase.steps.entries()) {
     latest = await harness.request('POST', '/api/student/message', {
       sessionId: create.body.sessionId,
       studentHubId: testCase.name,
@@ -1298,6 +1308,8 @@ async function assertGuidedTutorStartsAndCompletes(testCase) {
     assert.equal(latest.statusCode, 200, `${testCase.name} step ${message} status`);
     assert.equal(latest.body.routeType, 'formula_tutor', `${testCase.name} step ${message} route`);
     assert.equal(latest.body.tutor.originalQuestion, testCase.question, `${testCase.name} step ${message} keeps original question`);
+    if (stepIndex === 0) assert.equal(latest.body.tutor.solveFor, testCase.solveFor, `${testCase.name} earned solve target`);
+    if (stepIndex === 1 && testCase.formula) assert.equal(latest.body.tutor.formula, testCase.formula, `${testCase.name} earned formula`);
   }
 
   assert.equal(latest.body.tutor.completed, true, `${testCase.name} should complete tutor`);
@@ -1926,13 +1938,29 @@ async function assertMetricMethodBranchVisuals(harness) {
   assert.equal(stair.body.tutor?.work?.currentStep?.suppressKnownValues, true, 'stair-step branch should suppress known values row');
   assert.equal(stair.body.tutor?.work?.visualMetadata?.visualType, 'metric_stair_step', 'stair-step branch visual type');
   assert.notEqual(stair.body.tutor?.work?.visualMetadata?.visualType, 'picket_fence', 'stair-step branch should not show picket-fence visual');
-  assert.equal(stair.body.tutor?.work?.visualMetadata?.autoCompleteAnswer, '48,000 m', 'stair-step branch auto-complete answer');
-  assertMetricStepValueDisplays(stair.body.tutor?.work?.visualMetadata, ['48 km', '480 hm', '4,800 dam', '48,000 m']);
-  const completedStair = await sendHarnessMessage(harness, 'metric-method-branch-stair-ui', '48,000 m');
+  const activeVisual = stair.body.tutor?.work?.visualMetadata;
+  for (const key of ['autoCompleteAnswer', 'resultValue', 'resultUnit', 'stepValues']) {
+    assert.equal(Object.hasOwn(activeVisual, key), false, `active stair-step metadata should omit ${key}`);
+  }
+
+  const wrongMarker = await sendHarnessMessage(
+    harness,
+    'metric-method-branch-stair-ui',
+    'formula_visual_action:{"type":"metric_marker_position","markerPrefix":"h"}'
+  );
+  assert.equal(wrongMarker.body.tutor?.currentStep?.id, 'move_marker_to_target', 'an incorrect marker position should not advance');
+  assert.equal(wrongMarker.body.tutor?.active, true, 'an incorrect marker position should keep the Tutor active');
+
+  const completedStair = await sendHarnessMessage(
+    harness,
+    'metric-method-branch-stair-ui',
+    'formula_visual_action:{"type":"metric_marker_position","markerPrefix":"UNIT"}'
+  );
   assert.equal(completedStair.body.tutor?.completed, true, 'stair-step marker target answer should complete tutor');
   assert.equal(completedStair.body.tutor?.active, false, 'stair-step marker target answer should deactivate tutor');
   assert.match(completedStair.body.response, /Correct/i, 'stair-step marker target answer should be correct');
   assert.match(completedStair.body.response, /48 km\s*=\s*48,?000 m/i, 'stair-step marker target answer should show clean equation final answer');
+  assert.equal(completedStair.body.tutor?.visualMetadata?.resultValue, 48000, 'completed metric value should be released');
 
   const picketStart = await sendHarnessMessage(harness, 'metric-method-branch-picket-ui', 'Convert 48 km to meters.');
   assert.equal(picketStart.body.tutor?.currentStep?.choices?.length, 2, 'method choice should expose exactly two choices for picket path');
@@ -2023,13 +2051,6 @@ async function assertMixedUnitPicketFenceCancellationSequence(harness) {
   const completed = await sendHarnessMessage(harness, hubId, '8.22');
   assert.equal(completed.body.tutor?.completed, true, 'mixed-unit final answer should complete after both cancellation steps');
   assert.match(completed.body.response, /8\.22 ft/i, 'mixed-unit final response should include the final answer');
-}
-
-function assertMetricStepValueDisplays(visual, expectedDisplays) {
-  const displays = (visual?.stepValues || []).map((item) => item.display);
-  for (const expected of expectedDisplays) {
-    assert.ok(displays.includes(expected), `metric stair-step values should include ${expected}`);
-  }
 }
 
 function assertCompletedStep(body, stepId) {

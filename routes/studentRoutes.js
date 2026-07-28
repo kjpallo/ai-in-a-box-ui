@@ -36,6 +36,7 @@ const {
   buildFormulaTutorPrompt,
   getFormulaTutorDecisionDebug,
   isLikelyNewFormulaQuestionDuringTutor,
+  sanitizeFormulaTutorVisualActionTranscriptMessage,
   startFormulaTutor
 } = require('../lib/tutor/formulaTutor');
 const {
@@ -707,7 +708,10 @@ function registerStudentRoutes(app, {
         }
 
         const tutorResult = answerFormulaTutorStep(previousTutorProblem, message);
-        const transcriptMessage = sanitizeBalancingActivityTranscriptMessage(previousTutorProblem, message);
+        const transcriptMessage = sanitizeFormulaTutorVisualActionTranscriptMessage(
+          previousTutorProblem,
+          sanitizeBalancingActivityTranscriptMessage(previousTutorProblem, message)
+        );
         hub.currentTutorProblem = tutorResult.completed || tutorResult.stopped
           ? null
           : tutorResult.currentTutorProblem;

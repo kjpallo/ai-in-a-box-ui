@@ -838,7 +838,8 @@ async function assertKaiRetryPointsToChoice() {
   assert.equal(latest.body.tutor.stepId, 'identify_finish_side');
   const retry = await sendHarnessMessage(harness, name, 'he is at the ending side after swimming');
   assert.equal(retry.body.tutor.stepId, 'identify_finish_side');
-  assert.match(retry.body.response, /Choose 2, or click “2\. Opposite side of the pool\.”/i);
+  assert.match(retry.body.response, /Compare the choices with the current checkpoint/i);
+  assert.doesNotMatch(retry.body.response, /Choose 2|click “2\. Opposite side of the pool/i);
 }
 
 async function parkCarAdAccelerationAtConversion(name) {

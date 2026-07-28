@@ -46,8 +46,7 @@ const GOLDEN_CASES = [
           'speed — how fast something moves',
           'distance — how far something travels',
           'time — how long it takes'
-        ],
-        cue: 'What is its speed'
+        ]
       })
     }
   },
@@ -79,8 +78,7 @@ const GOLDEN_CASES = [
           'speed — how fast something moves',
           'distance — how far something travels',
           'time — how long it takes'
-        ],
-        cue: 'What distance'
+        ]
       })
     }
   },
@@ -486,12 +484,13 @@ function buildExpectedChoicePrompt({
   solveFor,
   stepCount,
   prompt = 'What variable are we solving for?',
-  choices,
-  cue = ''
+  choices
 }) {
-  const lines = [
-    `We are solving for ${solveFor}.`,
-    '',
+  const asksForSolveTarget = prompt === 'What variable are we solving for?';
+  const lines = asksForSolveTarget
+    ? []
+    : [`We are solving for ${solveFor}.`, ''];
+  lines.push(
     `Step 1 of ${stepCount}:`,
     prompt,
     '',
@@ -499,10 +498,7 @@ function buildExpectedChoicePrompt({
     ...choices.map((choice, index) => `${index + 1}. ${choice}`),
     '',
     'Click a choice or type only the number.'
-  ];
-  if (cue) {
-    lines.push('', `The question says “${cue},” so we are solving for ${solveFor}.`);
-  }
+  );
   return lines.join('\n');
 }
 

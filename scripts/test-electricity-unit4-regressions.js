@@ -191,7 +191,12 @@ async function assertTutorGatingCases(cases) {
       assert.equal(guided.body.routeType, 'formula_tutor', detail(testCase, route, guided.body, 'should start Formula Tutor when guided tutoring is enabled'));
       assert.equal(guided.body.tutor?.active, true, detail(testCase, route, guided.body, 'tutor should be active'));
       assert.match(guided.body.tutor?.formulaId || '', testCase.formulaId, detail(testCase, route, guided.body, 'formula id'));
-      assert.match(guided.body.tutor?.solveFor || '', testCase.solveFor, detail(testCase, route, guided.body, 'solve target'));
+      if (guided.body.tutor?.currentStep?.id === 'identify_solve_target') {
+        assert.equal(guided.body.tutor?.solveFor, '', detail(testCase, route, guided.body, 'active solve target should remain private'));
+        assert.equal(guided.body.tutor?.formula, '', detail(testCase, route, guided.body, 'future formula should remain private'));
+      } else {
+        assert.match(guided.body.tutor?.solveFor || '', testCase.solveFor, detail(testCase, route, guided.body, 'solve target'));
+      }
       assert.equal(guided.body.tutor?.originalQuestion, testCase.prompt, detail(testCase, route, guided.body, 'should keep original question'));
       assert.ok(guided.body.tutor?.totalSteps > 0, detail(testCase, route, guided.body, 'should expose total steps'));
     });
@@ -215,7 +220,7 @@ async function assertTutorWordingCases(cases) {
       const knownValues = tutor.knownValues || work.knownValues || valuesFromVariables(tutor.variables || work.variables);
       assert.equal(tutor.originalQuestion || work.originalQuestion, testCase.prompt, detail(testCase, null, start.body, 'should preserve original question context'));
       assert.ok(Array.isArray(knownValues), detail(testCase, null, start.body, 'should expose known values'));
-      assert.ok(knownValues.length >= testCase.minimumKnownValues, detail(testCase, null, start.body, 'should expose the problem known values'));
+      assert.ok(knownValues.length >= testCase.minimumKnownValues, detail(testCase, null, start.body, 'should expose only earned known values'));
       assert.match(tutor.currentStepPrompt || work.currentStep?.prompt || '', /what variable are we solving for|what kind of circuit is it/i, detail(testCase, null, start.body, 'should begin with a concrete guided prompt'));
       assert.doesNotMatch(startText, /PJ|sidewalk|doorstep|pool|truck|suitcase|Newton'?s Second Law|motion\/force/i, detail(testCase, null, start.body, 'should not leak motion/force wording'));
       assert.doesNotMatch(start.body.response || '', /what should we do next\?/i, detail(testCase, null, start.body, 'should not use a vague open-ended formula prompt'));
@@ -805,16 +810,16 @@ function tutorWordingCases() {
       category,
       name: 'ohms-law-tutor-wording',
       prompt: 'What is the voltage if current is 20 amps and resistance is 30 ohms?',
-      expectedIdea: 'Formula Tutor should preserve question, known values, concrete choices, and clean stop state.',
-      minimumKnownValues: 2,
+      expectedIdea: 'Formula Tutor should preserve question, concrete choices, answer integrity, and clean stop state.',
+      minimumKnownValues: 0,
       allowsTutor: true
     },
     {
       category,
       name: 'series-tutor-wording',
       prompt: 'What is total resistance for 2 ohm, 3 ohm, and 5 ohm resistors in series?',
-      expectedIdea: 'Circuit resistance tutor should use concrete series prompts and clean stop state.',
-      minimumKnownValues: 2,
+      expectedIdea: 'Circuit resistance tutor should use concrete prompts, earned-value release, and clean stop state.',
+      minimumKnownValues: 0,
       allowsTutor: true
     }
   ];

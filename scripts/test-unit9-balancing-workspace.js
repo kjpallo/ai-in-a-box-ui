@@ -438,9 +438,14 @@ async function assertBalancedNotSimplifiedReductionAndReset(harness, sessionId, 
   assert.equal(response.body.tutor.activity.latestCheck.status, 'balanced_not_simplified');
   assert.deepEqual(response.body.tutor.activity.balancedNotSimplified, {
     factor: 2,
-    selectedCoefficients: [2, 6, 4],
-    reducedCoefficients: [1, 3, 2]
+    selectedCoefficients: [2, 6, 4]
   });
+  assert.deepEqual(
+    harness.studentSessions[sessionId].anonymousHubs[hubId]
+      .currentTutorProblem.activityState.balancedNotSimplified.reducedCoefficients,
+    [1, 3, 2],
+    'Private validation state should retain the trusted reduced vector.'
+  );
   assert.match(response.body.response, /atom totals match.*equation is balanced/i);
   assert.match(response.body.response, /not in the smallest whole-number ratio/i);
   assert.match(response.body.response, /all three coefficients can be divided.*factor of 2/i);
@@ -448,9 +453,9 @@ async function assertBalancedNotSimplifiedReductionAndReset(harness, sessionId, 
   assert.deepEqual(response.body.tutor.activity.reductionProgress, {
     factor: 2,
     items: [
-      { compoundId: 'nitrogen', formula: 'N2', accessibleName: 'nitrogen gas', originalCoefficient: 2, divisor: 2, reducedCoefficient: 1, reduced: false },
-      { compoundId: 'hydrogen', formula: 'H2', accessibleName: 'hydrogen gas', originalCoefficient: 6, divisor: 2, reducedCoefficient: 3, reduced: false },
-      { compoundId: 'ammonia', formula: 'NH3', accessibleName: 'ammonia', originalCoefficient: 4, divisor: 2, reducedCoefficient: 2, reduced: false }
+      { compoundId: 'nitrogen', formula: 'N2', accessibleName: 'nitrogen gas', originalCoefficient: 2, divisor: 2, reduced: false },
+      { compoundId: 'hydrogen', formula: 'H2', accessibleName: 'hydrogen gas', originalCoefficient: 6, divisor: 2, reduced: false },
+      { compoundId: 'ammonia', formula: 'NH3', accessibleName: 'ammonia', originalCoefficient: 4, divisor: 2, reduced: false }
     ],
     completedCount: 0,
     totalCount: 3,
@@ -463,9 +468,10 @@ async function assertBalancedNotSimplifiedReductionAndReset(harness, sessionId, 
   let rendered = renderBalancing(response.body.tutor.visualMetadata, 'reduction-test');
   assert.match(rendered, /Balanced, but not in the smallest whole-number ratio/);
   assert.match(rendered, /All three coefficients can be divided by the trusted common factor of 2/);
-  assert.match(rendered, /data-balancing-reduce[^>]*data-compound-id="nitrogen"[^>]*aria-label="Reduce nitrogen gas coefficient: 2 ÷ 2 = 1"/);
-  assert.match(rendered, /data-balancing-reduce[^>]*data-compound-id="hydrogen"[^>]*aria-label="Reduce hydrogen gas coefficient: 6 ÷ 2 = 3"/);
-  assert.match(rendered, /data-balancing-reduce[^>]*data-compound-id="ammonia"[^>]*aria-label="Reduce ammonia coefficient: 4 ÷ 2 = 2"/);
+  assert.match(rendered, /data-balancing-reduce[^>]*data-compound-id="nitrogen"[^>]*aria-label="Reduce nitrogen gas coefficient: 2 divided by 2"[^>]*>[\s\S]*2 ÷ 2 = \?/);
+  assert.match(rendered, /data-balancing-reduce[^>]*data-compound-id="hydrogen"[^>]*aria-label="Reduce hydrogen gas coefficient: 6 divided by 2"[^>]*>[\s\S]*6 ÷ 2 = \?/);
+  assert.match(rendered, /data-balancing-reduce[^>]*data-compound-id="ammonia"[^>]*aria-label="Reduce ammonia coefficient: 4 divided by 2"[^>]*>[\s\S]*4 ÷ 2 = \?/);
+  assert.doesNotMatch(rendered, /2 ÷ 2 = 1|6 ÷ 2 = 3|4 ÷ 2 = 2/);
   assert.match(rendered, /role="status" aria-live="polite" aria-atomic="true">0 of 3 coefficients reduced/);
 
   const wrongDivisor = await action(harness, sessionId, hubId, 'reduce_coefficient', { compoundId: 'nitrogen', divisor: 3 });
@@ -497,6 +503,9 @@ async function assertBalancedNotSimplifiedReductionAndReset(harness, sessionId, 
   rendered = renderBalancing(response.body.tutor.visualMetadata, 'reduction-test-partial');
   assert.match(rendered, /<del aria-label="original coefficient 2">2<\/del>/);
   assert.match(rendered, /<ins aria-label="replacement coefficient 1">1<\/ins>/);
+  assert.match(rendered, /6 ÷ 2 = \?/);
+  assert.match(rendered, /4 ÷ 2 = \?/);
+  assert.doesNotMatch(rendered, /6 ÷ 2 = 3|4 ÷ 2 = 2/);
 
   const duplicate = await action(harness, sessionId, hubId, 'reduce_coefficient', { compoundId: 'nitrogen', divisor: 2 });
   assert.match(duplicate.body.response, /already been reduced.*remaining coefficient/i);
@@ -516,6 +525,7 @@ async function assertBalancedNotSimplifiedReductionAndReset(harness, sessionId, 
   assert.equal(response.body.tutor.activity.completionEligible, true);
   assert.equal(response.body.tutor.activity.reductionProgress.completedCount, 3);
   assert.equal(response.body.tutor.activity.reductionProgress.complete, true);
+  assert.deepEqual(response.body.tutor.activity.reductionProgress.reducedCoefficients, [1, 3, 2]);
   assert.deepEqual(response.body.tutor.activity.coefficients, { nitrogen: 1, hydrogen: 3, ammonia: 2 });
   assert.match(response.body.response, /4 ÷ 2 = 2.*all 3 coefficients are reduced/i);
   assert.match(response.body.response, /N2 \+ 3H2 → 2NH3/);

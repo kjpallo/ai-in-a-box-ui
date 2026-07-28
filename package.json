@@ -17,6 +17,7 @@
     "reset:teacher-auth": "node scripts/reset-teacher-auth.js",
     "test:bank": "node scripts/test-router-bank.js",
     "test:answer-safety": "node scripts/test-answer-safety.js",
+    "test:formula-tutor-answer-integrity": "node scripts/test-formula-tutor-answer-integrity.js",
     "test:formula-tutor-golden": "node scripts/test-formula-tutor-golden.js",
     "test:charlemagne-output-regressions": "node scripts/test-charlemagne-output-regressions.js",
     "test:motion-force-student-regressions": "node scripts/test-motion-force-student-regressions.js",
