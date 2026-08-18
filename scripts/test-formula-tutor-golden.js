@@ -139,6 +139,34 @@ const GOLDEN_CASES = [
     }
   },
   {
+    name: 'falling object weight near Earth',
+    question: 'what is the force of a 8 kg ball that is falling of a building',
+    expected: {
+      formulaId: 'weight_mass_gravity',
+      family: 'weight',
+      solveFor: 'weight',
+      formula: 'Fg = m × g',
+      variables: {
+        mass: { value: 8, unit: 'kg' },
+        gravity: { value: 9.8, unit: 'm/s²' },
+        weight: { value: 78.4, unit: 'N' }
+      },
+      finalAnswer: { value: 78.4, unit: 'N', display: '78.4 N downward' },
+      stepIds: [
+        'identify_solve_target',
+        'choose_formula',
+        'identify_mass',
+        'identify_gravity',
+        'calculate'
+      ],
+      firstPrompt: buildExpectedChoicePrompt({
+        solveFor: 'weight',
+        stepCount: 5,
+        choices: ['weight', 'mass', 'gravity']
+      })
+    }
+  },
+  {
     name: 'Ohm voltage from current and resistance',
     question: 'A circuit has a current of 2 A and a resistance of 6 ohms. What is the voltage?',
     expected: {

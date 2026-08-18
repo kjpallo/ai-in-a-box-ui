@@ -90,13 +90,13 @@ async function run() {
   assert.equal(active.body.tutor?.currentStep?.id, 'identify_speed', 'The fixture should reach the speed value-entry step.');
   assert.equal(
     active.body.tutor?.currentStep?.displayEquation,
-    'distance = {{blank}} × 0.25',
-    'Active tutor metadata should expose the authored presentation-only equation template.'
+    'd = {{blank}} × t',
+    'Active tutor metadata should keep the value-entry equation symbolic.'
   );
   assert.equal(
     active.body.tutor?.work?.currentStep?.displayEquation,
-    'distance = {{blank}} × 0.25',
-    'Tutor work metadata should preserve the same optional equation template.'
+    'd = {{blank}} × t',
+    'Tutor work metadata should preserve the same symbolic equation template.'
   );
   assertDisplayEquationMetadataValidation();
 
@@ -125,8 +125,8 @@ async function run() {
   assert.match(activeHtml, /What number should go in for speed\?/, 'The active Formula Tutor instruction should remain visible.');
   assert.match(
     activeHtml,
-    /distance = <span class="student-tutor-equation-blank" aria-hidden="true">____<\/span> × 0\.25/,
-    'The equation should place a visible blank at the exact requested value.'
+    /d = <span class="student-tutor-equation-blank" aria-hidden="true">____<\/span> × t/,
+    'The symbolic equation should place a visible blank at the exact requested variable.'
   );
   assert.match(activeHtml, /Enter only the missing number\./, 'The numeric step should state its response expectation.');
 
@@ -237,11 +237,11 @@ async function run() {
 }
 
 function assertDisplayEquationMetadataValidation() {
-  const valid = buildMetadataForDisplayEquation('distance = {{blank}} × 0.25');
-  assert.equal(valid.currentStep?.displayEquation, 'distance = {{blank}} × 0.25', 'Exactly one blank marker should pass the trusted metadata boundary.');
-  assert.equal(valid.work?.currentStep?.displayEquation, 'distance = {{blank}} × 0.25', 'Tutor work should preserve one valid blank marker.');
+  const valid = buildMetadataForDisplayEquation('d = {{blank}} × t');
+  assert.equal(valid.currentStep?.displayEquation, 'd = {{blank}} × t', 'A symbolic template with one blank marker should pass the trusted metadata boundary.');
+  assert.equal(valid.work?.currentStep?.displayEquation, 'd = {{blank}} × t', 'Tutor work should preserve one valid symbolic template.');
 
-  for (const invalid of ['distance = 43 × 0.25', '{{blank}} + {{blank}}']) {
+  for (const invalid of ['distance = {{blank}} × 0.25', 'distance = 43 × 0.25', '{{blank}} + {{blank}}']) {
     const metadata = buildMetadataForDisplayEquation(invalid);
     assert.equal(Object.hasOwn(metadata.currentStep || {}, 'displayEquation'), false, `Trusted metadata should omit malformed template: ${invalid}`);
     assert.equal(Object.hasOwn(metadata.work?.currentStep || {}, 'displayEquation'), false, `Tutor work should omit malformed template: ${invalid}`);

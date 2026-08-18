@@ -327,13 +327,56 @@ const ATOMIC_STRUCTURE_BOUNDARY_CASES = [
   { prompt: 'How do you calculate neutrons?', includes: [/mass number/i, /atomic number/i] }
 ];
 
+const METRIC_STUDENT_ROUTE_CASES = [
+  { prompt: 'how many cm in a meter', value: 100, unit: 'cm' },
+  { prompt: 'how many cm in a m', value: 100, unit: 'cm' },
+  { prompt: 'how many cm are in a meter', value: 100, unit: 'cm' },
+  { prompt: 'how many cm in 1 m', value: 100, unit: 'cm' },
+  { prompt: 'convert 3 m to km', value: 0.003, unit: 'km' },
+  { prompt: 'convert 3 m in to km', value: 0.003, unit: 'km' },
+  { prompt: '3 m to km', value: 0.003, unit: 'km' },
+  { prompt: '3m to km', value: 0.003, unit: 'km' },
+  { prompt: 'convert 3 meters to kilometers', value: 0.003, unit: 'km' },
+  { prompt: '2 ml to l', value: 0.002, unit: 'L' },
+  { prompt: '2ml to l', value: 0.002, unit: 'L' },
+  { prompt: '2 mL to L', value: 0.002, unit: 'L' },
+  { prompt: 'convert 20 l to kl', value: 0.02, unit: 'kL' },
+  { prompt: 'convert 20 liters to kiloliters', value: 0.02, unit: 'kL' },
+  { prompt: 'convert 3 g to mg', value: 3000, unit: 'mg' }
+];
+
+const METRIC_DEFINITION_BOUNDARIES = [
+  'what is a meter',
+  'define centimeter',
+  'what does kilo mean'
+];
+
+const FORMULA_TUTOR_CONTROLS = [
+  { prompt: 'what is the speed of a car that travelled 20 m in 5 sec', formulaId: 'speed_distance_time' },
+  { prompt: 'what is the speed of a truck that travels 5 miles in 4 minutes', formulaId: 'speed_distance_time' },
+  { prompt: 'what is the force of an object with a mass of 100 kg and an acceleration of 5 m/s^2', formulaId: 'force_mass_acceleration' }
+];
+
+const UNRELATED_ROUTE_CONTROLS = [
+  { prompt: 'how many electrons does boron have', routeType: 'periodic_table' },
+  { prompt: 'how many valence electrons does boron have', routeType: 'science_concept' },
+  { prompt: 'what is the difference between a parallel circuit and a series circuit', routeType: 'definition' }
+];
+
 async function main() {
   assertUnit1ConversionsNotationPacketShape();
 
-  const { request } = createStudentRouteHarness();
+  const harness = createStudentRouteHarness();
+  const { request } = harness;
   const create = await request('POST', '/api/profile/create-student-session');
   assert.equal(create.statusCode, 201);
   const sessionId = create.body.sessionId;
+
+  await assertMetricStudentRouteRegressions(harness, sessionId);
+  if (process.argv.includes('--metric-student-route-only')) {
+    console.log('PASS metric conversion student-route regressions: phrasing, aliases, dimensions, and routing boundaries');
+    return;
+  }
 
   for (const testCase of DIRECT_CASES) {
     const response = await ask(request, sessionId, `unit1-conversions-direct-${slug(testCase.name)}`, testCase.prompt);
@@ -392,6 +435,55 @@ async function main() {
   }
 
   console.log('PASS Unit 1 conversions/notation regressions: direct answers, formula tutor coverage, visual metadata, and route boundaries');
+}
+
+async function assertMetricStudentRouteRegressions(harness, sessionId) {
+  for (const [index, testCase] of METRIC_STUDENT_ROUTE_CASES.entries()) {
+    const routed = harness.questionAnswer.routeMessage(testCase.prompt);
+    assert.equal(routed.questionContract.taskType, 'calculation', `${testCase.prompt} contract taskType`);
+    assert.equal(routed.questionContract.targetConcept, 'unit_conversion', `${testCase.prompt} contract targetConcept`);
+    assert.equal(routed.answerValidation.valid, true, `${testCase.prompt} answer validation`);
+    assert.equal(routed.questionRoute.type, 'science_formula', `${testCase.prompt} canonical route`);
+    assert.equal(routed.questionRoute.formulaWork?.formulaId, 'unit1_metric_stair_step_conversion', `${testCase.prompt} formulaId`);
+    assertNearly(routed.questionRoute.formulaWork?.finalAnswer?.value, testCase.value, `${testCase.prompt} result value`);
+    assert.equal(routed.questionRoute.formulaWork?.finalAnswer?.unit, testCase.unit, `${testCase.prompt} result unit`);
+
+    const response = await ask(
+      harness.request,
+      sessionId,
+      `unit1-metric-student-route-${index + 1}`,
+      testCase.prompt
+    );
+    assert.equal(response.routeType, 'formula_tutor', `${testCase.prompt} should start Formula Tutor through /api/student/message`);
+    assert.equal(response.confidence, 'strong', `${testCase.prompt} public confidence`);
+    assert.equal(response.tutor?.formulaId, 'unit1_metric_stair_step_conversion', `${testCase.prompt} public formulaId`);
+  }
+
+  for (const [index, prompt] of METRIC_DEFINITION_BOUNDARIES.entries()) {
+    const routed = harness.questionAnswer.routeMessage(prompt);
+    assert.equal(routed.questionContract.taskType, 'definition', `${prompt} should retain definition intent`);
+    assert.notEqual(routed.questionRoute.formulaWork?.formulaId, 'unit1_metric_stair_step_conversion', `${prompt} should not become a metric conversion`);
+    const response = await ask(harness.request, sessionId, `unit1-metric-definition-boundary-${index + 1}`, prompt);
+    assert.notEqual(response.routeType, 'formula_tutor', `${prompt} should not start Formula Tutor`);
+  }
+
+  for (const [index, prompt] of ['convert 3 m to g', 'convert 3 g or mg'].entries()) {
+    const routed = harness.questionAnswer.routeMessage(prompt);
+    assert.equal(routed.questionRoute.type, 'no_match', `${prompt} should stay within the trusted no-match boundary`);
+    const response = await ask(harness.request, sessionId, `unit1-metric-no-match-boundary-${index + 1}`, prompt);
+    assert.equal(response.routeType, 'no_match', `${prompt} should not fabricate a conversion`);
+  }
+
+  for (const [index, testCase] of FORMULA_TUTOR_CONTROLS.entries()) {
+    const response = await ask(harness.request, sessionId, `unit1-metric-formula-control-${index + 1}`, testCase.prompt);
+    assert.equal(response.routeType, 'formula_tutor', `${testCase.prompt} should remain Formula Tutor`);
+    assert.equal(response.tutor?.formulaId, testCase.formulaId, `${testCase.prompt} formula owner`);
+  }
+
+  for (const [index, testCase] of UNRELATED_ROUTE_CONTROLS.entries()) {
+    const response = await ask(harness.request, sessionId, `unit1-metric-unrelated-control-${index + 1}`, testCase.prompt);
+    assert.equal(response.routeType, testCase.routeType, `${testCase.prompt} unrelated route`);
+  }
 }
 
 async function assertMetricQuestionForms(request, sessionId) {

@@ -5263,4 +5263,59 @@ routerTestBank.push(
   }
 );
 
+routerTestBank.push(
+  {
+    category: 'motion',
+    name: 'reported speed prompt keeps deterministic formula route',
+    question: 'what is the speed of a car that is traveling 8 m in 30 seconds?',
+    type: 'science_formula',
+    includes: ['speed = distance / time', 'speed = 8 m / 30 seconds', 'speed = about 0.27 m/s'],
+    excludes: ['Speed tells how fast'],
+    aiAllowed: false
+  },
+  {
+    category: 'force_mass_acceleration',
+    name: 'reported falling ball asks for Earth weight force',
+    question: 'what is the force of a 8 kg ball that is falling of a building',
+    type: 'science_formula',
+    includes: ['Fg = m × g', 'g = 9.8 m/s²', 'Fg = 8 kg × 9.8 m/s²', 'Fg = 78.4 N downward'],
+    aiAllowed: false
+  },
+  {
+    category: 'force_mass_acceleration',
+    name: 'gravitational force wording asks for Earth weight',
+    question: "Calculate the gravitational force on a 5 kg rock near Earth's surface.",
+    type: 'science_formula',
+    includes: ['Fg = m × g', 'Fg = 49 N downward'],
+    aiAllowed: false
+  },
+  {
+    category: 'should_reject',
+    name: 'fall duration with mass is not automatically weight',
+    question: 'How long does an 8 kg ball take to fall from a building?',
+    type: 'no_match',
+    includes: ['trusted local'],
+    excludes: ['Fg = m × g', '78.4 N'],
+    aiAllowed: false
+  },
+  {
+    category: 'should_reject',
+    name: 'air resistance force is not automatically weight',
+    question: 'What air resistance force acts on an 8 kg ball while it is falling?',
+    type: 'no_match',
+    includes: ['trusted local'],
+    excludes: ['Fg = m × g', '78.4 N'],
+    aiAllowed: false
+  },
+  {
+    category: 'should_reject',
+    name: 'falling statement with mass is not automatically weight',
+    question: 'An 8 kg ball is falling from a building.',
+    type: 'no_match',
+    includes: ['trusted local'],
+    excludes: ['Fg = m × g', '78.4 N'],
+    aiAllowed: false
+  }
+);
+
 module.exports = { routerTestBank };

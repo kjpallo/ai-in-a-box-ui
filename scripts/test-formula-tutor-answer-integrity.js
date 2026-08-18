@@ -28,6 +28,7 @@ async function main() {
   assert.equal(typeof renderHooks.shouldProtectTutorCalculator, 'function');
 
   await testReportedDistanceFlow();
+  await testReportedSpeedFlowStaysSymbolicUntilSubstitution();
   await testRepresentativeFormulaFamilies();
   await testMetricTargetMarkerServerValidation();
   await testBalancingReductionProjection();
@@ -36,6 +37,7 @@ async function main() {
   testKnowledgeGraphProjectionAndGuidance();
   testStructuralVisualMetadataProjection();
   testMissingPresentationFieldFallback();
+  testIdentificationEquationProjectionSafety();
   testTutorCalculatorProtection();
 
   console.log('formula tutor answer integrity: earned activity/visual projections, safe guidance, UI, calculator, and cross-family coverage passed');
@@ -62,7 +64,7 @@ async function testReportedDistanceFlow() {
   const formula = await send(harness, studentHubId, '1');
   assert.equal(formula.body.tutor.formula, 'distance = speed × time', 'The correctly selected formula should be released.');
   assert.equal(formula.body.tutor.currentStep.id, 'identify_time');
-  assert.equal(formula.body.tutor.currentStep.displayEquation, 'distance = 5 × {{blank}}');
+  assert.equal(formula.body.tutor.currentStep.displayEquation, 'd = v × {{blank}}');
   assertKnownValueAbsent(formula.body.tutor, '7200');
 
   const time = await send(harness, studentHubId, '2 hours');
@@ -85,13 +87,13 @@ async function testReportedDistanceFlow() {
 
   const conversion = await send(harness, studentHubId, '7200');
   assert.equal(conversion.body.tutor.currentStep.id, 'identify_speed');
-  assert.equal(conversion.body.tutor.currentStep.displayEquation, 'distance = {{blank}} × 7200');
+  assert.equal(conversion.body.tutor.currentStep.displayEquation, 'd = {{blank}} × t');
   assertKnownValuePresent(conversion.body.tutor, '7200', 'The correctly completed conversion should be available later.');
   assertKnownValueAbsent(conversion.body.tutor, '5 m/s', 'The active speed value must not be copied into known-value metadata.');
 
   const wrongSpeed = await send(harness, studentHubId, '36000');
   assert.equal(wrongSpeed.body.tutor.currentStep.id, 'identify_speed');
-  assert.equal(wrongSpeed.body.tutor.currentStep.displayEquation, 'distance = {{blank}} × 7200');
+  assert.equal(wrongSpeed.body.tutor.currentStep.displayEquation, 'd = {{blank}} × t');
   assert.doesNotMatch(wrongSpeed.body.response, /speed\s*(?:=|is)\s*5\b/i);
   assert.doesNotMatch(wrongSpeed.body.tutor.currentHint, /\b5\s*m\/s\b/i);
   assertKnownValueAbsent(wrongSpeed.body.tutor, '5 m/s');
@@ -119,7 +121,7 @@ async function testReportedDistanceFlow() {
   assert.match(wrongSpeedHtml, /Not quite yet/, 'The wrong submission must not be presented as correct.');
   assert.match(
     wrongSpeedHtml,
-    /aria-label="Equation: distance = blank × 7200"/,
+    /aria-label="Equation: d = blank × t"/,
     'Accessibility text must preserve the active blank instead of exposing the requested speed.'
   );
   assert.doesNotMatch(wrongSpeedHtml, /speed \(v\): 5 m\/s/, 'Hidden and visible known-value UI must omit the active answer.');
@@ -177,6 +179,47 @@ async function testReportedDistanceFlow() {
   assert.match(completed.body.response, /distance = 36000 m/i);
   assert.equal(completed.body.tutor.work.finalAnswer, 'distance = 36000 m');
   assert.equal(completed.body.tutor.work.calculatorCheck.display, '5 × 7200 = 36000');
+}
+
+async function testReportedSpeedFlowStaysSymbolicUntilSubstitution() {
+  const harness = await createHarnessSession();
+  const studentHubId = 'formula-tutor-symbolic-speed-regression';
+  const question = 'what is the speed of a car that is traveling 8 m in 30 seconds?';
+
+  const start = await send(harness, studentHubId, question);
+  assert.equal(start.body.routeType, 'formula_tutor');
+  assert.equal(start.body.confidence, 'strong');
+  assert.equal(start.body.tutor.formulaId, 'speed_distance_time');
+  assert.equal(start.body.tutor.currentStep.id, 'identify_solve_target');
+
+  const solveTarget = await send(harness, studentHubId, '1');
+  assert.equal(solveTarget.body.tutor.solveFor, 'speed');
+  assert.equal(solveTarget.body.tutor.currentStep.id, 'choose_formula');
+
+  const formula = await send(harness, studentHubId, '1');
+  assert.equal(formula.body.tutor.formula, 'speed = distance / time');
+  assert.equal(formula.body.tutor.currentStep.id, 'identify_distance');
+  assert.equal(formula.body.tutor.currentStep.displayEquation, 'v = {{blank}} / t');
+  assert.doesNotMatch(formula.body.tutor.currentStep.displayEquation, /\b30\b|v\s*=\s*d\s*\/\s*30/i);
+  assert.doesNotMatch(formula.body.tutor.work.currentStep.displayEquation, /\b30\b|v\s*=\s*d\s*\/\s*30/i);
+
+  const distance = await send(harness, studentHubId, '8 m');
+  assert.equal(distance.body.tutor.currentStep.id, 'identify_time');
+  assert.equal(distance.body.tutor.currentStep.displayEquation, 'v = d / {{blank}}');
+  assert.doesNotMatch(distance.body.tutor.currentStep.displayEquation, /\b8\b|\b30\b/);
+  assert.equal(distance.body.tutor.work.substitution, '');
+
+  const substitution = await send(harness, studentHubId, '30 s');
+  assert.equal(substitution.body.tutor.currentStep.id, 'calculate');
+  assert.equal(substitution.body.tutor.currentStep.displayEquation, 'speed = 8 ÷ 30 = {{blank}}');
+  assert.equal(substitution.body.tutor.work.substitution, 'speed = 8 / 30');
+  assert.match(substitution.body.response, /8\s*\/\s*30/);
+
+  const completed = await send(harness, studentHubId, '0.27');
+  assert.equal(completed.body.tutor.completed, true);
+  assert.equal(completed.body.tutor.finalAnswerDisplay, '0.27 m/s');
+  assert.ok(Math.abs(completed.body.tutor.finalAnswer.value - (8 / 30)) < 1e-12);
+  assert.equal(completed.body.tutor.finalAnswer.unit, 'm/s');
 }
 
 async function testRepresentativeFormulaFamilies() {
@@ -768,6 +811,66 @@ function testMissingPresentationFieldFallback() {
   });
   assert.match(html, /Enter the requested value\./);
   assert.doesNotMatch(html, /student-tutor-equation/, 'A missing optional equation must fall back without hidden answer content.');
+}
+
+function testIdentificationEquationProjectionSafety() {
+  const baseProblem = {
+    tutorProblemId: 'symbolic-until-substitution-safety',
+    formulaId: 'force_mass_acceleration',
+    family: 'force',
+    solveFor: 'force',
+    formula: 'F = m × a',
+    originalQuestion: 'A generic force projection fixture.',
+    variables: {},
+    finalAnswer: { value: 6, unit: 'N', display: '6 N' },
+    currentStepIndex: 0,
+    attempts: {},
+    completedSteps: [],
+    calculatorChecks: []
+  };
+
+  const leaky = buildFormulaTutorMetadata({
+    ...baseProblem,
+    steps: [{
+      id: 'identify_acceleration',
+      type: 'quantity',
+      prompt: 'What acceleration should go in for a?',
+      displayEquation: 'F = 3 × {{blank}}',
+      expectedValue: 2,
+      expectedDisplay: '2 m/s²'
+    }]
+  });
+  assert.equal(
+    Object.hasOwn(leaky.currentStep, 'displayEquation'),
+    false,
+    'A numerical substitution must not be projected during a generic identification step.'
+  );
+
+  const symbolic = buildFormulaTutorMetadata({
+    ...baseProblem,
+    steps: [{
+      id: 'identify_acceleration',
+      type: 'quantity',
+      prompt: 'What acceleration should go in for a?',
+      displayEquation: 'F = m × {{blank}}',
+      expectedValue: 2,
+      expectedDisplay: '2 m/s²'
+    }]
+  });
+  assert.equal(symbolic.currentStep.displayEquation, 'F = m × {{blank}}');
+
+  const calculation = buildFormulaTutorMetadata({
+    ...baseProblem,
+    steps: [{
+      id: 'calculate',
+      type: 'calculation',
+      prompt: 'Now substitute and calculate.',
+      displayEquation: 'F = 3 × 2 = {{blank}}',
+      expectedValue: 6,
+      expectedDisplay: '6 N'
+    }]
+  });
+  assert.equal(calculation.currentStep.displayEquation, 'F = 3 × 2 = {{blank}}');
 }
 
 function testTutorCalculatorProtection() {

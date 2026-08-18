@@ -6,6 +6,7 @@ const { detectAnswerRepresentationIntent } = require('../lib/router/answerIntent
 const { routeStudentQuestion } = require('../lib/router/questionRouter');
 const {
   answerFormulaTutorStep,
+  buildFormulaTutorMetadata,
   startFormulaTutor
 } = require('../lib/tutor/formulaTutor');
 
@@ -13,6 +14,8 @@ const teacherFactsPath = path.join(__dirname, '..', 'knowledge', 'teacher_facts.
 const teacherKnowledge = loadTeacherKnowledge(teacherFactsPath);
 
 const tests = [
+  testReportedSpeedTutorStaysSymbolicUntilSubstitution,
+  testReportedFallingBallUsesEarthWeightFormula,
   testFinalSpeedCartUsesAccelerationFormulaTutor,
   testAirResistanceUsesDragFact,
   testLawOfUniversalGravitationUsesLocalFact,
@@ -69,6 +72,64 @@ if (failed.length > 0) {
   console.log('Failing checks:');
   failed.forEach((result) => console.log(`- ${result.name}: ${result.error.message}`));
   process.exitCode = 1;
+}
+
+function testReportedSpeedTutorStaysSymbolicUntilSubstitution() {
+  const question = 'what is the speed of a car that is traveling 8 m in 30 seconds?';
+  const route = routeWithTeacherKnowledge(question);
+  assert.equal(route.type, 'science_formula');
+  assert.equal(route.formulaWork?.formulaId, 'speed_distance_time');
+  assert.equal(route.formulaWork?.formula, 'speed = distance / time');
+  assert.equal(route.formulaWork?.finalAnswer?.unit, 'm/s');
+  assert.ok(Math.abs(route.formulaWork.finalAnswer.value - (8 / 30)) < 1e-12);
+
+  let tutor = startFormulaTutor({ questionRoute: route, originalQuestion: question });
+  assert.ok(tutor);
+  tutor = answerFormulaTutorStep(tutor, 'speed').currentTutorProblem;
+  tutor = answerFormulaTutorStep(tutor, 'v = d / t').currentTutorProblem;
+
+  let metadata = buildFormulaTutorMetadata(tutor);
+  assert.equal(currentStep(tutor).id, 'identify_distance');
+  assert.equal(metadata.currentStep.displayEquation, 'v = {{blank}} / t');
+  assert.doesNotMatch(metadata.currentStep.displayEquation, /\b30\b|v\s*=\s*d\s*\/\s*30/i);
+
+  tutor = answerFormulaTutorStep(tutor, '8 m').currentTutorProblem;
+  metadata = buildFormulaTutorMetadata(tutor);
+  assert.equal(currentStep(tutor).id, 'identify_time');
+  assert.equal(metadata.currentStep.displayEquation, 'v = d / {{blank}}');
+  assert.doesNotMatch(metadata.currentStep.displayEquation, /\b8\b|\b30\b/);
+
+  tutor = answerFormulaTutorStep(tutor, '30 s').currentTutorProblem;
+  metadata = buildFormulaTutorMetadata(tutor);
+  assert.equal(currentStep(tutor).id, 'calculate');
+  assert.equal(metadata.work.substitution, 'speed = 8 / 30');
+  assert.match(metadata.currentStep.displayEquation, /8\s*÷\s*30/);
+
+  const completed = answerFormulaTutorStep(tutor, '0.27');
+  assert.equal(completed.completed, true);
+  assert.match(completed.response, /0\.27 m\/s/i);
+}
+
+function testReportedFallingBallUsesEarthWeightFormula() {
+  const question = 'what is the force of a 8 kg ball that is falling of a building';
+  const route = routeWithTeacherKnowledge(question);
+  assert.equal(route.type, 'science_formula');
+  assert.equal(route.confidence, 'strong');
+  assert.equal(route.formulaWork?.formulaId, 'weight_mass_gravity');
+  assert.equal(route.formulaWork?.formula, 'Fg = m × g');
+  assert.equal(route.formulaWork?.finalAnswer?.value, 78.4);
+  assert.equal(route.formulaWork?.finalAnswer?.unit, 'N');
+  assert.equal(route.formulaWork?.finalAnswer?.display, '78.4 N downward');
+  assert.match(route.directAnswer, /Fg = 8 kg × 9\.8 m\/s²/i);
+  assert.match(route.directAnswer, /Fg = 78\.4 N downward/i);
+
+  for (const boundary of [
+    'How long does an 8 kg ball take to fall from a building?',
+    'What is the speed of an 8 kg ball falling from a building?',
+    'What air resistance force acts on an 8 kg ball while it is falling?'
+  ]) {
+    assert.notEqual(routeWithTeacherKnowledge(boundary).formulaWork?.formulaId, 'weight_mass_gravity');
+  }
 }
 
 function testFinalSpeedCartUsesAccelerationFormulaTutor() {

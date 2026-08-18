@@ -17,6 +17,7 @@ const CAR_AD_ACCELERATION_QUESTION = 'A car advertisement claims that a certain 
 const CART_FINAL_SPEED_QUESTION = 'A cart rolling down an incline for 5.0 seconds has an acceleration of 4.0 m/s2. If the cart has an initial speed of 2.0 m/s, what is its final speed?';
 const TRUCK_MASS_QUESTION = 'If a truck has 40,500 kg*m/s of momentum and is moving with a velocity of 90 m/s, what is the truck\u2019s mass?';
 const SUITCASE_WEIGHT_QUESTION = 'Find the weight of a suitcase that has a mass of 42 kg.';
+const REPORTED_FALLING_BALL_QUESTION = 'what is the force of a 8 kg ball that is falling of a building';
 
 const tests = [
   testKnowledgePromptsAnswerDirectly,
@@ -30,6 +31,7 @@ const tests = [
   testFinalSpeedFormulaTutor,
   testMomentumMassFormulaTutor,
   testWeightFormulaTutor,
+  testReportedFallingBallWeightFormulaTutor,
   testPatch3FormulaDirectAnswers,
   testNumericNetForceFormulaTutorExamples,
   testGuidedFormulaTutorOffAnswersDirectly
@@ -557,6 +559,68 @@ async function testWeightFormulaTutor() {
     steps: ['1', '1', '42 kg', '9.8 m/s\u00b2', '411.6']
   });
   assert.match(final.body.response, /411\.6 N/i);
+}
+
+async function testReportedFallingBallWeightFormulaTutor() {
+  const routeCases = [
+    REPORTED_FALLING_BALL_QUESTION,
+    "Calculate the gravitational force on a 5 kg rock near Earth's surface.",
+    'What does a 3 kg package weigh on Earth?',
+    'A 2 kg apple is dropped from a roof. What force pulls it downward?',
+    'What is the force on a 4 kg object in free fall near Earth?'
+  ];
+
+  for (const question of routeCases) {
+    const route = routeWithTeacherKnowledge(question);
+    assert.equal(route.type, 'science_formula', `${question} should use deterministic formula routing`);
+    assert.equal(route.confidence, 'strong', `${question} should route with strong confidence`);
+    assert.equal(route.formulaWork?.formulaId, 'weight_mass_gravity', `${question} should use the weight formula`);
+    assert.equal(route.formulaWork?.formula, 'Fg = m × g', `${question} formula`);
+    assert.equal(route.formulaWork?.finalAnswer?.unit, 'N', `${question} result unit`);
+    assert.match(route.directAnswer, /g = 9\.8 m\/s²/i, `${question} should use Earth gravity`);
+    assert.match(route.directAnswer, /N downward$/i, `${question} result direction`);
+  }
+
+  const harness = await createHarnessSession({ studentGuidedFormulaTutoringEnabled: true });
+  const routed = harness.questionAnswer.routeMessage(REPORTED_FALLING_BALL_QUESTION);
+  assert.equal(routed.questionContract.taskType, 'calculation');
+  assert.equal(routed.questionRoute.type, 'science_formula');
+  assert.equal(routed.answerValidation.valid, true);
+  assert.equal(routed.questionRoute.formulaWork?.formulaId, 'weight_mass_gravity');
+  assert.equal(routed.questionRoute.formulaWork?.finalAnswer?.value, 78.4);
+  assert.equal(routed.questionRoute.formulaWork?.finalAnswer?.unit, 'N');
+  assert.equal(routed.questionRoute.formulaWork?.finalAnswer?.display, '78.4 N downward');
+  assert.match(routed.questionRoute.directAnswer, /Fg = 8 kg × 9\.8 m\/s²/i);
+  assert.match(routed.questionRoute.directAnswer, /Fg = 78\.4 N downward/i);
+
+  let latest = await startFormulaTutor(harness, 'reported-falling-ball-weight', REPORTED_FALLING_BALL_QUESTION);
+  assert.equal(latest.body.confidence, 'strong');
+  assert.equal(latest.body.tutor.formulaId, 'weight_mass_gravity');
+
+  for (const answer of ['1', '1', '8 kg', '9.8 m/s²', '78.4']) {
+    latest = await sendHarnessMessage(harness, 'reported-falling-ball-weight', answer);
+  }
+
+  assert.equal(latest.body.tutor.completed, true);
+  assert.equal(latest.body.tutor.finalAnswer.value, 78.4);
+  assert.equal(latest.body.tutor.finalAnswer.unit, 'N');
+  assert.equal(latest.body.tutor.finalAnswerDisplay, '78.4 N downward');
+  assert.match(latest.body.response, /78\.4 N downward/i);
+
+  const negativeCases = [
+    'How long does an 8 kg ball take to fall from a building?',
+    'What is the speed of an 8 kg ball falling from a building?',
+    'What air resistance force acts on an 8 kg ball while it is falling?',
+    'An 8 kg ball is falling from a building.'
+  ];
+  for (const question of negativeCases) {
+    const route = routeWithTeacherKnowledge(question);
+    assert.notEqual(
+      route.formulaWork?.formulaId,
+      'weight_mass_gravity',
+      `${question} must not be treated as weight from falling wording alone`
+    );
+  }
 }
 
 async function testPatch3FormulaDirectAnswers() {
